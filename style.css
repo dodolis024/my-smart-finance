@@ -1,0 +1,585 @@
+/* ============================================
+   Smart Finance Tracker — Style Sheet
+   Desktop-first (1200px+), CSS Grid layout
+   ============================================ */
+
+/* --------------------------------------------
+   1. CSS Variables (Color & Spacing System)
+   -------------------------------------------- */
+:root {
+  /* Colors */
+  --color-primary: #b59c80; /* 主顏色 */
+  --color-primary-hover: #9E8769; /* 主顏色懸停時的顏色 */
+  --color-bg: #FAF9F6; /* 背景顏色 */
+  --color-card: #ffffff; /* 卡片顏色 */
+  --color-text: #30231c; /* 文字顏色 */
+  --color-text-secondary: #6b7280; /* 次要文字顏色 */
+  --color-border: #E0D9D0 ;/* 邊框顏色 */
+  --color-success: #10b981; /* 成功顏色 */
+  --color-danger: #ef4444; /* 危險顏色 */
+  --color-table-header: #dfdad3; /* 表頭：暖灰米色，呼應主色與邊框 */
+  --color-row-hover: #F5F2ED; /* 列懸停：淺暖米，與背景協調 */
+  --color-row-alt: #FAF8F5; /* 列交替：極淺暖色 */
+
+  /* Spacing */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1); /* 卡片的陰影 */
+  --shadow-focus: 0 0 0 3px rgba(191, 165, 136, 0.35); /* 焦點的陰影 */
+
+  /* Transitions */
+  --transition: all 0.2s ease;
+
+  /* 圓餅圖最大寬度：改此值可調整大小；≤1440px、≤900px 在各自 media 內另有 --chart-max-width 可調 */
+  --chart-max-width: 260px;
+}
+
+/* --------------------------------------------
+   2. Reset & Base Typography
+   -------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.5;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  color: var(--color-text);
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* --------------------------------------------
+   3. Main Layout — CSS Grid (35% / 65%)
+   -------------------------------------------- */
+.app-container {
+  display: grid;
+  grid-template-columns: 30% 70%;
+  gap: var(--space-lg);
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-lg) max(var(--space-lg), 5vw);
+}
+
+/* --------------------------------------------
+   4. Form Column (Left — 35%)
+   -------------------------------------------- */
+.form-column {
+  position: sticky;
+  top: var(--space-lg);
+  align-self: start;
+}
+
+.transaction-form-section {
+  background: var(--color-card);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  padding: var(--space-lg);
+}
+
+/* Form groups */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+/* Form inputs (text, number, date) */
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="date"] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 1rem;
+  color: var(--color-text);
+  transition: var(--transition);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+/* Select dropdowns */
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 1rem;
+  color: var(--color-text);
+  background: var(--color-card);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+/* Textarea */
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--color-text);
+  resize: vertical;
+  transition: var(--transition);
+}
+
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+/* Submit button */
+.transaction-form-section button[type="submit"] {
+  width: 100%;
+  padding: 0.875rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.transaction-form-section button[type="submit"]:hover {
+  background: var(--color-primary-hover);
+}
+
+.transaction-form-section button[type="submit"]:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Form 按鈕區：新增/更新 + 取消（編輯時顯示） */
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.form-actions button[type="submit"] {
+  flex: 1;
+  min-width: 0;
+}
+.btn-cancel {
+  flex: 0 0 auto;
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-cancel:hover {
+  background: var(--color-row-hover);
+  color: var(--color-text);
+  border-color: var(--color-text-secondary);
+}
+.btn-cancel:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* --------------------------------------------
+   5. Dashboard Column (Right — 65%)
+   -------------------------------------------- */
+.dashboard-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* --------------------------------------------
+   6. Stat Cards (Income / Expense / Balance)
+   -------------------------------------------- */
+.stats-cards {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.stat-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card);
+  padding: var(--space-md);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-xs);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Stat card colors by position: Income=green, Expense=red, Balance=primary text */
+.stat-card:nth-child(1) .stat-value { color: var(--color-success); }
+.stat-card:nth-child(2) .stat-value { color: var(--color-danger); }
+.stat-card:nth-child(3) .stat-value { color: var(--color-text); }
+
+/* Balance 正負由 JS 加上 .balance-positive / .balance-negative */
+#totalIncome { color: var(--color-success); }
+#totalExpense { color: var(--color-danger); }
+.balance-positive { color: var(--color-success) !important; }
+.balance-negative { color: var(--color-danger) !important; }
+
+/* --------------------------------------------
+   7. Month Selector
+   -------------------------------------------- */
+.month-selector-section {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.month-selector-section label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.month-selector-section select {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 1rem;
+  background: var(--color-card);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.month-selector-section select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+/* --------------------------------------------
+   8. Analytics Section (2-column grid)
+   -------------------------------------------- */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.analytics-col {
+  background: var(--color-card);
+  padding: var(--space-md);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.analytics-col h3 {
+  margin-top: 0;
+  margin-bottom: var(--space-sm);
+}
+
+/* 圓餅圖：寬度由 --chart-max-width 控制，高由 Chart.js 依比例計算 */
+#categoryChart {
+  max-width: var(--chart-max-width);
+  margin: var(--space-sm) auto;
+  display: block;
+}
+
+/* --------------------------------------------
+   9. Transaction Table
+   -------------------------------------------- */
+.table-wrapper {
+  overflow-x: auto;
+  background: var(--color-card);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.transaction-history-section table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transaction-history-section th {
+  background: var(--color-table-header);
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.transaction-history-section td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9375rem;
+}
+
+.transaction-history-section tbody tr:nth-child(even) {
+  background: var(--color-row-alt);
+}
+
+.transaction-history-section tbody tr:hover {
+  background: var(--color-row-hover);
+}
+
+.transaction-history-section tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Amount cells — income vs expense (use .amount-income / .amount-expense if JS adds them) */
+.amount-income { color: var(--color-success); font-weight: 600; }
+.amount-expense { color: var(--color-danger); font-weight: 600; }
+
+/* Row actions: Edit + Delete */
+.row-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Edit / Delete buttons in transaction table */
+.btn-edit,
+.btn-delete {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid;
+  background: transparent;
+}
+.btn-edit {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.btn-edit:hover {
+  background: var(--color-primary);
+  color: white;
+}
+.btn-edit:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.btn-delete {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.btn-delete:hover {
+  background: var(--color-danger);
+  color: white;
+}
+.btn-delete:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35);
+}
+
+/* --------------------------------------------
+   10. Accessibility & Polish
+   -------------------------------------------- */
+/* Focus states are on each interactive element; smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ensure canvas and dynamic content don't overflow */
+#categoryStats,
+#paymentStats {
+  margin-top: var(--space-sm);
+  font-size: 0.9375rem;
+  color: var(--color-text-secondary);
+}
+
+/* 圓餅圖圖例（類別＝顏色）：一排四個、置中 */
+.category-chart-legend {
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  justify-content: center;
+  gap: 0.35rem 0.75rem;
+  margin-top: var(--space-sm);
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+.category-chart-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.category-chart-legend .legend-color {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* 分類 / 支付方式 列表 */
+.category-stats-list,
+.payment-stats-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.category-stats-list li,
+.payment-stats-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.category-stats-list li:last-child,
+.payment-stats-list li:last-child { border-bottom: none; }
+.cat-name, .pay-name { font-weight: 500; color: var(--color-text); }
+.cat-amount, .pay-amount { font-weight: 600; color: var(--color-text); }
+.category-stats-empty,
+.payment-stats-empty { margin: 0; color: var(--color-text-secondary); font-style: italic; }
+
+/* --------------------------------------------
+   11. Responsive — Medium viewports (≤1440px, e.g. 14" MBP at 100%)
+   Tighter spacing so the full UI fits without zooming.
+   -------------------------------------------- */
+@media (max-width: 1440px) {
+  .app-container {
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .transaction-form-section {
+    padding: 1.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .stat-card {
+    padding: 1.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+  }
+
+  .analytics-col {
+    padding: 1.25rem;
+  }
+
+  :root { --chart-max-width: 240px; }
+
+  .transaction-history-section th,
+  .transaction-history-section td {
+    padding: 0.625rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* --------------------------------------------
+   12. Responsive — Single column (≤1200px)
+   Form stacks above dashboard for narrow windows or split view.
+   -------------------------------------------- */
+@media (max-width: 1200px) {
+  .app-container {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.25rem;
+  }
+
+  .form-column {
+    position: static; /* stacked layout: no sticky to avoid overlap */
+  }
+
+  .transaction-form-section {
+    padding: 1.5rem;
+  }
+}
+
+/* --------------------------------------------
+   13. Responsive — Compact (≤900px)
+   Analytics stack; stat cards can wrap on very small screens.
+   -------------------------------------------- */
+@media (max-width: 900px) {
+  .app-container {
+    padding: 1rem max(1.5rem, 5vw);
+  }
+
+  .transaction-form-section {
+    padding: 1.25rem;
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-cards {
+    flex-wrap: wrap;
+  }
+
+  .stat-card {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  :root { --chart-max-width: 220px; }
+}
+
+/* Ensure no overflow on narrow viewports */
+.app-container > * {
+  max-width: 100%;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}

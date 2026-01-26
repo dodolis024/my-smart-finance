@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Finance Tracker 智能理財追蹤</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 左欄：交易輸入表單 (35%) -->
+    <aside class="form-column">
+      <section class="transaction-form-section">
+        <h2 id="formSectionTitle">新增交易</h2>
+        <form id="transactionForm">
+          <div class="form-group">
+            <label for="date">日期</label>
+            <input type="date" id="date" name="date">
+          </div>
+          <div class="form-group">
+            <label for="item">項目名稱</label>
+            <input type="text" id="item" name="itemName" required>
+          </div>
+          <div class="form-group">
+            <label for="category">分類</label>
+            <select id="category" name="category">
+              <!-- 由 JavaScript 動態填入 -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="method">支付方式</label>
+            <select id="method" name="paymentMethod">
+              <option value="" disabled selected>載入中…</option>
+              <!-- 由 JavaScript 依 Accounts 分頁的 Account Name 動態填入 -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="currency">幣別</label>
+            <select id="currency" name="currency">
+              <option value="TWD" selected>TWD</option>
+              <option value="USD">USD</option>
+              <option value="JPY">JPY</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="amount">金額</label>
+            <input type="number" id="amount" name="amount" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label for="note">備註</label>
+            <textarea id="note" name="note" rows="3" placeholder="Optional"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" id="cancelEditBtn" class="btn-cancel" style="display:none">取消</button>
+            <button type="submit" id="addBtn">新增交易</button>
+          </div>
+        </form>
+      </section>
+    </aside>
+
+    <!-- 右欄：儀表板 (65%) -->
+    <main class="dashboard-column">
+      <!-- 區塊 1：統計卡片 (收入/支出/餘額) -->
+      <section class="stats-section">
+        <h2>收支概覽</h2>
+        <div class="stats-cards">
+          <div class="stat-card">
+            <span class="stat-label">收入</span>
+            <span class="stat-value" id="totalIncome">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">支出</span>
+            <span class="stat-value" id="totalExpense">—</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">餘額</span>
+            <span class="stat-value" id="balance">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 2：月份選擇器 -->
+      <section class="month-selector-section">
+        <label for="monthSelect">月份</label>
+        <select id="monthSelect"></select>
+      </section>
+
+      <!-- 區塊 3：分析統計 -->
+      <section class="analytics-section">
+        <h2>分析統計</h2>
+        <div class="analytics-grid">
+          <div class="analytics-col category-breakdown">
+            <h3>分類分析</h3>
+            <canvas id="categoryChart"></canvas>
+            <div id="categoryChartLegend" class="category-chart-legend"></div>
+            <div id="categoryStats"></div>
+          </div>
+          <div class="analytics-col payment-breakdown">
+            <h3>支付方式分析</h3>
+            <div id="paymentStats"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 區塊 4：交易記錄 -->
+      <section class="transaction-history-section">
+        <h2>交易記錄</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>分類</th>
+                <th>項目</th>
+                <th>支付方式</th>
+                <th>金額(TWD)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="transactionList">
+              <!-- 由 JavaScript 動態填入 -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
