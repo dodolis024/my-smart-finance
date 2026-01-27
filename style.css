@@ -310,6 +310,9 @@ h3 {
 }
 .streak-badge__icon {
   font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .streak-badge__count {
   font-weight: 700;
@@ -588,22 +591,12 @@ html {
 .reaction-modal__title {
   margin: 0 0 0.75rem 0;
 }
-.reaction-modal__media {
-  width: 100%;
-  height: 240px;
-  border-radius: 12px;
-  border: 1px solid var(--color-border);
-  background-color: var(--color-bg);
-  /* NOTE: reaction-modal__media
-     - 預設為純色背景，搭配外框。
-     - 若要改成圖片，建議在這裡加上 background-image，例如：
-       background-image: url('your-happy-or-angry-image.gif'); */
-}
 .reaction-modal__text {
-  margin: 0.9rem 0 1rem;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--color-text);
+  /* NOTE: reaction-modal__text
+     - 目前不顯示任何說明文字（依照需求拿掉這一行）
+     - 若未來想再加標語，可移除 display:none 並在 script.js 設定文字內容 */
+  display: none;
+  margin: 0;
 }
 .reaction-modal__actions {
   display: flex;
@@ -626,6 +619,156 @@ html {
 .reaction-modal__primary:focus {
   outline: none;
   box-shadow: var(--shadow-focus);
+}
+
+/* NOTE: streak-calendar-root
+   - Modal 內主要區塊：上半部日曆、下半部統計卡片
+   - 結構由 script.js 動態產生，這裡只負責通用樣式 */
+.streak-calendar-root {
+  margin-top: 0.5rem;
+}
+
+.streak-calendar {
+  background: var(--color-bg);
+  border-radius: 12px;
+  padding: 0.75rem 0.75rem 0.5rem;
+  border: 1px solid var(--color-border);
+}
+
+.streak-calendar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.streak-calendar__month {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.streak-calendar__nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  transition: var(--transition);
+}
+.streak-calendar__nav-btn:hover {
+  background: var(--color-row-hover);
+}
+.streak-calendar__nav-btn:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.streak-calendar__weekdays,
+.streak-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+}
+
+.streak-calendar__weekdays {
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.streak-calendar__weekday {
+  padding: 0.15rem 0;
+}
+
+.streak-calendar__grid {
+  row-gap: 0.25rem;
+}
+
+.streak-calendar__day {
+  padding: 0.2rem 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.streak-calendar__day-inner {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streak-calendar__day--empty .streak-calendar__day-inner {
+  background: transparent;
+}
+
+.streak-calendar__day--has-log .streak-calendar__day-inner {
+  background: rgba(181, 156, 128, 0.35);
+  border: 1px solid rgba(181, 156, 128, 0.8); 
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.streak-calendar__day--today .streak-calendar__day-inner {
+  border: 1px solid var(--color-primary);
+  background: rgba(181, 156, 128, 0.45);
+}
+
+.streak-summary {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.streak-summary__card {
+  background: var(--color-card);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+}
+
+.streak-summary__label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.2rem;
+}
+
+.streak-summary__value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.streak-summary__value-emoji {
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streak-summary__value-number {
+  font-size: 1.2rem;
+}
+
+/* NOTE: icon-fire
+   - 目前連續記帳天數卡片使用的火焰 icon 樣式
+   - 若未來想統一其他火焰樣式，也可以共用這個 class */
+.icon-fire {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: block;
 }
 
 /* Prevent background scrolling when modal is open */

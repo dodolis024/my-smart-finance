@@ -440,6 +440,31 @@ function getDashboardData(year, month) {
       streakBroken = false;
     }
 
+    // 額外計算：
+    // - totalLoggedDays：有紀錄的「不同日期」總數（忽略是否連續）
+    // - longestStreak：歷史上最長的連續記帳天數（不受今天/昨天規則限制）
+    const totalLoggedDays = uniqueDateSet.size;
+    let longestStreak = 0;
+    if (uniqueDateSet.size > 0) {
+      const uniqueDatesAsc = Array.from(uniqueDateSet).sort(); // yyyy-MM-dd 字串可直接排序得到由舊到新
+      let currentRun = 0;
+      let prevTime = null;
+      for (let i = 0; i < uniqueDatesAsc.length; i++) {
+        const dStr = uniqueDatesAsc[i];
+        const d = new Date(dStr + 'T12:00:00'); // 避免時區邊界
+        const t = d.getTime();
+        if (prevTime === null) {
+          currentRun = 1;
+        } else if (t - prevTime === 86400000) {
+          currentRun++;
+        } else {
+          currentRun = 1;
+        }
+        if (currentRun > longestStreak) longestStreak = currentRun;
+        prevTime = t;
+      }
+    }
+
     // --- 從 Settings 讀取：D＝支出類別、E＝收入類別（分開管理，避免增減時互相影響）---
     var expenseCategories = [];
     var incomeCategories = [];
@@ -556,7 +581,13 @@ function getDashboardData(year, month) {
       categoriesIncome: incomeCategories,
       streakCount: streakCount,
       streakBroken: streakBroken,
-      // NOTE: `uniqueDatesDesc` is intentionally not returned (kept internal).
+      // NOTE: loggedDates：所有曾經有記帳的日期（yyyy-MM-dd），用於前端日曆顯示，不受年份月份限制
+      loggedDates: Array.from(uniqueDateSet),
+      // NOTE: totalLoggedDays：有記帳的「不同日期」總數（忽略是否連續）
+      totalLoggedDays: totalLoggedDays,
+      // NOTE: longestStreak：歷史上最長的連續記帳天數
+      longestStreak: longestStreak,
+      // NOTE: `uniqueDatesDesc` is intentionally not returned（僅內部使用，如需調試可暫時加入回傳）
     };
   } catch (err) {
     return { success: false, error: err.message || String(err) };

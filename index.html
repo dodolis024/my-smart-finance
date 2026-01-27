@@ -141,26 +141,44 @@
     </main>
   </div>
 
-  <!-- NOTE: Reaction Modal (hidden by default) / 情緒回饋視窗
-       - 共用一個彈窗元件，依照情境顯示不同標題/文字/按鈕：
-         * 連續記錄成功（每天第一筆）：正向鼓勵＋里程碑訊息
-         * 連續記錄斷掉（昨天沒記）：提醒＋「我現在補記！」之類的 CTA
-         * 點擊右上角 streak-badge：顯示目前連續記錄狀態
-       - 實際文案與圖片來源，都在 script.js 的 openReactionModal 系列函式中控制 -->
+      <!-- NOTE: Reaction Modal (hidden by default) / 記帳日曆＋情緒回饋視窗
+       - 共用一個彈窗元件，主要內容為「記帳日曆」與三個統計摘要：
+         * 上方：可切換月份的日曆，顯示每一天是否有記帳（有記帳的日子以主題色圓點標記）
+         * 下方：顯示「目前連續記帳天數」、「總共記帳天數」、「歷史最長連續記帳天數」
+       - 開啟情境：
+         * 點擊右上角 streak-badge 時：讓 user 檢視任意月份的記帳狀況
+         * 未來仍可在 script.js 中，於特定事件（例如 streak 斷掉、達成里程碑）自動開啟本 modal
+       - 真正的日曆內容與統計文字，全部在 script.js 中的 renderStreakCalendar / renderStreakSummary 控制 -->
   <div class="reaction-modal" id="reactionModal" aria-hidden="true">
     <div class="reaction-modal__backdrop" data-close="true"></div>
     <div class="reaction-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="reactionTitle">
       <button type="button" class="reaction-modal__close" id="reactionCloseBtn" aria-label="Close">×</button>
-      <h2 class="reaction-modal__title" id="reactionTitle">提醒</h2>
-      <!-- TODO: Replace the background-image of #reactionMedia in style.css with your GIF/image -->
-      <div class="reaction-modal__media" id="reactionMedia" role="img" aria-label="reaction image"></div>
+      <h2 class="reaction-modal__title" id="reactionTitle">記帳日曆</h2>
       <p class="reaction-modal__text" id="reactionText"></p>
-      <div class="reaction-modal__actions">
-        <!-- 按鈕文字會由 script.js 的 openReactionModal 動態設定；這裡只是預設 -->
-        <button type="button" class="reaction-modal__primary" id="reactionActionBtn">好的</button>
-      </div>
+      <!-- NOTE: streak-calendar-root
+           - JS 會在這個容器裡渲染日曆（可切換月份）與下方統計卡片
+           - 排版、顏色、emoji 由 script.js + style.css 共同決定 -->
+      <div class="streak-calendar-root" id="streakCalendarRoot"></div>
     </div>
   </div>
+
+ <!-- NOTE: Inline SVG icon sprites（目前只放 fire，可在此區擴充其他 icon）
+     - 使用方式：<svg class="icon-fire" aria-hidden="true"><use href="#icon-fire"></use></svg> -->
+<svg xmlns="http://www.w3.org/2000/svg" style="position: absolute; width: 0; height: 0;">  <!-- 改這行！ -->
+  <defs>
+    <!-- 火焰漸層定義（可全域用） -->
+    <linearGradient id="fireGrad" x1="0%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#B22222"/>   <!-- 底下紅 -->
+      <stop offset="50%" stop-color="#FF6347"/>
+      <stop offset="100%" stop-color="#FF8C00"/> <!-- 上面橘 -->
+    </linearGradient>
+  </defs>
+  <symbol id="icon-fire" viewBox="0 0 24 24" fill="none" stroke-width="1.5">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke="url(#fireGrad)" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" />
+    <path stroke-linecap="round" stroke-linejoin="round" stroke="url(#fireGrad)" d="M12 18a3.75 3.75 0 0 0 .495-7.468 5.99 5.99 0 0 0-1.925 3.547 5.975 5.975 0 0 1-2.133-1.001A3.75 3.75 0 0 0 12 18Z" />
+  </symbol>
+</svg>
+
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>

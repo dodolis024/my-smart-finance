@@ -3,7 +3,7 @@
  */
 
 // ⚠️ PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-const API_URL = "https://script.google.com/macros/s/AKfycbwhEvv--uzCLWBeBrEO3uheLkBb27zEO7HsyZ4jAos33jUQZbHB8ncwyjdShvgbwUseEA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxcsTTeOVdetgiKb3gghfkgTcK5iI043_yhbPe2V5AaKxj54DVZbsH73sXPqfK7oIF6BQ/exec";
 // Current State
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1; // JS months are 0-11
@@ -36,8 +36,7 @@ const elements = {
     reactionModal: document.getElementById('reactionModal'),
     reactionTitle: document.getElementById('reactionTitle'),
     reactionText: document.getElementById('reactionText'),
-    reactionMedia: document.getElementById('reactionMedia'),
-    reactionActionBtn: document.getElementById('reactionActionBtn'),
+    streakCalendarRoot: document.getElementById('streakCalendarRoot'),
     reactionCloseBtn: document.getElementById('reactionCloseBtn')
 };
 
@@ -52,10 +51,15 @@ let editingId = null;
 // - count：目前連續記錄天數（由後端計算後回傳）
 // - broken：true 代表昨天與今天都沒有紀錄，視為「連續紀錄中斷」
 let streakState = {
-    count: 0,
-    broken: false
+    count: 0,          // 目前連續記帳天數
+    broken: false,     // 是否為「昨天與今天都沒記帳」
+    totalDays: 0,      // 總共記帳的「不同日期」天數
+    longestStreak: 0,  // 歷史最長連續記帳天數
+    loggedDates: []    // 所有有記帳的 yyyy-MM-dd 字串，用於日曆標記
 };
 let streakInitialHandled = false;
+let streakCalendarYear = null;  // 日曆目前顯示的年份
+let streakCalendarMonth = null; // 日曆目前顯示的月份（1-12）
 
 // Professional color palette for chart segments
 const CHART_COLORS = [
@@ -107,12 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.reactionModal.addEventListener('click', (e) => {
             const t = e.target;
             if (t && t.getAttribute && t.getAttribute('data-close') === 'true') closeReactionModal();
-        });
-    }
-    if (elements.reactionActionBtn) {
-        elements.reactionActionBtn.addEventListener('click', () => {
-            closeReactionModal();
-            focusTransactionInput();
         });
     }
     document.addEventListener('keydown', (e) => {
@@ -178,22 +176,33 @@ async function fetchDashboardData(year, month) {
 function updateStreakStateFromServer(data) {
     const count = data && typeof data.streakCount === 'number' ? data.streakCount : 0;
     const broken = !!(data && data.streakBroken);
+    const totalDays = data && typeof data.totalLoggedDays === 'number' ? data.totalLoggedDays : 0;
+    const longestStreak = data && typeof data.longestStreak === 'number' ? data.longestStreak : 0;
+    const loggedDates = Array.isArray(data && data.loggedDates) ? data.loggedDates.slice() : [];
+
     streakState.count = count;
     streakState.broken = broken;
+    streakState.totalDays = totalDays;
+    streakState.longestStreak = longestStreak;
+    streakState.loggedDates = loggedDates;
     updateStreakBadge();
 }
 
 function updateStreakBadge() {
     if (!elements.streakBadge) return;
     const count = streakState.count || 0;
-    let icon = '✨';
+    let iconHtml = '';
     if (streakState.broken) {
-        icon = '💢';
+        iconHtml = '💢';
     } else if (count > 0) {
-        icon = '🔥';
+        // 使用 fire SVG icon（描邊漸層、中心透明）
+        iconHtml = '<svg class="icon-fire" aria-hidden="true"><use href="#icon-fire"></use></svg>';
+    } else {
+        iconHtml = '✨';
     }
-    // TODO：如果想改右上角的小圖示或文字，可以改這裡的字串與 emoji
-    elements.streakBadge.querySelector('.streak-badge__icon').textContent = icon;
+    // NOTE：如果想改右上角的小圖示（例如全部改成 icon），可以在這裡調整 iconHtml 的內容
+    const iconSpan = elements.streakBadge.querySelector('.streak-badge__icon');
+    if (iconSpan) iconSpan.innerHTML = iconHtml;
     elements.streakBadge.querySelector('.streak-badge__count').textContent = String(count);
 }
 
@@ -232,14 +241,15 @@ function maybeShowPositiveModalAfterAdd(submittedDate) {
 function openStreakModalForPositive() {
     const count = streakState.count || 0;
     const milestoneSteps = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
-    let title = '太棒了！';
-    let text = `你已連續記錄 ${count} 天了！繼續保持！🔥`;
+    let title = '真乖呦！';
+    let text = '今天是記帳的第 ${count} 天，明天也要繼續保持呦☺️';
     // milestone 特別文案
     if (milestoneSteps.includes(count)) {
         title = '里程碑達成！';
-        text = `你已經連續記錄 ${count} 天了！超強！🎉`;
+        text = '你已經連續記帳 ${count} 天了！真棒真棒🥹';
     }
-    // TODO：想要不同天數有不同圖片 / 文字，請在這裡依照 count 改寫 title / text 或增加更多條件
+    // TODO：想要不同天數有不同文字或 emoji，可在這裡依照 count 改寫 title / text
+    renderStreakCalendar();
     openReactionModal({
         title,
         text,
@@ -251,9 +261,10 @@ function openStreakModalForPositive() {
 // streak 斷掉（昨天沒記），在載入時顯示「生氣 / 難過」視窗
 function openStreakModalForBroken() {
     // TODO：這裡可以改成你喜歡的「生氣 / 難過」文字與 emoji
+    renderStreakCalendar();
     openReactionModal({
-        title: '連續記錄歸零了…',
-        text: '你昨天居然忘記記帳了！連續紀錄歸零了！😡',
+        title: '你偷懶被抓到了！！！',
+        text: '吼呦！你昨天迷有記帳 氣鼠了！😡',
         buttonLabel: '我現在補記！',
         variant: 'broken'
     });
@@ -262,17 +273,18 @@ function openStreakModalForBroken() {
 // 使用者點右上角小 icon 時：打開一個「總覽」視窗，顯示目前 streak 狀態
 function openStreakModalForCurrent() {
     const count = streakState.count || 0;
+    renderStreakCalendar();
     if (streakState.broken) {
         openReactionModal({
-            title: '目前連續記錄：0 天',
-            text: '目前沒有連續紀錄，今天開始重新累積也很棒！🙂',
-            buttonLabel: '我現在就去記！',
+            title: '目前連續記帳：0 天',
+            text: '目前沒有連續紀錄，今天要重新開始咪～～',
+            buttonLabel: '好鴨',
             variant: 'neutral'
         });
     } else if (count > 0) {
         openReactionModal({
-            title: `目前連續記錄：${count} 天`,
-            text: `太厲害了！已經連續記錄 ${count} 天，繼續往下一個里程碑前進吧！🔥`,
+            title: `目前連續記帳：${count} 天`,
+            text: `太厲害了！已經連續記錄 ${count} 天，繼續往下一個里程碑前進吧！🔥`, /* 用不到他 */
             buttonLabel: '好的',
             variant: 'neutral'
         });
@@ -280,7 +292,7 @@ function openStreakModalForCurrent() {
         openReactionModal({
             title: '還沒有連續紀錄',
             text: '從今天開始記第一筆，就會開始累積你的連續紀錄！',
-            buttonLabel: '馬上去記一筆',
+            buttonLabel: 'Go Go!',
             variant: 'neutral'
         });
     }
@@ -290,13 +302,136 @@ function getTodayYmd() {
     return new Date().toISOString().split('T')[0];
 }
 
+// NOTE: renderStreakCalendar
+// - 依據 streakState.loggedDates 在 modal 內渲染「可切換月份」的日曆與下方三個統計卡片
+// - 只負責畫面，不處理彈窗開關邏輯（開關由 openReactionModal 處理）
+function renderStreakCalendar() {
+    if (!elements.streakCalendarRoot) return;
+
+    ensureStreakCalendarMonth();
+
+    const y = streakCalendarYear;
+    const m = streakCalendarMonth;
+
+    // 產生一個 Set 方便查詢該月哪些日期有記帳
+    const loggedSet = new Set(streakState.loggedDates || []);
+
+    const firstDay = new Date(y, m - 1, 1);
+    const firstWeekday = firstDay.getDay(); // 0-6 (Sun-Sat)
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const todayStr = getTodayYmd();
+
+    const weekLabels = ['日', '一', '二', '三', '四', '五', '六'];
+
+    let html = '';
+    html += '<div class="streak-calendar">';
+    html += '  <div class="streak-calendar__header">';
+    html += '    <button type="button" class="streak-calendar__nav-btn" data-dir="-1" aria-label="上一個月">‹</button>';
+    html += `    <div class="streak-calendar__month">${y} 年 ${m} 月</div>`;
+    html += '    <button type="button" class="streak-calendar__nav-btn" data-dir="1" aria-label="下一個月">›</button>';
+    html += '  </div>';
+    html += '  <div class="streak-calendar__weekdays">';
+    weekLabels.forEach((w) => {
+        html += `<div class="streak-calendar__weekday">${w}</div>`;
+    });
+    html += '  </div>';
+    html += '  <div class="streak-calendar__grid">';
+
+    // 前置空白格
+    for (let i = 0; i < firstWeekday; i++) {
+        html += '<div class="streak-calendar__day streak-calendar__day--empty"><div class="streak-calendar__day-inner"></div></div>';
+    }
+
+    // 每一天
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dd = String(d).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        const dateStr = `${y}-${mm}-${dd}`;
+        const hasLog = loggedSet.has(dateStr);
+        const isToday = dateStr === todayStr;
+
+        let cls = 'streak-calendar__day';
+        if (hasLog) cls += ' streak-calendar__day--has-log';
+        if (isToday) cls += ' streak-calendar__day--today';
+
+        html += `<div class="${cls}"><div class="streak-calendar__day-inner">${d}</div></div>`;
+    }
+
+    html += '  </div>'; // grid
+    html += '</div>'; // calendar
+
+    // Summary cards
+    const current = streakState.count || 0;
+    const total = streakState.totalDays || 0;
+    const longest = streakState.longestStreak || 0;
+    // NOTE: streakIconHtml
+    // - 目前連續記帳天數卡片使用 fire icon（SVG）
+    // - 若 future 想改成別的 icon，可在這裡替換 <use href="#icon-fire">
+    const streakIconHtml =
+        current > 0
+            ? '<svg class="icon-fire" aria-hidden="true"><use href="#icon-fire"></use></svg>'
+            : '';
+    html += '<div class="streak-summary">';
+    html += '  <div class="streak-summary__card">';
+    html += '    <div class="streak-summary__label">目前連續記帳天數</div>';
+    html += '    <div class="streak-summary__value">';
+    html += `      <span class="streak-summary__value-emoji">${streakIconHtml}</span>`;
+    html += `      <span class="streak-summary__value-number">${current}</span><span>天</span>`;
+    html += '    </div>';
+    html += '  </div>';
+
+    html += '  <div class="streak-summary__card">';
+    html += '    <div class="streak-summary__label">總共記帳天數</div>';
+    html += '    <div class="streak-summary__value">';
+    html += `      <span class="streak-summary__value-number">${total}</span><span>天</span>`;
+    html += '    </div>';
+    html += '  </div>';
+
+    html += '  <div class="streak-summary__card">';
+    html += '    <div class="streak-summary__label">最長連續記帳</div>';
+    html += '    <div class="streak-summary__value">';
+    html += `      <span class="streak-summary__value-number">${longest}</span><span>天</span>`;
+    html += '    </div>';
+    html += '  </div>';
+
+    html += '</div>'; // streak-summary
+
+    elements.streakCalendarRoot.innerHTML = html;
+
+    // 綁定上一月 / 下一月按鈕
+    const root = elements.streakCalendarRoot;
+    const navButtons = root.querySelectorAll('.streak-calendar__nav-btn');
+    navButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const dir = parseInt(btn.getAttribute('data-dir'), 10) || 0;
+            const nextMonth = new Date(streakCalendarYear, streakCalendarMonth - 1 + dir, 1);
+            streakCalendarYear = nextMonth.getFullYear();
+            streakCalendarMonth = nextMonth.getMonth() + 1;
+            renderStreakCalendar();
+        });
+    });
+}
+
+// 若尚未指定日曆的年月，則以「最新有記帳的日期」或「今天」作為起始月份
+function ensureStreakCalendarMonth() {
+    if (streakCalendarYear && streakCalendarMonth) return;
+    let baseDate = null;
+    if (streakState.loggedDates && streakState.loggedDates.length > 0) {
+        // 取最新一筆記帳日期
+        const sorted = streakState.loggedDates.slice().sort((a, b) => b.localeCompare(a));
+        baseDate = new Date(sorted[0] + 'T12:00:00');
+    } else {
+        baseDate = new Date();
+    }
+    streakCalendarYear = baseDate.getFullYear();
+    streakCalendarMonth = baseDate.getMonth() + 1;
+}
+
 function openReactionModal(opts) {
     if (!elements.reactionModal) return;
     if (elements.reactionTitle) elements.reactionTitle.textContent = (opts && opts.title) ? opts.title : '提醒';
-    if (elements.reactionText) elements.reactionText.textContent = (opts && opts.text) ? opts.text : '';
-    if (elements.reactionActionBtn && opts && opts.buttonLabel) {
-        elements.reactionActionBtn.textContent = opts.buttonLabel;
-    }
+    // 目前已不顯示文字段落，如需再次顯示，可在 style.css 取消 reaction-modal__text 的 display:none
+    if (elements.reactionText) elements.reactionText.textContent = '';
     // TODO：若未來想根據 variant 顯示不同圖片，可在這裡根據 opts.variant 改變 reactionMedia 的背景圖
     if (elements.reactionModal) {
         elements.reactionModal.classList.add('is-open');
@@ -304,10 +439,6 @@ function openReactionModal(opts) {
         elements.reactionModal.setAttribute('data-variant', (opts && opts.variant) ? opts.variant : 'default');
     }
     document.body.classList.add('modal-open');
-    // Focus primary action for accessibility
-    if (elements.reactionActionBtn) {
-        setTimeout(() => elements.reactionActionBtn.focus(), 0);
-    }
 }
 
 function closeReactionModal() {
