@@ -241,6 +241,20 @@ h3 {
   gap: var(--space-sm);
 }
 
+.stats-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+/* NOTE: stats-section-header
+   - 左側：顯示「收支概覽」標題
+   - 右側：顯示連續紀錄天數的小按鈕（streak-badge），不改變原本三個統計卡片的排列 */
+.stats-section-header h2 {
+  margin-bottom: 0;
+}
+
 .stat-card {
   flex: 1;
   display: flex;
@@ -276,6 +290,40 @@ h3 {
 #totalExpense { color: var(--color-danger); }
 .balance-positive { color: var(--color-success) !important; }
 .balance-negative { color: var(--color-danger) !important; }
+
+/* --------------------------------------------
+   6.1 Streak Badge (top-right icon)
+   -------------------------------------------- */
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.streak-badge__icon {
+  font-size: 1rem;
+}
+.streak-badge__count {
+  font-weight: 700;
+  color: var(--color-text);
+}
+.streak-badge__unit {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.streak-badge:hover {
+  background: var(--color-row-hover);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
 
 /* --------------------------------------------
    7. Month Selector
@@ -486,6 +534,104 @@ html {
 .cat-amount, .pay-amount { font-weight: 600; color: var(--color-text); }
 .category-stats-empty,
 .payment-stats-empty { margin: 0; color: var(--color-text-secondary); font-style: italic; }
+
+/* --------------------------------------------
+   10.5 Reaction Modal (Emotional Feedback)
+   -------------------------------------------- */
+.reaction-modal {
+  position: fixed;
+  inset: 0;
+  display: none; /* hidden by default */
+  z-index: 999;
+}
+.reaction-modal.is-open {
+  display: block;
+}
+.reaction-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.reaction-modal__dialog {
+  position: relative;
+  width: min(560px, calc(100% - 2rem));
+  margin: 8vh auto 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.25rem 1.25rem 1.1rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.reaction-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.reaction-modal__close:hover {
+  background: var(--color-row-hover);
+}
+.reaction-modal__close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.reaction-modal__title {
+  margin: 0 0 0.75rem 0;
+}
+.reaction-modal__media {
+  width: 100%;
+  height: 240px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  /* NOTE: reaction-modal__media
+     - 預設為純色背景，搭配外框。
+     - 若要改成圖片，建議在這裡加上 background-image，例如：
+       background-image: url('your-happy-or-angry-image.gif'); */
+}
+.reaction-modal__text {
+  margin: 0.9rem 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.reaction-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.reaction-modal__primary {
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.reaction-modal__primary:hover {
+  background: var(--color-primary-hover);
+}
+.reaction-modal__primary:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Prevent background scrolling when modal is open */
+body.modal-open {
+  overflow: hidden;
+}
 
 /* --------------------------------------------
    11. Responsive — Medium viewports (≤1440px, e.g. 14" MBP at 100%)

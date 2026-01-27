@@ -3,7 +3,7 @@
  */
 
 // ⚠️ PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-const API_URL = "https://script.google.com/macros/s/AKfycbz2M17edMc6xd1Y_61PQHkLXYNYydtxVFzUBSCM81ezOmpALwJ8nhDfl3qSb87EjsK5tA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwhEvv--uzCLWBeBrEO3uheLkBb27zEO7HsyZ4jAos33jUQZbHB8ncwyjdShvgbwUseEA/exec";
 // Current State
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1; // JS months are 0-11
@@ -29,7 +29,16 @@ const elements = {
     methodInput: document.getElementById('method'),
     currencyInput: document.getElementById('currency'),
     amountInput: document.getElementById('amount'),
-    noteInput: document.getElementById('note')
+    noteInput: document.getElementById('note'),
+    // Streak UI（右上角小 icon / 連續天數）
+    streakBadge: document.getElementById('streakBadge'),
+    // Reaction Modal（共用的情緒回饋彈窗）
+    reactionModal: document.getElementById('reactionModal'),
+    reactionTitle: document.getElementById('reactionTitle'),
+    reactionText: document.getElementById('reactionText'),
+    reactionMedia: document.getElementById('reactionMedia'),
+    reactionActionBtn: document.getElementById('reactionActionBtn'),
+    reactionCloseBtn: document.getElementById('reactionCloseBtn')
 };
 
 // Chart.js instance for category doughnut (destroy before re-create when switching months)
@@ -38,6 +47,15 @@ let expenseChart = null;
 // State: 目前畫面上的交易列表；編輯模式時為該筆 id
 let currentTransactions = [];
 let editingId = null;
+// Daily streak state (from backend)
+// NOTE: streakState
+// - count：目前連續記錄天數（由後端計算後回傳）
+// - broken：true 代表昨天與今天都沒有紀錄，視為「連續紀錄中斷」
+let streakState = {
+    count: 0,
+    broken: false
+};
+let streakInitialHandled = false;
 
 // Professional color palette for chart segments
 const CHART_COLORS = [
@@ -75,6 +93,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const [y, m] = e.target.value.split('-');
         fetchDashboardData(y, m);
     });
+
+    // 點擊右上角小 icon，隨時打開 streak 視窗
+    if (elements.streakBadge) {
+        elements.streakBadge.addEventListener('click', () => {
+            openStreakModalForCurrent();
+        });
+    }
+
+    // Reaction Modal interactions
+    if (elements.reactionCloseBtn) elements.reactionCloseBtn.addEventListener('click', closeReactionModal);
+    if (elements.reactionModal) {
+        elements.reactionModal.addEventListener('click', (e) => {
+            const t = e.target;
+            if (t && t.getAttribute && t.getAttribute('data-close') === 'true') closeReactionModal();
+        });
+    }
+    if (elements.reactionActionBtn) {
+        elements.reactionActionBtn.addEventListener('click', () => {
+            closeReactionModal();
+            focusTransactionInput();
+        });
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeReactionModal();
+    });
 });
 
 // =========================================
@@ -93,6 +136,14 @@ async function fetchDashboardData(year, month) {
         // A. Update Stats Cards
         updateStats(data.summary);
 
+        // A2. Daily Streak（從後端帶回 streakCount / streakBroken，更新右上角 icon 與後續彈窗判斷）
+        updateStreakStateFromServer(data);
+        // NOTE: 首次載入頁面時：若 streak 斷掉，在當日第一個進站時彈出「生氣」視窗（一天只提醒一次）
+        if (!streakInitialHandled) {
+            streakInitialHandled = true;
+            maybeShowBrokenModalOnLoad();
+        }
+
         // B. Update Transaction Table
         renderTable(data.history);
 
@@ -107,14 +158,170 @@ async function fetchDashboardData(year, month) {
             populateCategories(data);
         }
 
-        // F. Update Payment Methods from Accounts (每次更新，與 Accounts 分頁同步)
+        // F. Update Payment Methods from Accounts（每次更新，與 Accounts 分頁同步）
         populatePaymentMethods(data.accounts);
 
+        // NOTE: 若未來需要在外層直接取得 dashboard 資料，可使用 return data;
+        return data;
     } catch (error) {
         console.error('Error fetching data:', error);
         alert('無法讀取資料，請檢查網路或 API 網址。');
+        return null;
     } finally {
         setLoading(false);
+    }
+}
+
+// =========================================
+// Daily Streak UI + Reaction Modal（情境邏輯）
+// =========================================
+function updateStreakStateFromServer(data) {
+    const count = data && typeof data.streakCount === 'number' ? data.streakCount : 0;
+    const broken = !!(data && data.streakBroken);
+    streakState.count = count;
+    streakState.broken = broken;
+    updateStreakBadge();
+}
+
+function updateStreakBadge() {
+    if (!elements.streakBadge) return;
+    const count = streakState.count || 0;
+    let icon = '✨';
+    if (streakState.broken) {
+        icon = '💢';
+    } else if (count > 0) {
+        icon = '🔥';
+    }
+    // TODO：如果想改右上角的小圖示或文字，可以改這裡的字串與 emoji
+    elements.streakBadge.querySelector('.streak-badge__icon').textContent = icon;
+    elements.streakBadge.querySelector('.streak-badge__count').textContent = String(count);
+}
+
+// 首次載入，若 streak 斷掉，且今天尚未顯示過「生氣」視窗，就彈一次
+function maybeShowBrokenModalOnLoad() {
+    if (!streakState.broken) return;
+    const today = getTodayYmd();
+    try {
+        const shownFor = window.localStorage.getItem('streakBrokenShownDate');
+        if (shownFor === today) return;
+        openStreakModalForBroken();
+        window.localStorage.setItem('streakBrokenShownDate', today);
+    } catch (e) {
+        openStreakModalForBroken();
+    }
+}
+
+// 新增當日第一筆資料後（非編輯），在 streak 仍然連續時顯示「開心」視窗（每天只顯示一次）
+function maybeShowPositiveModalAfterAdd(submittedDate) {
+    const today = getTodayYmd();
+    if (!submittedDate || submittedDate !== today) return;
+    if (streakState.broken) return;
+    if (!streakState.count || streakState.count <= 0) return;
+
+    try {
+        const shownFor = window.localStorage.getItem('streakPositiveShownDate');
+        if (shownFor === today) return;
+        openStreakModalForPositive();
+        window.localStorage.setItem('streakPositiveShownDate', today);
+    } catch (e) {
+        openStreakModalForPositive();
+    }
+}
+
+// 依照目前 streak 狀態（包含 milestone）開啟「開心」視窗
+function openStreakModalForPositive() {
+    const count = streakState.count || 0;
+    const milestoneSteps = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
+    let title = '太棒了！';
+    let text = `你已連續記錄 ${count} 天了！繼續保持！🔥`;
+    // milestone 特別文案
+    if (milestoneSteps.includes(count)) {
+        title = '里程碑達成！';
+        text = `你已經連續記錄 ${count} 天了！超強！🎉`;
+    }
+    // TODO：想要不同天數有不同圖片 / 文字，請在這裡依照 count 改寫 title / text 或增加更多條件
+    openReactionModal({
+        title,
+        text,
+        buttonLabel: '太讚了，繼續！',
+        variant: 'positive'
+    });
+}
+
+// streak 斷掉（昨天沒記），在載入時顯示「生氣 / 難過」視窗
+function openStreakModalForBroken() {
+    // TODO：這裡可以改成你喜歡的「生氣 / 難過」文字與 emoji
+    openReactionModal({
+        title: '連續記錄歸零了…',
+        text: '你昨天居然忘記記帳了！連續紀錄歸零了！😡',
+        buttonLabel: '我現在補記！',
+        variant: 'broken'
+    });
+}
+
+// 使用者點右上角小 icon 時：打開一個「總覽」視窗，顯示目前 streak 狀態
+function openStreakModalForCurrent() {
+    const count = streakState.count || 0;
+    if (streakState.broken) {
+        openReactionModal({
+            title: '目前連續記錄：0 天',
+            text: '目前沒有連續紀錄，今天開始重新累積也很棒！🙂',
+            buttonLabel: '我現在就去記！',
+            variant: 'neutral'
+        });
+    } else if (count > 0) {
+        openReactionModal({
+            title: `目前連續記錄：${count} 天`,
+            text: `太厲害了！已經連續記錄 ${count} 天，繼續往下一個里程碑前進吧！🔥`,
+            buttonLabel: '好的',
+            variant: 'neutral'
+        });
+    } else {
+        openReactionModal({
+            title: '還沒有連續紀錄',
+            text: '從今天開始記第一筆，就會開始累積你的連續紀錄！',
+            buttonLabel: '馬上去記一筆',
+            variant: 'neutral'
+        });
+    }
+}
+
+function getTodayYmd() {
+    return new Date().toISOString().split('T')[0];
+}
+
+function openReactionModal(opts) {
+    if (!elements.reactionModal) return;
+    if (elements.reactionTitle) elements.reactionTitle.textContent = (opts && opts.title) ? opts.title : '提醒';
+    if (elements.reactionText) elements.reactionText.textContent = (opts && opts.text) ? opts.text : '';
+    if (elements.reactionActionBtn && opts && opts.buttonLabel) {
+        elements.reactionActionBtn.textContent = opts.buttonLabel;
+    }
+    // TODO：若未來想根據 variant 顯示不同圖片，可在這裡根據 opts.variant 改變 reactionMedia 的背景圖
+    if (elements.reactionModal) {
+        elements.reactionModal.classList.add('is-open');
+        elements.reactionModal.setAttribute('aria-hidden', 'false');
+        elements.reactionModal.setAttribute('data-variant', (opts && opts.variant) ? opts.variant : 'default');
+    }
+    document.body.classList.add('modal-open');
+    // Focus primary action for accessibility
+    if (elements.reactionActionBtn) {
+        setTimeout(() => elements.reactionActionBtn.focus(), 0);
+    }
+}
+
+function closeReactionModal() {
+    if (!elements.reactionModal) return;
+    elements.reactionModal.classList.remove('is-open');
+    elements.reactionModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+}
+
+function focusTransactionInput() {
+    const form = document.getElementById('transactionForm');
+    if (form) form.scrollIntoView({ behavior: 'smooth' });
+    if (elements.itemInput) {
+        setTimeout(() => elements.itemInput.focus(), 150);
     }
 }
 
@@ -167,6 +374,10 @@ async function submitTransaction() {
             const [y, m] = submittedDate ? submittedDate.split('-') : (elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [String(currentYear), String(currentMonth)]);
             resetEditState();
             await fetchDashboardData(parseInt(y, 10), parseInt(m, 10));
+            // 新增當日第一筆資料後彈出「開心」視窗；編輯不觸發
+            if (!wasEdit) {
+                maybeShowPositiveModalAfterAdd(submittedDate);
+            }
             alert(wasEdit ? '已更新。' : '記帳成功！');
         } else {
             throw new Error(result.error || 'Unknown error');

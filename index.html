@@ -62,9 +62,22 @@
 
     <!-- 右欄：儀表板 (65%) -->
     <main class="dashboard-column">
-      <!-- 區塊 1：統計卡片 (收入/支出/餘額) -->
+      <!-- 區塊 1：統計卡片 (收入/支出/餘額) + 右上角連續記錄 Icon -->
+      <!-- NOTE: stats-section
+           - 主要負責顯示「收支概覽」三個統計卡片
+           - 標題右側增加 streak-badge，顯示目前連續記錄天數，點擊後可打開 streak 視窗 -->
       <section class="stats-section">
-        <h2>收支概覽</h2>
+        <div class="stats-section-header">
+          <h2>收支概覽</h2>
+          <!-- NOTE: streak-badge
+            - 不會影響 stats-cards 布局
+            - 文案與 emoji 可在 script.js 的 updateStreakBadge / openStreakModalForPositive / openStreakModalForBroken / openStreakModalForCurrent 中調整 -->
+          <button type="button" class="streak-badge" id="streakBadge" aria-label="查看連續記錄狀態">
+            <span class="streak-badge__icon" aria-hidden="true">🔥</span>
+            <span class="streak-badge__count">0</span>
+            <span class="streak-badge__unit">天</span>
+          </button>
+        </div>
         <div class="stats-cards">
           <div class="stat-card">
             <span class="stat-label">收入</span>
@@ -126,6 +139,27 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- NOTE: Reaction Modal (hidden by default) / 情緒回饋視窗
+       - 共用一個彈窗元件，依照情境顯示不同標題/文字/按鈕：
+         * 連續記錄成功（每天第一筆）：正向鼓勵＋里程碑訊息
+         * 連續記錄斷掉（昨天沒記）：提醒＋「我現在補記！」之類的 CTA
+         * 點擊右上角 streak-badge：顯示目前連續記錄狀態
+       - 實際文案與圖片來源，都在 script.js 的 openReactionModal 系列函式中控制 -->
+  <div class="reaction-modal" id="reactionModal" aria-hidden="true">
+    <div class="reaction-modal__backdrop" data-close="true"></div>
+    <div class="reaction-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="reactionTitle">
+      <button type="button" class="reaction-modal__close" id="reactionCloseBtn" aria-label="Close">×</button>
+      <h2 class="reaction-modal__title" id="reactionTitle">提醒</h2>
+      <!-- TODO: Replace the background-image of #reactionMedia in style.css with your GIF/image -->
+      <div class="reaction-modal__media" id="reactionMedia" role="img" aria-label="reaction image"></div>
+      <p class="reaction-modal__text" id="reactionText"></p>
+      <div class="reaction-modal__actions">
+        <!-- 按鈕文字會由 script.js 的 openReactionModal 動態設定；這裡只是預設 -->
+        <button type="button" class="reaction-modal__primary" id="reactionActionBtn">好的</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

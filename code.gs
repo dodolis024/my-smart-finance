@@ -396,6 +396,50 @@ function getDashboardData(year, month) {
       return { success: false, error: 'Transactions sheet structure unexpected. Run setupSheet() first.' };
     }
 
+    // -------------------------------------------------------------------------
+    // Daily Streak (Habit Tracker) / 連續記帳天數
+    // 規則：
+    // - 收集 Transactions 內所有「唯一日期」(yyyy-MM-dd)
+    // - 從「今天」或「昨天」開始嚴格往回連續計算
+    // - 若今天或昨天有記帳 → streak alive
+    // - 若今天與昨天都沒有記帳 → streak broken (0)，streakBroken=true
+    // -------------------------------------------------------------------------
+    const tz = Session.getScriptTimeZone();
+    const baseNoon = new Date();
+    baseNoon.setHours(12, 0, 0, 0); // avoid DST edge cases
+    const todayStr = Utilities.formatDate(baseNoon, tz, 'yyyy-MM-dd');
+    const yesterdayStr = Utilities.formatDate(new Date(baseNoon.getTime() - 86400000), tz, 'yyyy-MM-dd');
+
+    const uniqueDateSet = new Set();
+    for (let i = 1; i < transValues.length; i++) {
+      const ds = _toYyyyMmDd(transValues[i][COL.DATE]);
+      if (ds) uniqueDateSet.add(ds);
+    }
+    // Sorted dates (desc) for debugging / 符合需求：日期由新到舊排序
+    const uniqueDatesDesc = Array.from(uniqueDateSet).sort((a, b) => b.localeCompare(a));
+
+    const hasToday = uniqueDateSet.has(todayStr);
+    const hasYesterday = uniqueDateSet.has(yesterdayStr);
+    let streakCount = 0;
+    let streakBroken = false;
+
+    if (!hasToday && !hasYesterday) {
+      streakCount = 0;
+      streakBroken = true;
+    } else {
+      const startOffsetDays = hasToday ? 0 : -1; // start from today if present, otherwise yesterday
+      for (let k = 0; k < 3650; k++) { // safety cap (~10 years)
+        const expected = Utilities.formatDate(
+          new Date(baseNoon.getTime() + (startOffsetDays - k) * 86400000),
+          tz,
+          'yyyy-MM-dd'
+        );
+        if (uniqueDateSet.has(expected)) streakCount++;
+        else break;
+      }
+      streakBroken = false;
+    }
+
     // --- 從 Settings 讀取：D＝支出類別、E＝收入類別（分開管理，避免增減時互相影響）---
     var expenseCategories = [];
     var incomeCategories = [];
@@ -510,6 +554,9 @@ function getDashboardData(year, month) {
       categories,
       categoriesExpense: expenseCategories,
       categoriesIncome: incomeCategories,
+      streakCount: streakCount,
+      streakBroken: streakBroken,
+      // NOTE: `uniqueDatesDesc` is intentionally not returned (kept internal).
     };
   } catch (err) {
     return { success: false, error: err.message || String(err) };
