@@ -50,6 +50,11 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  if (data && data.action === 'checkin') {
+    // Daily check-in（今日簽到）：不新增 0 元交易，只在 Checkins 紀錄今天有登入/簽到
+    return ContentService.createTextOutput(JSON.stringify(addCheckin()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   if (data && data.action === 'delete') {
     return ContentService.createTextOutput(JSON.stringify(deleteTransaction(data.id))).setMimeType(ContentService.MimeType.JSON);
   }
@@ -68,6 +73,7 @@ const SHEET_NAMES = {
   TRANSACTIONS: 'Transactions',
   ACCOUNTS: 'Accounts',
   SETTINGS: 'Settings',
+  CHECKINS: 'Checkins', // 用來記錄每日「有準時記帳或簽到」的日期，不影響交易明細
 };
 
 /**
@@ -154,6 +160,15 @@ function setupSheet() {
       settingsSheet.getRange(2, 5, 2, 1).setValues([['薪水'], ['投資']]);
     }
 
+    // --- Tab 4: Checkins (Daily sign-in) / 每日簽到紀錄 ---
+    let checkinsSheet = ss.getSheetByName(SHEET_NAMES.CHECKINS);
+    if (!checkinsSheet) {
+      checkinsSheet = ss.insertSheet(SHEET_NAMES.CHECKINS);
+      const checkinsHeaders = ['Date', 'Source']; // Date: yyyy-MM-dd, Source: 'onTimeTransaction' | 'manual'
+      checkinsSheet.getRange(1, 1, 1, checkinsHeaders.length).setValues([checkinsHeaders]);
+      checkinsSheet.getRange(1, 1, 1, checkinsHeaders.length).setFontWeight('bold');
+    }
+
     return { success: true, message: 'Sheets setup completed.' };
   } catch (err) {
     Logger.log('setupSheet error: ' + err.message);
@@ -236,6 +251,9 @@ function addTransaction(data) {
       String(note || ''),
     ];
     transactionsSheet.appendRow(row);
+
+    // 若使用者在「今天」新增一筆，且日期欄位也是今天，則視為當日有準時記帳，寫入 Checkins。
+    ensureCheckinForTodayIfOnTime(dateStr);
 
     return { success: true, message: 'Transaction added successfully.' };
   } catch (err) {
@@ -382,6 +400,7 @@ function getDashboardData(year, month) {
     const transactionsSheet = ss.getSheetByName(SHEET_NAMES.TRANSACTIONS);
     const accountsSheet = ss.getSheetByName(SHEET_NAMES.ACCOUNTS);
     const settingsSheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+    const checkinsSheet = ss.getSheetByName(SHEET_NAMES.CHECKINS);
 
     if (!transactionsSheet || !accountsSheet || !settingsSheet) {
       return { success: false, error: 'Required sheets missing. Run setupSheet() first.' };
@@ -398,11 +417,14 @@ function getDashboardData(year, month) {
 
     // -------------------------------------------------------------------------
     // Daily Streak (Habit Tracker) / 連續記帳天數
-    // 規則：
-    // - 收集 Transactions 內所有「唯一日期」(yyyy-MM-dd)
+    // 新定義：
+    // - 以 Checkins 分頁的日期為準，代表「當天有準時記帳或點擊簽到」
     // - 從「今天」或「昨天」開始嚴格往回連續計算
-    // - 若今天或昨天有記帳 → streak alive
-    // - 若今天與昨天都沒有記帳 → streak broken (0)，streakBroken=true
+    // - 若今天或昨天有簽到 → streak alive
+    // - 若今天與昨天都沒有簽到 → streak broken (0)，streakBroken=true
+    // 同時：
+    // - totalLoggedDays：依 Transactions 內所有「唯一日期」計算（補登也算）
+    // - longestStreak：依 Checkins 記錄，計算歷史最長連續簽到天數
     // -------------------------------------------------------------------------
     const tz = Session.getScriptTimeZone();
     const baseNoon = new Date();
@@ -410,47 +432,65 @@ function getDashboardData(year, month) {
     const todayStr = Utilities.formatDate(baseNoon, tz, 'yyyy-MM-dd');
     const yesterdayStr = Utilities.formatDate(new Date(baseNoon.getTime() - 86400000), tz, 'yyyy-MM-dd');
 
-    const uniqueDateSet = new Set();
+    // 所有曾經有交易紀錄的日期（用於總記帳天數）
+    const uniqueTransDateSet = new Set();
     for (let i = 1; i < transValues.length; i++) {
       const ds = _toYyyyMmDd(transValues[i][COL.DATE]);
-      if (ds) uniqueDateSet.add(ds);
+      if (ds) uniqueTransDateSet.add(ds);
     }
-    // Sorted dates (desc) for debugging / 符合需求：日期由新到舊排序
-    const uniqueDatesDesc = Array.from(uniqueDateSet).sort((a, b) => b.localeCompare(a));
+    // 所有簽到日（Checkins），用於 streak 與 longestStreak
+    const checkinDateSet = new Set();
+    if (checkinsSheet) {
+      const lastRow = checkinsSheet.getLastRow();
+      if (lastRow > 1) {
+        const checkinValues = checkinsSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+        for (let i = 0; i < checkinValues.length; i++) {
+          const ds = _toYyyyMmDd(checkinValues[i][0]);
+          if (ds) checkinDateSet.add(ds);
+        }
+      }
+    }
 
-    const hasToday = uniqueDateSet.has(todayStr);
-    const hasYesterday = uniqueDateSet.has(yesterdayStr);
+    // Sorted dates (desc) for debugging / 日期由新到舊排序
+    const uniqueCheckinDatesDesc = Array.from(checkinDateSet).sort((a, b) => b.localeCompare(a));
+
     let streakCount = 0;
     let streakBroken = false;
-
-    if (!hasToday && !hasYesterday) {
+    if (checkinDateSet.size === 0) {
       streakCount = 0;
       streakBroken = true;
     } else {
-      const startOffsetDays = hasToday ? 0 : -1; // start from today if present, otherwise yesterday
-      for (let k = 0; k < 3650; k++) { // safety cap (~10 years)
-        const expected = Utilities.formatDate(
-          new Date(baseNoon.getTime() + (startOffsetDays - k) * 86400000),
-          tz,
-          'yyyy-MM-dd'
-        );
-        if (uniqueDateSet.has(expected)) streakCount++;
-        else break;
+      const hasToday = checkinDateSet.has(todayStr);
+      const hasYesterday = checkinDateSet.has(yesterdayStr);
+      if (!hasToday && !hasYesterday) {
+        streakCount = 0;
+        streakBroken = true;
+      } else {
+        const startOffsetDays = hasToday ? 0 : -1; // 以今天或昨天為起點往回算
+        for (let k = 0; k < 3650; k++) { // safety cap (~10 years)
+          const expected = Utilities.formatDate(
+            new Date(baseNoon.getTime() + (startOffsetDays - k) * 86400000),
+            tz,
+            'yyyy-MM-dd'
+          );
+          if (checkinDateSet.has(expected)) streakCount++;
+          else break;
+        }
+        streakBroken = false;
       }
-      streakBroken = false;
     }
 
     // 額外計算：
-    // - totalLoggedDays：有紀錄的「不同日期」總數（忽略是否連續）
-    // - longestStreak：歷史上最長的連續記帳天數（不受今天/昨天規則限制）
-    const totalLoggedDays = uniqueDateSet.size;
+    // - totalLoggedDays：有交易紀錄的「不同日期」總數（忽略是否連續）
+    // - longestStreak：依 Checkins，歷史上最長的連續簽到天數
+    const totalLoggedDays = uniqueTransDateSet.size;
     let longestStreak = 0;
-    if (uniqueDateSet.size > 0) {
-      const uniqueDatesAsc = Array.from(uniqueDateSet).sort(); // yyyy-MM-dd 字串可直接排序得到由舊到新
+    if (checkinDateSet.size > 0) {
+      const uniqueCheckinsAsc = Array.from(checkinDateSet).sort(); // yyyy-MM-dd 字串可直接排序得到由舊到新
       let currentRun = 0;
       let prevTime = null;
-      for (let i = 0; i < uniqueDatesAsc.length; i++) {
-        const dStr = uniqueDatesAsc[i];
+      for (let i = 0; i < uniqueCheckinsAsc.length; i++) {
+        const dStr = uniqueCheckinsAsc[i];
         const d = new Date(dStr + 'T12:00:00'); // 避免時區邊界
         const t = d.getTime();
         if (prevTime === null) {
@@ -581,13 +621,13 @@ function getDashboardData(year, month) {
       categoriesIncome: incomeCategories,
       streakCount: streakCount,
       streakBroken: streakBroken,
-      // NOTE: loggedDates：所有曾經有記帳的日期（yyyy-MM-dd），用於前端日曆顯示，不受年份月份限制
-      loggedDates: Array.from(uniqueDateSet),
-      // NOTE: totalLoggedDays：有記帳的「不同日期」總數（忽略是否連續）
+      // NOTE: loggedDates：所有曾「簽到」的日期（yyyy-MM-dd），用於前端日曆顯示，不受年份月份限制
+      loggedDates: Array.from(checkinDateSet),
+      // NOTE: totalLoggedDays：有交易紀錄的「不同日期」總數（忽略是否連續）
       totalLoggedDays: totalLoggedDays,
-      // NOTE: longestStreak：歷史上最長的連續記帳天數
+      // NOTE: longestStreak：歷史上最長的連續簽到天數
       longestStreak: longestStreak,
-      // NOTE: `uniqueDatesDesc` is intentionally not returned（僅內部使用，如需調試可暫時加入回傳）
+      // NOTE: `uniqueCheckinDatesDesc` is intentionally not返回（僅內部使用，如需調試可暫時加入回傳）
     };
   } catch (err) {
     return { success: false, error: err.message || String(err) };
@@ -597,6 +637,73 @@ function getDashboardData(year, month) {
 // =============================================================================
 // 5. ACCOUNTABILITY: checkDailyProgress / 記帳進度檢查（今日是否已記帳）
 // =============================================================================
+
+/**
+ * addCheckin(dateOpt, sourceOpt)
+ * 在 Checkins 分頁記錄一個「簽到日期」：
+ * - dateOpt 缺省時，使用今天
+ * - 同一日期只會保留一筆（再次呼叫時會直接回傳 success）
+ *
+ * @param {Date|string=} dateOpt - 可選，簽到日期；不傳則為今天
+ * @param {string=} sourceOpt - 可選，來源標記：'onTimeTransaction' | 'manual' 等
+ * @returns {{ success: boolean, message?: string, error?: string }}
+ */
+function addCheckin(dateOpt, sourceOpt) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(SHEET_NAMES.CHECKINS);
+    // 若尚未建立 Checkins 分頁，這裡自動建立（避免必須手動跑 setupSheet）
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_NAMES.CHECKINS);
+      const checkinsHeaders = ['Date', 'Source'];
+      sheet.getRange(1, 1, 1, checkinsHeaders.length).setValues([checkinsHeaders]);
+      sheet.getRange(1, 1, 1, checkinsHeaders.length).setFontWeight('bold');
+    }
+
+    const tz = Session.getScriptTimeZone();
+    let baseDate;
+    if (dateOpt) {
+      baseDate = _toYyyyMmDd(dateOpt);
+    } else {
+      baseDate = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+    }
+    const dateStr = baseDate;
+    if (!dateStr) {
+      return { success: false, error: 'Invalid check-in date.' };
+    }
+    const source = sourceOpt || 'manual';
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      const existing = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (let i = 0; i < existing.length; i++) {
+        const ds = _toYyyyMmDd(existing[i][0]);
+        if (ds === dateStr) {
+          // 已有該日期紀錄，視為成功（避免重複寫入）
+          return { success: true, message: 'Check-in already recorded for ' + dateStr };
+        }
+      }
+    }
+
+    sheet.appendRow([dateStr, source]);
+    return { success: true, message: 'Check-in recorded for ' + dateStr };
+  } catch (err) {
+    return { success: false, error: err.message || String(err) };
+  }
+}
+
+/**
+ * 若 dateStr 等於「今天」，則將今天記為有準時記帳（onTimeTransaction）。
+ *
+ * @param {string} dateStr - yyyy-MM-dd
+ */
+function ensureCheckinForTodayIfOnTime(dateStr) {
+  if (!dateStr) return;
+  const tz = Session.getScriptTimeZone();
+  const todayStr = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  if (dateStr !== todayStr) return;
+  addCheckin(todayStr, 'onTimeTransaction');
+}
 
 /**
  * checkDailyProgress()

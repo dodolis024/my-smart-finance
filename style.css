@@ -99,6 +99,57 @@ h3 {
   padding: var(--space-lg);
 }
 
+/* NOTE: transaction-form-header
+   - 左：表單標題「新增交易」
+   - 右：「今日簽到」按鈕（避免當日無消費時中斷連續記帳天數） */
+.transaction-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.btn-checkin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-checkin-icon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-checkin:hover {
+  background: var(--color-row-hover);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.btn-checkin:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.btn-checkin[disabled],
+.btn-checkin.btn-checkin-disabled {
+  opacity: 0.6;
+  cursor: default;
+  border-color: var(--color-border);
+}
+
 /* Form groups */
 .form-group {
   margin-bottom: 1.25rem;

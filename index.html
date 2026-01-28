@@ -11,7 +11,17 @@
     <!-- 左欄：交易輸入表單 (35%) -->
     <aside class="form-column">
       <section class="transaction-form-section">
-        <h2 id="formSectionTitle">新增交易</h2>
+        <!-- NOTE: transaction-form-header
+             - 左側：顯示「新增交易」標題
+             - 右側：顯示「今日簽到」按鈕（當日沒消費時可點擊，避免連續記帳天數中斷） -->
+        <div class="transaction-form-header">
+          <h2 id="formSectionTitle">新增交易</h2>
+          <button type="button" id="dailyCheckinBtn" class="btn-checkin" aria-label="今日簽到（當天無消費時使用）">
+            <!-- TODO: 未來若要加入 icon，可在此 span 內插入 SVG，例如 <svg class="icon-checkin">... -->
+            <span class="btn-checkin-icon" aria-hidden="true"></span>
+            <span class="btn-checkin-text">今日沒花錢</span>
+          </button>
+        </div>
         <form id="transactionForm">
           <div class="form-group">
             <label for="date">日期</label>

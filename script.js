@@ -3,7 +3,7 @@
  */
 
 // ⚠️ PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-const API_URL = "https://script.google.com/macros/s/AKfycbxcsTTeOVdetgiKb3gghfkgTcK5iI043_yhbPe2V5AaKxj54DVZbsH73sXPqfK7oIF6BQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwlC3hsIsTp4e402tL5U_fQSTnmcDxLyQi0FLtEpVFMsBB88zXXMkpqmWXl2XYp7rSHgA/exec";
 // Current State
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1; // JS months are 0-11
@@ -37,7 +37,9 @@ const elements = {
     reactionTitle: document.getElementById('reactionTitle'),
     reactionText: document.getElementById('reactionText'),
     streakCalendarRoot: document.getElementById('streakCalendarRoot'),
-    reactionCloseBtn: document.getElementById('reactionCloseBtn')
+    reactionCloseBtn: document.getElementById('reactionCloseBtn'),
+    // 今日簽到按鈕（當日無消費時仍可維持連續記帳天數）
+    checkinBtn: document.getElementById('dailyCheckinBtn'),
 };
 
 // Chart.js instance for category doughnut (destroy before re-create when switching months)
@@ -98,6 +100,11 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchDashboardData(y, m);
     });
 
+    // 今日簽到：當天即使沒有消費，也可點擊避免連續記帳天數中斷
+    if (elements.checkinBtn) {
+        elements.checkinBtn.addEventListener('click', submitDailyCheckin);
+    }
+
     // 點擊右上角小 icon，隨時打開 streak 視窗
     if (elements.streakBadge) {
         elements.streakBadge.addEventListener('click', () => {
@@ -145,8 +152,8 @@ async function fetchDashboardData(year, month) {
         // B. Update Transaction Table
         renderTable(data.history);
 
-        // C. Update Category Chart & Stats
-        renderChart(data.history);
+        // C. Update Category Chart & Stats（只針對支出分類繪製圓餅圖）
+        renderChart(data.history, data.categoriesIncome);
 
         // D. Update Payment Stats
         renderPaymentStats(data.history);
@@ -186,6 +193,14 @@ function updateStreakStateFromServer(data) {
     streakState.longestStreak = longestStreak;
     streakState.loggedDates = loggedDates;
     updateStreakBadge();
+
+    // 今日若已簽到（包含準時記帳或按簽到），就停用簽到按鈕，避免重複操作
+    const today = getTodayYmd();
+    const hasCheckinToday = loggedDates.indexOf(today) !== -1;
+    if (elements.checkinBtn) {
+        elements.checkinBtn.disabled = hasCheckinToday;
+        elements.checkinBtn.classList.toggle('btn-checkin-disabled', hasCheckinToday);
+    }
 }
 
 function updateStreakBadge() {
@@ -302,6 +317,40 @@ function getTodayYmd() {
     return new Date().toISOString().split('T')[0];
 }
 
+// =========================================
+// Daily Check-in（當天無消費時仍可維持 streak）
+// =========================================
+async function submitDailyCheckin() {
+    const btn = elements.checkinBtn;
+    if (!btn) return;
+    try {
+        const originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = '簽到中...';
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'checkin' })
+        });
+        if (!response.ok) throw new Error('伺服器錯誤 ' + response.status);
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || '簽到失敗');
+        }
+
+        // 重新讀取目前儀表板（包含 streak 與日曆）
+        const v = elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [currentYear, currentMonth];
+        await fetchDashboardData(parseInt(v[0], 10), parseInt(v[1], 10));
+        alert('今日簽到成功！');
+        btn.innerText = originalText;
+    } catch (err) {
+        console.error('Error check-in:', err);
+        alert(err.message || '簽到失敗，請稍後再試。');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
 // NOTE: renderStreakCalendar
 // - 依據 streakState.loggedDates 在 modal 內渲染「可切換月份」的日曆與下方三個統計卡片
 // - 只負責畫面，不處理彈窗開關邏輯（開關由 openReactionModal 處理）
@@ -412,7 +461,7 @@ function renderStreakCalendar() {
     });
 }
 
-// 若尚未指定日曆的年月，則以「最新有記帳的日期」或「今天」作為起始月份
+// 若尚未指定日曆的年月，則以「最新有簽到的日期」或「今天」作為起始月份
 function ensureStreakCalendarMonth() {
     if (streakCalendarYear && streakCalendarMonth) return;
     let baseDate = null;
@@ -660,15 +709,19 @@ function startEdit(id) {
 // =========================================
 // renderChart(history) — Category Doughnut + categoryStats list
 // =========================================
-function renderChart(history) {
+function renderChart(history, incomeCategories) {
     const canvas = elements.categoryChart;
     const statsEl = elements.categoryStats;
     if (!canvas) return;
 
     // Group by category, sum twdAmount (use Math.abs for consistent positive segment sizes)
     const byCat = {};
+    const incomeSet = new Set(incomeCategories || []);
     (history || []).forEach((tx) => {
-        const cat = tx.category && String(tx.category).trim() ? tx.category : '未分類';
+        const rawCat = tx.category && String(tx.category).trim() ? tx.category : '未分類';
+        // 僅統計「支出」分類：收入類別（如薪水、投資）不列入圓餅圖
+        if (incomeSet.has(rawCat)) return;
+        const cat = rawCat;
         const amt = typeof tx.twdAmount === 'number' ? tx.twdAmount : 0;
         byCat[cat] = (byCat[cat] || 0) + amt;
     });
@@ -720,8 +773,24 @@ function renderChart(history) {
         options: {
             responsive: true,
             maintainAspectRatio: true,
+            layout: {
+                padding: 8, // 內縮一點，避免 hover 放大時被裁切
+            },
             plugins: {
                 legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        // Tooltip 僅顯示百分比（相對於總支出）
+                        label: function (context) {
+                            const label = context.label || '';
+                            const dataArr = context.dataset.data || [];
+                            const total = dataArr.reduce((sum, v) => sum + Math.abs(v || 0), 0);
+                            const value = Math.abs(dataArr[context.dataIndex] || 0);
+                            const pct = total ? (value / total) * 100 : 0;
+                            return `${label}: ${pct.toFixed(1)}%`;
+                        },
+                    },
+                },
             },
         },
     });
