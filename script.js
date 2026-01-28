@@ -65,15 +65,15 @@ let streakCalendarMonth = null; // 日曆目前顯示的月份（1-12）
 
 // Professional color palette for chart segments
 const CHART_COLORS = [
-    'rgba(99, 102, 241, 0.9)',   // indigo
-    'rgba(34, 197, 94, 0.9)',    // green
-    'rgba(234, 179, 8, 0.9)',    // amber
-    'rgba(239, 68, 68, 0.9)',    // red
-    'rgba(236, 72, 153, 0.9)',   // pink
-    'rgba(20, 184, 166, 0.9)',   // teal
-    'rgba(168, 85, 247, 0.9)',   // purple
-    'rgba(249, 115, 22, 0.9)',   // orange
-    'rgba(59, 130, 246, 0.9)',   // blue
+    'rgba(158, 135, 105, 1)',   // indigo
+    'rgba(219, 204, 187, 1)',    // green
+    'rgba(232, 213, 196, 1)',    // amber
+    'rgba(240, 216, 214, 1)',    // red
+    'rgba(233, 199, 201, 1)',   // pink
+    'rgba(158, 135, 105, 1)',   // teal
+    'rgba(188, 173, 153, 1)',   // purple
+    'rgba(217, 204, 184, 1)',   // orange
+    'rgba(242, 224, 219, 1)',   // blue
 ];
 
 // =========================================
@@ -779,7 +779,10 @@ function renderChart(history, incomeCategories) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
+                    displayColors: false,
                     callbacks: {
+                        // 標題行留空，避免重複顯示兩次分類名稱
+                        title: function () { return ''; },
                         // Tooltip 僅顯示百分比（相對於總支出）
                         label: function (context) {
                             const label = context.label || '';

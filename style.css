@@ -104,7 +104,7 @@ h3 {
    - 右：「今日簽到」按鈕（避免當日無消費時中斷連續記帳天數） */
 .transaction-form-header {
   display: flex;
-  align-items: center;
+  align-items: baseline; /* 讓標題文字與右側按鈕文字底線對齊，看起來更整齊 */
   justify-content: space-between;
   margin-bottom: var(--space-md);
 }
@@ -294,7 +294,7 @@ h3 {
 
 .stats-section-header {
   display: flex;
-  align-items: center;
+  align-items: baseline; /* 讓「收支概覽」與右上角 streak-badge 文字底線對齊 */
   justify-content: space-between;
   margin-bottom: var(--space-sm);
 }
