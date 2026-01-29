@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登入 - Smart Finance Tracker</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .auth-container {
+      max-width: 400px;
+      margin: 100px auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .auth-form input {
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    .auth-form button {
+      padding: 0.75rem;
+      background: #9e8769;
+      color: white;
+      border: none;
+        border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .auth-form button:hover {
+      background: #7d6b54;
+    }
+    .auth-tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid #eee;
+    }
+    .auth-tab {
+      padding: 0.5rem 1rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      color: #666;
+    }
+    .auth-tab.active {
+      color: #9e8769;
+      border-bottom: 2px solid #9e8769;
+    }
+    .auth-error {
+      color: #d32f2f;
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+    .auth-success {
+      color: #2e7d32;
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      margin: 1.5rem 0;
+      color: #999;
+    }
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #ddd;
+    }
+    .auth-divider span {
+      padding: 0 1rem;
+    }
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: white;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn-google:hover {
+      background: #f5f5f5;
+    }
+    .btn-google svg {
+      width: 20px;
+      height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <h1>Smart Finance Tracker</h1>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">登入</button>
+      <button class="auth-tab" data-tab="signup">註冊</button>
+    </div>
+
+    <!-- 登入表單 -->
+    <form id="loginForm" class="auth-form">
+      <input type="email" id="loginEmail" placeholder="電子郵件" required>
+      <input type="password" id="loginPassword" placeholder="密碼" required>
+      <button type="submit">登入</button>
+      <div id="loginError" class="auth-error"></div>
+      
+      <!-- Google 登入分隔線 -->
+      <div class="auth-divider">
+        <span>或</span>
+      </div>
+      
+      <!-- Google 登入按鈕 -->
+      <button type="button" class="btn-google" id="googleLoginBtn">
+        <svg viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        <span>使用 Google 登入</span>
+      </button>
+    </form>
+
+    <!-- 註冊表單 -->
+    <form id="signupForm" class="auth-form" style="display: none;">
+      <input type="email" id="signupEmail" placeholder="電子郵件" required>
+      <input type="password" id="signupPassword" placeholder="密碼（至少6個字元）" required minlength="6">
+      <input type="password" id="signupPasswordConfirm" placeholder="確認密碼" required>
+      <button type="submit">註冊</button>
+      <div id="signupError" class="auth-error"></div>
+      <div id="signupSuccess" class="auth-success"></div>
+      
+      <!-- Google 註冊分隔線 -->
+      <div class="auth-divider">
+        <span>或</span>
+      </div>
+      
+      <!-- Google 註冊按鈕 -->
+      <button type="button" class="btn-google" id="googleSignupBtn">
+        <svg viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        <span>使用 Google 註冊</span>
+      </button>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ⚠️ 請將以下兩個變數替換為你的 Supabase 專案資訊
+    // 你可以在 Supabase Dashboard > Settings > API 中找到這些資訊
+    const SUPABASE_URL = 'https://rlahfuzsxfbocmkecqvg.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_Vc9BslZ5l-lNM0WQ8fVUmg_vbhEMqr-';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Tab 切換
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.dataset.tab;
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('loginForm').style.display = tabName === 'login' ? 'flex' : 'none';
+        document.getElementById('signupForm').style.display = tabName === 'signup' ? 'flex' : 'none';
+        document.getElementById('loginError').textContent = '';
+        document.getElementById('signupError').textContent = '';
+        document.getElementById('signupSuccess').textContent = '';
+      });
+    });
+
+    // 登入
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errorEl = document.getElementById('loginError');
+
+      errorEl.textContent = '';
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) throw error;
+
+        // 登入成功，跳轉到主頁
+        window.location.href = 'index.html';
+      } catch (error) {
+        errorEl.textContent = error.message || '登入失敗，請檢查帳號密碼';
+      }
+    });
+
+    // 註冊
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+      const errorEl = document.getElementById('signupError');
+      const successEl = document.getElementById('signupSuccess');
+
+      errorEl.textContent = '';
+      successEl.textContent = '';
+
+      if (password !== passwordConfirm) {
+        errorEl.textContent = '兩次輸入的密碼不一致';
+        return;
+      }
+
+      if (password.length < 6) {
+        errorEl.textContent = '密碼長度至少需要6個字元';
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password
+        });
+
+        if (error) throw error;
+
+        // 註冊成功後，建立預設資料
+        if (data.user) {
+          await createDefaultData(data.user.id);
+          successEl.textContent = '註冊成功！正在跳轉...';
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 1500);
+        }
+      } catch (error) {
+        errorEl.textContent = error.message || '註冊失敗，請稍後再試';
+      }
+    });
+
+    // 建立預設資料（帳戶和設定）
+    async function createDefaultData(userId) {
+      try {
+        // 建立預設帳戶
+        const { error: accountsError } = await supabase
+          .from('accounts')
+          .insert([
+            { user_id: userId, name: 'Cash', type: 'cash' },
+            { user_id: userId, name: 'Credit Card 1', type: 'credit_card', credit_limit: 50000, billing_day: 5, payment_due_day: 25 }
+          ]);
+
+        if (accountsError) console.error('建立預設帳戶失敗:', accountsError);
+
+        // 建立預設設定
+        const { error: settingsError } = await supabase
+          .from('settings')
+          .insert([
+            { user_id: userId, key: 'TWD', value: { rate: 1.0 } },
+            { user_id: userId, key: 'USD', value: { rate: 30.0 } },
+            { user_id: userId, key: 'JPY', value: { rate: 0.2 } },
+            { user_id: userId, key: 'EUR', value: { rate: 32.0 } },
+            { user_id: userId, key: 'GBP', value: { rate: 38.0 } },
+            { user_id: userId, key: 'expense_categories', value: ['飲食', '飲料', '交通', '娛樂', '購物', '其他'] },
+            { user_id: userId, key: 'income_categories', value: ['薪水', '投資'] }
+          ]);
+
+        if (settingsError) console.error('建立預設設定失敗:', settingsError);
+      } catch (error) {
+        console.error('建立預設資料時發生錯誤:', error);
+      }
+    }
+
+    // Google 登入（登入頁面）
+    document.getElementById('googleLoginBtn').addEventListener('click', async () => {
+      await signInWithGoogle();
+    });
+
+    // Google 註冊（註冊頁面）
+    document.getElementById('googleSignupBtn').addEventListener('click', async () => {
+      await signInWithGoogle();
+    });
+
+    // Google OAuth 登入/註冊
+    async function signInWithGoogle() {
+      const errorEl = document.getElementById('loginError') || document.getElementById('signupError');
+      
+      try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin + '/index.html'
+          }
+        });
+
+        if (error) throw error;
+        
+        // 注意：OAuth 會跳轉到 Google，所以這裡不會立即執行
+        // 當用戶從 Google 返回時，會在 index.html 中處理後續邏輯
+      } catch (error) {
+        console.error('Google 登入錯誤:', error);
+        if (errorEl) {
+          errorEl.textContent = error.message || 'Google 登入失敗，請稍後再試';
+        } else {
+          alert(error.message || 'Google 登入失敗，請稍後再試');
+        }
+      }
+    }
+
+    // 處理 OAuth 回調（當用戶從 Google 返回時）
+    // 檢查 URL 中是否有 hash fragment（OAuth 回調）
+    async function handleAuthCallback() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('取得 session 錯誤:', error);
+        return;
+      }
+
+      if (session) {
+        // 檢查是否為新用戶（第一次使用 Google 登入）
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // 檢查是否已有預設資料，如果沒有則建立
+        const { data: accounts } = await supabase
+          .from('accounts')
+          .select('id')
+          .limit(1);
+
+        if (!accounts || accounts.length === 0) {
+          // 新用戶，建立預設資料
+          await createDefaultData(user.id);
+        }
+
+        // 跳轉到主頁
+        window.location.href = 'index.html';
+      }
+    }
+
+    // 檢查是否已登入
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        window.location.href = 'index.html';
+      } else {
+        // 處理 OAuth 回調
+        handleAuthCallback();
+      }
+    });
+  </script>
+</body>
+</html>

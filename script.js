@@ -1,9 +1,15 @@
 /**
- * Smart Expense Tracker - Frontend Logic
+ * Smart Expense Tracker - Frontend Logic (Supabase Version)
  */
 
-// ⚠️ PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-const API_URL = "https://script.google.com/macros/s/AKfycbwlC3hsIsTp4e402tL5U_fQSTnmcDxLyQi0FLtEpVFMsBB88zXXMkpqmWXl2XYp7rSHgA/exec";
+// ⚠️ 請將以下兩個變數替換為你的 Supabase 專案資訊
+// 你可以在 Supabase Dashboard > Settings > API 中找到這些資訊
+const SUPABASE_URL = 'https://rlahfuzsxfbocmkecqvg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Vc9BslZ5l-lNM0WQ8fVUmg_vbhEMqr-';
+
+// 初始化 Supabase Client
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // Current State
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1; // JS months are 0-11
@@ -79,7 +85,37 @@ const CHART_COLORS = [
 // =========================================
 // 1. Initialization
 // =========================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // 處理 OAuth 回調（當用戶從 Google 返回時）
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    if (hashParams.get('access_token')) {
+        // OAuth 回調，等待 session 建立
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (session) {
+            // 檢查是否為新用戶，建立預設資料
+            const { data: { user } } = await supabase.auth.getUser();
+            const { data: accounts } = await supabase
+                .from('accounts')
+                .select('id')
+                .limit(1);
+            
+            if (!accounts || accounts.length === 0) {
+                // 新用戶，建立預設資料
+                await createDefaultDataForOAuth(user.id);
+            }
+            
+            // 清除 URL hash，避免重複處理
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+
+    // 檢查認證狀態
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        window.location.href = 'auth.html';
+        return;
+    }
+
     // Set Date input to today
     const today = new Date().toISOString().split('T')[0];
     if(elements.dateInput) elements.dateInput.value = today;
@@ -123,20 +159,35 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeReactionModal();
     });
+
+    // 登出按鈕
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            if (confirm('確定要登出嗎？')) {
+                await supabase.auth.signOut();
+                window.location.href = 'auth.html';
+            }
+        });
+    }
 });
 
 // =========================================
-// 2. Fetch Data (GET)
+// 2. Fetch Data (GET) - Supabase Version
 // =========================================
 async function fetchDashboardData(year, month) {
     try {
         setLoading(true);
         console.log(`Fetching data for ${year}-${month}...`);
         
-        const response = await fetch(`${API_URL}?action=getDashboardData&year=${year}&month=${month}`);
-        if (!response.ok) throw new Error('伺服器錯誤 ' + response.status);
-        const data = await response.json();
-        if (!data.success) throw new Error(data.error);
+        // 呼叫 Supabase 函數取得儀表板資料
+        const { data, error } = await supabase.rpc('get_dashboard_data', {
+            p_year: parseInt(year, 10),
+            p_month: parseInt(month, 10)
+        });
+
+        if (error) throw new Error(error.message || '無法取得資料');
+        if (!data || !data.success) throw new Error(data?.error || '無法取得資料');
 
         // A. Update Stats Cards
         updateStats(data.summary);
@@ -318,7 +369,7 @@ function getTodayYmd() {
 }
 
 // =========================================
-// Daily Check-in（當天無消費時仍可維持 streak）
+// Daily Check-in（當天無消費時仍可維持 streak）- Supabase Version
 // =========================================
 async function submitDailyCheckin() {
     const btn = elements.checkinBtn;
@@ -328,15 +379,19 @@ async function submitDailyCheckin() {
         btn.disabled = true;
         btn.innerText = '簽到中...';
 
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'checkin' })
-        });
-        if (!response.ok) throw new Error('伺服器錯誤 ' + response.status);
-        const result = await response.json();
-        if (!result.success) {
-            throw new Error(result.error || '簽到失敗');
-        }
+        const today = getTodayYmd();
+        
+        // 使用 upsert 確保同一天只有一筆記錄
+        const { error } = await supabase
+            .from('checkins')
+            .upsert({
+                date: today,
+                source: 'manual'
+            }, {
+                onConflict: 'user_id,date'
+            });
+
+        if (error) throw error;
 
         // 重新讀取目前儀表板（包含 streak 與日曆）
         const v = elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [currentYear, currentMonth];
@@ -506,7 +561,7 @@ function focusTransactionInput() {
 }
 
 // =========================================
-// 3. Submit Data (POST)
+// 3. Submit Data (POST) - Supabase Version
 // =========================================
 async function submitTransaction() {
     // Basic Validation
@@ -519,48 +574,106 @@ async function submitTransaction() {
         return;
     }
 
-    const payload = {
-        date: elements.dateInput.value,
-        item: elements.itemInput.value,
-        category: elements.categorySelect.value,
-        method: elements.methodInput.value,
-        currency: elements.currencyInput.value,
-        amount: elements.amountInput.value,
-        note: elements.noteInput.value
-    };
-    if (editingId) {
-        payload.action = 'edit';
-        payload.id = editingId;
-    } else {
-        payload.action = 'add';
-    }
-
     try {
         const btn = elements.addBtn;
         const originalText = btn.innerText;
         btn.innerText = "儲存中...";
         btn.disabled = true;
 
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-        if (!response.ok) throw new Error('伺服器錯誤 ' + response.status);
-        const result = await response.json();
+        const date = elements.dateInput.value;
+        const itemName = elements.itemInput.value;
+        const category = elements.categorySelect.value;
+        const paymentMethod = elements.methodInput.value;
+        const currency = elements.currencyInput.value || 'TWD';
+        const amount = parseFloat(elements.amountInput.value);
+        const note = elements.noteInput.value || null;
 
-        if (result.success) {
-            const wasEdit = !!editingId;
-            const submittedDate = elements.dateInput.value;
+        // 判斷是收入還是支出（根據類別）
+        const { data: incomeCategories } = await supabase
+            .from('settings')
+            .select('value')
+            .eq('key', 'income_categories')
+            .single();
+
+        const incomeCats = incomeCategories?.value || ['薪水', '投資'];
+        const isIncome = Array.isArray(incomeCats) && incomeCats.includes(category);
+        const type = isIncome ? 'income' : 'expense';
+
+        // 取得匯率
+        const { data: rateData } = await supabase
+            .from('settings')
+            .select('value')
+            .eq('key', currency.toUpperCase())
+            .single();
+
+        const exchangeRate = rateData?.value?.rate || 1.0;
+        const twdAmount = Math.round(amount * exchangeRate * 100) / 100;
+
+        // 尋找對應的 account_id（根據 payment_method 名稱）
+        const { data: account } = await supabase
+            .from('accounts')
+            .select('id')
+            .eq('name', paymentMethod)
+            .single();
+
+        const transactionData = {
+            date,
+            type,
+            item_name: itemName,
+            category,
+            payment_method: paymentMethod,
+            account_id: account?.id || null,
+            currency: currency.toUpperCase(),
+            amount,
+            exchange_rate: exchangeRate,
+            twd_amount: twdAmount,
+            note
+        };
+
+        if (editingId) {
+            // 更新交易
+            const { error } = await supabase
+                .from('transactions')
+                .update(transactionData)
+                .eq('id', editingId);
+
+            if (error) throw error;
+
+            const wasEdit = true;
+            const submittedDate = date;
+            const [y, m] = submittedDate ? submittedDate.split('-') : (elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [String(currentYear), String(currentMonth)]);
+            resetEditState();
+            await fetchDashboardData(parseInt(y, 10), parseInt(m, 10));
+            alert('已更新。');
+        } else {
+            // 新增交易
+            const { error } = await supabase
+                .from('transactions')
+                .insert(transactionData);
+
+            if (error) throw error;
+
+            // 若使用者在「今天」新增一筆，且日期欄位也是今天，則視為當日有準時記帳，寫入 Checkins
+            const today = getTodayYmd();
+            if (date === today) {
+                await supabase
+                    .from('checkins')
+                    .upsert({
+                        date: today,
+                        source: 'onTimeTransaction'
+                    }, {
+                        onConflict: 'user_id,date'
+                    });
+            }
+
+            const wasEdit = false;
+            const submittedDate = date;
             const [y, m] = submittedDate ? submittedDate.split('-') : (elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [String(currentYear), String(currentMonth)]);
             resetEditState();
             await fetchDashboardData(parseInt(y, 10), parseInt(m, 10));
             // 新增當日第一筆資料後彈出「開心」視窗；編輯不觸發
-            if (!wasEdit) {
-                maybeShowPositiveModalAfterAdd(submittedDate);
-            }
-            alert(wasEdit ? '已更新。' : '記帳成功！');
-        } else {
-            throw new Error(result.error || 'Unknown error');
+            maybeShowPositiveModalAfterAdd(submittedDate);
+            alert('記帳成功！');
         }
 
     } catch (error) {
@@ -574,7 +687,7 @@ async function submitTransaction() {
 }
 
 /**
- * 刪除一筆交易：確認後 POST { action: 'delete', id }，成功則重整儀表板。
+ * 刪除一筆交易 - Supabase Version
  */
 async function deleteTransaction(id) {
     if (!id) return;
@@ -582,20 +695,17 @@ async function deleteTransaction(id) {
 
     try {
         setLoading(true);
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'delete', id: id })
-        });
-        if (!response.ok) throw new Error('伺服器錯誤 ' + response.status);
-        const result = await response.json();
+        
+        const { error } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', id);
 
-        if (result.success) {
-            const v = elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [currentYear, currentMonth];
-            await fetchDashboardData(parseInt(v[0], 10), parseInt(v[1], 10));
-            alert('已刪除。');
-        } else {
-            throw new Error(result.error || '刪除失敗');
-        }
+        if (error) throw error;
+
+        const v = elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [currentYear, currentMonth];
+        await fetchDashboardData(parseInt(v[0], 10), parseInt(v[1], 10));
+        alert('已刪除。');
     } catch (error) {
         console.error('Error deleting:', error);
         alert(error.message || '刪除失敗，請稍後再試。');
@@ -918,4 +1028,36 @@ function escapeHtml(s) {
 function setLoading(isLoading) {
     document.body.style.cursor = isLoading ? 'wait' : 'default';
     if (elements.monthSelect) elements.monthSelect.disabled = !!isLoading;
+}
+
+// 為 OAuth 用戶建立預設資料（與 auth.html 中的函數相同）
+async function createDefaultDataForOAuth(userId) {
+    try {
+        // 建立預設帳戶
+        const { error: accountsError } = await supabase
+            .from('accounts')
+            .insert([
+                { user_id: userId, name: 'Cash', type: 'cash' },
+                { user_id: userId, name: 'Credit Card 1', type: 'credit_card', credit_limit: 50000, billing_day: 5, payment_due_day: 25 }
+            ]);
+
+        if (accountsError) console.error('建立預設帳戶失敗:', accountsError);
+
+        // 建立預設設定
+        const { error: settingsError } = await supabase
+            .from('settings')
+            .insert([
+                { user_id: userId, key: 'TWD', value: { rate: 1.0 } },
+                { user_id: userId, key: 'USD', value: { rate: 30.0 } },
+                { user_id: userId, key: 'JPY', value: { rate: 0.2 } },
+                { user_id: userId, key: 'EUR', value: { rate: 32.0 } },
+                { user_id: userId, key: 'GBP', value: { rate: 38.0 } },
+                { user_id: userId, key: 'expense_categories', value: ['飲食', '飲料', '交通', '娛樂', '購物', '其他'] },
+                { user_id: userId, key: 'income_categories', value: ['薪水', '投資'] }
+            ]);
+
+        if (settingsError) console.error('建立預設設定失敗:', settingsError);
+    } catch (error) {
+        console.error('建立預設資料時發生錯誤:', error);
+    }
 }

@@ -79,14 +79,18 @@
       <section class="stats-section">
         <div class="stats-section-header">
           <h2>收支概覽</h2>
-          <!-- NOTE: streak-badge
-            - 不會影響 stats-cards 布局
-            - 文案與 emoji 可在 script.js 的 updateStreakBadge / openStreakModalForPositive / openStreakModalForBroken / openStreakModalForCurrent 中調整 -->
-          <button type="button" class="streak-badge" id="streakBadge" aria-label="查看連續記錄狀態">
-            <span class="streak-badge__icon" aria-hidden="true">🔥</span>
-            <span class="streak-badge__count">0</span>
-            <span class="streak-badge__unit">天</span>
-          </button>
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <!-- NOTE: streak-badge
+              - 不會影響 stats-cards 布局
+              - 文案與 emoji 可在 script.js 的 updateStreakBadge / openStreakModalForPositive / openStreakModalForBroken / openStreakModalForCurrent 中調整 -->
+            <button type="button" class="streak-badge" id="streakBadge" aria-label="查看連續記錄狀態">
+              <span class="streak-badge__icon" aria-hidden="true">🔥</span>
+              <span class="streak-badge__count">0</span>
+              <span class="streak-badge__unit">天</span>
+            </button>
+            <!-- logout-btn -->
+            <button type="button" id="logoutBtn" style="padding: 0.5rem 1rem; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">登出</button>
+          </div>
         </div>
         <div class="stats-cards">
           <div class="stat-card">
@@ -191,6 +195,7 @@
 
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
 </body>
 </html>

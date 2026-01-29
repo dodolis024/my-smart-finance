@@ -1,0 +1,12 @@
+# Supabase config (含有 API keys)
+supabase-config.js
+.env
+.env.local
+
+# 其他常見要忽略的
+node_modules/
+.DS_Store
+
+# 其他不重要的檔案
+SUPABASE_MIGRATION_SUMMARY.md
+MIGRATION_GUIDE.md
