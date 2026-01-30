@@ -10,3 +10,5 @@ node_modules/
 # 其他不重要的檔案
 SUPABASE_MIGRATION_SUMMARY.md
 MIGRATION_GUIDE.md
+test.html
+test-script.html
