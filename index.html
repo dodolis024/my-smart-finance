@@ -7,6 +7,10 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- 小螢幕專用頂部列：登出按鈕固定在上方（僅在單欄版面時顯示） -->
+  <header class="app-top-bar" aria-label="頂部導覽">
+    <button type="button" class="btn-logout-top logout-btn">登出</button>
+  </header>
   <div class="app-container">
     <!-- 左欄：交易輸入表單 (35%) -->
     <aside class="form-column">
@@ -88,8 +92,8 @@
               <span class="streak-badge__count">0</span>
               <span class="streak-badge__unit">天</span>
             </button>
-            <!-- logout-btn -->
-            <button type="button" id="logoutBtn" style="padding: 0.5rem 1rem; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">登出</button>
+            <!-- logout-btn（大螢幕顯示；小螢幕由 .app-top-bar 的按鈕取代） -->
+            <button type="button" id="logoutBtn" class="logout-btn logout-btn--desktop" style="padding: 0.5rem 1rem; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">登出</button>
           </div>
         </div>
         <div class="stats-cards">
@@ -194,8 +198,9 @@
 </svg>
 
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- 重要：Supabase 必須在 script.js 之前載入 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

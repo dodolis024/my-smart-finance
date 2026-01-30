@@ -13,19 +13,22 @@
 -- 1. 取得儀表板資料（getDashboardData）
 -- =============================================================================
 -- 功能：回傳指定年月的摘要、交易紀錄、帳戶列表、類別列表、streak 資訊
--- 參數：p_year (INTEGER), p_month (INTEGER)
+-- 參數：p_month (INTEGER), p_year (INTEGER)
+-- 注意：參數順序必須與 PostgREST 預期一致（依字母順序），否則會 404
 -- 回傳：JSON 物件
+-- 若曾建立過舊版（參數名不同），需先 DROP 再建立
+DROP FUNCTION IF EXISTS get_dashboard_data(INTEGER, INTEGER);
 
-CREATE OR REPLACE FUNCTION get_dashboard_data(p_year INTEGER, p_month INTEGER)
+CREATE OR REPLACE FUNCTION get_dashboard_data(p_month INTEGER, p_year INTEGER)
 RETURNS JSON AS $$
 DECLARE
     v_user_id UUID;
     v_summary JSON;
     v_history JSON;
     v_accounts JSON;
-    v_categories JSON;
-    v_expense_categories JSON;
-    v_income_categories JSON;
+    v_categories JSONB;
+    v_expense_categories JSONB;
+    v_income_categories JSONB;
     v_streak_count INTEGER;
     v_streak_broken BOOLEAN;
     v_total_logged_days INTEGER;
@@ -153,6 +156,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 功能：計算連續記帳天數、總記帳天數、最長連續記帳等
 -- 參數：p_user_id UUID
 -- 回傳：TABLE (streak_count, streak_broken, total_logged_days, longest_streak, logged_dates)
+DROP FUNCTION IF EXISTS calculate_streak_stats(UUID);
 
 CREATE OR REPLACE FUNCTION calculate_streak_stats(p_user_id UUID)
 RETURNS TABLE (
@@ -290,6 +294,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 功能：從 settings 表取得指定貨幣的匯率
 -- 參數：p_currency TEXT
 -- 回傳：NUMERIC（匯率）
+DROP FUNCTION IF EXISTS get_exchange_rate(TEXT);
 
 CREATE OR REPLACE FUNCTION get_exchange_rate(p_currency TEXT)
 RETURNS NUMERIC AS $$

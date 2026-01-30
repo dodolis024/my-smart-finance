@@ -170,196 +170,276 @@
     const SUPABASE_URL = 'https://rlahfuzsxfbocmkecqvg.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_Vc9BslZ5l-lNM0WQ8fVUmg_vbhEMqr-';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // 確保 Supabase 已載入後再初始化
+    if (typeof window.supabase === 'undefined') {
+      console.error('Supabase 尚未載入！請檢查網路連線。');
+    } else {
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Tab 切換
-    document.querySelectorAll('.auth-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        const tabName = tab.dataset.tab;
-        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('loginForm').style.display = tabName === 'login' ? 'flex' : 'none';
-        document.getElementById('signupForm').style.display = tabName === 'signup' ? 'flex' : 'none';
-        document.getElementById('loginError').textContent = '';
-        document.getElementById('signupError').textContent = '';
-        document.getElementById('signupSuccess').textContent = '';
-      });
-    });
-
-    // 登入
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('loginEmail').value;
-      const password = document.getElementById('loginPassword').value;
-      const errorEl = document.getElementById('loginError');
-
-      errorEl.textContent = '';
-
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (error) throw error;
-
-        // 登入成功，跳轉到主頁
-        window.location.href = 'index.html';
-      } catch (error) {
-        errorEl.textContent = error.message || '登入失敗，請檢查帳號密碼';
-      }
-    });
-
-    // 註冊
-    document.getElementById('signupForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('signupEmail').value;
-      const password = document.getElementById('signupPassword').value;
-      const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
-      const errorEl = document.getElementById('signupError');
-      const successEl = document.getElementById('signupSuccess');
-
-      errorEl.textContent = '';
-      successEl.textContent = '';
-
-      if (password !== passwordConfirm) {
-        errorEl.textContent = '兩次輸入的密碼不一致';
-        return;
-      }
-
-      if (password.length < 6) {
-        errorEl.textContent = '密碼長度至少需要6個字元';
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password
-        });
-
-        if (error) throw error;
-
-        // 註冊成功後，建立預設資料
-        if (data.user) {
-          await createDefaultData(data.user.id);
-          successEl.textContent = '註冊成功！正在跳轉...';
-          setTimeout(() => {
-            window.location.href = 'index.html';
-          }, 1500);
-        }
-      } catch (error) {
-        errorEl.textContent = error.message || '註冊失敗，請稍後再試';
-      }
-    });
-
-    // 建立預設資料（帳戶和設定）
-    async function createDefaultData(userId) {
-      try {
-        // 建立預設帳戶
-        const { error: accountsError } = await supabase
-          .from('accounts')
-          .insert([
-            { user_id: userId, name: 'Cash', type: 'cash' },
-            { user_id: userId, name: 'Credit Card 1', type: 'credit_card', credit_limit: 50000, billing_day: 5, payment_due_day: 25 }
-          ]);
-
-        if (accountsError) console.error('建立預設帳戶失敗:', accountsError);
-
-        // 建立預設設定
-        const { error: settingsError } = await supabase
-          .from('settings')
-          .insert([
-            { user_id: userId, key: 'TWD', value: { rate: 1.0 } },
-            { user_id: userId, key: 'USD', value: { rate: 30.0 } },
-            { user_id: userId, key: 'JPY', value: { rate: 0.2 } },
-            { user_id: userId, key: 'EUR', value: { rate: 32.0 } },
-            { user_id: userId, key: 'GBP', value: { rate: 38.0 } },
-            { user_id: userId, key: 'expense_categories', value: ['飲食', '飲料', '交通', '娛樂', '購物', '其他'] },
-            { user_id: userId, key: 'income_categories', value: ['薪水', '投資'] }
-          ]);
-
-        if (settingsError) console.error('建立預設設定失敗:', settingsError);
-      } catch (error) {
-        console.error('建立預設資料時發生錯誤:', error);
-      }
-    }
-
-    // Google 登入（登入頁面）
-    document.getElementById('googleLoginBtn').addEventListener('click', async () => {
-      await signInWithGoogle();
-    });
-
-    // Google 註冊（註冊頁面）
-    document.getElementById('googleSignupBtn').addEventListener('click', async () => {
-      await signInWithGoogle();
-    });
-
-    // Google OAuth 登入/註冊
-    async function signInWithGoogle() {
-      const errorEl = document.getElementById('loginError') || document.getElementById('signupError');
-      
-      try {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: window.location.origin + '/index.html'
-          }
-        });
-
-        if (error) throw error;
-        
-        // 注意：OAuth 會跳轉到 Google，所以這裡不會立即執行
-        // 當用戶從 Google 返回時，會在 index.html 中處理後續邏輯
-      } catch (error) {
-        console.error('Google 登入錯誤:', error);
-        if (errorEl) {
-          errorEl.textContent = error.message || 'Google 登入失敗，請稍後再試';
-        } else {
-          alert(error.message || 'Google 登入失敗，請稍後再試');
-        }
-      }
-    }
-
-    // 處理 OAuth 回調（當用戶從 Google 返回時）
-    // 檢查 URL 中是否有 hash fragment（OAuth 回調）
-    async function handleAuthCallback() {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('取得 session 錯誤:', error);
-        return;
-      }
-
-      if (session) {
-        // 檢查是否為新用戶（第一次使用 Google 登入）
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        // 檢查是否已有預設資料，如果沒有則建立
-        const { data: accounts } = await supabase
-          .from('accounts')
-          .select('id')
-          .limit(1);
-
-        if (!accounts || accounts.length === 0) {
-          // 新用戶，建立預設資料
-          await createDefaultData(user.id);
-        }
-
-        // 跳轉到主頁
-        window.location.href = 'index.html';
-      }
-    }
-
-    // 檢查是否已登入
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        window.location.href = 'index.html';
+      // 等待 DOM 載入完成
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAuth);
       } else {
-        // 處理 OAuth 回調
-        handleAuthCallback();
+        initAuth();
       }
-    });
+
+      function initAuth() {
+      console.log('初始化認證頁面...');
+
+      // Tab 切換
+      document.querySelectorAll('.auth-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.dataset.tab;
+          document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById('loginForm').style.display = tabName === 'login' ? 'flex' : 'none';
+          document.getElementById('signupForm').style.display = tabName === 'signup' ? 'flex' : 'none';
+          document.getElementById('loginError').textContent = '';
+          document.getElementById('signupError').textContent = '';
+          document.getElementById('signupSuccess').textContent = '';
+        });
+      });
+
+      // 登入
+      document.getElementById('loginForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const errorEl = document.getElementById('loginError');
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+
+        errorEl.textContent = '';
+        
+        // 顯示載入狀態
+        const originalBtnText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '登入中...';
+
+        try {
+          console.log('開始登入...', email);
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+
+          if (error) {
+            console.error('登入錯誤:', error);
+            throw error;
+          }
+
+          console.log('登入成功，等待 session 建立...', data);
+          
+          // 等待一下確保 session 已建立
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // 再次確認 session
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError || !session) {
+            throw new Error('Session 建立失敗，請重試');
+          }
+
+          console.log('Session 確認成功，準備跳轉');
+          
+          // 登入成功，跳轉到主頁
+          window.location.href = 'index.html';
+        } catch (error) {
+          console.error('登入失敗:', error);
+          errorEl.textContent = error.message || '登入失敗，請檢查帳號密碼';
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
+      });
+
+      // 註冊
+      document.getElementById('signupForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+        const email = document.getElementById('signupEmail').value;
+        const password = document.getElementById('signupPassword').value;
+        const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+        const errorEl = document.getElementById('signupError');
+        const successEl = document.getElementById('signupSuccess');
+
+        errorEl.textContent = '';
+        successEl.textContent = '';
+
+        if (password !== passwordConfirm) {
+          errorEl.textContent = '兩次輸入的密碼不一致';
+          return;
+        }
+
+        if (password.length < 6) {
+          errorEl.textContent = '密碼長度至少需要6個字元';
+          return;
+        }
+
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password
+          });
+
+          if (error) throw error;
+
+          // 註冊成功後，建立預設資料
+          if (data.user) {
+            await createDefaultData(data.user.id);
+            successEl.textContent = '註冊成功！正在跳轉...';
+            setTimeout(() => {
+              window.location.href = 'index.html';
+            }, 1500);
+          }
+        } catch (error) {
+          errorEl.textContent = error.message || '註冊失敗，請稍後再試';
+        }
+      });
+
+      // 建立預設資料（帳戶和設定）
+      async function createDefaultData(userId) {
+        try {
+          // 建立預設帳戶
+          const { error: accountsError } = await supabase
+            .from('accounts')
+            .insert([
+              { user_id: userId, name: 'Cash', type: 'cash' },
+              { user_id: userId, name: 'Credit Card 1', type: 'credit_card', credit_limit: 50000, billing_day: 5, payment_due_day: 25 }
+            ]);
+
+          if (accountsError) console.error('建立預設帳戶失敗:', accountsError);
+
+          // 建立預設設定
+          const { error: settingsError } = await supabase
+            .from('settings')
+            .insert([
+              { user_id: userId, key: 'TWD', value: { rate: 1.0 } },
+              { user_id: userId, key: 'USD', value: { rate: 30.0 } },
+              { user_id: userId, key: 'JPY', value: { rate: 0.2 } },
+              { user_id: userId, key: 'EUR', value: { rate: 32.0 } },
+              { user_id: userId, key: 'GBP', value: { rate: 38.0 } },
+              { user_id: userId, key: 'expense_categories', value: ['飲食', '飲料', '交通', '娛樂', '購物', '其他'] },
+              { user_id: userId, key: 'income_categories', value: ['薪水', '投資'] }
+            ]);
+
+          if (settingsError) console.error('建立預設設定失敗:', settingsError);
+        } catch (error) {
+          console.error('建立預設資料時發生錯誤:', error);
+        }
+      }
+
+      // Google OAuth 登入/註冊
+      async function signInWithGoogle() {
+        const errorEl = document.getElementById('loginError') || document.getElementById('signupError');
+        
+        try {
+          // 計算 redirectTo URL
+          // 如果是本地測試（file://），使用完整路徑
+          let redirectTo;
+          if (window.location.protocol === 'file:') {
+            // 本地測試時，使用當前目錄的 index.html
+            redirectTo = window.location.href.replace('auth.html', 'index.html');
+          } else {
+            // 線上環境
+            redirectTo = window.location.origin + window.location.pathname.replace('auth.html', 'index.html');
+          }
+
+          console.log('Google OAuth 登入，redirectTo:', redirectTo);
+          
+          const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: redirectTo
+            }
+          });
+
+          if (error) {
+            console.error('Google OAuth 錯誤:', error);
+            throw error;
+          }
+          
+          console.log('Google OAuth 已啟動，準備跳轉到 Google...');
+          
+          // 注意：OAuth 會跳轉到 Google，所以這裡不會立即執行
+          // 當用戶從 Google 返回時，會在 index.html 中處理後續邏輯
+        } catch (error) {
+          console.error('Google 登入錯誤:', error);
+          if (errorEl) {
+            errorEl.textContent = error.message || 'Google 登入失敗，請稍後再試。請確認已在 Supabase 中設定 Google OAuth。';
+          } else {
+            alert(error.message || 'Google 登入失敗，請稍後再試');
+          }
+        }
+      }
+
+      // Google 登入（登入頁面）
+      const googleLoginBtn = document.getElementById('googleLoginBtn');
+      if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          console.log('Google 登入按鈕被點擊');
+          await signInWithGoogle();
+        });
+      } else {
+        console.error('找不到 googleLoginBtn 元素');
+      }
+
+      // Google 註冊（註冊頁面）
+      const googleSignupBtn = document.getElementById('googleSignupBtn');
+      if (googleSignupBtn) {
+        googleSignupBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          console.log('Google 註冊按鈕被點擊');
+          await signInWithGoogle();
+        });
+      } else {
+        console.error('找不到 googleSignupBtn 元素');
+      }
+
+      // 處理 OAuth 回調（當用戶從 Google 返回時）
+      // 檢查 URL 中是否有 hash fragment（OAuth 回調）
+      async function handleAuthCallback() {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('取得 session 錯誤:', error);
+          return;
+        }
+
+        if (session) {
+          // 檢查是否為新用戶（第一次使用 Google 登入）
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          // 檢查是否已有預設資料，如果沒有則建立
+          const { data: accounts } = await supabase
+            .from('accounts')
+            .select('id')
+            .limit(1);
+
+          if (!accounts || accounts.length === 0) {
+            // 新用戶，建立預設資料
+            await createDefaultData(user.id);
+          }
+
+          // 跳轉到主頁
+          window.location.href = 'index.html';
+        }
+      }
+
+      // 檢查是否已登入
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('取得 session 錯誤:', error);
+          return;
+        }
+        
+        if (session) {
+          console.log('已登入，跳轉到主頁');
+          window.location.href = 'index.html';
+        } else {
+          // 處理 OAuth 回調
+          handleAuthCallback();
+        }
+      });
+      }
+    }
   </script>
 </body>
 </html>

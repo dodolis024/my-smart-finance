@@ -71,6 +71,28 @@ h3 {
 }
 
 /* --------------------------------------------
+   2b. Top Bar（僅小螢幕顯示，登出按鈕固定於頁面頂端）
+   -------------------------------------------- */
+.app-top-bar {
+  display: none;
+}
+
+.btn-logout-top {
+  padding: 0.5rem 1rem;
+  background: #f5f5f5;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.btn-logout-top:hover {
+  background: #eee;
+  border-color: #ccc;
+}
+
+/* --------------------------------------------
    3. Main Layout — CSS Grid (35% / 65%)
    -------------------------------------------- */
 .app-container {
@@ -798,7 +820,7 @@ html {
   font-weight: 700;
   color: var(--color-text);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.25rem;
 }
 
@@ -871,6 +893,25 @@ body.modal-open {
    Form stacks above dashboard for narrow windows or split view.
    -------------------------------------------- */
 @media (max-width: 1200px) {
+  /* 小螢幕：頂部列顯示，登出按鈕固定於頁面上方 */
+  .app-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0.75rem max(var(--space-lg), 5vw);
+    background: var(--color-card);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  /* 大螢幕的登出按鈕在小螢幕隱藏，改由頂部列按鈕取代 */
+  .logout-btn--desktop {
+    display: none !important;
+  }
+
   .app-container {
     grid-template-columns: 1fr;
     gap: 1.5rem;

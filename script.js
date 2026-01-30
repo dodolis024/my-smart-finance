@@ -7,8 +7,29 @@
 const SUPABASE_URL = 'https://rlahfuzsxfbocmkecqvg.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Vc9BslZ5l-lNM0WQ8fVUmg_vbhEMqr-';
 
-// 初始化 Supabase Client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 初始化 Supabase Client（確保 Supabase 已載入）
+// 使用 window 物件避免變數衝突，確保只初始化一次
+(function() {
+    if (typeof window.supabase === 'undefined') {
+        console.error('Supabase 尚未載入，請確認 script 載入順序');
+        return;
+    }
+    
+    // 初始化 supabase client（如果尚未初始化）
+    if (!window.supabaseClient) {
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+})();
+
+// 取得 supabase client 的輔助函數
+function getSupabase() {
+    if (!window.supabaseClient && typeof window.supabase !== 'undefined') {
+        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+    return window.supabaseClient;
+}
+
+// 注意：不使用頂層 supabase 變數，所有函數都使用 getSupabase() 來避免衝突
 
 // Current State
 let currentYear = new Date().getFullYear();
@@ -86,33 +107,64 @@ const CHART_COLORS = [
 // 1. Initialization
 // =========================================
 document.addEventListener('DOMContentLoaded', async () => {
-    // 處理 OAuth 回調（當用戶從 Google 返回時）
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    if (hashParams.get('access_token')) {
-        // OAuth 回調，等待 session 建立
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (session) {
-            // 檢查是否為新用戶，建立預設資料
-            const { data: { user } } = await supabase.auth.getUser();
-            const { data: accounts } = await supabase
-                .from('accounts')
-                .select('id')
-                .limit(1);
-            
-            if (!accounts || accounts.length === 0) {
-                // 新用戶，建立預設資料
-                await createDefaultDataForOAuth(user.id);
-            }
-            
-            // 清除 URL hash，避免重複處理
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
+    // 確保 Supabase 已載入
+    if (typeof window.supabase === 'undefined') {
+        console.error('Supabase 尚未載入！請檢查網路連線或 CDN 是否正常。');
+        alert('無法載入 Supabase，請檢查網路連線。');
+        return;
     }
 
-    // 檢查認證狀態
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        window.location.href = 'auth.html';
+    // 取得 supabase client
+    const supabase = getSupabase();
+    if (!supabase) {
+        alert('無法初始化 Supabase，請重新整理頁面。');
+        return;
+    }
+
+    try {
+        // 處理 OAuth 回調（當用戶從 Google 返回時）
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        if (hashParams.get('access_token')) {
+            // OAuth 回調，等待 session 建立
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (session) {
+                // 檢查是否為新用戶，建立預設資料
+                const { data: { user } } = await supabase.auth.getUser();
+                const { data: accounts } = await supabase
+                    .from('accounts')
+                    .select('id')
+                    .limit(1);
+                
+                if (!accounts || accounts.length === 0) {
+                    // 新用戶，建立預設資料
+                    await createDefaultDataForOAuth(user.id);
+                }
+                
+                // 清除 URL hash，避免重複處理
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
+        // 檢查認證狀態
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+            console.error('取得 session 錯誤:', sessionError);
+            // 不顯示 alert，直接跳轉到登入頁面
+            window.location.href = 'auth.html';
+            return;
+        }
+        
+        if (!session) {
+            // 未登入，跳轉到登入頁面
+            console.log('未登入，跳轉到登入頁面');
+            window.location.href = 'auth.html';
+            return;
+        }
+
+        console.log('認證成功，使用者:', session.user.email);
+    } catch (error) {
+        console.error('初始化錯誤:', error);
+        alert('初始化失敗：' + error.message);
         return;
     }
 
@@ -160,16 +212,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Escape') closeReactionModal();
     });
 
-    // 登出按鈕
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
+    // 登出按鈕（大螢幕在 stats 區、小螢幕在頂部列，共用同一行為）
+    const logoutBtns = document.querySelectorAll('.logout-btn');
+    logoutBtns.forEach((btn) => {
+        btn.addEventListener('click', async () => {
             if (confirm('確定要登出嗎？')) {
-                await supabase.auth.signOut();
+                const supabase = getSupabase();
+                if (supabase) {
+                    await supabase.auth.signOut();
+                }
                 window.location.href = 'auth.html';
             }
         });
-    }
+    });
 });
 
 // =========================================
@@ -180,10 +235,17 @@ async function fetchDashboardData(year, month) {
         setLoading(true);
         console.log(`Fetching data for ${year}-${month}...`);
         
+        // 取得 supabase client
+        const supabase = getSupabase();
+        if (!supabase) {
+            throw new Error('Supabase 尚未初始化');
+        }
+        
         // 呼叫 Supabase 函數取得儀表板資料
+        // 參數順序須與 DB 函數一致：p_month, p_year（PostgREST 依字母順序比對）
         const { data, error } = await supabase.rpc('get_dashboard_data', {
-            p_year: parseInt(year, 10),
-            p_month: parseInt(month, 10)
+            p_month: parseInt(month, 10),
+            p_year: parseInt(year, 10)
         });
 
         if (error) throw new Error(error.message || '無法取得資料');
@@ -381,6 +443,12 @@ async function submitDailyCheckin() {
 
         const today = getTodayYmd();
         
+        // 取得 supabase client
+        const supabase = getSupabase();
+        if (!supabase) {
+            throw new Error('Supabase 尚未初始化');
+        }
+        
         // 使用 upsert 確保同一天只有一筆記錄
         const { error } = await supabase
             .from('checkins')
@@ -574,6 +642,13 @@ async function submitTransaction() {
         return;
     }
 
+    // 取得 supabase client
+    const supabase = getSupabase();
+    if (!supabase) {
+        alert('Supabase 尚未初始化，請重新整理頁面。');
+        return;
+    }
+
     try {
         const btn = elements.addBtn;
         const originalText = btn.innerText;
@@ -609,6 +684,13 @@ async function submitTransaction() {
         const exchangeRate = rateData?.value?.rate || 1.0;
         const twdAmount = Math.round(amount * exchangeRate * 100) / 100;
 
+        // 取得目前使用者（RLS 要求 INSERT 時帶入 user_id）
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            alert('請先登入');
+            return;
+        }
+
         // 尋找對應的 account_id（根據 payment_method 名稱）
         const { data: account } = await supabase
             .from('accounts')
@@ -617,6 +699,7 @@ async function submitTransaction() {
             .single();
 
         const transactionData = {
+            user_id: user.id,
             date,
             type,
             item_name: itemName,
@@ -659,6 +742,7 @@ async function submitTransaction() {
                 await supabase
                     .from('checkins')
                     .upsert({
+                        user_id: user.id,
                         date: today,
                         source: 'onTimeTransaction'
                     }, {
@@ -692,6 +776,13 @@ async function submitTransaction() {
 async function deleteTransaction(id) {
     if (!id) return;
     if (!confirm('確定要刪除這筆交易嗎？')) return;
+
+    // 取得 supabase client
+    const supabase = getSupabase();
+    if (!supabase) {
+        alert('Supabase 尚未初始化，請重新整理頁面。');
+        return;
+    }
 
     try {
         setLoading(true);
@@ -1032,6 +1123,13 @@ function setLoading(isLoading) {
 
 // 為 OAuth 用戶建立預設資料（與 auth.html 中的函數相同）
 async function createDefaultDataForOAuth(userId) {
+    // 取得 supabase client
+    const supabase = getSupabase();
+    if (!supabase) {
+        console.error('Supabase 尚未初始化');
+        return;
+    }
+    
     try {
         // 建立預設帳戶
         const { error: accountsError } = await supabase
