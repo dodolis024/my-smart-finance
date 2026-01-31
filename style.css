@@ -793,7 +793,7 @@ html {
 
 /* 簽到按鈕簽到（今日沒花錢）：藍綠色圈 */
 .streak-calendar__day--manual .streak-calendar__day-inner {
-  background: rgba(205, 216, 190, 0.7);
+  background: rgba(205, 216, 190, 0.6);
   border: 1px solid rgba(148, 172, 156, 1);
   color: var(--color-text);
   font-weight: 600;
@@ -813,12 +813,12 @@ html {
 
 /* 今天 + 記帳簽到：保留米色 */
 .streak-calendar__day--today.streak-calendar__day--transaction .streak-calendar__day-inner {
-  background: rgba(181, 156, 128, 0.5);
+  background: rgba(181, 156, 128, 0.35);
 }
 
 /* 今天 + 簽到按鈕：保留綠色，不要被 today 覆蓋成米色 */
 .streak-calendar__day--today.streak-calendar__day--manual .streak-calendar__day-inner {
-  background: rgba(205, 216, 190, 0.7);
+  background: rgba(205, 216, 190, 0.6);
   border: 1px solid rgba(148, 172, 156, 1);
 }
 
@@ -855,7 +855,7 @@ html {
 }
 
 .streak-calendar__legend-item--manual::before {
-  background: rgba(205, 216, 190, 0.7);
+  background: rgba(205, 216, 190, 0.6);
   border: 1px solid rgba(148, 172, 156, 1);
 }
 
@@ -906,6 +906,14 @@ html {
   width: 1.1rem;
   height: 1.1rem;
   display: block;
+}
+
+/* 簽到按鈕內的 check 圓圈 icon（圓形底色在 SVG path fill="#E9AD66"，外圈與勾用 currentColor） */
+.icon-checkin {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: block;
+  /* color: #FAF9F6; */
 }
 
 /* Prevent background scrolling when modal is open */

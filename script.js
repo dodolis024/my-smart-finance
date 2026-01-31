@@ -92,15 +92,15 @@ let streakCalendarMonth = null; // 日曆目前顯示的月份（1-12）
 
 // Professional color palette for chart segments
 const CHART_COLORS = [
-    'rgba(158, 135, 105, 1)',   // indigo
-    'rgba(219, 204, 187, 1)',    // green
-    'rgba(232, 213, 196, 1)',    // amber
-    'rgba(240, 216, 214, 1)',    // red
-    'rgba(233, 199, 201, 1)',   // pink
-    'rgba(158, 135, 105, 1)',   // teal
-    'rgba(188, 173, 153, 1)',   // purple
-    'rgba(217, 204, 184, 1)',   // orange
-    'rgba(242, 224, 219, 1)',   // blue
+    'rgb(205, 184, 161)',   // 1. 烘焙奶茶 (提亮)
+    'rgb(190, 168, 150)',   // 2. 煙燻陶土 (提亮)
+    'rgba(201, 180, 172, 1)', // 3. 乾燥玫瑰灰 (提亮)
+    'rgba(200, 192, 177, 1)', // 4. 暖木灰 (提亮)
+    'rgba(216, 204, 188, 1)', // 5. 燕麥拿鐵 (提亮)
+    'rgba(224, 215, 204, 1)', // 6. 灰砂色 (提亮)
+    'rgba(238, 226, 214, 1)', // 7. 奶油杏色 (提亮)
+    'rgba(245, 234, 230, 1)', // 8. 亞麻白粉 (提亮)
+    'rgba(252, 248, 245, 1)'  // 9. 純白珍珠 (提亮)
 ];
 
 // =========================================
@@ -372,7 +372,7 @@ function maybeShowPositiveModalAfterAdd(submittedDate) {
 function openStreakModalForPositive() {
     const count = streakState.count || 0;
     const milestoneSteps = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
-    let title = '真乖呦！';
+    let title = '怎麼這麼乖呀！';
     let text = '今天是記帳的第 ${count} 天，明天也要繼續保持呦☺️';
     // milestone 特別文案
     if (milestoneSteps.includes(count)) {
@@ -394,7 +394,7 @@ function openStreakModalForBroken() {
     // TODO：這裡可以改成你喜歡的「生氣 / 難過」文字與 emoji
     renderStreakCalendar();
     openReactionModal({
-        title: '你偷懶被抓到了！！！',
+        title: '小壞蛋 你偷懶被抓到了！！！',
         text: '吼呦！你昨天迷有記帳 氣鼠了！😡',
         buttonLabel: '我現在補記！',
         variant: 'broken'
