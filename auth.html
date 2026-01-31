@@ -300,8 +300,8 @@
           const { error: accountsError } = await supabase
             .from('accounts')
             .insert([
-              { user_id: userId, name: 'Cash', type: 'cash' },
-              { user_id: userId, name: 'Credit Card 1', type: 'credit_card', credit_limit: 50000, billing_day: 5, payment_due_day: 25 }
+              { user_id: userId, name: '現金', type: 'cash' },
+              { user_id: userId, name: '信用卡A', type: 'credit_card', credit_limit: 50000, billing_day: 5, payment_due_day: 25 }
             ]);
 
           if (accountsError) console.error('建立預設帳戶失敗:', accountsError);
@@ -315,8 +315,8 @@
               { user_id: userId, key: 'JPY', value: { rate: 0.2 } },
               { user_id: userId, key: 'EUR', value: { rate: 32.0 } },
               { user_id: userId, key: 'GBP', value: { rate: 38.0 } },
-              { user_id: userId, key: 'expense_categories', value: ['飲食', '飲料', '交通', '娛樂', '購物', '其他'] },
-              { user_id: userId, key: 'income_categories', value: ['薪水', '投資'] }
+              { user_id: userId, key: 'expense_categories', value: ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他'] },
+              { user_id: userId, key: 'income_categories', value: ['薪水', '投資', '其他'] }
             ]);
 
           if (settingsError) console.error('建立預設設定失敗:', settingsError);

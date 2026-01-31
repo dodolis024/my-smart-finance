@@ -235,8 +235,8 @@ RETURNS void AS $$
 BEGIN
     INSERT INTO accounts (user_id, name, type, credit_limit, billing_day, payment_due_day)
     VALUES
-        (p_user_id, 'Cash', 'cash', NULL, NULL, NULL),
-        (p_user_id, 'Credit Card 1', 'credit_card', 50000, 5, 25)
+        (p_user_id, '現金', 'cash', NULL, NULL, NULL),
+        (p_user_id, '信用卡A', 'credit_card', 50000, 5, 25)
     ON CONFLICT DO NOTHING;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -254,9 +254,9 @@ BEGIN
         (p_user_id, 'EUR', '{"rate": 32.0}'::jsonb),
         (p_user_id, 'GBP', '{"rate": 38.0}'::jsonb),
         -- 支出類別
-        (p_user_id, 'expense_categories', '["飲食", "飲料", "交通", "娛樂", "購物", "其他"]'::jsonb),
+        (p_user_id, 'expense_categories', '["飲食", "飲料", "交通", "旅遊", "娛樂", "購物", "其他"]'::jsonb),
         -- 收入類別
-        (p_user_id, 'income_categories', '["薪水", "投資"]'::jsonb)
+        (p_user_id, 'income_categories', '["薪水", "投資", "其他"]'::jsonb)
     ON CONFLICT (user_id, key) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

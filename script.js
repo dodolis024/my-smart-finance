@@ -298,7 +298,10 @@ function updateStreakStateFromServer(data) {
     const broken = !!(data && data.streakBroken);
     const totalDays = data && typeof data.totalLoggedDays === 'number' ? data.totalLoggedDays : 0;
     const longestStreak = data && typeof data.longestStreak === 'number' ? data.longestStreak : 0;
-    const loggedDates = Array.isArray(data && data.loggedDates) ? data.loggedDates.slice() : [];
+    const rawLogged = Array.isArray(data && data.loggedDates) ? data.loggedDates.slice() : [];
+    // 支援新格式 [{date, source}, ...] 與舊格式 [dateStr, ...]
+    const loggedDates = rawLogged.map((d) => (typeof d === 'string' ? d : d.date));
+    streakState.loggedDatesWithSource = rawLogged;
 
     streakState.count = count;
     streakState.broken = broken;
@@ -436,8 +439,8 @@ function getTodayYmd() {
 async function submitDailyCheckin() {
     const btn = elements.checkinBtn;
     if (!btn) return;
+    const originalText = btn.innerText;
     try {
-        const originalText = btn.innerText;
         btn.disabled = true;
         btn.innerText = '簽到中...';
 
@@ -448,11 +451,18 @@ async function submitDailyCheckin() {
         if (!supabase) {
             throw new Error('Supabase 尚未初始化');
         }
+
+        // 取得目前使用者（RLS 要求 INSERT/UPDATE 時帶入 user_id）
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            throw new Error('請先登入');
+        }
         
         // 使用 upsert 確保同一天只有一筆記錄
         const { error } = await supabase
             .from('checkins')
             .upsert({
+                user_id: user.id,
                 date: today,
                 source: 'manual'
             }, {
@@ -461,16 +471,17 @@ async function submitDailyCheckin() {
 
         if (error) throw error;
 
-        // 重新讀取目前儀表板（包含 streak 與日曆）
+        // 重新讀取目前儀表板（包含 streak 與日曆）；updateStreakStateFromServer 會依 loggedDates 停用簽到按鈕
         const v = elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [currentYear, currentMonth];
         await fetchDashboardData(parseInt(v[0], 10), parseInt(v[1], 10));
         alert('今日簽到成功！');
         btn.innerText = originalText;
+        // 成功後按鈕是否停用由 updateStreakStateFromServer 依今日是否已在 loggedDates 決定，不再於 finally 強制啟用
     } catch (err) {
         console.error('Error check-in:', err);
         alert(err.message || '簽到失敗，請稍後再試。');
-    } finally {
         btn.disabled = false;
+        btn.innerText = originalText;
     }
 }
 
@@ -485,8 +496,16 @@ function renderStreakCalendar() {
     const y = streakCalendarYear;
     const m = streakCalendarMonth;
 
-    // 產生一個 Set 方便查詢該月哪些日期有記帳
-    const loggedSet = new Set(streakState.loggedDates || []);
+    // 依 source 區分：記帳簽到 (onTimeTransaction) / 簽到按鈕 (manual)，供日曆顯示兩種顏色
+    const loggedBySource = { onTimeTransaction: new Set(), manual: new Set() };
+    (streakState.loggedDatesWithSource || streakState.loggedDates || []).forEach((item) => {
+        const dateStr = typeof item === 'string' ? item : (item && item.date);
+        if (!dateStr) return;
+        const source = typeof item === 'object' && item && 'source' in item ? item.source : null;
+        const src = source != null ? String(source) : '';
+        if (src === 'onTimeTransaction') loggedBySource.onTimeTransaction.add(dateStr);
+        else loggedBySource.manual.add(dateStr); // 'manual' 或舊格式、未知來源都視為簽到按鈕
+    });
 
     const firstDay = new Date(y, m - 1, 1);
     const firstWeekday = firstDay.getDay(); // 0-6 (Sun-Sat)
@@ -519,17 +538,23 @@ function renderStreakCalendar() {
         const dd = String(d).padStart(2, '0');
         const mm = String(m).padStart(2, '0');
         const dateStr = `${y}-${mm}-${dd}`;
-        const hasLog = loggedSet.has(dateStr);
+        const isTransaction = loggedBySource.onTimeTransaction.has(dateStr);
+        const isManual = loggedBySource.manual.has(dateStr);
         const isToday = dateStr === todayStr;
 
         let cls = 'streak-calendar__day';
-        if (hasLog) cls += ' streak-calendar__day--has-log';
+        if (isTransaction) cls += ' streak-calendar__day--transaction';
+        else if (isManual) cls += ' streak-calendar__day--manual';
         if (isToday) cls += ' streak-calendar__day--today';
 
         html += `<div class="${cls}"><div class="streak-calendar__day-inner">${d}</div></div>`;
     }
 
     html += '  </div>'; // grid
+    html += '  <div class="streak-calendar__legend">';
+    html += '    <span class="streak-calendar__legend-item streak-calendar__legend-item--transaction">記帳</span>';
+    html += '    <span class="streak-calendar__legend-item streak-calendar__legend-item--manual">簽到</span>';
+    html += '  </div>';
     html += '</div>'; // calendar
 
     // Summary cards
@@ -1135,8 +1160,8 @@ async function createDefaultDataForOAuth(userId) {
         const { error: accountsError } = await supabase
             .from('accounts')
             .insert([
-                { user_id: userId, name: 'Cash', type: 'cash' },
-                { user_id: userId, name: 'Credit Card 1', type: 'credit_card', credit_limit: 50000, billing_day: 5, payment_due_day: 25 }
+                { user_id: userId, name: '現金', type: 'cash' },
+                { user_id: userId, name: '信用卡A', type: 'credit_card', credit_limit: 50000, billing_day: 5, payment_due_day: 25 }
             ]);
 
         if (accountsError) console.error('建立預設帳戶失敗:', accountsError);
@@ -1150,8 +1175,8 @@ async function createDefaultDataForOAuth(userId) {
                 { user_id: userId, key: 'JPY', value: { rate: 0.2 } },
                 { user_id: userId, key: 'EUR', value: { rate: 32.0 } },
                 { user_id: userId, key: 'GBP', value: { rate: 38.0 } },
-                { user_id: userId, key: 'expense_categories', value: ['飲食', '飲料', '交通', '娛樂', '購物', '其他'] },
-                { user_id: userId, key: 'income_categories', value: ['薪水', '投資'] }
+                { user_id: userId, key: 'expense_categories', value: ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他'] },
+                { user_id: userId, key: 'income_categories', value: ['薪水', '投資', '其他'] }
             ]);
 
         if (settingsError) console.error('建立預設設定失敗:', settingsError);

@@ -105,11 +105,11 @@ BEGIN
 
     -- 如果沒有設定，使用預設值
     IF v_expense_categories IS NULL THEN
-        v_expense_categories := '["飲食", "飲料", "交通", "娛樂", "購物", "其他"]'::jsonb;
+        v_expense_categories := '["飲食", "飲料", "交通", "旅遊", "娛樂", "購物", "其他"]'::jsonb;
     END IF;
 
     IF v_income_categories IS NULL THEN
-        v_income_categories := '["薪水", "投資"]'::jsonb;
+        v_income_categories := '["薪水", "投資", "其他"]'::jsonb;
     END IF;
 
     -- 合併類別列表
@@ -197,10 +197,11 @@ BEGIN
     SELECT COUNT(*) INTO v_total_logged_days
     FROM (SELECT DISTINCT date FROM transactions WHERE user_id = p_user_id) AS unique_dates;
 
-    -- 轉換簽到日期為 JSON 陣列（字串格式 yyyy-MM-dd）
-    SELECT json_agg(date::text ORDER BY date DESC)
+    -- 轉換簽到日期為 JSON 陣列（含 date 與 source，供前端區分記帳簽到 / 簽到按鈕）
+    SELECT json_agg(json_build_object('date', date::text, 'source', source) ORDER BY date DESC)
     INTO v_logged_dates_json
-    FROM (SELECT DISTINCT date FROM checkins WHERE user_id = p_user_id) AS unique_checkins;
+    FROM checkins
+    WHERE user_id = p_user_id;
 
     -- 計算目前連續記帳天數
     IF v_checkin_dates IS NULL OR array_length(v_checkin_dates, 1) IS NULL THEN

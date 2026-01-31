@@ -783,16 +783,80 @@ html {
   background: transparent;
 }
 
+/* 記帳簽到（當日有記帳）：主色米色圈 */
+.streak-calendar__day--transaction .streak-calendar__day-inner {
+  background: rgba(181, 156, 128, 0.35);
+  border: 1px solid rgba(181, 156, 128, 0.8);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* 簽到按鈕簽到（今日沒花錢）：藍綠色圈 */
+.streak-calendar__day--manual .streak-calendar__day-inner {
+  background: rgba(205, 216, 190, 0.7);
+  border: 1px solid rgba(148, 172, 156, 1);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* 舊版或未知來源時 fallback（與 transaction 同色） */
 .streak-calendar__day--has-log .streak-calendar__day-inner {
   background: rgba(181, 156, 128, 0.35);
-  border: 1px solid rgba(181, 156, 128, 0.8); 
+  border: 1px solid rgba(181, 156, 128, 0.8);
   color: var(--color-text);
   font-weight: 600;
 }
 
 .streak-calendar__day--today .streak-calendar__day-inner {
   border: 1px solid var(--color-primary);
-  background: rgba(181, 156, 128, 0.45);
+}
+
+/* 今天 + 記帳簽到：保留米色 */
+.streak-calendar__day--today.streak-calendar__day--transaction .streak-calendar__day-inner {
+  background: rgba(181, 156, 128, 0.5);
+}
+
+/* 今天 + 簽到按鈕：保留綠色，不要被 today 覆蓋成米色 */
+.streak-calendar__day--today.streak-calendar__day--manual .streak-calendar__day-inner {
+  background: rgba(205, 216, 190, 0.7);
+  border: 1px solid rgba(148, 172, 156, 1);
+}
+
+/* 今天但無簽到：預設米色邊框 */
+.streak-calendar__day--today:not(.streak-calendar__day--transaction):not(.streak-calendar__day--manual) .streak-calendar__day-inner {
+  background: rgba(181, 156, 128, 0.25);
+}
+
+.streak-calendar__legend {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.streak-calendar__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.streak-calendar__legend-item::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.streak-calendar__legend-item--transaction::before {
+  background: rgba(181, 156, 128, 0.35);
+  border: 1px solid rgba(181, 156, 128, 0.8);
+}
+
+.streak-calendar__legend-item--manual::before {
+  background: rgba(205, 216, 190, 0.7);
+  border: 1px solid rgba(148, 172, 156, 1);
 }
 
 .streak-summary {
