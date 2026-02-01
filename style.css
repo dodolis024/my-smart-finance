@@ -36,6 +36,11 @@
 
   /* 圓餅圖最大寬度：改此值可調整大小；≤1440px、≤900px 在各自 media 內另有 --chart-max-width 可調 */
   --chart-max-width: 260px;
+
+  /* 捲軸：淡淡的不突兀 */
+  --scrollbar-track: #FAF9F7;
+  --scrollbar-thumb: #e5e0da;
+  --scrollbar-thumb-hover: #d8d2ca;
 }
 
 /* --------------------------------------------
@@ -47,14 +52,29 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+  overflow-x: hidden;
+  /* 左側留白略縮小；右側不留白讓捲軸可貼畫面最右 */
+  padding-left: 1.25rem;
+  padding-right: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 1rem;
   font-weight: 400;
   color: var(--color-text);
   background: var(--color-bg);
   line-height: 1.5;
+  box-sizing: border-box;
 }
 
 h2 {
@@ -94,24 +114,40 @@ h3 {
 
 /* --------------------------------------------
    3. Main Layout — CSS Grid (35% / 65%)
+   大螢幕：左欄固定不捲動，僅右側儀表板可上下捲動（懸浮於背景效果）
    -------------------------------------------- */
 .app-container {
   display: grid;
-  grid-template-columns: 30% 70%;
+  /* minmax(0, …) 讓兩欄可彈性縮小，不超出 content 區、不佔到 padding */
+  grid-template-columns: minmax(0, 30%) minmax(0, 70%);
+  grid-template-rows: 1fr;
   gap: var(--space-lg);
-  width: 100%;
-  max-width: 1400px;
+  /* 寬度 = 視窗扣掉左側留白（略縮小），右側貼齊畫面讓捲軸在最右 */
+  width: min(1400px, calc(100vw - 1.25rem));
+  max-width: min(1400px, calc(100vw - 1.25rem));
+  height: 100vh;
+  max-height: 100vh;
   margin: 0 auto;
   padding: var(--space-lg) max(var(--space-lg), 5vw);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* --------------------------------------------
    4. Form Column (Left — 35%)
+   大螢幕：固定於左側、頂部對齊，與右欄「收支概覽」標題同高（Safari / Arc 一致）
    -------------------------------------------- */
 .form-column {
-  position: sticky;
-  top: var(--space-lg);
-  align-self: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  min-height: 0;
+  min-width: 0; /* 允許縮小，不超出 grid 格、不佔到 padding */
+  overflow-y: auto;
+  /* 左右留空間給 .transaction-form-section 的陰影，避免被裁掉 */
+  padding-left: 0.5rem;
+  padding-right: 0.75rem;
 }
 
 .transaction-form-section {
@@ -177,6 +213,39 @@ h3 {
   margin-bottom: 1.25rem;
 }
 
+/* 幣別 + 金額：標籤「金額」與其他欄位對齊，下一行左為幣別下拉、右為金額輸入 */
+.form-group--currency-amount .form-group__amount-label {
+  display: block;
+  margin-bottom: var(--space-xs);
+}
+
+.form-group--currency-amount .form-group__currency-amount-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: stretch;
+}
+
+.form-group--currency-amount .form-group__currency {
+  flex: 0 0 auto;
+  min-width: 0;
+  width: 30%;
+}
+
+.form-group--currency-amount .form-group__currency select {
+  width: 100%;
+  height: 100%;
+  min-height: 2.75rem;
+}
+
+.form-group--currency-amount .form-group__amount {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-group--currency-amount .form-group__amount input {
+  width: 100%;
+}
+
 .form-group label {
   display: block;
   font-size: 0.875rem;
@@ -204,15 +273,21 @@ h3 {
   box-shadow: var(--shadow-focus);
 }
 
-/* Select dropdowns */
+/* Select dropdowns — custom chevron arrow (matches site style) */
 .form-group select {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.75rem 1.25rem 0.75rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 1rem;
   color: var(--color-text);
-  background: var(--color-card);
+  background-color: var(--color-card);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%2330231c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+  -webkit-appearance: none;
+  appearance: none;
   cursor: pointer;
   transition: var(--transition);
 }
@@ -299,11 +374,39 @@ h3 {
 
 /* --------------------------------------------
    5. Dashboard Column (Right — 65%)
+   大螢幕：僅此區可上下捲動，左側表單不受影響
    -------------------------------------------- */
 .dashboard-column {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-height: 0;
+  min-width: 0; /* 允許縮小，不超出 grid 格、不佔到 padding */
+  overflow-y: auto;
+  overflow-x: auto; /* 內容過寬時在欄內橫向捲動，不佔到右側 padding */
+  /* 右側留較多空間給捲軸，不擋內容；下方留空間給表格陰影 */
+  padding-right: 1.5rem;
+  padding-bottom: 1rem;
+  /* 實際高度由 JS 設為與左側表單區塊同高，滑到底時與表單下緣對齊 */
+
+  /* 捲軸樣式：淡淡的不突兀（Chrome / Safari / Arc） */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+.dashboard-column::-webkit-scrollbar {
+  width: 10px;
+}
+.dashboard-column::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 10px;
+}
+.dashboard-column::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+  border: 2px solid var(--scrollbar-track);
+}
+.dashboard-column::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* --------------------------------------------
@@ -417,11 +520,17 @@ h3 {
 }
 
 .month-selector-section select {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.25rem 0.5rem 1rem;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 1rem;
-  background: var(--color-card);
+  background-color: var(--color-card);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%2330231c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 0.875rem;
+  -webkit-appearance: none;
+  appearance: none;
   color: var(--color-text);
   cursor: pointer;
   transition: var(--transition);
@@ -990,7 +1099,7 @@ body.modal-open {
 @media (max-width: 1440px) {
   .app-container {
     gap: 1.5rem;
-    padding: 1.5rem;
+    padding: 1.5rem max(1.5rem, 6vw);
   }
 
   .transaction-form-section {
@@ -1048,12 +1157,23 @@ body.modal-open {
 
   .app-container {
     grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
     gap: 1.5rem;
-    padding: 1.25rem;
+    padding: 1.25rem max(1.25rem, 6vw);
   }
 
   .form-column {
-    position: static; /* stacked layout: no sticky to avoid overlap */
+    display: block;
+    min-height: auto;
+    overflow-y: visible;
+  }
+
+  .dashboard-column {
+    min-height: auto;
+    overflow-y: visible;
   }
 
   .transaction-form-section {

@@ -10,6 +10,27 @@
 -- =============================================================================
 
 -- =============================================================================
+-- 0. 依賴：exchange_rates 表（若尚未建立，先建立表與 RLS，函數才可正常執行）
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS exchange_rates (
+    currency_code TEXT PRIMARY KEY,
+    rate NUMERIC(10, 6) NOT NULL DEFAULT 1.0,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE exchange_rates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Authenticated users can read exchange_rates" ON exchange_rates;
+CREATE POLICY "Authenticated users can read exchange_rates"
+    ON exchange_rates FOR SELECT
+    TO authenticated
+    USING (true);
+
+INSERT INTO exchange_rates (currency_code, rate)
+VALUES ('TWD', 1.0), ('USD', 30.0), ('JPY', 0.2), ('EUR', 32.0), ('GBP', 38.0)
+ON CONFLICT (currency_code) DO UPDATE SET rate = EXCLUDED.rate, updated_at = NOW();
+
+-- =============================================================================
 -- 1. 取得儀表板資料（getDashboardData）
 -- =============================================================================
 -- 功能：回傳指定年月的摘要、交易紀錄、帳戶列表、類別列表、streak 資訊
@@ -290,9 +311,21 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =============================================================================
--- 3. 取得匯率（用於新增/編輯交易時計算 TWD 金額）
+-- 3. 取得可用幣別列表（供前端動態幣別選單）
 -- =============================================================================
--- 功能：從 settings 表取得指定貨幣的匯率
+-- 功能：從中央 exchange_rates 表回傳所有幣別代碼，前端依此渲染選單
+-- 回傳：TEXT[]（幣別代碼陣列，依字母排序）
+DROP FUNCTION IF EXISTS get_available_currencies();
+
+CREATE OR REPLACE FUNCTION get_available_currencies()
+RETURNS TEXT[] AS $$
+    SELECT COALESCE(ARRAY_AGG(currency_code ORDER BY currency_code), ARRAY['TWD']::TEXT[])
+    FROM exchange_rates;
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+-- 4. 取得匯率（用於新增/編輯交易時計算 TWD 金額）
+-- =============================================================================
+-- 功能：從中央 exchange_rates 表取得指定貨幣對 TWD 的匯率
 -- 參數：p_currency TEXT
 -- 回傳：NUMERIC（匯率）
 DROP FUNCTION IF EXISTS get_exchange_rate(TEXT);
@@ -300,34 +333,18 @@ DROP FUNCTION IF EXISTS get_exchange_rate(TEXT);
 CREATE OR REPLACE FUNCTION get_exchange_rate(p_currency TEXT)
 RETURNS NUMERIC AS $$
 DECLARE
-    v_user_id UUID;
     v_rate NUMERIC;
-    v_setting JSONB;
 BEGIN
-    v_user_id := auth.uid();
-    
-    IF v_user_id IS NULL THEN
-        RETURN 1.0; -- 預設匯率
+    SELECT rate INTO v_rate
+    FROM exchange_rates
+    WHERE currency_code = UPPER(TRIM(p_currency));
+
+    IF v_rate IS NULL OR v_rate <= 0 THEN
+        RETURN 1.0;
     END IF;
-
-    -- 查詢設定
-    SELECT value INTO v_setting
-    FROM settings
-    WHERE user_id = v_user_id AND key = UPPER(p_currency);
-
-    -- 從 JSONB 中提取 rate
-    IF v_setting IS NOT NULL THEN
-        v_rate := (v_setting->>'rate')::NUMERIC;
-        IF v_rate IS NULL OR v_rate <= 0 THEN
-            v_rate := 1.0;
-        END IF;
-    ELSE
-        v_rate := 1.0; -- 預設匯率
-    END IF;
-
     RETURN v_rate;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 -- =============================================================================
 -- 完成！

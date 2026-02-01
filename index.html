@@ -49,19 +49,19 @@
               <!-- 由 JavaScript 依 Accounts 分頁的 Account Name 動態填入 -->
             </select>
           </div>
-          <div class="form-group">
-            <label for="currency">幣別</label>
-            <select id="currency" name="currency">
-              <option value="TWD" selected>TWD</option>
-              <option value="USD">USD</option>
-              <option value="JPY">JPY</option>
-              <option value="EUR">EUR</option>
-              <option value="GBP">GBP</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="amount">金額</label>
-            <input type="number" id="amount" name="amount" step="0.01" required>
+          <div class="form-group form-group--currency-amount">
+            <label for="amount" class="form-group__amount-label">金額</label>
+            <div class="form-group__currency-amount-row">
+              <div class="form-group__currency">
+                <select id="currency" name="currency">
+                  <option value="" disabled selected>載入中…</option>
+                  <!-- 由 JavaScript 依中央匯率表 exchange_rates 動態填入 -->
+                </select>
+              </div>
+              <div class="form-group__amount">
+                <input type="number" id="amount" name="amount" step="0.01" required>
+              </div>
+            </div>
           </div>
           <div class="form-group">
             <label for="note">備註</label>
