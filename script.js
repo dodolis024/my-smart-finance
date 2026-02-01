@@ -74,7 +74,12 @@ let expenseChart = null;
 
 // State: 目前畫面上的交易列表；編輯模式時為該筆 id
 let currentTransactions = [];
+let transactionHistoryFull = []; // 當月完整列表，供表頭篩選用
+let selectedFilterCategories = [];   // 勾選的分類（空＝顯示全部）
+let selectedFilterPaymentMethods = []; // 勾選的支付方式（空＝顯示全部）
 let editingId = null;
+let filterPopover = null;   // 點擊 icon 後顯示的 popover 節點
+let filterPopoverAnchor = null; // 目前開啟的按鈕，用於關閉時比對
 // Daily streak state (from backend)
 // NOTE: streakState
 // - count：目前連續記錄天數（由後端計算後回傳）
@@ -188,6 +193,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetchDashboardData(y, m);
     });
 
+    // 表頭篩選 icon 點擊：顯示 popover，由 openFilterPopover 處理
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.th-filter-btn');
+        if (btn) {
+            e.preventDefault();
+            openFilterPopover(btn);
+            return;
+        }
+        if (filterPopover && filterPopover.contains(e.target)) return;
+        closeFilterPopover();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeFilterPopover();
+    });
+
     // 今日簽到：當天即使沒有消費，也可點擊避免連續記帳天數中斷
     if (elements.checkinBtn) {
         elements.checkinBtn.addEventListener('click', submitDailyCheckin);
@@ -262,8 +282,9 @@ async function fetchDashboardData(year, month) {
             maybeShowBrokenModalOnLoad();
         }
 
-        // B. Update Transaction Table
-        renderTable(data.history);
+        // B. Update Transaction Table（表頭篩選：點 icon 才顯示選項）
+        transactionHistoryFull = data.history || [];
+        applyTableFilter();
 
         // C. Update Category Chart & Stats（只針對支出分類繪製圓餅圖）
         renderChart(data.history, data.categoriesIncome);
@@ -404,7 +425,7 @@ function openStreakModalForBroken() {
 // 使用者點右上角小 icon 時：打開一個「總覽」視窗，顯示目前 streak 狀態
 function openStreakModalForCurrent() {
     const count = streakState.count || 0;
-    renderStreakCalendar();
+    // 日曆由 openReactionModal 內重置為當月並渲染，不在此重複
     if (streakState.broken) {
         openReactionModal({
             title: '目前連續記帳：0 天',
@@ -609,23 +630,21 @@ function renderStreakCalendar() {
     });
 }
 
-// 若尚未指定日曆的年月，則以「最新有簽到的日期」或「今天」作為起始月份
+// 日曆一律預設當月，不記憶上次停在哪一頁（實際重置在 openReactionModal 內完成）
 function ensureStreakCalendarMonth() {
-    if (streakCalendarYear && streakCalendarMonth) return;
-    let baseDate = null;
-    if (streakState.loggedDates && streakState.loggedDates.length > 0) {
-        // 取最新一筆記帳日期
-        const sorted = streakState.loggedDates.slice().sort((a, b) => b.localeCompare(a));
-        baseDate = new Date(sorted[0] + 'T12:00:00');
-    } else {
-        baseDate = new Date();
-    }
-    streakCalendarYear = baseDate.getFullYear();
-    streakCalendarMonth = baseDate.getMonth() + 1;
+    if (streakCalendarYear != null && streakCalendarMonth != null) return;
+    const now = new Date();
+    streakCalendarYear = now.getFullYear();
+    streakCalendarMonth = now.getMonth() + 1;
 }
 
 function openReactionModal(opts) {
     if (!elements.reactionModal) return;
+    // 每次打開彈窗都預設顯示當月，不記憶上次停在哪一頁
+    const now = new Date();
+    streakCalendarYear = now.getFullYear();
+    streakCalendarMonth = now.getMonth() + 1;
+    renderStreakCalendar();
     if (elements.reactionTitle) elements.reactionTitle.textContent = (opts && opts.title) ? opts.title : '提醒';
     // 目前已不顯示文字段落，如需再次顯示，可在 style.css 取消 reaction-modal__text 的 display:none
     if (elements.reactionText) elements.reactionText.textContent = '';
@@ -861,6 +880,98 @@ function updateStats(summary) {
         elements.balance.classList.remove('balance-positive', 'balance-negative');
         elements.balance.classList.add(summary.balance >= 0 ? 'balance-positive' : 'balance-negative');
     }
+}
+
+function getFilterPopover() {
+    if (filterPopover) return filterPopover;
+    filterPopover = document.createElement('div');
+    filterPopover.className = 'filter-popover';
+    filterPopover.setAttribute('role', 'dialog');
+    filterPopover.setAttribute('aria-label', '篩選選項');
+    const list = document.createElement('div');
+    list.className = 'filter-popover__list';
+    filterPopover.appendChild(list);
+    document.body.appendChild(filterPopover);
+    return filterPopover;
+}
+
+function closeFilterPopover() {
+    if (filterPopover) {
+        filterPopover.classList.remove('is-open');
+        filterPopoverAnchor = null;
+    }
+}
+
+function openFilterPopover(btn) {
+    if (filterPopoverAnchor === btn) {
+        closeFilterPopover();
+        return;
+    }
+    const kind = btn.getAttribute('data-filter'); // 'category' | 'payment'
+    const list = transactionHistoryFull || [];
+    const popover = getFilterPopover();
+    const listEl = popover.querySelector('.filter-popover__list');
+    listEl.innerHTML = '';
+
+    if (kind === 'category') {
+        const categories = [...new Set(list.map(t => (t.category && String(t.category).trim()) || '未分類').filter(Boolean))].sort();
+        categories.forEach(cat => {
+            const label = document.createElement('label');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = cat;
+            cb.checked = selectedFilterCategories.includes(cat);
+            cb.addEventListener('change', () => {
+                if (cb.checked) {
+                    if (!selectedFilterCategories.includes(cat)) selectedFilterCategories.push(cat);
+                } else {
+                    selectedFilterCategories = selectedFilterCategories.filter(c => c !== cat);
+                }
+                applyTableFilter();
+            });
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(cat));
+            listEl.appendChild(label);
+        });
+    } else if (kind === 'payment') {
+        const paymentMethods = [...new Set(list.map(t => (t.paymentMethod && String(t.paymentMethod).trim()) || '其他').filter(Boolean))].sort();
+        paymentMethods.forEach(pm => {
+            const label = document.createElement('label');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = pm;
+            cb.checked = selectedFilterPaymentMethods.includes(pm);
+            cb.addEventListener('change', () => {
+                if (cb.checked) {
+                    if (!selectedFilterPaymentMethods.includes(pm)) selectedFilterPaymentMethods.push(pm);
+                } else {
+                    selectedFilterPaymentMethods = selectedFilterPaymentMethods.filter(p => p !== pm);
+                }
+                applyTableFilter();
+            });
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(pm));
+            listEl.appendChild(label);
+        });
+    }
+
+    const rect = btn.getBoundingClientRect();
+    popover.style.left = rect.left + 'px';
+    popover.style.top = (rect.bottom + 4) + 'px';
+    popover.classList.add('is-open');
+    filterPopoverAnchor = btn;
+}
+
+function applyTableFilter() {
+    const list = transactionHistoryFull || [];
+    const filtered = list.filter(tx => {
+        const cat = (tx.category && String(tx.category).trim()) || '未分類';
+        const pm = (tx.paymentMethod && String(tx.paymentMethod).trim()) || '其他';
+        return (selectedFilterCategories.length === 0 || selectedFilterCategories.includes(cat)) &&
+               (selectedFilterPaymentMethods.length === 0 || selectedFilterPaymentMethods.includes(pm));
+    });
+    currentTransactions = filtered;
+    renderTable(filtered);
 }
 
 function renderTable(history) {
