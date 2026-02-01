@@ -1,2 +1,2 @@
 # my-smart-finance
-A lightweight expense tracker using Google Sheets
+A lightweight expense tracker
