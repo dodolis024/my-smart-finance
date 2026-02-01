@@ -67,6 +67,10 @@ const elements = {
     reactionCloseBtn: document.getElementById('reactionCloseBtn'),
     // 今日簽到按鈕（當日無消費時仍可維持連續記帳天數）
     checkinBtn: document.getElementById('dailyCheckinBtn'),
+    // 大螢幕時：右欄高度與左側表單對齊用
+    formSection: document.querySelector('.transaction-form-section'),
+    formColumn: document.querySelector('.form-column'),
+    dashboardColumn: document.querySelector('.dashboard-column'),
 };
 
 // Chart.js instance for category doughnut (destroy before re-create when switching months)
@@ -180,8 +184,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load Month Selector (Optional: Simple last 6 months)
     initMonthSelector();
 
+    // 動態載入幣別選單（來自中央匯率表 exchange_rates）
+    await loadCurrencyOptions();
+
     // Fetch Initial Data
     fetchDashboardData(currentYear, currentMonth);
+
+    // 大螢幕：右側儀表板最高與左側表單下緣對齊（滑到底時不超過表單）
+    syncDashboardHeightToForm();
+    window.addEventListener('resize', syncDashboardHeightToForm);
 
     // Attach Event Listeners（表單用 submit + preventDefault，避免 type="submit" 造成頁面重載）
     const form = document.getElementById('transactionForm');
@@ -718,14 +729,12 @@ async function submitTransaction() {
         const isIncome = Array.isArray(incomeCats) && incomeCats.includes(category);
         const type = isIncome ? 'income' : 'expense';
 
-        // 取得匯率
-        const { data: rateData } = await supabase
-            .from('settings')
-            .select('value')
-            .eq('key', currency.toUpperCase())
-            .single();
+        // 取得匯率（從中央 exchange_rates 表）
+        const { data: exchangeRateVal, error: rateErr } = await supabase
+            .rpc('get_exchange_rate', { p_currency: currency.trim().toUpperCase() });
 
-        const exchangeRate = rateData?.value?.rate || 1.0;
+        const exchangeRate = (rateErr == null && exchangeRateVal != null && exchangeRateVal > 0)
+            ? Number(exchangeRateVal) : 1.0;
         const twdAmount = Math.round(amount * exchangeRate * 100) / 100;
 
         // 取得目前使用者（RLS 要求 INSERT 時帶入 user_id）
@@ -1044,7 +1053,16 @@ function startEdit(id) {
     if (elements.dateInput) elements.dateInput.value = tx.date || '';
     if (elements.itemInput) elements.itemInput.value = tx.itemName || '';
     if (elements.amountInput) elements.amountInput.value = tx.originalAmount != null ? tx.originalAmount : (tx.twdAmount != null ? tx.twdAmount : '');
-    if (elements.currencyInput) elements.currencyInput.value = tx.currency || 'TWD';
+    const currencyVal = (tx.currency || 'TWD').toUpperCase();
+    if (elements.currencyInput) {
+        if (!Array.from(elements.currencyInput.options).some(function (o) { return o.value === currencyVal; })) {
+            const opt = document.createElement('option');
+            opt.value = currencyVal;
+            opt.textContent = currencyVal;
+            elements.currencyInput.appendChild(opt);
+        }
+        elements.currencyInput.value = currencyVal;
+    }
     if (elements.noteInput) elements.noteInput.value = tx.note || '';
 
     const cat = String(tx.category || '');
@@ -1112,7 +1130,7 @@ function renderChart(history, incomeCategories) {
     // categoryStats: HTML list "Category: Amount" sorted by value
     if (statsEl) {
         if (pairs.length === 0) {
-            statsEl.innerHTML = '<p class="category-stats-empty">本月尚無分類資料</p>';
+            statsEl.innerHTML = '<p class="category-stats-empty">本月尚無消費資料</p>';
         } else {
             statsEl.innerHTML =
                 '<ul class="category-stats-list">' +
@@ -1190,7 +1208,7 @@ function renderPaymentStats(history) {
         .map((k) => ({ label: k, value: byMethod[k] }))
         .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
     if (pairs.length === 0) {
-        el.innerHTML = '<p class="payment-stats-empty">本月尚無支付方式資料</p>';
+        el.innerHTML = '<p class="payment-stats-empty">本月尚無消費紀錄</p>';
     } else {
         el.innerHTML =
             '<ul class="payment-stats-list">' +
@@ -1274,6 +1292,64 @@ function initMonthSelector() {
     }
     // Select current month
     elements.monthSelect.value = `${currentYear}-${currentMonth}`;
+}
+
+/**
+ * 從中央匯率表載入可用幣別並填入 #currency 選單；失敗時保留 TWD。
+ */
+async function loadCurrencyOptions() {
+    const sel = elements.currencyInput;
+    if (!sel) return;
+
+    const supabase = getSupabase();
+    if (!supabase) {
+        sel.innerHTML = '<option value="TWD" selected>TWD</option>';
+        return;
+    }
+
+    try {
+        const { data: codes, error } = await supabase.rpc('get_available_currencies');
+        const list = Array.isArray(codes) ? codes : (codes ? [codes] : []);
+        if (error || list.length === 0) {
+            sel.innerHTML = '<option value="TWD" selected>TWD</option>';
+            return;
+        }
+        sel.innerHTML = '';
+        const hasTWD = list.some(function (c) { return String(c).toUpperCase() === 'TWD'; });
+        if (!hasTWD) list.unshift('TWD');
+        list.forEach(function (code) {
+            const opt = document.createElement('option');
+            opt.value = String(code).toUpperCase();
+            opt.textContent = String(code).toUpperCase();
+            if (opt.value === 'TWD') opt.selected = true;
+            sel.appendChild(opt);
+        });
+    } catch (e) {
+        sel.innerHTML = '<option value="TWD" selected>TWD</option>';
+    }
+}
+
+/**
+ * 大螢幕（>1200px）時：右側儀表板 max-height = 左欄頂到表單區塊下緣的距離，
+ * 滑到底時表格下緣最多與表單下緣對齊。小螢幕時清除 max-height。
+ */
+function syncDashboardHeightToForm() {
+    const formSection = elements.formSection;
+    const formColumn = elements.formColumn;
+    const dashboardColumn = elements.dashboardColumn;
+    if (!formSection || !formColumn || !dashboardColumn) return;
+
+    if (window.innerWidth <= 1200) {
+        dashboardColumn.style.maxHeight = '';
+        return;
+    }
+
+    const rectForm = formColumn.getBoundingClientRect();
+    const rectSection = formSection.getBoundingClientRect();
+    const h = Math.round(rectSection.bottom - rectForm.top);
+    if (h > 0) {
+        dashboardColumn.style.maxHeight = h + 'px';
+    }
 }
 
 function formatMoney(num) {

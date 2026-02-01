@@ -83,7 +83,17 @@ CREATE TABLE IF NOT EXISTS checkins (
 );
 
 -- =============================================================================
--- 6. 建立索引（提升查詢效能）
+-- 6. 建立 exchange_rates 表（中央匯率，全站共用）
+-- =============================================================================
+-- 功能：儲存各幣別對 TWD 的匯率，新增/更新後前端幣別選單與匯率會自動反映
+CREATE TABLE IF NOT EXISTS exchange_rates (
+    currency_code TEXT PRIMARY KEY,
+    rate NUMERIC(10, 6) NOT NULL DEFAULT 1.0,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================================================
+-- 7. 建立索引（提升查詢效能）
 -- =============================================================================
 
 -- accounts 表索引
@@ -107,7 +117,7 @@ CREATE INDEX IF NOT EXISTS idx_checkins_user_id_date ON checkins(user_id, date D
 CREATE INDEX IF NOT EXISTS idx_checkins_user_id_date_unique ON checkins(user_id, date);
 
 -- =============================================================================
--- 7. 啟用 Row Level Security (RLS)
+-- 8. 啟用 Row Level Security (RLS)
 -- =============================================================================
 
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
@@ -116,7 +126,7 @@ ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE checkins ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================================
--- 8. 建立 RLS 政策（Policy）
+-- 9. 建立 RLS 政策（Policy）
 -- =============================================================================
 
 -- accounts 表的 RLS 政策
@@ -195,8 +205,17 @@ CREATE POLICY "Users can delete their own checkins"
     ON checkins FOR DELETE
     USING (auth.uid() = user_id);
 
+-- exchange_rates 表：僅允許已登入使用者讀取（供前端動態幣別選單與匯率計算）
+ALTER TABLE exchange_rates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Authenticated users can read exchange_rates" ON exchange_rates;
+CREATE POLICY "Authenticated users can read exchange_rates"
+    ON exchange_rates FOR SELECT
+    TO authenticated
+    USING (true);
+
 -- =============================================================================
--- 9. 建立觸發器（自動更新 updated_at）
+-- 10. 建立觸發器（自動更新 updated_at）與中央匯率種子
 -- =============================================================================
 
 -- accounts 表的 updated_at 觸發器
@@ -223,8 +242,13 @@ CREATE TRIGGER update_settings_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- 中央匯率表種子（前端幣別選單會依此動態顯示；之後在表內新增列即可出現新幣別）
+INSERT INTO exchange_rates (currency_code, rate)
+VALUES ('TWD', 1.0), ('USD', 30.0), ('JPY', 0.2), ('EUR', 32.0), ('GBP', 38.0)
+ON CONFLICT (currency_code) DO UPDATE SET rate = EXCLUDED.rate, updated_at = NOW();
+
 -- =============================================================================
--- 10. 初始化預設資料（可選）
+-- 11. 初始化預設資料（可選）
 -- =============================================================================
 -- 注意：這些預設資料會在每個使用者首次註冊時透過應用程式邏輯建立
 -- 這裡提供一個範例函數，可在應用程式中呼叫
