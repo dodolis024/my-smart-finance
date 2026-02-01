@@ -56,6 +56,7 @@ html {
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
+  min-height: 100vh;
   box-sizing: border-box;
 }
 
@@ -63,9 +64,10 @@ body {
   margin: 0;
   width: 100%;
   max-width: 100vw;
+  min-height: 100vh;
   overflow-x: hidden;
-  /* 上下留白與左側一致（約 1.25rem），下方不會多一大塊 */
-  padding: 1.25rem 0 1.25rem 1.25rem;
+  /* 四邊留白一致（1.25rem），填滿整個螢幕高度 */
+  padding: 1.25rem;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 1rem;
   font-weight: 400;
@@ -78,6 +80,7 @@ body {
 h2 {
   font-size: 1.5rem;
   font-weight: 600;
+  margin-top: 0;
   margin-bottom: var(--space-sm);
   color: var(--color-text);
 }
@@ -112,37 +115,38 @@ h3 {
 
 /* --------------------------------------------
    3. Main Layout — CSS Grid (35% / 65%)
-   大螢幕：左欄固定不捲動，僅右側儀表板可上下捲動（懸浮於背景效果）
+   大螢幕：容器填滿整個畫面高度（扣除 body 的上下 padding）
    -------------------------------------------- */
 .app-container {
   display: grid;
   /* minmax(0, …) 讓兩欄可彈性縮小，不超出 content 區、不佔到 padding */
   grid-template-columns: minmax(0, 30%) minmax(0, 70%);
+  /* 使用 1fr 讓內容填滿整個高度 */
   grid-template-rows: 1fr;
   gap: var(--space-lg);
-  /* 寬度 = 視窗扣掉左側留白（略縮小），右側貼齊畫面讓捲軸在最右 */
-  width: min(1400px, calc(100vw - 1.25rem));
-  max-width: min(1400px, calc(100vw - 1.25rem));
-  height: 100vh;
-  max-height: 100vh;
+  /* 寬度 = 視窗扣掉左右 padding */
+  width: min(1400px, calc(100vw - 2.5rem));
+  max-width: min(1400px, calc(100vw - 2.5rem));
+  /* 高度填滿螢幕（扣除 body 上下 padding） */
+  height: calc(100vh - 2.5rem);
+  min-height: calc(100vh - 2.5rem);
   margin: 0 auto;
-  /* 上下留白一致，與畫面邊緣距離和左側相當 */
   padding-top: var(--space-lg);
   padding-bottom: var(--space-lg);
   padding-left: max(var(--space-lg), 5vw);
   padding-right: max(var(--space-lg), 5vw);
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
 }
 
 /* --------------------------------------------
    4. Form Column (Left — 35%)
-   大螢幕：固定於左側、頂部對齊，與右欄「收支概覽」標題同高（Safari / Arc 一致）
+   大螢幕：固定於左側、垂直置中，如果表單內容過長可以滾動
    -------------------------------------------- */
 .form-column {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: stretch;
   min-height: 0;
   min-width: 0; /* 允許縮小，不超出 grid 格、不佔到 padding */
@@ -150,6 +154,25 @@ h3 {
   /* 左右留空間給 .transaction-form-section 的陰影，避免被裁掉 */
   padding-left: 0.5rem;
   padding-right: 0.75rem;
+  
+  /* 捲軸樣式：與右側一致 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+.form-column::-webkit-scrollbar {
+  width: 10px;
+}
+.form-column::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 10px;
+}
+.form-column::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+  border: 2px solid var(--scrollbar-track);
+}
+.form-column::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .transaction-form-section {
@@ -376,7 +399,7 @@ h3 {
 
 /* --------------------------------------------
    5. Dashboard Column (Right — 65%)
-   大螢幕：僅此區可上下捲動，左側表單不受影響
+   大螢幕：可上下捲動，隨畫面高度自動調整
    -------------------------------------------- */
 .dashboard-column {
   display: flex;
@@ -389,7 +412,7 @@ h3 {
   /* 右側留較多空間給捲軸，不擋內容；下方留空間給表格陰影 */
   padding-right: 1.5rem;
   padding-bottom: 1rem;
-  /* 實際高度由 JS 設為與左側表單區塊同高，滑到底時與表單下緣對齊 */
+  /* 高度由 grid 自動計算，可隨畫面變化 */
 
   /* 捲軸樣式：淡淡的不突兀（Chrome / Safari / Arc） */
   scrollbar-width: thin;
@@ -1181,10 +1204,16 @@ body.modal-open {
     display: none !important;
   }
 
+  /* 小螢幕：body 不強制填滿高度，讓內容自然流動 */
+  body {
+    min-height: auto;
+  }
+
   .app-container {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
     height: auto;
+    min-height: 0;
     max-height: none;
     overflow: visible;
     gap: 1.5rem;

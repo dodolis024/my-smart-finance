@@ -193,6 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 大螢幕：右側儀表板最高與左側表單下緣對齊（滑到底時不超過表單）
     syncDashboardHeightToForm();
     window.addEventListener('resize', syncDashboardHeightToForm);
+    window.addEventListener('load', () => { syncDashboardHeightToForm(); });
 
     // Attach Event Listeners（表單用 submit + preventDefault，避免 type="submit" 造成頁面重載）
     const form = document.getElementById('transactionForm');
@@ -319,6 +320,7 @@ async function fetchDashboardData(year, month) {
         return null;
     } finally {
         setLoading(false);
+        syncDashboardHeightToForm();
     }
 }
 
@@ -1330,25 +1332,14 @@ async function loadCurrencyOptions() {
 }
 
 /**
- * 大螢幕（>1200px）時：右側儀表板 max-height = 左欄頂到表單區塊下緣的距離，
- * 滑到底時表格下緣最多與表單下緣對齊。小螢幕時清除 max-height。
+ * 大螢幕（>1200px）時：高度由 CSS Grid 自動控制，不需要 JS 動態調整。
+ * 右側儀表板可以隨畫面高度自由滾動。
  */
 function syncDashboardHeightToForm() {
-    const formSection = elements.formSection;
-    const formColumn = elements.formColumn;
+    // 移除所有動態高度設定，讓 CSS Grid 自動處理
     const dashboardColumn = elements.dashboardColumn;
-    if (!formSection || !formColumn || !dashboardColumn) return;
-
-    if (window.innerWidth <= 1200) {
+    if (dashboardColumn && window.innerWidth <= 1200) {
         dashboardColumn.style.maxHeight = '';
-        return;
-    }
-
-    const rectForm = formColumn.getBoundingClientRect();
-    const rectSection = formSection.getBoundingClientRect();
-    const h = Math.round(rectSection.bottom - rectForm.top);
-    if (h > 0) {
-        dashboardColumn.style.maxHeight = h + 'px';
     }
 }
 
