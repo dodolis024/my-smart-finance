@@ -1237,10 +1237,10 @@ body.modal-open {
 }
 
 /* --------------------------------------------
-   13. Responsive — Compact (≤900px)
+   13. Responsive — Compact (≤870px)
    Analytics stack; stat cards can wrap on very small screens.
    -------------------------------------------- */
-@media (max-width: 900px) {
+@media (max-width: 870px) {
   .app-container {
     padding: 1rem max(1.5rem, 5vw);
   }
@@ -1272,4 +1272,263 @@ body.modal-open {
 
 .table-wrapper {
   overflow-x: auto;
+}
+
+/* --------------------------------------------
+   14. Responsive — Mobile (≤600px)
+   手機專用優化：更大的觸控目標、更緊湊的布局、優化的字體大小
+   -------------------------------------------- */
+@media (max-width: 600px) {
+  /* 減少 body padding，讓手機有更多空間 */
+  body {
+    padding: 0.75rem;
+  }
+
+  /* 頂部列優化 */
+  .app-top-bar {
+    padding: 0.625rem 1rem;
+    margin: 0 -0.75rem 0 -0.75rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .btn-logout-top {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* 主容器：減少 padding，讓內容更寬 */
+  .app-container {
+    padding: 0.75rem 0.75rem;
+    gap: 1rem;
+  }
+
+  /* 表單區塊：減少 padding */
+  .transaction-form-section {
+    padding: 1rem;
+    border-radius: 10px;
+  }
+
+  /* 表單標題：稍微縮小 */
+  .transaction-form-header h2 {
+    font-size: 1.25rem;
+  }
+
+  /* 表單輸入框：增大觸控目標（至少 44px 高） */
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group input[type="date"],
+  .form-group select,
+  .form-group textarea {
+    padding: 0.875rem;
+    font-size: 16px; /* 防止 iOS 自動縮放 */
+    min-height: 44px;
+  }
+
+  /* 表單按鈕：增大觸控目標 */
+  .transaction-form-section button[type="submit"],
+  .btn-cancel {
+    padding: 1rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  /* 簽到按鈕優化 */
+  .btn-checkin {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  /* 統計卡片：垂直堆疊，每個佔滿寬度 */
+  .stats-cards {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    flex: 1 1 auto;
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+
+  /* 統計區塊標題 */
+  .stats-section-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .stats-section-header h2 {
+    font-size: 1.25rem;
+  }
+
+  /* Streak badge 優化 */
+  .streak-badge {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  /* 月份選擇器 */
+  .month-selector-section {
+    flex-wrap: wrap;
+  }
+
+  .month-selector-section select {
+    padding: 0.625rem 1.25rem 0.625rem 1rem;
+    font-size: 16px; /* 防止 iOS 自動縮放 */
+    min-height: 44px;
+  }
+
+  /* 分析區塊 */
+  .analytics-col {
+    padding: 1rem;
+  }
+
+  .analytics-col h3 {
+    font-size: 1.125rem;
+  }
+
+  :root { --chart-max-width: 200px; }
+
+  /* 表格優化：更小的字體和 padding */
+  .transaction-history-section th,
+  .transaction-history-section td {
+    padding: 0.5rem 0.375rem;
+    font-size: 0.8125rem;
+  }
+
+  /* 表格標題：更緊湊 */
+  .transaction-history-section th {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  /* 表格操作按鈕：增大觸控目標 */
+  .btn-edit,
+  .btn-delete {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    min-height: 36px;
+  }
+
+  /* 表格標題區塊 */
+  .transaction-history-section h2 {
+    font-size: 1.25rem;
+  }
+
+  /* Modal 優化 */
+  .reaction-modal__dialog {
+    width: calc(100% - 1.5rem);
+    margin: 5vh auto 0;
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .reaction-modal__close {
+    width: 36px;
+    height: 36px;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 1.25rem;
+  }
+
+  .reaction-modal__title {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* 日曆優化 */
+  .streak-calendar {
+    padding: 0.5rem;
+  }
+
+  .streak-calendar__day-inner {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+
+  .streak-calendar__nav-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Streak summary 卡片：垂直堆疊 */
+  .streak-summary {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  /* 表單操作按鈕區：垂直堆疊 */
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  /* 幣別和金額輸入：垂直堆疊 */
+  .form-group--currency-amount .form-group__currency-amount-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .form-group--currency-amount .form-group__currency {
+    width: 100%;
+  }
+
+  /* 標題字體大小調整 */
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+  }
+}
+
+/* --------------------------------------------
+   15. Responsive — Small Mobile (≤400px)
+   超小手機優化：進一步減少間距和字體
+   -------------------------------------------- */
+@media (max-width: 400px) {
+  body {
+    padding: 0.5rem;
+  }
+
+  .app-container {
+    padding: 0.5rem;
+    gap: 0.75rem;
+  }
+
+  .transaction-form-section {
+    padding: 0.875rem;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .stat-card {
+    padding: 0.875rem;
+  }
+
+  :root { --chart-max-width: 180px; }
+
+  .transaction-history-section th,
+  .transaction-history-section td {
+    padding: 0.4rem 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .transaction-history-section th {
+    font-size: 0.7rem;
+  }
 }
