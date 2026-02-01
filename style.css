@@ -63,11 +63,9 @@ body {
   margin: 0;
   width: 100%;
   max-width: 100vw;
-  min-height: 100vh;
   overflow-x: hidden;
-  /* 左側留白略縮小；右側不留白讓捲軸可貼畫面最右 */
-  padding-left: 1.25rem;
-  padding-right: 0;
+  /* 上下留白與左側一致（約 1.25rem），下方不會多一大塊 */
+  padding: 1.25rem 0 1.25rem 1.25rem;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 1rem;
   font-weight: 400;
@@ -128,7 +126,11 @@ h3 {
   height: 100vh;
   max-height: 100vh;
   margin: 0 auto;
-  padding: var(--space-lg) max(var(--space-lg), 5vw);
+  /* 上下留白一致，與畫面邊緣距離和左側相當 */
+  padding-top: var(--space-lg);
+  padding-bottom: var(--space-lg);
+  padding-left: max(var(--space-lg), 5vw);
+  padding-right: max(var(--space-lg), 5vw);
   overflow: hidden;
   box-sizing: border-box;
 }
