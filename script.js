@@ -888,9 +888,6 @@ function getFilterPopover() {
     filterPopover.className = 'filter-popover';
     filterPopover.setAttribute('role', 'dialog');
     filterPopover.setAttribute('aria-label', '篩選選項');
-    const list = document.createElement('div');
-    list.className = 'filter-popover__list';
-    filterPopover.appendChild(list);
     document.body.appendChild(filterPopover);
     return filterPopover;
 }
@@ -910,11 +907,38 @@ function openFilterPopover(btn) {
     const kind = btn.getAttribute('data-filter'); // 'category' | 'payment'
     const list = transactionHistoryFull || [];
     const popover = getFilterPopover();
-    const listEl = popover.querySelector('.filter-popover__list');
-    listEl.innerHTML = '';
+    popover.innerHTML = '';
+
+    const actions = document.createElement('div');
+    actions.className = 'filter-popover__actions';
+    const btnSelectAll = document.createElement('button');
+    btnSelectAll.type = 'button';
+    btnSelectAll.className = 'filter-popover__action';
+    btnSelectAll.textContent = '全選';
+    const btnClear = document.createElement('button');
+    btnClear.type = 'button';
+    btnClear.className = 'filter-popover__action';
+    btnClear.textContent = '取消篩選';
+    actions.appendChild(btnSelectAll);
+    actions.appendChild(btnClear);
+    popover.appendChild(actions);
+
+    const listEl = document.createElement('div');
+    listEl.className = 'filter-popover__list';
+    popover.appendChild(listEl);
 
     if (kind === 'category') {
         const categories = [...new Set(list.map(t => (t.category && String(t.category).trim()) || '未分類').filter(Boolean))].sort();
+        btnSelectAll.addEventListener('click', () => {
+            selectedFilterCategories = categories.slice();
+            listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = true; });
+            applyTableFilter();
+        });
+        btnClear.addEventListener('click', () => {
+            selectedFilterCategories = [];
+            listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+            applyTableFilter();
+        });
         categories.forEach(cat => {
             const label = document.createElement('label');
             const cb = document.createElement('input');
@@ -935,6 +959,16 @@ function openFilterPopover(btn) {
         });
     } else if (kind === 'payment') {
         const paymentMethods = [...new Set(list.map(t => (t.paymentMethod && String(t.paymentMethod).trim()) || '其他').filter(Boolean))].sort();
+        btnSelectAll.addEventListener('click', () => {
+            selectedFilterPaymentMethods = paymentMethods.slice();
+            listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = true; });
+            applyTableFilter();
+        });
+        btnClear.addEventListener('click', () => {
+            selectedFilterPaymentMethods = [];
+            listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+            applyTableFilter();
+        });
         paymentMethods.forEach(pm => {
             const label = document.createElement('label');
             const cb = document.createElement('input');

@@ -529,6 +529,30 @@ h3 {
 .filter-popover.is-open {
   display: block;
 }
+.filter-popover__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.filter-popover__action {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.filter-popover__action:hover {
+  background: rgba(181, 156, 128, 0.15);
+}
+.filter-popover__action:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
 .filter-popover__list {
   display: flex;
   flex-direction: column;
