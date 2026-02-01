@@ -1033,8 +1033,12 @@ function renderTable(history) {
             <td>${escapeHtml(tx.paymentMethod)}</td>
             <td class="amount">${formatMoney(tx.twdAmount)}</td>
             <td class="row-actions">
-                <button type="button" class="btn-edit" data-id="${escapeHtml(String(tx.id || ''))}">編輯</button>
-                <button type="button" class="btn-delete" data-id="${escapeHtml(String(tx.id || ''))}">刪除</button>
+                <button type="button" class="btn-edit" data-id="${escapeHtml(String(tx.id || ''))}" aria-label="編輯">
+                    <svg class="icon-edit" aria-hidden="true"><use href="#icon-edit"></use></svg>
+                </button>
+                <button type="button" class="btn-delete" data-id="${escapeHtml(String(tx.id || ''))}" aria-label="刪除">
+                    <svg class="icon-delete" aria-hidden="true"><use href="#icon-delete"></use></svg>
+                </button>
             </td>
         `;
         const editBtn = row.querySelector('.btn-edit');

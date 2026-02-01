@@ -737,22 +737,32 @@ h3 {
 /* Edit / Delete buttons in transaction table */
 .btn-edit,
 .btn-delete {
-  padding: 0.35rem 0.6rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
   transition: var(--transition);
-  border: 1px solid;
+  border: none;
   background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
 }
+
+.btn-edit .icon-edit,
+.btn-delete .icon-delete {
+  width: 1.125rem;
+  height: 1.125rem;
+  display: block;
+}
+
 .btn-edit {
   color: var(--color-primary);
-  border-color: var(--color-primary);
 }
 .btn-edit:hover {
-  background: var(--color-primary);
-  color: white;
+  background: rgba(181, 156, 128, 0.1);
+  color: var(--color-primary);
 }
 .btn-edit:focus {
   outline: none;
@@ -760,11 +770,10 @@ h3 {
 }
 .btn-delete {
   color: var(--color-danger);
-  border-color: var(--color-danger);
 }
 .btn-delete:hover {
-  background: var(--color-danger);
-  color: white;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
 }
 .btn-delete:focus {
   outline: none;
@@ -1191,9 +1200,9 @@ body.modal-open {
     align-items: center;
     justify-content: flex-end;
     padding: 0.75rem max(var(--space-lg), 5vw);
-    background: var(--color-card);
-    border-bottom: 1px solid var(--color-border);
-    box-shadow: var(--shadow-card);
+    background: transparent;
+    border-bottom: none;
+    box-shadow: none;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -1284,12 +1293,18 @@ body.modal-open {
     padding: 0.75rem;
   }
 
-  /* 頂部列優化 */
+  /* 頂部列優化：移除白色橫幅，只保留按鈕 */
   .app-top-bar {
-    padding: 0.625rem 1rem;
-    margin: 0 -0.75rem 0 -0.75rem;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
+    background: transparent;
+    border-bottom: none;
+    box-shadow: none;
+    padding: 0.75rem 0;
+    margin: 0;
+    display: flex;
+    justify-content: flex-end;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
   .btn-logout-top {
@@ -1301,6 +1316,29 @@ body.modal-open {
   .app-container {
     padding: 0.75rem 0.75rem;
     gap: 1rem;
+  }
+
+  /* 統一所有區塊寬度並水平置中 */
+  .form-column,
+  .dashboard-column {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    /* 移除所有 padding，讓寬度統一 */
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+
+  .transaction-form-section,
+  .stats-section,
+  .analytics-section,
+  .transaction-history-section {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   /* 表單區塊：減少 padding */
@@ -1412,9 +1450,15 @@ body.modal-open {
   /* 表格操作按鈕：增大觸控目標 */
   .btn-edit,
   .btn-delete {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    min-height: 36px;
+    padding: 0.625rem;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .btn-edit .icon-edit,
+  .btn-delete .icon-delete {
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
   /* 表格標題區塊 */
