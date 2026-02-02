@@ -625,7 +625,7 @@ h3 {
 .transaction-history-section thead tr {
   background: var(--color-table-header);
   display: grid;
-  grid-template-columns: 1.2fr 0.9fr 1.5fr 1fr 1.3fr 1.4fr;
+  grid-template-columns: 1.2fr 1fr 1.3fr 1fr 1.3fr 1.4fr;
   align-items: center;
   padding: 0 0.45rem;
 }
@@ -774,15 +774,23 @@ h3 {
   .transaction-history-section thead tr {
     display: flex !important;
     align-items: center;
-    padding: 0 0.75rem;
+    padding: 0 0.4rem;
   }
   
   .transaction-history-section thead th {
     padding: 0.5rem 0.25rem;
+    display: flex;
+    font-size: 0.885rem;
+    align-items: center;
+    justify-content: flex-start;
   }
   
-  .transaction-history-section thead th:nth-child(1) { flex: 0 0 50px; }  /* 日期 */
-  .transaction-history-section thead th:nth-child(2) { flex: 0 0 60px; }  /* 分類 */
+  .transaction-history-section thead th:nth-child(5) {
+    justify-content: flex-end;
+  }
+  
+  .transaction-history-section thead th:nth-child(1) { flex: 0 0 71px; }  /* 日期 */
+  .transaction-history-section thead th:nth-child(2) { flex: 0 0 75px; }  /* 分類 */
   .transaction-history-section thead th:nth-child(3) { flex: 1; }         /* 項目 */
   .transaction-history-section thead th:nth-child(5) { flex: 0 0 70px; text-align: right; }  /* 金額 */
 
@@ -794,17 +802,17 @@ h3 {
 
   /* 調整手機版欄位樣式 */
   .cell-date { 
-    flex: 0 0 50px;
+    flex: 0 0 65px;
     font-size: 0.8rem;
     text-align: left !important;
-    padding: 0 0.25rem;
+    padding: 0 0.2rem;
     white-space: nowrap;
   }
   
   .cell-category { 
-    flex: 0 0 60px;
+    flex: 0 0 70px;
     text-align: left !important;
-    padding: 0 0.25rem;
+    /* padding: 0 0.1rem; */
     white-space: nowrap;
   }
   
@@ -812,7 +820,7 @@ h3 {
     flex: 1;
     font-size: 0.875rem;
     text-align: left !important;
-    padding: 0 0.25rem;
+    /* padding: 0 0.25rem; */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -862,7 +870,7 @@ h3 {
 
 .swipe-content {
   display: grid;
-  grid-template-columns: 1.2fr 0.9fr 1.5fr 1fr 1.3fr 1.4fr;
+  grid-template-columns: 1.2fr 1fr 1.3fr 1fr 1.3fr 1.4fr;
   align-items: center;
   width: 100%;
   background: #ffffff;

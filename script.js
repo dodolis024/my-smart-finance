@@ -1087,17 +1087,17 @@ function applyTableFilter() {
 }
 
 function formatDateForDisplay(dateStr) {
-    // 手機版（≤600px）只顯示月/日，桌面版顯示完整日期
+    // 手機版（≤600px）只顯示月-日，桌面版顯示完整日期
     if (!dateStr) return '';
     const isMobile = window.innerWidth <= 600;
     if (!isMobile) return dateStr; // 桌面版顯示完整日期
     
-    // 手機版：從 "2026-02-01" 格式中提取月/日
+    // 手機版：從 "2026-02-01" 格式中提取月-日（保留前導零）
     const parts = dateStr.split('-');
     if (parts.length === 3) {
-        const month = parseInt(parts[1], 10);
-        const day = parseInt(parts[2], 10);
-        return `${month}/${day}`;
+        const month = parts[1];
+        const day = parts[2];
+        return `${month}-${day}`;
     }
     return dateStr;
 }
