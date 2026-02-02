@@ -224,8 +224,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Set Date input to today
-    const today = new Date().toISOString().split('T')[0];
+    // Set Date input to today (使用台灣時區)
+    const today = getTodayYmd();
     if(elements.dateInput) elements.dateInput.value = today;
 
     // Load Month Selector (Optional: Simple last 6 months)
@@ -511,7 +511,13 @@ function openStreakModalForCurrent() {
 }
 
 function getTodayYmd() {
-    return new Date().toISOString().split('T')[0];
+    // 使用台灣時區（UTC+8）的日期
+    const now = new Date();
+    const taipeiTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+    const year = taipeiTime.getFullYear();
+    const month = String(taipeiTime.getMonth() + 1).padStart(2, '0');
+    const day = String(taipeiTime.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 // =========================================
@@ -914,7 +920,7 @@ async function deleteTransaction(id) {
 function resetEditState(scrollToHistory) {
     const wasEditing = editingId !== null;
     editingId = null;
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayYmd();
     if (elements.dateInput) elements.dateInput.value = today;
     if (elements.itemInput) elements.itemInput.value = '';
     if (elements.amountInput) elements.amountInput.value = '';

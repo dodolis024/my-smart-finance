@@ -198,8 +198,8 @@ DECLARE
     v_logged_dates_json JSON;
     v_total_logged_days INTEGER;
 BEGIN
-    -- 取得今天和昨天的日期（使用 UTC+8 時區，可根據需求調整）
-    v_today := CURRENT_DATE;
+    -- 取得今天和昨天的日期（使用台灣時區 UTC+8）
+    v_today := (NOW() AT TIME ZONE 'Asia/Taipei')::DATE;
     v_yesterday := v_today - INTERVAL '1 day';
 
     -- 取得所有簽到日期
@@ -214,9 +214,10 @@ BEGIN
     FROM transactions
     WHERE user_id = p_user_id;
 
-    -- 計算 total_logged_days
-    SELECT COUNT(*) INTO v_total_logged_days
-    FROM (SELECT DISTINCT date FROM transactions WHERE user_id = p_user_id) AS unique_dates;
+    -- 計算 total_logged_days（使用 checkins 表，包含所有有記帳或簽到的日期）
+    SELECT COUNT(DISTINCT date) INTO v_total_logged_days
+    FROM checkins
+    WHERE user_id = p_user_id;
 
     -- 轉換簽到日期為 JSON 陣列（含 date 與 source，供前端區分記帳簽到 / 簽到按鈕）
     SELECT json_agg(json_build_object('date', date::text, 'source', source) ORDER BY date DESC)
