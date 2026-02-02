@@ -755,6 +755,16 @@ h3 {
 
 /* 手機版：隱藏桌面按鈕，啟用滑動操作 */
 @media (max-width: 600px) {
+  /* 大標題置中 */
+  .stats-section-header {
+    justify-content: center;
+  }
+  
+  .analytics-section h2,
+  .transaction-history-section h2 {
+    text-align: center;
+  }
+
   /* 隱藏桌面版按鈕 */
   .cell-actions {
     display: none !important;
@@ -1593,9 +1603,10 @@ body.modal-open {
     max-width: 100%;
     margin-left: auto;
     margin-right: auto;
-    /* 移除所有 padding，讓寬度統一 */
-    padding-left: 0;
-    padding-right: 0;
+    /* 保留左右 padding 給陰影留空間，移除上下 padding */
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-top: 0;
     padding-bottom: 0;
   }
 
