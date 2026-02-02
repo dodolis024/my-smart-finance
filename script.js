@@ -133,11 +133,11 @@ function moveStreakBadgeToTopBar() {
     const isVertical = window.matchMedia('(max-width: 1200px)').matches;
     
     if (isVertical) {
-        // 垂直顯示：移動到 top-bar 右側容器（在登出按鈕之前）
+        // 垂直顯示：移動到 top-bar 右側容器（在更多選單按鈕之前）
         if (streakBadge.parentElement !== topBarRight) {
-            const logoutBtn = topBarRight.querySelector('.btn-logout-top');
-            if (logoutBtn) {
-                topBarRight.insertBefore(streakBadge, logoutBtn);
+            const moreMenuBtn = topBarRight.querySelector('.more-menu-btn--mobile');
+            if (moreMenuBtn) {
+                topBarRight.insertBefore(streakBadge, moreMenuBtn);
             } else {
                 topBarRight.appendChild(streakBadge);
             }
@@ -145,10 +145,10 @@ function moveStreakBadgeToTopBar() {
     } else {
         // 水平顯示：移動回原位置
         if (streakBadgeOriginalParent && streakBadge.parentElement !== streakBadgeOriginalParent) {
-            // 找到原本的位置（在登出按鈕之前）
-            const logoutBtn = streakBadgeOriginalParent.querySelector('.logout-btn--desktop');
-            if (logoutBtn) {
-                streakBadgeOriginalParent.insertBefore(streakBadge, logoutBtn);
+            // 找到原本的位置（在更多選單按鈕之前）
+            const moreMenuBtn = streakBadgeOriginalParent.querySelector('.more-menu-btn--desktop');
+            if (moreMenuBtn) {
+                streakBadgeOriginalParent.insertBefore(streakBadge, moreMenuBtn);
             } else {
                 streakBadgeOriginalParent.appendChild(streakBadge);
             }
@@ -288,21 +288,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeReactionModal();
+        if (e.key === 'Escape') {
+            closeReactionModal();
+            closeMoreMenu();
+        }
     });
 
-    // 登出按鈕（大螢幕在 stats 區、小螢幕在頂部列，共用同一行為）
-    const logoutBtns = document.querySelectorAll('.logout-btn');
-    logoutBtns.forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            if (confirm('確定要登出嗎？')) {
-                const supabase = getSupabase();
-                if (supabase) {
-                    await supabase.auth.signOut();
-                }
-                window.location.href = 'auth.html';
-            }
+    // 更多選單按鈕（桌面版和手機版）
+    const moreMenuBtn = document.getElementById('moreMenuBtn');
+    const moreMenuBtnMobile = document.getElementById('moreMenuBtnMobile');
+    const moreMenuDropdown = document.getElementById('moreMenuDropdown');
+    const moreMenuDropdownMobile = document.getElementById('moreMenuDropdownMobile');
+
+    console.log('更多選單元素:', { moreMenuBtn, moreMenuBtnMobile, moreMenuDropdown, moreMenuDropdownMobile });
+
+    if (moreMenuBtn && moreMenuDropdown) {
+        console.log('綁定桌面版更多選單事件');
+        moreMenuBtn.addEventListener('click', (e) => {
+            console.log('桌面版更多選單被點擊');
+            e.stopPropagation();
+            toggleMoreMenu(moreMenuBtn, moreMenuDropdown);
         });
+    }
+
+    if (moreMenuBtnMobile && moreMenuDropdownMobile) {
+        console.log('綁定手機版更多選單事件');
+        moreMenuBtnMobile.addEventListener('click', (e) => {
+            console.log('手機版更多選單被點擊');
+            e.stopPropagation();
+            toggleMoreMenu(moreMenuBtnMobile, moreMenuDropdownMobile);
+        });
+    }
+
+    // 點擊外部關閉選單
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.more-menu-btn') && !e.target.closest('.more-menu-dropdown')) {
+            closeMoreMenu();
+        }
+    });
+
+    // 登出按鈕（在更多選單中）
+    const logoutBtn = document.getElementById('logoutBtn');
+    const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+    
+    [logoutBtn, logoutBtnMobile].forEach((btn) => {
+        if (btn) {
+            btn.addEventListener('click', async () => {
+                if (confirm('確定要登出嗎？')) {
+                    const supabase = getSupabase();
+                    if (supabase) {
+                        await supabase.auth.signOut();
+                    }
+                    window.location.href = 'auth.html';
+                }
+            });
+        }
     });
 });
 
@@ -728,6 +768,28 @@ function closeReactionModal() {
     elements.reactionModal.classList.remove('is-open');
     elements.reactionModal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
+}
+
+// =========================================
+// More Menu Toggle
+// =========================================
+function toggleMoreMenu(btn, dropdown) {
+    console.log('toggleMoreMenu 被調用', { btn, dropdown });
+    const isOpen = dropdown.classList.contains('is-open');
+    console.log('選單狀態:', isOpen ? '開啟' : '關閉');
+    closeMoreMenu(); // 先關閉所有選單
+    if (!isOpen) {
+        console.log('打開選單');
+        dropdown.classList.add('is-open');
+        btn.setAttribute('aria-expanded', 'true');
+    }
+}
+
+function closeMoreMenu() {
+    const dropdowns = document.querySelectorAll('.more-menu-dropdown');
+    const btns = document.querySelectorAll('.more-menu-btn');
+    dropdowns.forEach(d => d.classList.remove('is-open'));
+    btns.forEach(b => b.setAttribute('aria-expanded', 'false'));
 }
 
 function focusTransactionInput() {

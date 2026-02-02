@@ -15,11 +15,24 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- 小螢幕專用頂部列：登出按鈕固定在上方（僅在單欄版面時顯示） -->
+  <!-- 小螢幕專用頂部列：更多選單按鈕固定在上方（僅在單欄版面時顯示） -->
   <header class="app-top-bar" aria-label="頂部導覽">
     <div class="app-top-bar__right">
       <!-- Streak 按鈕將在垂直顯示時移動到此處 -->
-      <button type="button" class="btn-logout-top logout-btn">登出</button>
+      <button type="button" id="moreMenuBtnMobile" class="more-menu-btn more-menu-btn--mobile" aria-label="更多選項" aria-expanded="false">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-icon">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      </button>
+      <!-- 手機版更多選單下拉內容 -->
+      <div class="more-menu-dropdown more-menu-dropdown--mobile" id="moreMenuDropdownMobile">
+        <button type="button" id="logoutBtnMobile" class="more-menu-item">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+          </svg>
+          <span>登出</span>
+        </button>
+      </div>
     </div>
   </header>
   <div class="app-container">
@@ -104,8 +117,21 @@
               <span class="streak-badge__count">0</span>
               <span class="streak-badge__unit">天</span>
             </button>
-            <!-- logout-btn（大螢幕顯示；小螢幕由 .app-top-bar 的按鈕取代） -->
-            <button type="button" id="logoutBtn" class="logout-btn logout-btn--desktop" style="padding: 0.5rem 1rem; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">登出</button>
+            <!-- 更多選單按鈕（大螢幕顯示；小螢幕由 .app-top-bar 的按鈕取代） -->
+            <button type="button" id="moreMenuBtn" class="more-menu-btn more-menu-btn--desktop" aria-label="更多選項" aria-expanded="false">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-icon">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+            </button>
+            <!-- 更多選單下拉內容 -->
+            <div class="more-menu-dropdown" id="moreMenuDropdown">
+              <button type="button" id="logoutBtn" class="more-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+                </svg>
+                <span>登出</span>
+              </button>
+            </div>
           </div>
         </div>
         <div class="stats-cards">
