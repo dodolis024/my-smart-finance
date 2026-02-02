@@ -115,6 +115,47 @@ const CHART_COLORS = [
 // =========================================
 // 1. Initialization
 // =========================================
+// 移動 streak 按鈕到 top-bar（垂直顯示時）
+let streakBadgeOriginalParent = null;
+
+function moveStreakBadgeToTopBar() {
+    const streakBadge = document.getElementById('streakBadge');
+    const topBarRight = document.querySelector('.app-top-bar__right');
+    
+    if (!streakBadge || !topBarRight) return;
+    
+    // 保存原始父元素（只在第一次時）
+    if (!streakBadgeOriginalParent && streakBadge.parentElement !== topBarRight) {
+        streakBadgeOriginalParent = streakBadge.parentElement;
+    }
+    
+    // 檢查是否為垂直顯示（寬度 ≤ 1200px）
+    const isVertical = window.matchMedia('(max-width: 1200px)').matches;
+    
+    if (isVertical) {
+        // 垂直顯示：移動到 top-bar 右側容器（在登出按鈕之前）
+        if (streakBadge.parentElement !== topBarRight) {
+            const logoutBtn = topBarRight.querySelector('.btn-logout-top');
+            if (logoutBtn) {
+                topBarRight.insertBefore(streakBadge, logoutBtn);
+            } else {
+                topBarRight.appendChild(streakBadge);
+            }
+        }
+    } else {
+        // 水平顯示：移動回原位置
+        if (streakBadgeOriginalParent && streakBadge.parentElement !== streakBadgeOriginalParent) {
+            // 找到原本的位置（在登出按鈕之前）
+            const logoutBtn = streakBadgeOriginalParent.querySelector('.logout-btn--desktop');
+            if (logoutBtn) {
+                streakBadgeOriginalParent.insertBefore(streakBadge, logoutBtn);
+            } else {
+                streakBadgeOriginalParent.appendChild(streakBadge);
+            }
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 確保 Supabase 已載入
     if (typeof window.supabase === 'undefined') {
@@ -122,6 +163,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert('無法載入 Supabase，請檢查網路連線。');
         return;
     }
+    
+    // 移動 streak 按鈕到 top-bar（如果適用）
+    moveStreakBadgeToTopBar();
+    
+    // 監聽視窗大小變化
+    window.addEventListener('resize', moveStreakBadgeToTopBar);
 
     // 取得 supabase client
     const supabase = getSupabase();
@@ -780,7 +827,7 @@ async function submitTransaction() {
             const wasEdit = true;
             const submittedDate = date;
             const [y, m] = submittedDate ? submittedDate.split('-') : (elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [String(currentYear), String(currentMonth)]);
-            resetEditState();
+            resetEditState(true); // 完成編輯後滾動到交易紀錄列表
             await fetchDashboardData(parseInt(y, 10), parseInt(m, 10));
             alert('已更新。');
         } else {
@@ -862,8 +909,10 @@ async function deleteTransaction(id) {
 
 /**
  * 清除編輯狀態並還原表單：用於取消、送出成功、切換月份時。
+ * @param {boolean} scrollToHistory - 是否滾動到交易紀錄列表（預設：如果正在編輯模式則滾動）
  */
-function resetEditState() {
+function resetEditState(scrollToHistory) {
+    const wasEditing = editingId !== null;
     editingId = null;
     const today = new Date().toISOString().split('T')[0];
     if (elements.dateInput) elements.dateInput.value = today;
@@ -875,6 +924,24 @@ function resetEditState() {
     if (elements.addBtn) elements.addBtn.innerText = '新增交易';
     if (elements.cancelEditBtn) elements.cancelEditBtn.style.display = 'none';
     if (elements.formSectionTitle) elements.formSectionTitle.textContent = '新增交易';
+    
+    // 如果正在編輯模式（取消或完成編輯），滾動到交易紀錄列表
+    if (wasEditing && (scrollToHistory !== false)) {
+        scrollToTransactionHistory();
+    }
+}
+
+/**
+ * 滾動到交易紀錄列表
+ */
+function scrollToTransactionHistory() {
+    const historySection = document.querySelector('.transaction-history-section');
+    if (historySection) {
+        // 使用 setTimeout 確保 DOM 更新完成後再滾動
+        setTimeout(() => {
+            historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
 }
 
 // =========================================
@@ -1019,6 +1086,22 @@ function applyTableFilter() {
     renderTable(filtered);
 }
 
+function formatDateForDisplay(dateStr) {
+    // 手機版（≤600px）只顯示月/日，桌面版顯示完整日期
+    if (!dateStr) return '';
+    const isMobile = window.innerWidth <= 600;
+    if (!isMobile) return dateStr; // 桌面版顯示完整日期
+    
+    // 手機版：從 "2026-02-01" 格式中提取月/日
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        const month = parseInt(parts[1], 10);
+        const day = parseInt(parts[2], 10);
+        return `${month}/${day}`;
+    }
+    return dateStr;
+}
+
 function renderTable(history) {
     if(!elements.transactionList) return;
     currentTransactions = history || [];
@@ -1026,28 +1109,220 @@ function renderTable(history) {
 
     currentTransactions.forEach(tx => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${escapeHtml(tx.date)}</td>
-            <td><span class="badge">${escapeHtml(tx.category)}</span></td>
-            <td>${escapeHtml(tx.itemName)}</td>
-            <td>${escapeHtml(tx.paymentMethod)}</td>
-            <td class="amount">${formatMoney(tx.twdAmount)}</td>
-            <td class="row-actions">
+        row.className = 'transaction-row';
+        row.setAttribute('data-id', escapeHtml(String(tx.id || '')));
+        
+        // 創建包含所有內容的 td（使用單個 td 包裝所有內容）
+        const contentCell = document.createElement('td');
+        contentCell.className = 'transaction-row-cell';
+        contentCell.colSpan = 6;
+        
+        // 創建滑動容器
+        const swipeContainer = document.createElement('div');
+        swipeContainer.className = 'swipe-container';
+        
+        // 創建內容區域
+        const content = document.createElement('div');
+        content.className = 'swipe-content';
+        const displayDate = formatDateForDisplay(tx.date);
+        content.innerHTML = `
+            <div class="cell-date">${escapeHtml(displayDate)}</div>
+            <div class="cell-category"><span class="badge">${escapeHtml(tx.category)}</span></div>
+            <div class="cell-item">${escapeHtml(tx.itemName)}</div>
+            <div class="cell-payment">${escapeHtml(tx.paymentMethod)}</div>
+            <div class="cell-amount">${formatMoney(tx.twdAmount)}</div>
+            <div class="cell-actions row-actions">
                 <button type="button" class="btn-edit" data-id="${escapeHtml(String(tx.id || ''))}" aria-label="編輯">
                     <svg class="icon-edit" aria-hidden="true"><use href="#icon-edit"></use></svg>
                 </button>
                 <button type="button" class="btn-delete" data-id="${escapeHtml(String(tx.id || ''))}" aria-label="刪除">
                     <svg class="icon-delete" aria-hidden="true"><use href="#icon-delete"></use></svg>
                 </button>
-            </td>
+            </div>
         `;
-        const editBtn = row.querySelector('.btn-edit');
-        const delBtn = row.querySelector('.btn-delete');
+        
+        // 創建編輯按鈕（放在左邊，右滑時顯示）
+        const swipeEditAction = document.createElement('div');
+        swipeEditAction.className = 'swipe-action swipe-action--edit';
+        swipeEditAction.innerHTML = `
+            <button type="button" class="swipe-action-btn swipe-action-btn--edit" data-id="${escapeHtml(String(tx.id || ''))}" aria-label="編輯">
+                <svg class="icon-edit" aria-hidden="true"><use href="#icon-edit"></use></svg>
+            </button>
+        `;
+        
+        // 創建刪除按鈕（放在右邊，左滑時顯示）
+        const swipeDeleteAction = document.createElement('div');
+        swipeDeleteAction.className = 'swipe-action swipe-action--delete';
+        swipeDeleteAction.innerHTML = `
+            <button type="button" class="swipe-action-btn swipe-action-btn--delete" data-id="${escapeHtml(String(tx.id || ''))}" aria-label="刪除">
+                <svg class="icon-delete" aria-hidden="true"><use href="#icon-delete"></use></svg>
+            </button>
+        `;
+        
+        // 組裝結構：[編輯] [內容] [刪除]
+        // 左滑時內容向左 → 露出右邊的刪除
+        // 右滑時內容向右 → 露出左邊的編輯
+        swipeContainer.appendChild(swipeEditAction);
+        swipeContainer.appendChild(content);
+        swipeContainer.appendChild(swipeDeleteAction);
+        contentCell.appendChild(swipeContainer);
+        row.appendChild(contentCell);
+        
+        // 桌面版按鈕事件
+        const editBtn = content.querySelector('.btn-edit');
+        const delBtn = content.querySelector('.btn-delete');
         if (editBtn) editBtn.addEventListener('click', function () { startEdit(this.getAttribute('data-id')); });
         if (delBtn) delBtn.addEventListener('click', function () { deleteTransaction(this.getAttribute('data-id')); });
+        
+        // 滑動操作按鈕事件
+        const swipeEditBtn = swipeEditAction.querySelector('.swipe-action-btn--edit');
+        const swipeDelBtn = swipeDeleteAction.querySelector('.swipe-action-btn--delete');
+        if (swipeEditBtn) swipeEditBtn.addEventListener('click', function () { 
+            resetSwipeContainer(swipeContainer);
+            startEdit(this.getAttribute('data-id')); 
+        });
+        if (swipeDelBtn) swipeDelBtn.addEventListener('click', function () { 
+            resetSwipeContainer(swipeContainer);
+            deleteTransaction(this.getAttribute('data-id')); 
+        });
+        
+        // 添加滑動功能
+        initSwipe(swipeContainer);
+        
         elements.transactionList.appendChild(row);
     });
 }
+
+// 當前打開的滑動容器（全域追蹤，確保一次只有一個）
+let currentOpenSwipeContainer = null;
+
+// 重置指定容器的滑動狀態
+function resetSwipeContainer(container) {
+    if (!container) return;
+    const content = container.querySelector('.swipe-content');
+    if (content) {
+        content.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        content.style.transform = 'translateX(0)';
+    }
+    container.classList.remove('swiped-left', 'swiped-right');
+    container._swipeState = { currentTranslate: 0, prevTranslate: 0 };
+    if (currentOpenSwipeContainer === container) {
+        currentOpenSwipeContainer = null;
+    }
+}
+
+// 初始化滑動功能
+function initSwipe(container) {
+    if (!container) return;
+    
+    const content = container.querySelector('.swipe-content');
+    if (!content) return;
+    
+    // 初始化滑動狀態
+    container._swipeState = { currentTranslate: 0, prevTranslate: 0 };
+    
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+    
+    function setTranslateX(x) {
+        content.style.transform = `translateX(${x}px)`;
+        container._swipeState.currentTranslate = x;
+    }
+    
+    function resetSwipe() {
+        container._swipeState.currentTranslate = 0;
+        container._swipeState.prevTranslate = 0;
+        content.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        setTranslateX(0);
+        container.classList.remove('swiped-left', 'swiped-right');
+        if (currentOpenSwipeContainer === container) {
+            currentOpenSwipeContainer = null;
+        }
+    }
+    
+    function handleStart(e) {
+        // 如果點擊的是按鈕，不處理滑動
+        if (e.target.closest('.btn-edit, .btn-delete, .swipe-action-btn')) return;
+        
+        // 重置之前打開的容器
+        if (currentOpenSwipeContainer && currentOpenSwipeContainer !== container) {
+            resetSwipeContainer(currentOpenSwipeContainer);
+        }
+        
+        const touch = e.touches ? e.touches[0] : e;
+        startX = touch.clientX;
+        isDragging = true;
+        content.style.transition = 'none';
+        
+        // 從狀態中讀取當前位置
+        container._swipeState.prevTranslate = container._swipeState.currentTranslate;
+    }
+    
+    function handleMove(e) {
+        if (!isDragging) return;
+        e.preventDefault();
+        
+        const touch = e.touches ? e.touches[0] : e;
+        currentX = touch.clientX - startX;
+        const newTranslate = container._swipeState.prevTranslate + currentX;
+        
+        // 限制滑動範圍
+        const maxLeft = -90; // 左滑最大距離（刪除按鈕寬度）
+        const maxRight = 90; // 右滑最大距離（編輯按鈕寬度）
+        const limitedTranslate = Math.max(maxLeft, Math.min(maxRight, newTranslate));
+        
+        setTranslateX(limitedTranslate);
+    }
+    
+    function handleEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        content.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        const threshold = 50; // 滑動閾值
+        const actionWidth = 90; // 操作按鈕寬度
+        const currentTranslate = container._swipeState.currentTranslate;
+        
+        if (currentTranslate < -threshold) {
+            // 左滑：顯示刪除
+            container._swipeState.currentTranslate = -actionWidth;
+            container._swipeState.prevTranslate = -actionWidth;
+            setTranslateX(-actionWidth);
+            container.classList.add('swiped-left');
+            container.classList.remove('swiped-right');
+            currentOpenSwipeContainer = container;
+        } else if (currentTranslate > threshold) {
+            // 右滑：顯示編輯
+            container._swipeState.currentTranslate = actionWidth;
+            container._swipeState.prevTranslate = actionWidth;
+            setTranslateX(actionWidth);
+            container.classList.add('swiped-right');
+            container.classList.remove('swiped-left');
+            currentOpenSwipeContainer = container;
+        } else {
+            // 未達閾值：彈回原位
+            resetSwipe();
+        }
+    }
+    
+    // 觸摸事件
+    content.addEventListener('touchstart', handleStart, { passive: false });
+    content.addEventListener('touchmove', handleMove, { passive: false });
+    content.addEventListener('touchend', handleEnd, { passive: true });
+    
+    // 點擊內容區域重置滑動
+    content.addEventListener('click', (e) => {
+        if (container.classList.contains('swiped-left') || container.classList.contains('swiped-right')) {
+            // 如果點擊的是按鈕，不重置
+            if (e.target.closest('.btn-edit, .btn-delete')) return;
+            e.preventDefault();
+            resetSwipe();
+        }
+    });
+}
+
 
 /**
  * 進入編輯模式：依 id 從 currentTransactions 取出資料填入表單，按鈕改為「更新交易」，並捲至表單。
