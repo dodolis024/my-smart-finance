@@ -626,6 +626,7 @@ h3 {
   background: var(--color-table-header);
   display: grid;
   grid-template-columns: 1.2fr 0.9fr 1.5fr 1fr 1.3fr 1.4fr;
+  align-items: center;
   padding: 0 0.45rem;
 }
 
@@ -769,38 +770,60 @@ h3 {
     display: none !important;
   }
 
-  /* 手機版表頭：4 欄 Grid（日期、分類、項目、金額） */
+  /* 手機版表頭：只顯示 4 欄（日期、分類、項目、金額） */
   .transaction-history-section thead tr {
-    grid-template-columns: 50px 70px 1fr 85px;
-    padding: 0 0.5rem;
-    gap: 0.5rem;
+    display: flex !important;
+    align-items: center;
+    padding: 0 0.75rem;
   }
+  
+  .transaction-history-section thead th {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .transaction-history-section thead th:nth-child(1) { flex: 0 0 50px; }  /* 日期 */
+  .transaction-history-section thead th:nth-child(2) { flex: 0 0 60px; }  /* 分類 */
+  .transaction-history-section thead th:nth-child(3) { flex: 1; }         /* 項目 */
+  .transaction-history-section thead th:nth-child(5) { flex: 0 0 70px; text-align: right; }  /* 金額 */
 
-  /* 手機版內容：4 欄 Grid（與表頭完全一致） */
+  /* 手機版內容：只顯示 4 欄 */
   .swipe-content {
-    grid-template-columns: 50px 70px 1fr 85px;
-    padding: 0.75rem 0.5rem;
-    gap: 0.5rem;
+    display: flex !important;
+    padding: 0.5rem 0.75rem;
   }
 
   /* 調整手機版欄位樣式 */
   .cell-date { 
-    font-size: 0.75rem;
-    text-align: left;
+    flex: 0 0 50px;
+    font-size: 0.8rem;
+    text-align: left !important;
+    padding: 0 0.25rem;
+    white-space: nowrap;
   }
   
   .cell-category { 
-    text-align: left;
+    flex: 0 0 60px;
+    text-align: left !important;
+    padding: 0 0.25rem;
+    white-space: nowrap;
   }
   
   .cell-item { 
+    flex: 1;
     font-size: 0.875rem;
-    text-align: left;
+    text-align: left !important;
+    padding: 0 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .cell-amount { 
+    flex: 0 0 70px;
     font-size: 0.875rem;
-    text-align: right;
+    text-align: right !important;
+    padding: 0 0.25rem;
+    white-space: nowrap;
   }
 
   /* 手機版：顯示滑動操作按鈕 */
