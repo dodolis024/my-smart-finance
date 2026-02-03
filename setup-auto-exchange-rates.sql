@@ -8,8 +8,13 @@
 -- 1. 已部署 update-exchange-rates Edge Function
 -- 2. 已在 Edge Function 設定中配置 EXCHANGE_RATE_API_KEY
 -- 
--- 執行此腳本前，請先將以下兩個值替換為你的實際值：
--- ✅ 已自動填入您的 Supabase URL 和 Anon Key
+-- ⚠️ 執行前請先替換：
+-- <YOUR_SUPABASE_URL>: 你的 Supabase 專案 URL
+-- <YOUR_SUPABASE_ANON_KEY>: 你的 Supabase Anon Key
+-- 
+-- 如何取得這些資訊：
+-- 1. 前往 Supabase Dashboard > Settings > API
+-- 2. 複製 Project URL 和 anon public key
 -- =============================================================================
 
 -- 1. 啟用 pg_cron 擴展（如果尚未啟用）
@@ -33,10 +38,10 @@ SELECT cron.schedule(
   $$
   SELECT
     extensions.http_post(
-      url := 'https://rlahfuzsxfbocmkecqvg.supabase.co/functions/v1/update-exchange-rates',
+      url := '<YOUR_SUPABASE_URL>/functions/v1/update-exchange-rates',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'Authorization', 'Bearer sb_publishable_Vc9BslZ5l-lNM0WQ8fVUmg_vbhEMqr-'
+        'Authorization', 'Bearer <YOUR_SUPABASE_ANON_KEY>'
       ),
       body := '{}'::jsonb
     ) AS request_id;
@@ -54,8 +59,8 @@ WHERE jobname = 'update-exchange-rates-daily';
 
 -- 提示：首次執行會在明天的排程時間自動執行
 -- 如果想立即測試，請直接呼叫 Edge Function：
--- curl -X POST https://rlahfuzsxfbocmkecqvg.supabase.co/functions/v1/update-exchange-rates \
---   -H "Authorization: Bearer sb_publishable_Vc9BslZ5l-lNM0WQ8fVUmg_vbhEMqr-" \
+-- curl -X POST <YOUR_SUPABASE_URL>/functions/v1/update-exchange-rates \
+--   -H "Authorization: Bearer <YOUR_SUPABASE_ANON_KEY>" \
 --   -H "Content-Type: application/json"
 
 -- =============================================================================
@@ -92,7 +97,7 @@ WHERE jobname = 'update-exchange-rates-daily';
 -- 格式：分 時 日 月 週
 -- 
 -- 範例：
--- '0 18 * * *'   - 每天 18:00（UTC）
+-- '0 2 * * *'    - 每天 02:00（UTC）= 台灣時間 10:00 ⭐ 目前設定
 -- '0 0 * * *'    - 每天 00:00（UTC）= 台灣時間 08:00
 -- '0 */6 * * *'  - 每 6 小時執行一次
 -- '0 2 * * 1'    - 每週一 02:00

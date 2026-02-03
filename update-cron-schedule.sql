@@ -3,6 +3,10 @@
 -- =============================================================================
 -- 此腳本用於更新現有的 cron 排程，將執行時間改為更合適的時段
 -- 執行位置：Supabase Dashboard > SQL Editor
+-- 
+-- ⚠️ 執行前請先替換：
+-- <YOUR_SUPABASE_URL>: 你的 Supabase 專案 URL
+-- <YOUR_SUPABASE_ANON_KEY>: 你的 Supabase Anon Key
 -- =============================================================================
 
 -- 刪除舊的排程
@@ -16,10 +20,10 @@ SELECT cron.schedule(
   $$
   SELECT
     extensions.http_post(
-      url := 'https://rlahfuzsxfbocmkecqvg.supabase.co/functions/v1/update-exchange-rates',
+      url := '<YOUR_SUPABASE_URL>/functions/v1/update-exchange-rates',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
-        'Authorization', 'Bearer sb_publishable_Vc9BslZ5l-lNM0WQ8fVUmg_vbhEMqr-'
+        'Authorization', 'Bearer <YOUR_SUPABASE_ANON_KEY>'
       ),
       body := '{}'::jsonb
     ) AS request_id;

@@ -2,6 +2,14 @@
 # =============================================================================
 # 匯率系統測試腳本
 # =============================================================================
+# 使用方法：
+# 1. 將下方的 <YOUR_SUPABASE_URL> 替換為您的 Supabase URL
+# 2. 執行：./test-exchange-rates.sh
+# =============================================================================
+
+# ⚠️ 請替換為您的 Supabase URL
+SUPABASE_URL="<YOUR_SUPABASE_URL>"
+# 範例：SUPABASE_URL="https://abc123xyz.supabase.co"
 
 echo "🧪 開始測試自動更新匯率系統..."
 echo ""
@@ -11,7 +19,7 @@ echo "📡 測試 Edge Function..."
 echo ""
 
 response=$(curl -s -X POST \
-  https://rlahfuzsxfbocmkecqvg.supabase.co/functions/v1/update-exchange-rates)
+  ${SUPABASE_URL}/functions/v1/update-exchange-rates)
 
 echo "回應內容："
 echo "$response" | python3 -m json.tool 2>/dev/null || echo "$response"
@@ -33,7 +41,7 @@ else
     echo "   請檢查："
     echo "   1. EXCHANGE_RATE_API_KEY 是否已設定"
     echo "   2. API Key 是否有效"
-    echo "   3. Edge Function Logs：https://supabase.com/dashboard/project/rlahfuzsxfbocmkecqvg/functions/update-exchange-rates/details"
+    echo "   3. Edge Function Logs（請在 Supabase Dashboard 中查看）"
 fi
 
 echo ""
