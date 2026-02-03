@@ -3,6 +3,11 @@ supabase-config.js
 .env
 .env.local
 
+# Supabase CLI 暫存檔案
+supabase/.temp/
+supabase/.branches/
+supabase/config.toml
+
 # 其他常見要忽略的
 node_modules/
 .DS_Store
