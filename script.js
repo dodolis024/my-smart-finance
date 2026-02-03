@@ -267,6 +267,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Escape') closeFilterPopover();
     });
 
+    // 金額輸入欄位：自動格式化千分位逗號
+    if (elements.amountInput) {
+        setupAmountInputFormatting();
+    }
+
     // 今日簽到：當天即使沒有消費，也可點擊避免連續記帳天數中斷
     if (elements.checkinBtn) {
         elements.checkinBtn.addEventListener('click', submitDailyCheckin);
@@ -445,7 +450,7 @@ function updateStreakBadge() {
     const count = streakState.count || 0;
     let iconHtml = '';
     if (streakState.broken) {
-        iconHtml = '💢';
+        iconHtml = '😡';
     } else if (count > 0) {
         // 使用 fire SVG icon（描邊漸層、中心透明）
         iconHtml = '<svg class="icon-fire" aria-hidden="true"><use href="#icon-fire"></use></svg>';
@@ -801,6 +806,78 @@ function focusTransactionInput() {
 }
 
 // =========================================
+// 金額輸入欄位格式化（千分位逗號）
+// =========================================
+function formatNumberWithCommas(value) {
+    // 移除所有非數字字符（保留小數點）
+    const cleaned = value.replace(/[^\d.]/g, '');
+    // 只保留第一個小數點
+    const parts = cleaned.split('.');
+    let integerPart = parts[0] || '';
+    const decimalPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
+    
+    // 格式化整數部分（加上千分位逗號）
+    if (integerPart) {
+        integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    
+    return integerPart + decimalPart;
+}
+
+function parseFormattedNumber(value) {
+    // 移除所有逗號，保留數字和小數點
+    return value.replace(/,/g, '');
+}
+
+function setupAmountInputFormatting() {
+    if (!elements.amountInput) return;
+    
+    // 輸入時格式化
+    elements.amountInput.addEventListener('input', (e) => {
+        const cursorPosition = e.target.selectionStart;
+        const oldValue = e.target.value;
+        const formatted = formatNumberWithCommas(oldValue);
+        
+        // 計算游標新位置（考慮新增或移除的逗號）
+        // 計算游標前有多少個逗號
+        const commasBeforeCursor = (oldValue.substring(0, cursorPosition).match(/,/g) || []).length;
+        const newCommasBeforeCursor = (formatted.substring(0, cursorPosition).match(/,/g) || []).length;
+        const cursorAdjustment = newCommasBeforeCursor - commasBeforeCursor;
+        const newCursorPosition = cursorPosition + cursorAdjustment;
+        
+        e.target.value = formatted;
+        
+        // 恢復游標位置
+        setTimeout(() => {
+            e.target.setSelectionRange(newCursorPosition, newCursorPosition);
+        }, 0);
+    });
+    
+    // 失去焦點時確保格式正確
+    elements.amountInput.addEventListener('blur', (e) => {
+        const value = e.target.value.trim();
+        if (value) {
+            e.target.value = formatNumberWithCommas(value);
+        }
+    });
+    
+    // 防止貼上非數字內容
+    elements.amountInput.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+        const cleaned = parseFormattedNumber(pastedText);
+        if (cleaned) {
+            const formatted = formatNumberWithCommas(cleaned);
+            e.target.value = formatted;
+            // 將游標移到最後
+            setTimeout(() => {
+                e.target.setSelectionRange(formatted.length, formatted.length);
+            }, 0);
+        }
+    });
+}
+
+// =========================================
 // 3. Submit Data (POST) - Supabase Version
 // =========================================
 async function submitTransaction() {
@@ -832,7 +909,15 @@ async function submitTransaction() {
         const category = elements.categorySelect.value;
         const paymentMethod = elements.methodInput.value;
         const currency = elements.currencyInput.value || 'TWD';
-        const amount = parseFloat(elements.amountInput.value);
+        // 移除千分位逗號後再解析數字
+        const amountValue = parseFormattedNumber(elements.amountInput.value);
+        const amount = parseFloat(amountValue);
+        if (isNaN(amount) || amount <= 0) {
+            alert('請輸入有效的金額！');
+            btn.disabled = false;
+            btn.innerText = originalText;
+            return;
+        }
         const note = elements.noteInput.value || null;
 
         // 判斷是收入還是支出（根據類別）
@@ -1401,7 +1486,15 @@ function startEdit(id) {
 
     if (elements.dateInput) elements.dateInput.value = tx.date || '';
     if (elements.itemInput) elements.itemInput.value = tx.itemName || '';
-    if (elements.amountInput) elements.amountInput.value = tx.originalAmount != null ? tx.originalAmount : (tx.twdAmount != null ? tx.twdAmount : '');
+    // 編輯時：格式化顯示金額（加上千分位逗號）
+    if (elements.amountInput) {
+        const amountValue = tx.originalAmount != null ? tx.originalAmount : (tx.twdAmount != null ? tx.twdAmount : '');
+        if (amountValue) {
+            elements.amountInput.value = formatNumberWithCommas(String(amountValue));
+        } else {
+            elements.amountInput.value = '';
+        }
+    }
     const currencyVal = (tx.currency || 'TWD').toUpperCase();
     if (elements.currencyInput) {
         if (!Array.from(elements.currencyInput.options).some(function (o) { return o.value === currencyVal; })) {

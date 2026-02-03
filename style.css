@@ -549,6 +549,56 @@ h3 {
   padding: var(--space-md);
   border-radius: 10px;
   box-shadow: var(--shadow-card);
+  position: relative;
+}
+
+/* 第一個卡片（收入）GIF  */
+.stat-card:nth-child(1)::after {
+  content: '';
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5rem;
+  height: 5rem;
+  right: 0rem;
+  background-image: url('images/maltese-gif-3.gif');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
+}
+
+/* 第二個卡片（支出）GIF  */
+.stat-card:nth-child(2)::after {
+  content: '';
+  position: absolute;
+  right: 0rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 11rem;
+  height: 11rem;
+  background-image: url('images/maltese-gif-5.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
+}
+
+/* 第三個卡片（餘額）GIF */
+.stat-card:nth-child(3)::after {
+  content: '';
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6rem;
+  height: 6rem;
+  background-image: url('images/maltese-gif-6.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
 }
 
 .stat-label {
@@ -1437,6 +1487,39 @@ html {
   border-radius: 10px;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--color-border);
+  position: relative;
+}
+
+/* 第一個卡片（目前連續記帳天數）加入右側圖示 */
+.streak-summary__card:first-child::after {
+  content: '';
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4.5rem;
+  height: 4.5rem;
+  background-image: url('images/maltese-icon-2.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
+}
+
+/* 第三個卡片（最長連續記帳）加入右側 GIF 圖示 */
+.streak-summary__card:nth-child(3)::after {
+  content: '';
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.2rem;
+  height: 3.2rem;
+  background-image: url('images/maltese-git-2.gif');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
 }
 
 .streak-summary__label {
@@ -1507,6 +1590,23 @@ body.modal-open {
 
   .stat-card {
     padding: 1.25rem;
+  }
+
+  /* 中等螢幕：縮小收入卡片圖片 *//* 第一個卡片（收入）GIF  */
+  .stat-card:nth-child(1)::after {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+  /* 中等螢幕：縮小支出卡片圖片 *//* 第二個卡片（支出）GIF  */
+  .stat-card:nth-child(2)::after {
+    width: 6.7rem;
+    height: 6.7rem;
+  }
+
+  /* 中等螢幕：縮小餘額卡片圖片 *//* 第三個卡片（餘額）GIF */
+  .stat-card:nth-child(3)::after {
+    width: 5rem;
+    height: 5rem;
   }
 
   .stat-value {
@@ -1622,6 +1722,17 @@ body.modal-open {
   }
 
   :root { --chart-max-width: 220px; }
+
+  /* 中等螢幕：適中尺寸的圖片 */
+  .streak-summary__card:first-child::after {
+    width: 5.0rem;
+    height: 5.0rem;
+  }
+
+  .streak-summary__card:nth-child(3)::after {
+    width: 3.2rem;
+    height: 3.2rem;
+  }
 }
 
 /* Ensure no overflow on narrow viewports */
@@ -1747,6 +1858,27 @@ body.modal-open {
   .stat-card {
     flex: 1 1 auto;
     padding: 1rem;
+  }
+
+  /* 手機版：縮小收入卡片圖片 *//* 第一個卡片（收入）GIF  */
+  .stat-card:nth-child(1)::after {
+    width: 3.5rem;
+    height: 3.5rem;
+    right: 0.5rem;
+  }
+
+  /* 手機版：縮小支出卡片圖片 *//* 第二個卡片（支出）GIF  */
+  .stat-card:nth-child(2)::after {
+    width: 3.5rem;
+    height: 3.5rem;
+    right: 0.5rem;
+  }
+
+  /* 手機版：縮小餘額卡片圖片 *//* 第三個卡片（餘額）GIF */
+  .stat-card:nth-child(3)::after {
+    width: 3.5rem;
+    height: 3.5rem;
+    right: 0.5rem;
   }
 
   .stat-value {
@@ -1879,6 +2011,19 @@ body.modal-open {
     gap: 0.5rem;
   }
 
+  /* 手機版：縮小圖片尺寸 */
+  .streak-summary__card:first-child::after {
+    width: 3rem;
+    height: 3rem;
+    right: 0.4rem;
+  }
+
+  .streak-summary__card:nth-child(3)::after {
+    width: 3rem;
+    height: 3rem;
+    right: 0.4rem;
+  }
+
   /* 表單操作按鈕區：垂直堆疊 */
   .form-actions {
     flex-direction: column;
@@ -1993,6 +2138,27 @@ body.modal-open {
     padding: 0.875rem;
   }
 
+  /* 超小手機：進一步縮小收入卡片圖片 *//* 第一個卡片（收入）GIF  */
+  .stat-card:nth-child(1)::after {
+    width: 4.9rem;
+    height: 4.9rem;
+    right: 0rem;
+  }
+
+  /* 超小手機：進一步縮小支出卡片圖片 *//* 第二個卡片（支出）GIF  */
+  .stat-card:nth-child(2)::after {
+    width: 6.2rem;
+    height: 6.2rem;
+    right: 0rem;
+  }
+
+  /* 超小手機：進一步縮小餘額卡片圖片 *//* 第三個卡片（餘額）GIF */
+  .stat-card:nth-child(3)::after {
+    width: 5.1rem;
+    height: 5.1rem;
+    right: 0.75rem;
+  }
+
   :root { --chart-max-width: 180px; }
 
   .transaction-history-section th,
@@ -2003,5 +2169,18 @@ body.modal-open {
 
   .transaction-history-section th {
     font-size: 0.7rem;
+  }
+
+  /* 超小手機：進一步縮小圖片 */
+  .streak-summary__card:first-child::after {
+    width: 5.0rem;
+    height: 5.0rem;
+    right: 0.3rem;
+  }
+
+  .streak-summary__card:nth-child(3)::after {
+    width: 3.3rem;
+    height: 3.3rem;
+    right: 1.1rem;
   }
 }
