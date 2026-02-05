@@ -296,6 +296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Escape') {
             closeReactionModal();
             closeMoreMenu();
+            closeTransactionDetail();
         }
     });
 
@@ -776,6 +777,118 @@ function closeReactionModal() {
 }
 
 // =========================================
+// Transaction Detail Modal
+// =========================================
+function showTransactionDetail(tx) {
+    if (!tx) return;
+    
+    // 創建彈窗容器（如果不存在）
+    let modal = document.getElementById('transactionDetailModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'transactionDetailModal';
+        modal.className = 'transaction-detail-modal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-labelledby', 'transactionDetailTitle');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(modal);
+        
+        // 點擊背景關閉
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal || e.target.closest('[data-close="modal"]')) {
+                closeTransactionDetail();
+            }
+        });
+    }
+    
+    // 格式化金額顯示
+    const originalAmount = tx.originalAmount != null ? tx.originalAmount : (tx.amount != null ? tx.amount : tx.twdAmount);
+    const currency = tx.currency || 'TWD';
+    const exchangeRate = tx.exchangeRate || 1.0;
+    const twdAmount = tx.twdAmount || 0;
+    const note = tx.note || '無';
+    
+    // 構建詳情內容
+    let html = '<div class="transaction-detail-content">';
+    html += '  <div class="transaction-detail-header">';
+    html += '    <h2 id="transactionDetailTitle" class="transaction-detail-title">交易詳情</h2>';
+    html += '    <button type="button" class="transaction-detail-close" data-close="modal" aria-label="關閉">';
+    html += '      <svg class="icon-close" aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+    html += '        <line x1="18" y1="6" x2="6" y2="18"></line>';
+    html += '        <line x1="6" y1="6" x2="18" y2="18"></line>';
+    html += '      </svg>';
+    html += '    </button>';
+    html += '  </div>';
+    html += '  <div class="transaction-detail-body">';
+    
+    // 日期
+    html += '    <div class="transaction-detail-item">';
+    html += '      <div class="transaction-detail-label">日期</div>';
+    html += `      <div class="transaction-detail-value">${escapeHtml(tx.date)}</div>`;
+    html += '    </div>';
+    
+    // 分類
+    html += '    <div class="transaction-detail-item">';
+    html += '      <div class="transaction-detail-label">分類</div>';
+    html += `      <div class="transaction-detail-value"><span class="badge">${escapeHtml(tx.category)}</span></div>`;
+    html += '    </div>';
+    
+    // 項目
+    html += '    <div class="transaction-detail-item">';
+    html += '      <div class="transaction-detail-label">項目</div>';
+    html += `      <div class="transaction-detail-value">${escapeHtml(tx.itemName)}</div>`;
+    html += '    </div>';
+    
+    // 原始金額
+    html += '    <div class="transaction-detail-item">';
+    html += '      <div class="transaction-detail-label">金額</div>';
+    html += `      <div class="transaction-detail-value transaction-detail-amount">${formatNumberWithCommas(String(originalAmount))} ${escapeHtml(currency)}</div>`;
+    html += '    </div>';
+    
+    // 如果不是台幣，顯示匯率和台幣金額
+    if (currency !== 'TWD') {
+        html += '    <div class="transaction-detail-item">';
+        html += '      <div class="transaction-detail-label">匯率</div>';
+        html += `      <div class="transaction-detail-value">${exchangeRate.toFixed(4)}</div>`;
+        html += '    </div>';
+        
+        html += '    <div class="transaction-detail-item">';
+        html += '      <div class="transaction-detail-label">台幣金額</div>';
+        html += `      <div class="transaction-detail-value transaction-detail-amount">${formatMoney(twdAmount)}</div>`;
+        html += '    </div>';
+    }
+    
+    // 支付方式
+    html += '    <div class="transaction-detail-item">';
+    html += '      <div class="transaction-detail-label">支付方式</div>';
+    html += `      <div class="transaction-detail-value">${escapeHtml(tx.paymentMethod)}</div>`;
+    html += '    </div>';
+    
+    // 備註
+    html += '    <div class="transaction-detail-item transaction-detail-item--note">';
+    html += '      <div class="transaction-detail-label">備註</div>';
+    html += `      <div class="transaction-detail-value transaction-detail-note">${escapeHtml(note)}</div>`;
+    html += '    </div>';
+    
+    html += '  </div>';
+    html += '</div>';
+    
+    modal.innerHTML = html;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+}
+
+function closeTransactionDetail() {
+    const modal = document.getElementById('transactionDetailModal');
+    if (!modal) return;
+    
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+}
+
+// =========================================
 // More Menu Toggle
 // =========================================
 function toggleMoreMenu(btn, dropdown) {
@@ -1102,9 +1215,10 @@ function scrollToTransactionHistory() {
 // =========================================
 
 function updateStats(summary) {
-    if(elements.totalIncome) elements.totalIncome.innerText = formatMoney(summary.totalIncome);
-    if(elements.totalExpense) elements.totalExpense.innerText = formatMoney(summary.totalExpense);
-    if(elements.balance) elements.balance.innerText = formatMoney(summary.balance);
+    // 收支概覽卡片：四捨五入到整數
+    if(elements.totalIncome) elements.totalIncome.innerText = formatMoney(Math.round(summary.totalIncome));
+    if(elements.totalExpense) elements.totalExpense.innerText = formatMoney(Math.round(summary.totalExpense));
+    if(elements.balance) elements.balance.innerText = formatMoney(Math.round(summary.balance));
     
     // Optional: Color the balance
     if (elements.balance) {
@@ -1341,6 +1455,16 @@ function renderTable(history) {
         
         // 添加滑動功能
         initSwipe(swipeContainer);
+        
+        // 添加點擊事件顯示詳細資訊
+        content.addEventListener('click', (e) => {
+            // 如果點擊的是按鈕，不顯示詳情
+            if (e.target.closest('.btn-edit, .btn-delete')) return;
+            // 如果容器處於滑動狀態，不顯示詳情
+            if (swipeContainer.classList.contains('swiped-left') || swipeContainer.classList.contains('swiped-right')) return;
+            
+            showTransactionDetail(tx);
+        });
         
         elements.transactionList.appendChild(row);
     });
