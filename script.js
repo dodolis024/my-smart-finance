@@ -99,17 +99,17 @@ let streakInitialHandled = false;
 let streakCalendarYear = null;  // 日曆目前顯示的年份
 let streakCalendarMonth = null; // 日曆目前顯示的月份（1-12）
 
-// Professional color palette for chart segments
+// Professional color palette for chart segments (hue 約 13° 間隔，S=36% L=60%)
 const CHART_COLORS = [
-    'rgb(205, 184, 161)',   // 1. 烘焙奶茶 (提亮)
-    'rgb(190, 168, 150)',   // 2. 煙燻陶土 (提亮)
-    'rgba(201, 180, 172, 1)', // 3. 乾燥玫瑰灰 (提亮)
-    'rgba(200, 192, 177, 1)', // 4. 暖木灰 (提亮)
-    'rgba(216, 204, 188, 1)', // 5. 燕麥拿鐵 (提亮)
-    'rgba(224, 215, 204, 1)', // 6. 灰砂色 (提亮)
-    'rgba(238, 226, 214, 1)', // 7. 奶油杏色 (提亮)
-    'rgba(245, 234, 230, 1)', // 8. 亞麻白粉 (提亮)
-    'rgba(252, 248, 245, 1)'  // 9. 純白珍珠 (提亮)
+    'hsl(11, 36%, 60%)',   // 1. 烘焙奶茶
+    'hsl(26, 36%, 60%)',   // 2. 煙燻陶土
+    'hsl(41, 36%, 60%)',   // 3. 乾燥玫瑰灰
+    'hsl(54, 36%, 58%)',   // 4. 暖木灰
+    'hsl(67, 36%, 60%)',   // 5. 燕麥拿鐵
+    'hsl(80, 36%, 60%)',   // 6. 灰砂色
+    'hsl(93, 36%, 60%)',   // 7. 奶油杏色
+    'hsl(106, 36%, 60%)',  // 8. 亞麻白粉
+    'hsl(119, 36%, 60%)'   // 9. 純白珍珠
 ];
 
 // =========================================
@@ -367,8 +367,10 @@ async function fetchDashboardData(year, month) {
         }
         
         // 呼叫 Supabase 函數取得儀表板資料
-        // 參數順序須與 DB 函數一致：p_month, p_year（PostgREST 依字母順序比對）
+        // 參數順序須與 DB 函數一致（PostgREST 依字母順序比對）
+        // p_client_today: 用戶裝置的今天日期（用於 streak 計算）
         const { data, error } = await supabase.rpc('get_dashboard_data', {
+            p_client_today: getTodayYmd(),
             p_month: parseInt(month, 10),
             p_year: parseInt(year, 10)
         });
@@ -557,12 +559,11 @@ function openStreakModalForCurrent() {
 }
 
 function getTodayYmd() {
-    // 使用台灣時區（UTC+8）的日期
-    const now = new Date();
-    const taipeiTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
-    const year = taipeiTime.getFullYear();
-    const month = String(taipeiTime.getMonth() + 1).padStart(2, '0');
-    const day = String(taipeiTime.getDate()).padStart(2, '0');
+    // 使用裝置當地時區的日期（支援旅行時自動跟隨所在地時區）
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
 

@@ -13,9 +13,9 @@
   --color-bg: #FAF9F6; /* 背景顏色 */
   --color-card: #ffffff; /* 卡片顏色 */
   --color-text: #3d3629; /* 文字顏色 */
-  --color-text-secondary: #6b7280; /* 次要文字顏色 */
+  --color-text-secondary: #797169; /* 次要文字顏色 */
   --color-border: #E0D9D0 ;/* 邊框顏色 */
-  --color-success: #10b981; /* 成功顏色 */
+  --color-success: #12ae63; /* 成功顏色 */
   --color-danger: #ef4444; /* 危險顏色 */
   --color-table-header: #dfdad3; /* 表頭：暖灰米色，呼應主色與邊框 */
   --color-row-hover: #F5F2ED; /* 列懸停：淺暖米，與背景協調 */
@@ -108,6 +108,7 @@ h3 {
   border: none;
   cursor: pointer;
   color: var(--color-primary);
+  /* color: hsl(355, 32%, 55%) */
   transition: var(--transition);
   position: relative;
 }

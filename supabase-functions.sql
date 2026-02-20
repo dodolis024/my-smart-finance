@@ -34,13 +34,18 @@ ON CONFLICT (currency_code) DO UPDATE SET rate = EXCLUDED.rate, updated_at = NOW
 -- 1. 取得儀表板資料（getDashboardData）
 -- =============================================================================
 -- 功能：回傳指定年月的摘要、交易紀錄、帳戶列表、類別列表、streak 資訊
--- 參數：p_month (INTEGER), p_year (INTEGER)
+-- 參數：p_client_today (TEXT, 可選), p_month (INTEGER), p_year (INTEGER)
 -- 注意：參數順序必須與 PostgREST 預期一致（依字母順序），否則會 404
 -- 回傳：JSON 物件
 -- 若曾建立過舊版（參數名不同），需先 DROP 再建立
 DROP FUNCTION IF EXISTS get_dashboard_data(INTEGER, INTEGER);
+DROP FUNCTION IF EXISTS get_dashboard_data(TEXT, INTEGER, INTEGER);
 
-CREATE OR REPLACE FUNCTION get_dashboard_data(p_month INTEGER, p_year INTEGER)
+CREATE OR REPLACE FUNCTION get_dashboard_data(
+    p_client_today TEXT DEFAULT NULL,
+    p_month INTEGER DEFAULT NULL,
+    p_year INTEGER DEFAULT NULL
+)
 RETURNS JSON AS $$
 DECLARE
     v_user_id UUID;
@@ -136,7 +141,7 @@ BEGIN
     -- 合併類別列表
     v_categories := v_expense_categories || v_income_categories;
 
-    -- 計算 streak 相關資料（呼叫專門的函數）
+    -- 計算 streak 相關資料（呼叫專門的函數，傳入客戶端的今天日期）
     SELECT 
         streak_count,
         streak_broken,
@@ -149,7 +154,7 @@ BEGIN
         v_total_logged_days,
         v_longest_streak,
         v_logged_dates
-    FROM calculate_streak_stats(v_user_id);
+    FROM calculate_streak_stats(v_user_id, p_client_today);
 
     -- 組合結果
     v_result := json_build_object(
@@ -175,11 +180,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 2. 計算 Streak 統計資料
 -- =============================================================================
 -- 功能：計算連續記帳天數、總記帳天數、最長連續記帳等
--- 參數：p_user_id UUID
+-- 參數：p_user_id UUID, p_client_today TEXT (可選，客戶端的今天日期)
 -- 回傳：TABLE (streak_count, streak_broken, total_logged_days, longest_streak, logged_dates)
 DROP FUNCTION IF EXISTS calculate_streak_stats(UUID);
+DROP FUNCTION IF EXISTS calculate_streak_stats(UUID, TEXT);
 
-CREATE OR REPLACE FUNCTION calculate_streak_stats(p_user_id UUID)
+CREATE OR REPLACE FUNCTION calculate_streak_stats(
+    p_user_id UUID,
+    p_client_today TEXT DEFAULT NULL
+)
 RETURNS TABLE (
     streak_count INTEGER,
     streak_broken BOOLEAN,
@@ -198,8 +207,13 @@ DECLARE
     v_logged_dates_json JSON;
     v_total_logged_days INTEGER;
 BEGIN
-    -- 取得今天和昨天的日期（使用台灣時區 UTC+8）
-    v_today := (NOW() AT TIME ZONE 'Asia/Taipei')::DATE;
+    -- 取得今天和昨天的日期
+    -- 優先使用客戶端傳入的日期（支援跨時區旅行），否則使用台灣時區（向後相容）
+    IF p_client_today IS NOT NULL AND p_client_today != '' THEN
+        v_today := p_client_today::DATE;
+    ELSE
+        v_today := (NOW() AT TIME ZONE 'Asia/Taipei')::DATE;
+    END IF;
     v_yesterday := v_today - INTERVAL '1 day';
 
     -- 取得所有簽到日期
