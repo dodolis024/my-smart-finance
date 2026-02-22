@@ -675,10 +675,14 @@ function renderStreakCalendar() {
         const isTransaction = loggedBySource.onTimeTransaction.has(dateStr);
         const isManual = loggedBySource.manual.has(dateStr);
         const isToday = dateStr === todayStr;
+        const isFuture = dateStr > todayStr;
 
         let cls = 'streak-calendar__day';
-        if (isTransaction) cls += ' streak-calendar__day--transaction';
-        else if (isManual) cls += ' streak-calendar__day--manual';
+        // 未來日期不顯示簽到標記（即使有記錄），避免跨時區時顯示「還沒發生」的日期
+        if (!isFuture) {
+            if (isTransaction) cls += ' streak-calendar__day--transaction';
+            else if (isManual) cls += ' streak-calendar__day--manual';
+        }
         if (isToday) cls += ' streak-calendar__day--today';
 
         html += `<div class="${cls}"><div class="streak-calendar__day-inner">${d}</div></div>`;
