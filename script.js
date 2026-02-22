@@ -399,10 +399,8 @@ async function fetchDashboardData(year, month) {
         // D. Update Payment Stats
         renderPaymentStats(data.history);
 
-        // E. Update Categories (Only if empty)
-        if (elements.categorySelect && elements.categorySelect.options.length <= 1) {
-            populateCategories(data);
-        }
+        // E. Update Categories（每次都更新，確保類別管理變更後能立即反映）
+        populateCategories(data);
 
         // F. Update Payment Methods from Accounts（每次更新，與 Accounts 分頁同步）
         populatePaymentMethods(data.accounts);
@@ -1964,4 +1962,486 @@ async function createDefaultDataForOAuth(userId) {
     } catch (error) {
         console.error('建立預設資料時發生錯誤:', error);
     }
+}
+
+// =========================================
+// Settings Management Modal
+// =========================================
+
+// State
+let currentExpenseCategories = [];
+let currentIncomeCategories = [];
+let currentAccounts = [];
+
+// DOM elements
+const settingsModal = document.getElementById('settingsManageModal');
+const settingsManageBtn = document.getElementById('settingsManageBtn');
+const settingsCloseBtn = document.getElementById('settingsManageCloseBtn');
+const expenseCategoryList = document.getElementById('expenseCategoryList');
+const incomeCategoryList = document.getElementById('incomeCategoryList');
+const accountsList = document.getElementById('accountsList');
+const addAccountBtn = document.getElementById('addAccountBtn');
+const accountForm = document.getElementById('accountForm');
+const accountFormElement = document.getElementById('accountFormElement');
+const cancelAccountFormBtn = document.getElementById('cancelAccountFormBtn');
+const accountTypeSelect = document.getElementById('accountType');
+const creditCardFields = document.getElementById('creditCardFields');
+
+// 開啟 Modal
+function openSettingsModal() {
+    if (!settingsModal) return;
+    settingsModal.classList.add('is-open');
+    settingsModal.setAttribute('aria-hidden', 'false');
+    loadSettingsData();
+}
+
+// 關閉 Modal
+function closeSettingsModal() {
+    if (!settingsModal) return;
+    settingsModal.classList.remove('is-open');
+    settingsModal.setAttribute('aria-hidden', 'true');
+    // 關閉後重新載入資料以更新下拉選單
+    fetchDashboardData(currentYear, currentMonth);
+}
+
+// 載入設定資料
+async function loadSettingsData() {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // 載入類別
+        const { data: expenseData } = await supabase
+            .from('settings')
+            .select('value')
+            .eq('user_id', user.id)
+            .eq('key', 'expense_categories')
+            .single();
+
+        const { data: incomeData } = await supabase
+            .from('settings')
+            .select('value')
+            .eq('user_id', user.id)
+            .eq('key', 'income_categories')
+            .single();
+
+        currentExpenseCategories = (expenseData?.value || ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他']);
+        currentIncomeCategories = (incomeData?.value || ['薪水', '投資', '其他']);
+
+        renderCategories();
+
+        // 載入帳戶
+        const { data: accounts } = await supabase
+            .from('accounts')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true });
+
+        currentAccounts = accounts || [];
+        renderAccounts();
+    } catch (error) {
+        console.error('載入設定資料失敗:', error);
+    }
+}
+
+// 渲染類別列表
+function renderCategories() {
+    if (!expenseCategoryList || !incomeCategoryList) return;
+
+    // 支出類別
+    expenseCategoryList.innerHTML = currentExpenseCategories.map((cat, index) => `
+        <li class="category-item">
+            <span class="category-item__name">${escapeHtml(cat)}</span>
+            <div class="category-item__actions">
+                <button type="button" class="category-item__btn" onclick="renameCategoryPrompt('expense', ${index})">重新命名</button>
+                <button type="button" class="category-item__btn category-item__btn--delete" onclick="deleteCategory('expense', ${index})">刪除</button>
+            </div>
+        </li>
+    `).join('');
+
+    // 收入類別
+    incomeCategoryList.innerHTML = currentIncomeCategories.map((cat, index) => `
+        <li class="category-item">
+            <span class="category-item__name">${escapeHtml(cat)}</span>
+            <div class="category-item__actions">
+                <button type="button" class="category-item__btn" onclick="renameCategoryPrompt('income', ${index})">重新命名</button>
+                <button type="button" class="category-item__btn category-item__btn--delete" onclick="deleteCategory('income', ${index})">刪除</button>
+            </div>
+        </li>
+    `).join('');
+}
+
+// 新增類別
+async function addCategory(type) {
+    const name = prompt(type === 'expense' ? '請輸入新的支出類別名稱：' : '請輸入新的收入類別名稱：');
+    if (!name || !name.trim()) return;
+
+    const trimmedName = name.trim();
+    const categories = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
+
+    if (categories.includes(trimmedName)) {
+        alert('此類別已存在！');
+        return;
+    }
+
+    categories.push(trimmedName);
+    await saveCategoriesType(type);
+}
+
+// 重新命名類別
+async function renameCategoryPrompt(type, index) {
+    const categories = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
+    const oldName = categories[index];
+    const newName = prompt('請輸入新的類別名稱：', oldName);
+    
+    if (!newName || !newName.trim() || newName.trim() === oldName) return;
+
+    const trimmedName = newName.trim();
+    
+    if (categories.includes(trimmedName)) {
+        alert('此類別名稱已存在！');
+        return;
+    }
+
+    categories[index] = trimmedName;
+    await saveCategoriesType(type);
+
+    // 更新所有使用此類別的交易
+    await updateTransactionCategories(oldName, trimmedName);
+}
+
+// 刪除類別
+async function deleteCategory(type, index) {
+    const categories = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
+    const categoryName = categories[index];
+    
+    if (!confirm(`確定要刪除類別「${categoryName}」嗎？\n\n注意：既有交易的類別名稱會保留。`)) return;
+
+    categories.splice(index, 1);
+    await saveCategoriesType(type);
+}
+
+// 暴露到全局作用域供 HTML onclick 使用
+window.addCategory = addCategory;
+window.renameCategoryPrompt = renameCategoryPrompt;
+window.deleteCategory = deleteCategory;
+
+// 儲存類別
+async function saveCategoriesType(type) {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const key = type === 'expense' ? 'expense_categories' : 'income_categories';
+        const value = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
+
+        const { error } = await supabase
+            .from('settings')
+            .upsert({
+                user_id: user.id,
+                key: key,
+                value: value
+            });
+
+        if (error) throw error;
+
+        renderCategories();
+    } catch (error) {
+        console.error('儲存類別失敗:', error);
+        alert('儲存失敗，請稍後再試。');
+    }
+}
+
+// 更新交易的類別名稱（批次更新）
+async function updateTransactionCategories(oldName, newName) {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { error } = await supabase
+            .from('transactions')
+            .update({ category: newName })
+            .eq('user_id', user.id)
+            .eq('category', oldName);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('更新交易類別失敗:', error);
+    }
+}
+
+// 渲染帳戶列表
+function renderAccounts() {
+    if (!accountsList) return;
+
+    if (currentAccounts.length === 0) {
+        accountsList.innerHTML = '<p style="color: var(--color-text-secondary); text-align: center; padding: 1rem;">尚無帳戶，請新增帳戶。</p>';
+        return;
+    }
+
+    accountsList.innerHTML = currentAccounts.map(account => {
+        const typeNames = {
+            'cash': '現金',
+            'credit_card': '信用卡',
+            'debit_card': '金融卡',
+            'digital_wallet': '電子錢包',
+            'bank': '銀行帳戶'
+        };
+
+        let details = `<div class="account-item__detail">類型：${typeNames[account.type] || account.type}</div>`;
+        
+        if (account.type === 'credit_card') {
+            if (account.credit_limit) {
+                details += `<div class="account-item__detail">信用額度：${formatMoney(account.credit_limit)}</div>`;
+            }
+            if (account.billing_day) {
+                details += `<div class="account-item__detail">帳單日：每月 ${account.billing_day} 日</div>`;
+            }
+            if (account.payment_due_day) {
+                details += `<div class="account-item__detail">繳款日：每月 ${account.payment_due_day} 日</div>`;
+            }
+        }
+
+        return `
+            <div class="account-item">
+                <div class="account-item__header">
+                    <span class="account-item__name">${escapeHtml(account.name)}</span>
+                    <div class="account-item__actions">
+                        <button type="button" class="account-item__btn" onclick="editAccount('${account.id}')">編輯</button>
+                        <button type="button" class="account-item__btn account-item__btn--delete" onclick="deleteAccount('${account.id}')">刪除</button>
+                    </div>
+                </div>
+                <div class="account-item__details">
+                    ${details}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 新增帳戶
+function showAddAccountForm() {
+    if (!accountForm || !accountFormElement) return;
+    
+    document.getElementById('accountFormTitle').textContent = '新增帳戶';
+    document.getElementById('accountFormId').value = '';
+    document.getElementById('accountName').value = '';
+    document.getElementById('accountType').value = '';
+    document.getElementById('creditLimit').value = '';
+    document.getElementById('billingDay').value = '';
+    document.getElementById('paymentDueDay').value = '';
+    
+    creditCardFields.style.display = 'none';
+    accountForm.style.display = 'block';
+    accountsList.style.display = 'none';
+}
+
+// 編輯帳戶
+function editAccount(accountId) {
+    if (!accountForm || !accountFormElement) return;
+    
+    const account = currentAccounts.find(a => a.id === accountId);
+    if (!account) return;
+
+    document.getElementById('accountFormTitle').textContent = '編輯帳戶';
+    document.getElementById('accountFormId').value = account.id;
+    document.getElementById('accountName').value = account.name;
+    document.getElementById('accountType').value = account.type;
+    document.getElementById('creditLimit').value = account.credit_limit || '';
+    document.getElementById('billingDay').value = account.billing_day || '';
+    document.getElementById('paymentDueDay').value = account.payment_due_day || '';
+    
+    creditCardFields.style.display = account.type === 'credit_card' ? 'block' : 'none';
+    accountForm.style.display = 'block';
+    accountsList.style.display = 'none';
+}
+
+// 取消帳戶表單
+function cancelAccountForm() {
+    if (!accountForm) return;
+    accountForm.style.display = 'none';
+    accountsList.style.display = 'block';
+}
+
+// 儲存帳戶
+async function saveAccount(e) {
+    e.preventDefault();
+    
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const accountId = document.getElementById('accountFormId').value;
+        const name = document.getElementById('accountName').value.trim();
+        const type = document.getElementById('accountType').value;
+        const creditLimit = document.getElementById('creditLimit').value;
+        const billingDay = document.getElementById('billingDay').value;
+        const paymentDueDay = document.getElementById('paymentDueDay').value;
+
+        if (!name || !type) {
+            alert('請填寫必填欄位！');
+            return;
+        }
+
+        const accountData = {
+            user_id: user.id,
+            name: name,
+            type: type,
+            credit_limit: creditLimit ? parseFloat(creditLimit) : null,
+            billing_day: billingDay ? parseInt(billingDay) : null,
+            payment_due_day: paymentDueDay ? parseInt(paymentDueDay) : null
+        };
+
+        if (accountId) {
+            // 更新
+            const oldAccount = currentAccounts.find(a => a.id === accountId);
+            const oldName = oldAccount?.name;
+
+            const { error } = await supabase
+                .from('accounts')
+                .update(accountData)
+                .eq('id', accountId);
+
+            if (error) throw error;
+
+            // 如果名稱改變，更新交易的 payment_method
+            if (oldName && oldName !== name) {
+                await updateTransactionPaymentMethods(oldName, name);
+            }
+        } else {
+            // 新增
+            const { error } = await supabase
+                .from('accounts')
+                .insert(accountData);
+
+            if (error) throw error;
+        }
+
+        cancelAccountForm();
+        await loadSettingsData();
+    } catch (error) {
+        console.error('儲存帳戶失敗:', error);
+        alert('儲存失敗，請稍後再試。');
+    }
+}
+
+// 刪除帳戶
+async function deleteAccount(accountId) {
+    const account = currentAccounts.find(a => a.id === accountId);
+    if (!account) return;
+
+    if (!confirm(`確定要刪除帳戶「${account.name}」嗎？\n\n注意：既有交易的支付方式名稱會保留，但帳戶連結會移除。`)) return;
+
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+        const { error } = await supabase
+            .from('accounts')
+            .delete()
+            .eq('id', accountId);
+
+        if (error) throw error;
+
+        await loadSettingsData();
+    } catch (error) {
+        console.error('刪除帳戶失敗:', error);
+        alert('刪除失敗，請稍後再試。');
+    }
+}
+
+// 暴露到全局作用域供 HTML onclick 使用
+window.editAccount = editAccount;
+window.deleteAccount = deleteAccount;
+
+// 更新交易的支付方式名稱（批次更新）
+async function updateTransactionPaymentMethods(oldName, newName) {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { error } = await supabase
+            .from('transactions')
+            .update({ payment_method: newName })
+            .eq('user_id', user.id)
+            .eq('payment_method', oldName);
+
+        if (error) throw error;
+    } catch (error) {
+        console.error('更新交易支付方式失敗:', error);
+    }
+}
+
+// 事件監聽
+function openSettingsModalAndCloseMenu() {
+    // 關閉桌面版與手機版更多選單
+    const moreMenuDropdown = document.getElementById('moreMenuDropdown');
+    const moreMenuDropdownMobile = document.getElementById('moreMenuDropdownMobile');
+    if (moreMenuDropdown) moreMenuDropdown.classList.remove('is-open');
+    if (moreMenuDropdownMobile) moreMenuDropdownMobile.classList.remove('is-open');
+    openSettingsModal();
+}
+
+if (settingsManageBtn) {
+    settingsManageBtn.addEventListener('click', openSettingsModalAndCloseMenu);
+}
+
+const settingsManageBtnMobile = document.getElementById('settingsManageBtnMobile');
+if (settingsManageBtnMobile) {
+    settingsManageBtnMobile.addEventListener('click', openSettingsModalAndCloseMenu);
+}
+
+if (settingsCloseBtn) {
+    settingsCloseBtn.addEventListener('click', closeSettingsModal);
+}
+
+if (settingsModal) {
+    settingsModal.querySelector('.settings-manage-modal__backdrop')?.addEventListener('click', (e) => {
+        if (e.target.hasAttribute('data-close')) {
+            closeSettingsModal();
+        }
+    });
+}
+
+// 類別新增按鈕
+document.querySelectorAll('.btn-add-category').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const type = e.target.getAttribute('data-type');
+        addCategory(type);
+    });
+});
+
+// 帳戶相關按鈕
+if (addAccountBtn) {
+    addAccountBtn.addEventListener('click', showAddAccountForm);
+}
+
+if (cancelAccountFormBtn) {
+    cancelAccountFormBtn.addEventListener('click', cancelAccountForm);
+}
+
+if (accountFormElement) {
+    accountFormElement.addEventListener('submit', saveAccount);
+}
+
+// 帳戶類型改變時顯示/隱藏信用卡欄位
+if (accountTypeSelect) {
+    accountTypeSelect.addEventListener('change', (e) => {
+        creditCardFields.style.display = e.target.value === 'credit_card' ? 'block' : 'none';
+    });
 }

@@ -26,6 +26,12 @@
       </button>
       <!-- 手機版更多選單下拉內容 -->
       <div class="more-menu-dropdown more-menu-dropdown--mobile" id="moreMenuDropdownMobile">
+        <button type="button" id="settingsManageBtnMobile" class="more-menu-item">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+          </svg>
+          <span>帳戶與類別管理</span>
+        </button>
         <button type="button" id="logoutBtnMobile" class="more-menu-item">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
@@ -125,6 +131,12 @@
             </button>
             <!-- 更多選單下拉內容 -->
             <div class="more-menu-dropdown" id="moreMenuDropdown">
+              <button type="button" id="settingsManageBtn" class="more-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+                </svg>
+                <span>帳戶與類別管理</span>
+              </button>
               <button type="button" id="logoutBtn" class="more-menu-item">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
@@ -215,6 +227,99 @@
            - JS 會在這個容器裡渲染日曆（可切換月份）與下方統計卡片
            - 排版、顏色、emoji 由 script.js + style.css 共同決定 -->
       <div class="streak-calendar-root" id="streakCalendarRoot"></div>
+    </div>
+  </div>
+
+  <!-- Settings Management Modal -->
+  <div class="settings-manage-modal" id="settingsManageModal" aria-hidden="true">
+    <div class="settings-manage-modal__backdrop" data-close="true"></div>
+    <div class="settings-manage-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="settingsManageTitle">
+      <button type="button" class="settings-manage-modal__close" id="settingsManageCloseBtn" aria-label="關閉">×</button>
+      <h2 class="settings-manage-modal__title" id="settingsManageTitle">帳戶與類別管理</h2>
+      
+      <div class="settings-manage-grid">
+        <!-- 左側／上方：類別管理 -->
+        <section class="settings-manage__section settings-manage__categories">
+          <h3 class="settings-manage__section-title">類別管理</h3>
+          
+          <!-- 支出類別 -->
+          <div class="category-group">
+            <div class="category-group__header">
+              <h4>支出類別</h4>
+              <button type="button" class="btn-add-category" data-type="expense" aria-label="新增支出類別">+ 新增</button>
+            </div>
+            <ul class="category-list" id="expenseCategoryList"></ul>
+          </div>
+          
+          <!-- 收入類別 -->
+          <div class="category-group">
+            <div class="category-group__header">
+              <h4>收入類別</h4>
+              <button type="button" class="btn-add-category" data-type="income" aria-label="新增收入類別">+ 新增</button>
+            </div>
+            <ul class="category-list" id="incomeCategoryList"></ul>
+          </div>
+        </section>
+        
+        <!-- 右側／下方：帳戶管理 -->
+        <section class="settings-manage__section settings-manage__accounts">
+          <h3 class="settings-manage__section-title">帳戶管理</h3>
+          
+          <div class="accounts-header">
+            <button type="button" class="btn-add-account" id="addAccountBtn">+ 新增帳戶</button>
+          </div>
+          
+          <div class="accounts-list" id="accountsList"></div>
+          
+          <!-- 帳戶編輯表單（隱藏，需要時顯示） -->
+          <div class="account-form" id="accountForm" style="display: none;">
+            <h4 id="accountFormTitle">新增帳戶</h4>
+            <form id="accountFormElement">
+              <input type="hidden" id="accountFormId" />
+              
+              <div class="form-group">
+                <label for="accountName">帳戶名稱 *</label>
+                <input type="text" id="accountName" required />
+              </div>
+              
+              <div class="form-group">
+                <label for="accountType">帳戶類型 *</label>
+                <select id="accountType" required>
+                  <option value="">請選擇</option>
+                  <option value="cash">現金</option>
+                  <option value="credit_card">信用卡</option>
+                  <option value="debit_card">金融卡</option>
+                  <option value="digital_wallet">電子錢包</option>
+                  <option value="bank">銀行帳戶</option>
+                </select>
+              </div>
+              
+              <!-- 信用卡專用欄位 -->
+              <div id="creditCardFields" style="display: none;">
+                <div class="form-group">
+                  <label for="creditLimit">信用額度</label>
+                  <input type="number" id="creditLimit" step="0.01" min="0" />
+                </div>
+                
+                <div class="form-group">
+                  <label for="billingDay">帳單日（1-31）</label>
+                  <input type="number" id="billingDay" min="1" max="31" />
+                </div>
+                
+                <div class="form-group">
+                  <label for="paymentDueDay">繳款日（1-31）</label>
+                  <input type="number" id="paymentDueDay" min="1" max="31" />
+                </div>
+              </div>
+              
+              <div class="form-actions">
+                <button type="button" class="btn-cancel" id="cancelAccountFormBtn">取消</button>
+                <button type="submit" class="btn-save">儲存</button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 

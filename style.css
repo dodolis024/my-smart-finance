@@ -1311,6 +1311,355 @@ html {
   box-shadow: var(--shadow-focus);
 }
 
+/* --------------------------------------------
+   10.6 Settings Management Modal
+   -------------------------------------------- */
+.settings-manage-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 999;
+}
+.settings-manage-modal.is-open {
+  display: block;
+}
+.settings-manage-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.settings-manage-modal__dialog {
+  position: relative;
+  width: min(960px, calc(100% - 2rem));
+  max-height: calc(100vh - 8vh);
+  margin: 4vh auto 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow-y: auto;
+}
+.settings-manage-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+  z-index: 1;
+}
+.settings-manage-modal__close:hover {
+  background: var(--color-row-hover);
+}
+.settings-manage-modal__close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.settings-manage-modal__title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.5rem;
+  color: var(--color-text);
+}
+
+/* Grid Layout: 大螢幕左右，小螢幕上下 */
+.settings-manage-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .settings-manage-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+}
+
+.settings-manage__section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-manage__section-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  color: var(--color-text);
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: 0.5rem;
+}
+
+/* 類別管理樣式 */
+.category-group {
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.category-group__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.category-group__header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.btn-add-category {
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-primary);
+  background: #fff;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-add-category:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.category-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.category-item__name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.category-item__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.category-item__btn {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.category-item__btn:hover {
+  background: var(--color-row-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.category-item__btn--delete:hover {
+  background: #fee;
+  border-color: #d33;
+  color: #d33;
+}
+
+/* 帳戶管理樣式 */
+.accounts-header {
+  margin-bottom: 1rem;
+}
+
+.btn-add-account {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-add-account:hover {
+  background: var(--color-primary-hover);
+}
+
+.accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.account-item {
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.account-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.account-item__name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.account-item__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.account-item__btn {
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.account-item__btn:hover {
+  background: var(--color-row-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.account-item__btn--delete:hover {
+  background: #fee;
+  border-color: #d33;
+  color: #d33;
+}
+
+.account-item__details {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.account-item__detail {
+  margin: 0.25rem 0;
+}
+
+/* 帳戶表單 */
+.account-form {
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 1.25rem;
+  border: 1px solid var(--color-primary);
+  margin-top: 1rem;
+}
+
+.account-form h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.account-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.account-form .form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.account-form .form-group input,
+.account-form .form-group select {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  background: #fff;
+  color: var(--color-text);
+}
+
+.account-form .form-group input:focus,
+.account-form .form-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(181, 156, 128, 0.15);
+}
+
+.account-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.account-form .btn-cancel {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.account-form .btn-cancel:hover {
+  background: var(--color-row-hover);
+}
+
+.account-form .btn-save {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.account-form .btn-save:hover {
+  background: var(--color-primary-hover);
+}
+
+
 /* NOTE: streak-calendar-root
    - Modal 內主要區塊：上半部日曆、下半部統計卡片
    - 結構由 script.js 動態產生，這裡只負責通用樣式 */
