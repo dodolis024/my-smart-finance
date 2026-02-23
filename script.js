@@ -133,14 +133,9 @@ function moveStreakBadgeToTopBar() {
     const isVertical = window.matchMedia('(max-width: 1200px)').matches;
     
     if (isVertical) {
-        // 垂直顯示：移動到 top-bar 右側容器（在更多選單按鈕之前）
+        // 垂直顯示：移動到 top-bar 右側容器（與左側更多選單對稱）
         if (streakBadge.parentElement !== topBarRight) {
-            const moreMenuBtn = topBarRight.querySelector('.more-menu-btn--mobile');
-            if (moreMenuBtn) {
-                topBarRight.insertBefore(streakBadge, moreMenuBtn);
-            } else {
-                topBarRight.appendChild(streakBadge);
-            }
+            topBarRight.appendChild(streakBadge);
         }
     } else {
         // 水平顯示：移動回原位置
