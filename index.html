@@ -289,19 +289,19 @@
           </div>
         </section>
         
-        <!-- 右側／下方：帳戶管理 -->
+        <!-- 右側／下方：支付工具管理 -->
         <section class="settings-manage__section settings-manage__accounts">
-          <h3 class="settings-manage__section-title">帳戶管理</h3>
+          <h3 class="settings-manage__section-title">支付工具管理</h3>
           
           <div class="accounts-header">
-            <button type="button" class="btn-add-account" id="addAccountBtn">+ 新增帳戶</button>
+            <button type="button" class="btn-add-account" id="addAccountBtn">+ 新增</button>
           </div>
           
           <div class="accounts-list" id="accountsList"></div>
           
           <!-- 帳戶編輯表單（隱藏，需要時顯示） -->
           <div class="account-form" id="accountForm" style="display: none;">
-            <h4 id="accountFormTitle">新增帳戶</h4>
+            <h4 id="accountFormTitle">新增</h4>
             <form id="accountFormElement">
               <input type="hidden" id="accountFormId" />
               
@@ -359,6 +359,42 @@
       <h2 class="changelog-modal__title" id="changelogTitle">Change Log</h2>
       <div class="changelog-content" id="changelogContent">
         <!-- 由 JavaScript 動態填入 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Credit Card Limit Modal -->
+  <div class="credit-card-modal" id="creditCardModal" aria-hidden="true">
+    <div class="credit-card-modal__backdrop" data-close="true"></div>
+    <div class="credit-card-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="creditCardTitle">
+      <button type="button" class="credit-card-modal__close" id="creditCardCloseBtn" aria-label="關閉">×</button>
+      <h2 class="credit-card-modal__title" id="creditCardTitle">信用卡額度</h2>
+      
+      <div class="credit-card-info">
+        <div class="credit-limit-section">
+          <div class="credit-limit-header">
+            <span class="credit-limit-label">可用額度</span>
+            <span class="credit-limit-amount" id="creditAvailable">—</span>
+          </div>
+          <div class="credit-limit-progress">
+            <div class="credit-limit-bar" id="creditLimitBar"></div>
+          </div>
+          <div class="credit-limit-detail">
+            <span id="creditUsedText">已使用：—</span>
+            <span id="creditTotalText">總額度：—</span>
+          </div>
+        </div>
+        
+        <div class="credit-dates">
+          <div class="credit-date-item">
+            <span class="credit-date-label">帳單日</span>
+            <span class="credit-date-value" id="creditBillingDay">—</span>
+          </div>
+          <div class="credit-date-item">
+            <span class="credit-date-label">繳款日</span>
+            <span class="credit-date-value" id="creditPaymentDay">—</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

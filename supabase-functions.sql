@@ -109,6 +109,7 @@ BEGIN
     -- 取得帳戶列表
     SELECT json_agg(
         json_build_object(
+            'id', id,
             'accountName', name,
             'type', type,
             'creditLimit', credit_limit,

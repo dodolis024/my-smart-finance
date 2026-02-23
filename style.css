@@ -296,10 +296,10 @@ h3 {
 
 /* 頭像按鈕：圓形，與更多選項按鈕大小相近 */
 .user-avatar-btn {
-  width: 2.25rem;
-  height: 2.25rem;
-  min-width: 2.25rem;
-  min-height: 2.25rem;
+  width: 2.05rem;
+  height: 2.05rem;
+  min-width: 2.05rem;
+  min-height: 2.05rem;
   padding: 0;
   border: none;
   border-radius: 50%;
@@ -1720,6 +1720,162 @@ html {
   padding: 0.2em 0.4em;
   border-radius: 4px;
   font-size: 0.85em;
+}
+
+/* --------------------------------------------
+   10.8 Credit Card Limit Modal
+   -------------------------------------------- */
+.credit-card-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 999;
+}
+.credit-card-modal.is-open {
+  display: block;
+}
+.credit-card-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.credit-card-modal__dialog {
+  position: relative;
+  width: min(480px, calc(100% - 2rem));
+  max-height: calc(100vh - 8vh);
+  margin: 4vh auto;
+  padding: 2rem;
+  background: var(--color-card);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow-y: auto;
+}
+.credit-card-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  z-index: 1;
+}
+.credit-card-modal__close:hover {
+  background: var(--color-row-hover);
+}
+.credit-card-modal__close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.credit-card-modal__title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.5rem;
+  color: var(--color-text);
+}
+
+.credit-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.credit-limit-section {
+  background: var(--color-bg);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+}
+
+.credit-limit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1rem;
+}
+
+.credit-limit-label {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.credit-limit-amount {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.credit-limit-progress {
+  width: 100%;
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.credit-limit-bar {
+  height: 100%;
+  background: #4caf50;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 12px;
+}
+
+.credit-limit-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.credit-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.credit-date-item {
+  background: var(--color-bg);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.credit-date-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.credit-date-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Payment stats clickable style */
+.payment-stats-list li.clickable {
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.payment-stats-list li.clickable:hover {
+  background: var(--color-row-hover);
+  border-radius: 6px;
+  padding-left: 0.5rem;
 }
 
 /* Grid Layout: 大螢幕左右，小螢幕上下 */

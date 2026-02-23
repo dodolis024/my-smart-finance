@@ -525,7 +525,8 @@ async function fetchDashboardData(year, month) {
         // C. Update Category Chart & Stats（只針對支出分類繪製圓餅圖）
         renderChart(data.history, data.categoriesIncome);
 
-        // D. Update Payment Stats
+        // D. Update Payment Stats（需要帳戶資料判斷是否為信用卡）
+        currentAccounts = data.accounts || [];
         renderPaymentStats(data.history);
 
         // E. Update Categories（每次都更新，確保類別管理變更後能立即反映）
@@ -1960,9 +1961,152 @@ function renderPaymentStats(history) {
     } else {
         el.innerHTML =
             '<ul class="payment-stats-list">' +
-            pairs.map((p) => `<li><span class="pay-name">${escapeHtml(p.label)}</span><span class="pay-amount">${formatMoney(p.value)}</span></li>`).join('') +
+            pairs.map((p) => {
+                const account = currentAccounts.find(a => (a.name || a.accountName) === p.label);
+                const isCreditCard = account && account.type === 'credit_card';
+                const clickableClass = isCreditCard ? ' clickable' : '';
+                const dataAttr = account ? ` data-account-id="${escapeHtml(String(account.id))}"` : '';
+                return `<li class="${clickableClass.trim()}"${dataAttr}><span class="pay-name">${escapeHtml(p.label)}</span><span class="pay-amount">${formatMoney(p.value)}</span></li>`;
+            }).join('') +
             '</ul>';
+        
+        // 為信用卡項目綁定點擊事件
+        const clickableItems = el.querySelectorAll('.payment-stats-list li.clickable');
+        clickableItems.forEach((item) => {
+            item.addEventListener('click', function() {
+                const accountId = this.getAttribute('data-account-id');
+                if (accountId) {
+                    openCreditCardModal(accountId);
+                }
+            });
+        });
     }
+}
+
+/**
+ * 計算信用卡已使用額度（依帳單週期）
+ * @param {string} accountId - 帳戶 ID
+ * @param {string} accountName - 帳戶名稱
+ * @param {number} billingDay - 帳單日（1-31）
+ * @param {number} paymentDueDay - 繳款日（1-31）
+ * @returns {number} 已使用金額
+ * 
+ * 邏輯：
+ * 已使用金額 = 已入帳消費 + 本期新增消費
+ * 
+ * - 已入帳消費：從「上上個帳單日」到「上個帳單日 - 1」（等待繳款）
+ * - 本期新增消費：從「上個帳單日」到「今天」（未入帳）
+ * - 繳款日過後：已入帳消費被清空（已繳清），只保留本期新增
+ */
+function calculateCreditUsage(accountId, accountName, billingDay, paymentDueDay) {
+    if (!billingDay) return 0;
+    
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // 1-12
+    const currentDay = today.getDate();
+    
+    // 計算上個帳單日和上上個帳單日
+    let lastBillingYear = currentYear;
+    let lastBillingMonth = currentMonth;
+    
+    // 如果今天還沒到帳單日，上個帳單日在上個月
+    if (currentDay < billingDay) {
+        lastBillingMonth -= 1;
+        if (lastBillingMonth < 1) {
+            lastBillingMonth = 12;
+            lastBillingYear -= 1;
+        }
+    }
+    
+    // 上上個帳單日
+    let prevBillingYear = lastBillingYear;
+    let prevBillingMonth = lastBillingMonth - 1;
+    if (prevBillingMonth < 1) {
+        prevBillingMonth = 12;
+        prevBillingYear -= 1;
+    }
+    
+    // 格式化日期為 YYYY-MM-DD
+    const formatDate = (y, m, d) => {
+        const month = String(m).padStart(2, '0');
+        const day = String(d).padStart(2, '0');
+        return `${y}-${month}-${day}`;
+    };
+    
+    // 上上個帳單日（已入帳週期起始）
+    const prevBillingDate = formatDate(prevBillingYear, prevBillingMonth, billingDay);
+    // 上個帳單日
+    const lastBillingDate = formatDate(lastBillingYear, lastBillingMonth, billingDay);
+    // 上個帳單日前一天（已入帳週期結束）
+    let lastBillingEndDay = billingDay - 1;
+    let lastBillingEndMonth = lastBillingMonth;
+    let lastBillingEndYear = lastBillingYear;
+    if (lastBillingEndDay < 1) {
+        lastBillingEndMonth -= 1;
+        if (lastBillingEndMonth < 1) {
+            lastBillingEndMonth = 12;
+            lastBillingEndYear -= 1;
+        }
+        // 取得上個月最後一天
+        lastBillingEndDay = new Date(lastBillingEndYear, lastBillingEndMonth, 0).getDate();
+    }
+    const lastBillingEndDate = formatDate(lastBillingEndYear, lastBillingEndMonth, lastBillingEndDay);
+    
+    // 判斷是否已過繳款日
+    let hasPaid = false;
+    if (paymentDueDay) {
+        // 判斷邏輯：
+        // 如果繳款日在帳單日之後（例如帳單日 10 號，繳款日 25 號）
+        // - 當今天在帳單日之後且繳款日之後，表示已繳款
+        // 如果繳款日在帳單日之前（例如帳單日 10 號，繳款日 5 號，跨月繳款）
+        // - 當今天在繳款日之後，表示已繳款
+        
+        if (paymentDueDay > billingDay) {
+            // 同月繳款（例：10號帳單，25號繳款）
+            // 如果今天 >= 帳單日且今天 >= 繳款日
+            if (currentDay >= billingDay && currentDay >= paymentDueDay) {
+                hasPaid = true;
+            }
+        } else {
+            // 跨月繳款（例：10號帳單，下月5號繳款）
+            // 如果今天在帳單日之前，且今天 >= 繳款日
+            if (currentDay < billingDay && currentDay >= paymentDueDay) {
+                hasPaid = true;
+            }
+        }
+    }
+    
+    let totalUsed = 0;
+    
+    // 從 transactionHistoryFull 篩選消費
+    (transactionHistoryFull || []).forEach((tx) => {
+        // 只計算支出
+        if (tx.type !== 'expense') return;
+        
+        // 只計算該帳戶的交易
+        const matchAccount = tx.account_id === accountId || tx.paymentMethod === accountName;
+        if (!matchAccount) return;
+        
+        const txDate = tx.date;
+        const amt = typeof tx.twdAmount === 'number' ? Math.abs(tx.twdAmount) : 0;
+        
+        // 如果還沒繳款，計算已入帳消費
+        if (!hasPaid) {
+            // 已入帳：上上個帳單日 ~ 上個帳單日前一天
+            if (txDate >= prevBillingDate && txDate <= lastBillingEndDate) {
+                totalUsed += amt;
+            }
+        }
+        
+        // 本期新增消費：上個帳單日 ~ 今天
+        const todayDate = formatDate(currentYear, currentMonth, currentDay);
+        if (txDate >= lastBillingDate && txDate <= todayDate) {
+            totalUsed += amt;
+        }
+    });
+    
+    return totalUsed;
 }
 
 function populateCategories(data) {
@@ -2474,6 +2618,8 @@ async function saveCategoriesType(type) {
                 user_id: user.id,
                 key: key,
                 value: value
+            }, {
+                onConflict: 'user_id,key'
             });
 
         if (error) throw error;
@@ -2595,7 +2741,7 @@ function editAccount(accountId) {
 function cancelAccountForm() {
     if (!accountForm) return;
     accountForm.style.display = 'none';
-    accountsList.style.display = 'block';
+    if (accountsList) accountsList.style.removeProperty('display');
 }
 
 // 儲存帳戶
@@ -2705,6 +2851,100 @@ async function updateTransactionPaymentMethods(oldName, newName) {
     } catch (error) {
         reportError(error, '更新交易支付方式失敗，請稍後再試。');
     }
+}
+
+// =========================================
+// Credit Card Limit Modal
+// =========================================
+const creditCardModal = document.getElementById('creditCardModal');
+const creditCardCloseBtn = document.getElementById('creditCardCloseBtn');
+
+// 開啟信用卡額度 Modal
+function openCreditCardModal(accountId) {
+    if (!creditCardModal) return;
+    
+    console.log('openCreditCardModal called with accountId:', accountId);
+    console.log('currentAccounts:', currentAccounts);
+    
+    const account = currentAccounts.find(a => a.id === accountId || String(a.id) === String(accountId));
+    console.log('Found account:', account);
+    
+    if (!account) {
+        alert('找不到該帳戶資料');
+        return;
+    }
+    
+    // 更新標題
+    const titleEl = document.getElementById('creditCardTitle');
+    const accountName = account.name || account.accountName || '信用卡';
+    if (titleEl) titleEl.textContent = `${accountName} - 額度資訊`;
+    
+    // 取得額度與日期資訊（支援兩種命名方式）
+    const creditLimit = account.creditLimit || account.credit_limit;
+    const billingDay = account.billingDay || account.billing_day;
+    const paymentDueDay = account.paymentDueDay || account.payment_due_day;
+    
+    // 如果沒有設定額度
+    if (!creditLimit) {
+        document.getElementById('creditAvailable').textContent = '未設定';
+        document.getElementById('creditUsedText').textContent = '未設定信用額度';
+        document.getElementById('creditTotalText').textContent = '';
+        document.getElementById('creditLimitBar').style.width = '0%';
+        document.getElementById('creditLimitBar').style.backgroundColor = '#e0e0e0';
+    } else {
+        // 計算已使用額度
+        const accountName = account.name || account.accountName;
+        const usedAmount = calculateCreditUsage(account.id, accountName, billingDay, paymentDueDay);
+        const available = Math.max(0, creditLimit - usedAmount);
+        const usagePercent = creditLimit > 0 ? (usedAmount / creditLimit) * 100 : 0;
+        
+        // 更新額度顯示
+        document.getElementById('creditAvailable').textContent = formatMoney(available);
+        document.getElementById('creditUsedText').textContent = `已使用：${formatMoney(usedAmount)}`;
+        document.getElementById('creditTotalText').textContent = `總額度：${formatMoney(creditLimit)}`;
+        
+        // 更新進度條
+        const progressBar = document.getElementById('creditLimitBar');
+        progressBar.style.width = `${Math.min(100, usagePercent)}%`;
+        
+        // 根據使用率改變顏色
+        if (usagePercent <= 50) {
+            progressBar.style.backgroundColor = '#4caf50'; // 綠色
+        } else if (usagePercent <= 80) {
+            progressBar.style.backgroundColor = '#ff9800'; // 黃色
+        } else {
+            progressBar.style.backgroundColor = '#f44336'; // 紅色
+        }
+    }
+    
+    // 更新帳單日與繳款日
+    document.getElementById('creditBillingDay').textContent = billingDay ? `每月 ${billingDay} 日` : '未設定';
+    document.getElementById('creditPaymentDay').textContent = paymentDueDay ? `每月 ${paymentDueDay} 日` : '未設定';
+    
+    // 顯示 modal
+    creditCardModal.classList.add('is-open');
+    creditCardModal.setAttribute('aria-hidden', 'false');
+}
+
+// 關閉信用卡額度 Modal
+function closeCreditCardModal() {
+    if (!creditCardModal) return;
+    creditCardModal.classList.remove('is-open');
+    creditCardModal.setAttribute('aria-hidden', 'true');
+}
+
+// 綁定關閉按鈕事件
+if (creditCardCloseBtn) {
+    creditCardCloseBtn.addEventListener('click', closeCreditCardModal);
+}
+
+// 綁定背景點擊關閉事件
+if (creditCardModal) {
+    creditCardModal.querySelector('.credit-card-modal__backdrop')?.addEventListener('click', (e) => {
+        if (e.target.hasAttribute('data-close')) {
+            closeCreditCardModal();
+        }
+    });
 }
 
 // 事件監聽
