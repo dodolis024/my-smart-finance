@@ -188,6 +188,54 @@ const CHART_COLORS = [
 // =========================================
 // 1. Initialization
 // =========================================
+
+// 用戶頭像：取得當前用戶資訊
+async function getCurrentUserInfo() {
+    const supabase = getSupabase();
+    if (!supabase) return null;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const provider = user.app_metadata?.provider || user.identities?.[0]?.provider || 'email';
+    const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+    return {
+        email: user.email || '',
+        provider,
+        avatarUrl,
+        fullName: user.user_metadata?.full_name || user.user_metadata?.name || null
+    };
+}
+
+// 用戶頭像：渲染頭像到桌面版和手機版
+function renderUserAvatar(userInfo) {
+    if (!userInfo) return;
+    const innerDesktop = document.getElementById('userAvatarInnerDesktop');
+    const innerMobile = document.getElementById('userAvatarInnerMobile');
+    const emailDisplayDesktop = document.getElementById('userEmailDisplayDesktop');
+    const emailDisplayMobile = document.getElementById('userEmailDisplayMobile');
+
+    const isGoogle = userInfo.provider === 'google' && userInfo.avatarUrl;
+    const initial = userInfo.email ? userInfo.email[0].toUpperCase() : '?';
+
+    function setInner(el) {
+        if (!el) return;
+        el.innerHTML = '';
+        if (isGoogle) {
+            const img = document.createElement('img');
+            img.src = userInfo.avatarUrl;
+            img.alt = 'User Avatar';
+            img.onerror = () => { el.textContent = initial; };
+            el.appendChild(img);
+        } else {
+            el.textContent = initial;
+        }
+    }
+
+    setInner(innerDesktop);
+    setInner(innerMobile);
+    if (emailDisplayDesktop) emailDisplayDesktop.textContent = userInfo.email || '—';
+    if (emailDisplayMobile) emailDisplayMobile.textContent = userInfo.email || '—';
+}
+
 // 移動 streak 按鈕到 top-bar（垂直顯示時）
 let streakBadgeOriginalParent = null;
 
@@ -286,6 +334,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         console.log('認證成功，使用者:', session.user.email);
+
+        // 初始化用戶頭像（桌面版 + 手機版）
+        const userInfo = await getCurrentUserInfo();
+        renderUserAvatar(userInfo);
     } catch (error) {
         console.error('初始化錯誤:', error);
         alert('初始化失敗：' + error.message);
@@ -367,60 +419,66 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Escape') {
             closeReactionModal();
             closeMoreMenu();
+            closeUserAvatarDropdown();
             closeTransactionDetail();
         }
     });
 
-    // 更多選單按鈕（桌面版和手機版）
+    // 更多選單按鈕（桌面版；單欄時更多選項併入頭像下拉）
     const moreMenuBtn = document.getElementById('moreMenuBtn');
-    const moreMenuBtnMobile = document.getElementById('moreMenuBtnMobile');
     const moreMenuDropdown = document.getElementById('moreMenuDropdown');
-    const moreMenuDropdownMobile = document.getElementById('moreMenuDropdownMobile');
-
-    console.log('更多選單元素:', { moreMenuBtn, moreMenuBtnMobile, moreMenuDropdown, moreMenuDropdownMobile });
 
     if (moreMenuBtn && moreMenuDropdown) {
-        console.log('綁定桌面版更多選單事件');
         moreMenuBtn.addEventListener('click', (e) => {
-            console.log('桌面版更多選單被點擊');
             e.stopPropagation();
             toggleMoreMenu(moreMenuBtn, moreMenuDropdown);
         });
     }
 
-    if (moreMenuBtnMobile && moreMenuDropdownMobile) {
-        console.log('綁定手機版更多選單事件');
-        moreMenuBtnMobile.addEventListener('click', (e) => {
-            console.log('手機版更多選單被點擊');
-            e.stopPropagation();
-            toggleMoreMenu(moreMenuBtnMobile, moreMenuDropdownMobile);
-        });
-    }
-
-    // 點擊外部關閉選單
+    // 點擊外部關閉選單（更多選單 + 用戶頭像下拉）
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.more-menu-btn') && !e.target.closest('.more-menu-dropdown')) {
             closeMoreMenu();
         }
+        if (!e.target.closest('.user-avatar-btn') && !e.target.closest('.user-avatar-dropdown')) {
+            closeUserAvatarDropdown();
+        }
     });
 
-    // 登出按鈕（在更多選單中）
-    const logoutBtn = document.getElementById('logoutBtn');
-    const logoutBtnMobile = document.getElementById('logoutBtnMobile');
-    
-    [logoutBtn, logoutBtnMobile].forEach((btn) => {
+    // 用戶頭像按鈕（桌面版 + 手機版）
+    const userAvatarBtnDesktop = document.getElementById('userAvatarBtnDesktop');
+    const userAvatarBtnMobile = document.getElementById('userAvatarBtnMobile');
+    const userAvatarDropdownDesktop = document.getElementById('userAvatarDropdownDesktop');
+    const userAvatarDropdownMobile = document.getElementById('userAvatarDropdownMobile');
+
+    if (userAvatarBtnDesktop && userAvatarDropdownDesktop) {
+        userAvatarBtnDesktop.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleUserAvatarDropdown(userAvatarBtnDesktop, userAvatarDropdownDesktop);
+        });
+    }
+    if (userAvatarBtnMobile && userAvatarDropdownMobile) {
+        userAvatarBtnMobile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleUserAvatarDropdown(userAvatarBtnMobile, userAvatarDropdownMobile);
+        });
+    }
+
+    // 用戶頭像下拉選單內的登出按鈕
+    const logoutBtnAvatarDesktop = document.getElementById('logoutBtnAvatarDesktop');
+    const logoutBtnAvatarMobile = document.getElementById('logoutBtnAvatarMobile');
+    [logoutBtnAvatarDesktop, logoutBtnAvatarMobile].forEach((btn) => {
         if (btn) {
             btn.addEventListener('click', asyncWithErrorHandler(async () => {
                 if (confirm('確定要登出嗎？')) {
                     const supabase = getSupabase();
-                    if (supabase) {
-                        await supabase.auth.signOut();
-                    }
+                    if (supabase) await supabase.auth.signOut();
                     window.location.href = 'auth.html';
                 }
             }, '登出失敗，請稍後再試。'));
         }
     });
+
 });
 
 // =========================================
@@ -967,6 +1025,7 @@ function toggleMoreMenu(btn, dropdown) {
     const isOpen = dropdown.classList.contains('is-open');
     console.log('選單狀態:', isOpen ? '開啟' : '關閉');
     closeMoreMenu(); // 先關閉所有選單
+    closeUserAvatarDropdown(); // 關閉用戶頭像下拉
     if (!isOpen) {
         console.log('打開選單');
         dropdown.classList.add('is-open');
@@ -979,6 +1038,21 @@ function closeMoreMenu() {
     const btns = document.querySelectorAll('.more-menu-btn');
     dropdowns.forEach(d => d.classList.remove('is-open'));
     btns.forEach(b => b.setAttribute('aria-expanded', 'false'));
+}
+
+function closeUserAvatarDropdown() {
+    document.querySelectorAll('.user-avatar-dropdown').forEach(d => d.classList.remove('is-open'));
+    document.querySelectorAll('.user-avatar-btn').forEach(b => b.setAttribute('aria-expanded', 'false'));
+}
+
+function toggleUserAvatarDropdown(btn, dropdown) {
+    closeMoreMenu();
+    const isOpen = dropdown.classList.contains('is-open');
+    closeUserAvatarDropdown();
+    if (!isOpen) {
+        dropdown.classList.add('is-open');
+        btn.setAttribute('aria-expanded', 'true');
+    }
 }
 
 function focusTransactionInput() {
@@ -2635,11 +2709,8 @@ async function updateTransactionPaymentMethods(oldName, newName) {
 
 // 事件監聽
 function openSettingsModalAndCloseMenu() {
-    // 關閉桌面版與手機版更多選單
-    const moreMenuDropdown = document.getElementById('moreMenuDropdown');
-    const moreMenuDropdownMobile = document.getElementById('moreMenuDropdownMobile');
-    if (moreMenuDropdown) moreMenuDropdown.classList.remove('is-open');
-    if (moreMenuDropdownMobile) moreMenuDropdownMobile.classList.remove('is-open');
+    closeMoreMenu();
+    closeUserAvatarDropdown();
     openSettingsModal();
 }
 
@@ -2783,10 +2854,8 @@ function closeChangelogModal() {
 }
 
 function openChangelogModalAndCloseMenu() {
-    const moreMenuDropdown = document.getElementById('moreMenuDropdown');
-    const moreMenuDropdownMobile = document.getElementById('moreMenuDropdownMobile');
-    if (moreMenuDropdown) moreMenuDropdown.classList.remove('is-open');
-    if (moreMenuDropdownMobile) moreMenuDropdownMobile.classList.remove('is-open');
+    closeMoreMenu();
+    closeUserAvatarDropdown();
     openChangelogModal();
 }
 

@@ -152,12 +152,6 @@ h3 {
   transform: translateY(0);
 }
 
-/* 手機版下拉選單 */
-.more-menu-dropdown--mobile {
-  position: fixed;
-  top: 3.5rem;
-  right: 0.75rem;
-}
 
 /* 選單項目 */
 .more-menu-item {
@@ -255,21 +249,143 @@ h3 {
 }
 
 /* 更多選項按鈕設定，寬度不超出白色卡片 */
+/* 桌面版：[頭像] [更多選項]，兩者平均分配寬度，更多選項靠右 */
 .form-column__more-menu {
   position: relative;
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   margin-bottom: 0.75rem;
   max-width: 100%;
 }
 
-.form-column__more-menu .more-menu-btn {
-  margin-left: 0.3rem;
+.form-column__more-menu .user-avatar-wrapper--desktop {
+  flex: 1;
+  margin-left: 0.4rem;
 }
 
-/* 下拉選單對齊按鈕左側 */
+.form-column__more-menu .more-menu-btn--desktop {
+  flex: 1;
+  margin-left: 0;
+  justify-content: flex-end;
+}
+
+/* 下拉選單對齊更多選項按鈕（靠右） */
 .form-column__more-menu .more-menu-dropdown {
+  left: auto;
+  right: 0;
+}
+
+/* --------------------------------------------
+   2c. User Avatar（用戶頭像）
+   -------------------------------------------- */
+/* 桌面版：在 form-column__more-menu 中，僅大螢幕顯示 */
+.user-avatar-wrapper--desktop {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+/* 手機版：在 app-top-bar__left 中，僅小螢幕顯示 */
+.user-avatar-wrapper--mobile {
+  display: none;
+  align-items: center;
+  position: relative;
+}
+
+/* 頭像按鈕：圓形，與更多選項按鈕大小相近 */
+.user-avatar-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.user-avatar-btn:hover {
+  opacity: 0.85;
+}
+
+.user-avatar-btn:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* 頭像內容：首字母或圖片 */
+.user-avatar-inner {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.user-avatar-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 頭像下拉選單（在頭像下方，不重疊） */
+.user-avatar-dropdown {
+  position: absolute;
+  top: calc(100% + 0.75rem);
   left: 0;
+  z-index: 100;
+  min-width: 12rem;
+  padding: 0.5rem;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
+  display: none;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.user-avatar-dropdown.is-open {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.user-avatar-dropdown__email {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  word-break: break-all;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 0.25rem;
+}
+
+/* 登出按鈕上方分隔線（單欄時選項與登出之間） */
+.user-avatar-dropdown--mobile #logoutBtnAvatarMobile {
+  border-top: 1px solid var(--color-border);
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+}
+
+/* 手機版頭像下拉選單：fixed 定位，在頭像下方留出間隙 */
+.user-avatar-dropdown--mobile {
+  position: fixed;
+  top: 4.25rem;
+  left: 0.75rem;
   right: auto;
 }
 
@@ -2241,10 +2357,19 @@ body.modal-open {
   .app-top-bar__right {
     display: flex;
     align-items: center;
+    gap: 0.5rem;
   }
 
-  /* 兩顆按鈕等高、垂直置中對齊 */
-  .app-top-bar .more-menu-btn--mobile,
+  /* 單欄時：隱藏桌面版頭像，顯示手機版頭像 */
+  .user-avatar-wrapper--desktop {
+    display: none !important;
+  }
+  .user-avatar-wrapper--mobile {
+    display: flex !important;
+  }
+
+  /* 單欄：左側頭像、右側簽到，等高垂直置中 */
+  .app-top-bar .user-avatar-wrapper--mobile,
   .app-top-bar .streak-badge {
     display: inline-flex;
     align-items: center;
@@ -2252,32 +2377,14 @@ body.modal-open {
     min-height: 2.25rem;
   }
 
-  .app-top-bar .more-menu-btn--mobile {
-    width: 2.25rem;
-    padding: 0;
-  }
-
-  .app-top-bar__more-menu-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .app-top-bar__more-menu-wrapper .more-menu-dropdown--mobile {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    left: 0;
-    right: auto;
-  }
-
   /* 隱藏 stats-section-header 中的 streak 按鈕（已移動到 top-bar） */
   .stats-section-header .streak-badge {
     display: none !important;
   }
 
-  /* 大螢幕的更多選單按鈕在小螢幕隱藏，改由頂部列按鈕取代 */
+  /* 大螢幕的更多選單按鈕在小螢幕隱藏（單欄時選項併入頭像） */
   .more-menu-btn--desktop,
-  .more-menu-dropdown:not(.more-menu-dropdown--mobile) {
+  .form-column__more-menu .more-menu-dropdown {
     display: none !important;
   }
 
@@ -2392,9 +2499,12 @@ body.modal-open {
     align-items: center;
   }
 
-  .more-menu-btn--mobile .more-menu-icon {
-    width: 1.5rem;
-    height: 1.5rem;
+  /* 手機版頭像：至少 44px 觸控目標 */
+  .user-avatar-wrapper--mobile .user-avatar-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
   }
 
   /* 主容器：減少 padding，讓內容更寬 */
