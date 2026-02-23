@@ -84,6 +84,8 @@ let selectedFilterPaymentMethods = []; // 勾選的支付方式（空＝顯示�
 let editingId = null;
 let filterPopover = null;   // 點擊 icon 後顯示的 popover 節點
 let filterPopoverAnchor = null; // 目前開啟的按鈕，用於關閉時比對
+let filterPopoverScrollHandler = null; // 滾動時關閉 popover 的監聽器
+let filterPopoverIgnoreScrollUntil = 0; // 在此時間之前忽略 scroll（用於程式觸發的捲動）
 // Daily streak state (from backend)
 // NOTE: streakState
 // - count：目前連續記錄天數（由後端計算後回傳）
@@ -1201,7 +1203,6 @@ function resetEditState(scrollToHistory) {
 function scrollToTransactionHistory() {
     const historySection = document.querySelector('.transaction-history-section');
     if (historySection) {
-        // 使用 setTimeout 確保 DOM 更新完成後再滾動
         setTimeout(() => {
             historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
@@ -1238,7 +1239,18 @@ function getFilterPopover() {
 function closeFilterPopover() {
     if (filterPopover) {
         filterPopover.classList.remove('is-open');
+        const list = transactionHistoryFull || [];
+        if (selectedFilterCategories.length === 0) {
+            selectedFilterCategories = [...new Set(list.map(t => (t.category && String(t.category).trim()) || '未分類').filter(Boolean))];
+        }
+        if (selectedFilterPaymentMethods.length === 0) {
+            selectedFilterPaymentMethods = [...new Set(list.map(t => (t.paymentMethod && String(t.paymentMethod).trim()) || '其他').filter(Boolean))];
+        }
         filterPopoverAnchor = null;
+    }
+    if (filterPopoverScrollHandler) {
+        window.removeEventListener('scroll', filterPopoverScrollHandler, true);
+        filterPopoverScrollHandler = null;
     }
 }
 
@@ -1275,12 +1287,12 @@ function openFilterPopover(btn) {
         btnSelectAll.addEventListener('click', () => {
             selectedFilterCategories = categories.slice();
             listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = true; });
-            applyTableFilter();
+            applyTableFilter(true);
         });
         btnClear.addEventListener('click', () => {
             selectedFilterCategories = [];
             listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
-            applyTableFilter();
+            applyTableFilter(true);
         });
         categories.forEach(cat => {
             const label = document.createElement('label');
@@ -1294,7 +1306,7 @@ function openFilterPopover(btn) {
                 } else {
                     selectedFilterCategories = selectedFilterCategories.filter(c => c !== cat);
                 }
-                applyTableFilter();
+                applyTableFilter(true);
             });
             label.appendChild(cb);
             label.appendChild(document.createTextNode(cat));
@@ -1305,12 +1317,12 @@ function openFilterPopover(btn) {
         btnSelectAll.addEventListener('click', () => {
             selectedFilterPaymentMethods = paymentMethods.slice();
             listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = true; });
-            applyTableFilter();
+            applyTableFilter(true);
         });
         btnClear.addEventListener('click', () => {
             selectedFilterPaymentMethods = [];
             listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
-            applyTableFilter();
+            applyTableFilter(true);
         });
         paymentMethods.forEach(pm => {
             const label = document.createElement('label');
@@ -1324,7 +1336,7 @@ function openFilterPopover(btn) {
                 } else {
                     selectedFilterPaymentMethods = selectedFilterPaymentMethods.filter(p => p !== pm);
                 }
-                applyTableFilter();
+                applyTableFilter(true);
             });
             label.appendChild(cb);
             label.appendChild(document.createTextNode(pm));
@@ -1333,13 +1345,45 @@ function openFilterPopover(btn) {
     }
 
     const rect = btn.getBoundingClientRect();
+    const gutter = 8;
     popover.style.left = rect.left + 'px';
     popover.style.top = (rect.bottom + 4) + 'px';
     popover.classList.add('is-open');
+
+    const popoverRect = popover.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+
+    if (popoverRect.bottom > vh - gutter) {
+        const spaceAbove = rect.top;
+        if (spaceAbove >= popoverRect.height + gutter) {
+            popover.style.top = (rect.top - popoverRect.height - 4) + 'px';
+        } else {
+            popover.style.top = Math.max(gutter, vh - popoverRect.height - gutter) + 'px';
+        }
+    }
+    const afterTop = popover.getBoundingClientRect();
+    if (afterTop.right > vw - gutter) {
+        popover.style.left = (vw - popoverRect.width - gutter) + 'px';
+    }
+    if (parseInt(popover.style.left, 10) < gutter) {
+        popover.style.left = gutter + 'px';
+    }
+
     filterPopoverAnchor = btn;
+
+    if (filterPopoverScrollHandler) {
+        window.removeEventListener('scroll', filterPopoverScrollHandler, true);
+    }
+    filterPopoverScrollHandler = () => {
+        if (Date.now() < filterPopoverIgnoreScrollUntil) return;
+        closeFilterPopover();
+    };
+    window.addEventListener('scroll', filterPopoverScrollHandler, true);
 }
 
-function applyTableFilter() {
+function applyTableFilter(shouldScroll) {
+    if (shouldScroll) filterPopoverIgnoreScrollUntil = Date.now() + 800;
     const list = transactionHistoryFull || [];
     const filtered = list.filter(tx => {
         const cat = (tx.category && String(tx.category).trim()) || '未分類';
@@ -1349,6 +1393,7 @@ function applyTableFilter() {
     });
     currentTransactions = filtered;
     renderTable(filtered);
+    if (shouldScroll) scrollToTransactionHistory();
 }
 
 function formatDateForDisplay(dateStr) {
@@ -1840,22 +1885,158 @@ function populatePaymentMethods(accounts) {
     if (prev && Array.from(sel.options).some(function (o) { return o.value === prev; })) sel.value = prev;
 }
 
+const monthPickerTrigger = document.getElementById('monthPickerTrigger');
+const monthPickerPopover = document.getElementById('monthPickerPopover');
+const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+let monthPickerDisplayYear = currentYear;
+
+function formatMonthLabel(year, month) {
+    return MONTH_ABBREVS[month - 1] + ' ' + year;
+}
+
+function ensureMonthOption(year, month) {
+    const value = `${year}-${month}`;
+    if (!elements.monthSelect) return;
+    const sel = elements.monthSelect;
+    if (!Array.from(sel.options).some(o => o.value === value)) {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = formatMonthLabel(year, month);
+        sel.appendChild(opt);
+    }
+    sel.value = value;
+}
+
+function updateMonthPickerTriggerLabel() {
+    const triggerLabel = document.querySelector('.month-picker-trigger__label');
+    if (!triggerLabel || !elements.monthSelect) return;
+    const sel = elements.monthSelect;
+    const v = sel.value ? sel.value.split('-') : [currentYear, currentMonth];
+    const y = parseInt(v[0], 10);
+    const m = parseInt(v[1], 10);
+    triggerLabel.textContent = formatMonthLabel(y, m);
+}
+
+function renderMonthPickerPopover() {
+    if (!monthPickerPopover || !elements.monthSelect) return;
+    monthPickerPopover.innerHTML = '';
+    const yearRow = document.createElement('div');
+    yearRow.className = 'month-picker-year-row';
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'month-picker-year-btn';
+    prevBtn.setAttribute('aria-label', '上一年');
+    prevBtn.setAttribute('data-dir', '-1');
+    prevBtn.innerHTML = '&larr;';
+    const yearDisplay = document.createElement('span');
+    yearDisplay.className = 'month-picker-year-display';
+    yearDisplay.textContent = monthPickerDisplayYear;
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'month-picker-year-btn';
+    nextBtn.setAttribute('aria-label', '下一年');
+    nextBtn.setAttribute('data-dir', '1');
+    nextBtn.innerHTML = '&rarr;';
+    yearRow.appendChild(prevBtn);
+    yearRow.appendChild(yearDisplay);
+    yearRow.appendChild(nextBtn);
+    monthPickerPopover.appendChild(yearRow);
+    const grid = document.createElement('div');
+    grid.className = 'month-picker-grid';
+    for (let m = 1; m <= 12; m++) {
+        const value = `${monthPickerDisplayYear}-${m}`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'month-picker-item';
+        btn.setAttribute('role', 'option');
+        btn.setAttribute('data-value', value);
+        btn.textContent = MONTH_ABBREVS[m - 1];
+        const selVal = elements.monthSelect.value || `${currentYear}-${currentMonth}`;
+        if (value === selVal) btn.classList.add('is-selected');
+        btn.addEventListener('click', () => {
+            ensureMonthOption(monthPickerDisplayYear, m);
+            elements.monthSelect.dispatchEvent(new Event('change'));
+            closeMonthPickerPopover();
+            updateMonthPickerTriggerLabel();
+        });
+        grid.appendChild(btn);
+    }
+    monthPickerPopover.appendChild(grid);
+}
+
+function openMonthPickerPopover() {
+    if (!monthPickerPopover || !monthPickerTrigger) return;
+    document.body.appendChild(monthPickerPopover);
+    const v = elements.monthSelect && elements.monthSelect.value ? elements.monthSelect.value.split('-') : [String(currentYear), String(currentMonth)];
+    monthPickerDisplayYear = parseInt(v[0], 10);
+    renderMonthPickerPopover();
+    monthPickerPopover.classList.add('is-open');
+    monthPickerTrigger.setAttribute('aria-expanded', 'true');
+    monthPickerPopover.setAttribute('aria-hidden', 'false');
+    const rect = monthPickerTrigger.getBoundingClientRect();
+    const gap = 6;
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const popoverHeight = 220;
+    if (spaceAbove >= popoverHeight + gap && spaceAbove >= spaceBelow) {
+        monthPickerPopover.style.top = '';
+        monthPickerPopover.style.bottom = (window.innerHeight - rect.top + gap) + 'px';
+    } else {
+        monthPickerPopover.style.bottom = '';
+        monthPickerPopover.style.top = (rect.bottom + gap) + 'px';
+    }
+    monthPickerPopover.style.left = rect.left + 'px';
+    requestAnimationFrame(() => {
+        const width = monthPickerPopover.offsetWidth;
+        const maxLeft = window.innerWidth - width - 16;
+        const minLeft = 16;
+        let left = parseFloat(monthPickerPopover.style.left) || rect.left;
+        if (left > maxLeft) left = maxLeft;
+        if (left < minLeft) left = minLeft;
+        monthPickerPopover.style.left = left + 'px';
+    });
+}
+
+function closeMonthPickerPopover() {
+    if (!monthPickerPopover || !monthPickerTrigger) return;
+    monthPickerPopover.classList.remove('is-open');
+    monthPickerTrigger.setAttribute('aria-expanded', 'false');
+    monthPickerPopover.setAttribute('aria-hidden', 'true');
+    monthPickerPopover.style.top = '';
+    monthPickerPopover.style.bottom = '';
+    const parent = document.getElementById('monthPicker');
+    if (parent) parent.appendChild(monthPickerPopover);
+}
+
 function initMonthSelector() {
     if (!elements.monthSelect) return;
     elements.monthSelect.innerHTML = '';
-    const today = new Date();
-    // Generate last 6 months
-    for(let i = 0; i < 6; i++) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const y = d.getFullYear();
-        const m = d.getMonth() + 1;
-        const option = document.createElement('option');
-        option.value = `${y}-${m}`;
-        option.innerText = `${y}年 ${m}月`;
-        elements.monthSelect.appendChild(option);
+    ensureMonthOption(currentYear, currentMonth);
+    updateMonthPickerTriggerLabel();
+    if (monthPickerTrigger) {
+        monthPickerTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (monthPickerPopover.classList.contains('is-open')) {
+                closeMonthPickerPopover();
+            } else {
+                openMonthPickerPopover();
+            }
+        });
     }
-    // Select current month
-    elements.monthSelect.value = `${currentYear}-${currentMonth}`;
+    document.addEventListener('click', (e) => {
+        if (monthPickerPopover && monthPickerPopover.classList.contains('is-open') &&
+            !monthPickerPopover.contains(e.target) && !monthPickerTrigger.contains(e.target)) {
+            closeMonthPickerPopover();
+        }
+    });
+    monthPickerPopover.addEventListener('click', (e) => {
+        const btn = e.target.closest('.month-picker-year-btn');
+        if (!btn) return;
+        e.stopPropagation();
+        const dir = parseInt(btn.getAttribute('data-dir'), 10);
+        monthPickerDisplayYear += dir;
+        renderMonthPickerPopover();
+    });
 }
 
 /**
@@ -1918,6 +2099,7 @@ function escapeHtml(s) {
 function setLoading(isLoading) {
     document.body.style.cursor = isLoading ? 'wait' : 'default';
     if (elements.monthSelect) elements.monthSelect.disabled = !!isLoading;
+    if (monthPickerTrigger) monthPickerTrigger.disabled = !!isLoading;
 }
 
 // 為 OAuth 用戶建立預設資料（與 auth.html 中的函數相同）

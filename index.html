@@ -36,7 +36,7 @@
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
               </svg>
-              <span>更新日記</span>
+              <span>Change Log</span>
             </button>
             <button type="button" id="logoutBtnMobile" class="more-menu-item">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
@@ -71,7 +71,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
             </svg>
-            <span>更新日記</span>
+            <span>Change Log</span>
           </button>
           <button type="button" id="logoutBtn" class="more-menu-item">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
@@ -150,17 +150,27 @@
            - 標題右側增加 streak-badge，顯示目前連續記錄天數，點擊後可打開 streak 視窗 -->
       <section class="stats-section">
         <div class="stats-section-header">
-          <h2>收支概覽</h2>
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <!-- NOTE: streak-badge
-              - 不會影響 stats-cards 布局
-              - 文案與 emoji 可在 script.js 的 updateStreakBadge / openStreakModalForPositive / openStreakModalForBroken / openStreakModalForCurrent 中調整 -->
-            <button type="button" class="streak-badge" id="streakBadge" aria-label="查看連續記錄狀態">
+          <div class="stats-section-header__title-group">
+            <h2>收支概覽</h2>
+            <div class="month-picker" id="monthPicker">
+              <select id="monthSelect" class="month-select month-select--hidden" aria-hidden="true" tabindex="-1"></select>
+              <button type="button" class="month-picker-trigger" id="monthPickerTrigger" aria-haspopup="listbox" aria-expanded="false" aria-label="選擇月份">
+                <span class="month-picker-trigger__label">載入中…</span>
+                <svg class="month-picker-trigger__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                </svg>
+              </button>
+              <div class="month-picker-popover" id="monthPickerPopover" role="listbox" aria-hidden="true"></div>
+            </div>
+          </div>
+          <!-- NOTE: streak-badge
+            - 不會影響 stats-cards 布局
+            - 文案與 emoji 可在 script.js 的 updateStreakBadge / openStreakModalForPositive / openStreakModalForBroken / openStreakModalForCurrent 中調整 -->
+          <button type="button" class="streak-badge" id="streakBadge" aria-label="查看連續記錄狀態">
               <span class="streak-badge__icon" aria-hidden="true">🔥</span>
               <span class="streak-badge__count">0</span>
               <span class="streak-badge__unit">天</span>
-            </button>
-          </div>
+          </button>
         </div>
         <div class="stats-cards">
           <div class="stat-card">
@@ -178,13 +188,7 @@
         </div>
       </section>
 
-      <!-- 區塊 2：月份選擇器 -->
-      <section class="month-selector-section">
-        <label for="monthSelect">月份</label>
-        <select id="monthSelect"></select>
-      </section>
-
-      <!-- 區塊 3：分析統計 -->
+      <!-- 區塊 2：分析統計 -->
       <section class="analytics-section">
         <h2>分析統計</h2>
         <div class="analytics-grid">
@@ -344,7 +348,7 @@
     <div class="changelog-modal__backdrop" data-close="true"></div>
     <div class="changelog-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="changelogTitle">
       <button type="button" class="changelog-modal__close" id="changelogCloseBtn" aria-label="關閉">×</button>
-      <h2 class="changelog-modal__title" id="changelogTitle">更新日記</h2>
+      <h2 class="changelog-modal__title" id="changelogTitle">Change Log</h2>
       <div class="changelog-content" id="changelogContent">
         <!-- 由 JavaScript 動態填入 -->
       </div>
