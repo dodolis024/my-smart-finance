@@ -2413,6 +2413,123 @@ if (settingsModal) {
     });
 }
 
+// =========================================
+// Changelog Modal
+// =========================================
+
+const changelogModal = document.getElementById('changelogModal');
+const changelogContent = document.getElementById('changelogContent');
+const changelogBtn = document.getElementById('changelogBtn');
+const changelogBtnMobile = document.getElementById('changelogBtnMobile');
+const changelogCloseBtn = document.getElementById('changelogCloseBtn');
+
+/**
+ * 解析 CHANGELOG.md 格式，回傳 { version, date, changes[] } 陣列
+ * 格式：## [1.0.0] - 2025-01-15 或 ## [1.0.0] - Jan-15 2026
+ */
+function parseChangelogMarkdown(text) {
+    const entries = [];
+    const sectionRegex = /^## \[([^\]]+)\]\s*-\s*([^\n]*)\s*$/gm;
+    const sections = [];
+    let m;
+    while ((m = sectionRegex.exec(text)) !== null) {
+        sections.push({
+            version: m[1],
+            date: m[2],
+            headerEnd: m.index + m[0].length,
+            nextHeaderStart: m.index
+        });
+    }
+    for (let i = 0; i < sections.length; i++) {
+        const { version, date, headerEnd } = sections[i];
+        const contentEnd = i + 1 < sections.length ? sections[i + 1].nextHeaderStart : text.length;
+        const block = text.slice(headerEnd, contentEnd).trim();
+        const changes = block.split('\n')
+            .map(line => line.replace(/^\s*[-*]\s+/, '').trim())
+            .filter(line => line.length > 0);
+        entries.push({ version, date, changes });
+    }
+    return entries;
+}
+
+function renderChangelog(entries) {
+    if (!changelogContent) return;
+    if (!entries || entries.length === 0) {
+        changelogContent.innerHTML = '<p class="changelog-empty">暫無更新紀錄，或無法載入 CHANGELOG.md。請確保透過 HTTP 伺服器執行（例如 <code>npx serve .</code>）。</p>';
+        return;
+    }
+    changelogContent.innerHTML = entries.map(({ version, date, changes }) => `
+        <div class="changelog-entry">
+            <div class="changelog-entry__header">
+                <span class="changelog-entry__version">v${escapeHtml(version)}</span>
+                <span class="changelog-entry__date">${escapeHtml(date)}</span>
+            </div>
+            <ul class="changelog-entry__list">
+                ${changes.map(c => `<li>${escapeHtml(c)}</li>`).join('')}
+            </ul>
+        </div>
+    `).join('');
+}
+
+/** fetch 失敗時使用的備援內容（file:// 或伺服器未運行時） */
+const CHANGELOG_FALLBACK = [
+    { version: '1.1.0', date: 'Feb-23 2026', changes: ['新增更新日記（Change Log）功能，可於更多選項中查看版本紀錄'] },
+    { version: '1.0.0', date: 'Jan-15 2026', changes: ['初版上線', '交易記帳、類別與帳戶管理', '今日簽到、記帳日曆', '圖表分析、多幣別支援', '交易篩選、手機版優化'] }
+];
+
+async function loadAndRenderChangelog() {
+    if (!changelogContent) return;
+    try {
+        const url = new URL('CHANGELOG.md', window.location.href).href;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to fetch');
+        const text = await res.text();
+        const entries = parseChangelogMarkdown(text);
+        renderChangelog(entries.length > 0 ? entries : CHANGELOG_FALLBACK);
+    } catch (err) {
+        console.warn('無法載入 CHANGELOG.md，使用備援內容:', err);
+        renderChangelog(CHANGELOG_FALLBACK);
+    }
+}
+
+function openChangelogModal() {
+    if (!changelogModal) return;
+    loadAndRenderChangelog();
+    changelogModal.classList.add('is-open');
+    changelogModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeChangelogModal() {
+    if (!changelogModal) return;
+    changelogModal.classList.remove('is-open');
+    changelogModal.setAttribute('aria-hidden', 'true');
+}
+
+function openChangelogModalAndCloseMenu() {
+    const moreMenuDropdown = document.getElementById('moreMenuDropdown');
+    const moreMenuDropdownMobile = document.getElementById('moreMenuDropdownMobile');
+    if (moreMenuDropdown) moreMenuDropdown.classList.remove('is-open');
+    if (moreMenuDropdownMobile) moreMenuDropdownMobile.classList.remove('is-open');
+    openChangelogModal();
+}
+
+if (changelogBtn) {
+    changelogBtn.addEventListener('click', openChangelogModalAndCloseMenu);
+}
+if (changelogBtnMobile) {
+    changelogBtnMobile.addEventListener('click', openChangelogModalAndCloseMenu);
+}
+if (changelogCloseBtn) {
+    changelogCloseBtn.addEventListener('click', closeChangelogModal);
+}
+if (changelogModal) {
+    changelogModal.querySelector('.changelog-modal__backdrop')?.addEventListener('click', (e) => {
+        if (e.target.hasAttribute('data-close')) {
+            closeChangelogModal();
+        }
+    });
+}
+
 // 類別新增按鈕
 document.querySelectorAll('.btn-add-category').forEach(btn => {
     btn.addEventListener('click', (e) => {

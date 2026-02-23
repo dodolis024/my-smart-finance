@@ -32,6 +32,12 @@
               </svg>
               <span>帳戶與類別管理</span>
             </button>
+            <button type="button" id="changelogBtnMobile" class="more-menu-item">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+              </svg>
+              <span>更新日記</span>
+            </button>
             <button type="button" id="logoutBtnMobile" class="more-menu-item">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
@@ -60,6 +66,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
             </svg>
             <span>帳戶與類別管理</span>
+          </button>
+          <button type="button" id="changelogBtn" class="more-menu-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+            </svg>
+            <span>更新日記</span>
           </button>
           <button type="button" id="logoutBtn" class="more-menu-item">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
@@ -323,6 +335,18 @@
             </form>
           </div>
         </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Changelog Modal -->
+  <div class="changelog-modal" id="changelogModal" aria-hidden="true">
+    <div class="changelog-modal__backdrop" data-close="true"></div>
+    <div class="changelog-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="changelogTitle">
+      <button type="button" class="changelog-modal__close" id="changelogCloseBtn" aria-label="關閉">×</button>
+      <h2 class="changelog-modal__title" id="changelogTitle">更新日記</h2>
+      <div class="changelog-content" id="changelogContent">
+        <!-- 由 JavaScript 動態填入 -->
       </div>
     </div>
   </div>
