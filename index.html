@@ -30,7 +30,7 @@
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
               </svg>
-              <span>帳戶與類別管理</span>
+              <span>選項管理</span>
             </button>
             <button type="button" id="changelogBtnMobile" class="more-menu-item">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
@@ -65,7 +65,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
               <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
             </svg>
-            <span>帳戶與類別管理</span>
+            <span>選項管理</span>
           </button>
           <button type="button" id="changelogBtn" class="more-menu-item">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="more-menu-item-icon">
@@ -255,7 +255,7 @@
     <div class="settings-manage-modal__backdrop" data-close="true"></div>
     <div class="settings-manage-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="settingsManageTitle">
       <button type="button" class="settings-manage-modal__close" id="settingsManageCloseBtn" aria-label="關閉">×</button>
-      <h2 class="settings-manage-modal__title" id="settingsManageTitle">帳戶與類別管理</h2>
+      <h2 class="settings-manage-modal__title" id="settingsManageTitle">選項管理</h2>
       
       <div class="settings-manage-grid">
         <!-- 左側／上方：類別管理 -->
@@ -266,7 +266,7 @@
           <div class="category-group">
             <div class="category-group__header">
               <h4>支出類別</h4>
-              <button type="button" class="btn-add-category" data-type="expense" aria-label="新增支出類別">+ 新增</button>
+              <button type="button" class="btn-add-category" data-action="add-category" data-type="expense" aria-label="新增支出類別">+ 新增</button>
             </div>
             <ul class="category-list" id="expenseCategoryList"></ul>
           </div>
@@ -275,7 +275,7 @@
           <div class="category-group">
             <div class="category-group__header">
               <h4>收入類別</h4>
-              <button type="button" class="btn-add-category" data-type="income" aria-label="新增收入類別">+ 新增</button>
+              <button type="button" class="btn-add-category" data-action="add-category" data-type="income" aria-label="新增收入類別">+ 新增</button>
             </div>
             <ul class="category-list" id="incomeCategoryList"></ul>
           </div>
@@ -392,6 +392,7 @@
   <!-- 重要：Supabase 必須在 script.js 之前載入 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="constants.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

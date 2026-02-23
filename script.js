@@ -31,6 +31,77 @@ function getSupabase() {
 
 // 注意：不使用頂層 supabase 變數，所有函數都使用 getSupabase() 來避免衝突
 
+// Debounce 工具函數（用於 resize、scroll 等頻繁觸發的事件）
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// =========================================
+// 統一錯誤處理機制
+// =========================================
+
+/**
+ * 統一錯誤回報：寫入 console 並顯示使用者可讀訊息
+ * @param {Error} err - 捕獲的錯誤
+ * @param {string} fallbackMessage - 當 err.message 為空時使用的預設訊息
+ */
+function reportError(err, fallbackMessage) {
+    const msg = err?.message || String(err) || fallbackMessage || '發生錯誤，請稍後再試。';
+    console.error('Error:', err);
+    alert(msg);
+}
+
+/**
+ * Supabase 初始化檢查的 wrapper，確保有 client 才執行 callback
+ * @param {function(supabase)} callback - 接收 supabase client 的 async 函數
+ * @returns {Promise<*>} callback 的回傳值，或 undefined（若初始化失敗）
+ */
+async function withSupabase(callback) {
+    const supabase = getSupabase();
+    if (!supabase) {
+        reportError(new Error('Supabase 尚未初始化'), 'Supabase 尚未初始化，請重新整理頁面。');
+        return;
+    }
+    try {
+        return await callback(supabase);
+    } catch (err) {
+        reportError(err, '操作失敗，請稍後再試。');
+        throw err;
+    }
+}
+
+/**
+ * 將 async 函數包裝為具統一錯誤處理的版本，用於事件監聽器等
+ * 捕獲的錯誤會透過 reportError 處理，避免未捕獲的 Promise rejection
+ * @param {function(...*): Promise<*>} asyncFn - 要包裝的 async 函數
+ * @param {string} [fallbackMessage] - 錯誤時的預設訊息
+ * @returns {function(...*): Promise<*>}
+ */
+function asyncWithErrorHandler(asyncFn, fallbackMessage) {
+    return async function(...args) {
+        try {
+            return await asyncFn.apply(this, args);
+        } catch (err) {
+            reportError(err, fallbackMessage);
+        }
+    };
+}
+
+// 全域未捕獲的 Promise rejection 處理（最後防線）
+window.addEventListener('unhandledrejection', (event) => {
+    try {
+        console.error('Unhandled promise rejection:', event.reason);
+        reportError(event.reason, '發生未預期的錯誤，請稍後再試。');
+    } catch (e) {
+        console.error('Error in unhandledrejection handler:', e);
+    }
+    event.preventDefault();
+});
+
 // Current State
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1; // JS months are 0-11
@@ -131,8 +202,8 @@ function moveStreakBadgeToTopBar() {
         streakBadgeOriginalParent = streakBadge.parentElement;
     }
     
-    // 檢查是否為垂直顯示（寬度 ≤ 1200px）
-    const isVertical = window.matchMedia('(max-width: 1200px)').matches;
+    // 檢查是否為垂直顯示（寬度 ≤ LAYOUT.VERTICAL_MAX_WIDTH）
+    const isVertical = window.matchMedia(`(max-width: ${LAYOUT.VERTICAL_MAX_WIDTH}px)`).matches;
     
     if (isVertical) {
         // 垂直顯示：移動到 top-bar 右側容器（與左側更多選單對稱）
@@ -164,8 +235,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 移動 streak 按鈕到 top-bar（如果適用）
     moveStreakBadgeToTopBar();
     
-    // 監聽視窗大小變化
-    window.addEventListener('resize', moveStreakBadgeToTopBar);
+    // 監聽視窗大小變化（debounce 避免頻繁觸發）
+    window.addEventListener('resize', debounce(moveStreakBadgeToTopBar, DEBOUNCE.RESIZE_MS));
 
     // 取得 supabase client
     const supabase = getSupabase();
@@ -236,17 +307,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 大螢幕：右側儀表板最高與左側表單下緣對齊（滑到底時不超過表單）
     syncDashboardHeightToForm();
-    window.addEventListener('resize', syncDashboardHeightToForm);
+    window.addEventListener('resize', debounce(syncDashboardHeightToForm, DEBOUNCE.RESIZE_MS));
     window.addEventListener('load', () => { syncDashboardHeightToForm(); });
 
     // Attach Event Listeners（表單用 submit + preventDefault，避免 type="submit" 造成頁面重載）
     const form = document.getElementById('transactionForm');
-    if (form) form.addEventListener('submit', (e) => { e.preventDefault(); submitTransaction(); });
+    if (form) form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        submitTransaction().catch(err => reportError(err, '記帳失敗，請稍後再試。'));
+    });
     if (elements.cancelEditBtn) elements.cancelEditBtn.addEventListener('click', resetEditState);
     if (elements.monthSelect) elements.monthSelect.addEventListener('change', (e) => {
         resetEditState();
         const [y, m] = e.target.value.split('-');
-        fetchDashboardData(y, m);
+        fetchDashboardData(y, m).catch(err => reportError(err, '無法讀取資料，請檢查網路或 API 網址。'));
     });
 
     // 表頭篩選 icon 點擊：顯示 popover，由 openFilterPopover 處理
@@ -336,7 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     [logoutBtn, logoutBtnMobile].forEach((btn) => {
         if (btn) {
-            btn.addEventListener('click', async () => {
+            btn.addEventListener('click', asyncWithErrorHandler(async () => {
                 if (confirm('確定要登出嗎？')) {
                     const supabase = getSupabase();
                     if (supabase) {
@@ -344,7 +418,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     window.location.href = 'auth.html';
                 }
-            });
+            }, '登出失敗，請稍後再試。'));
         }
     });
 });
@@ -405,8 +479,7 @@ async function fetchDashboardData(year, month) {
         // NOTE: 若未來需要在外層直接取得 dashboard 資料，可使用 return data;
         return data;
     } catch (error) {
-        console.error('Error fetching data:', error);
-        alert('無法讀取資料，請檢查網路或 API 網址。');
+        reportError(error, '無法讀取資料，請檢查網路或 API 網址。');
         return null;
     } finally {
         setLoading(false);
@@ -495,11 +568,10 @@ function maybeShowPositiveModalAfterAdd(submittedDate) {
 // 依照目前 streak 狀態（包含 milestone）開啟「開心」視窗
 function openStreakModalForPositive() {
     const count = streakState.count || 0;
-    const milestoneSteps = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
     let title = '怎麼這麼乖呀！';
     let text = '今天是記帳的第 ${count} 天，明天也要繼續保持呦☺️';
     // milestone 特別文案
-    if (milestoneSteps.includes(count)) {
+    if (STREAK_MILESTONES.includes(count)) {
         title = '里程碑達成！';
         text = '你已經連續記帳 ${count} 天了！真棒真棒🥹';
     }
@@ -607,8 +679,7 @@ async function submitDailyCheckin() {
         btn.innerText = originalText;
         // 成功後按鈕是否停用由 updateStreakStateFromServer 依今日是否已在 loggedDates 決定，不再於 finally 強制啟用
     } catch (err) {
-        console.error('Error check-in:', err);
-        alert(err.message || '簽到失敗，請稍後再試。');
+        reportError(err, '簽到失敗，請稍後再試。');
         btn.disabled = false;
         btn.innerText = originalText;
     }
@@ -914,7 +985,7 @@ function focusTransactionInput() {
     const form = document.getElementById('transactionForm');
     if (form) form.scrollIntoView({ behavior: 'smooth' });
     if (elements.itemInput) {
-        setTimeout(() => elements.itemInput.focus(), 150);
+        setTimeout(() => elements.itemInput.focus(), TIMING.FOCUS_DELAY);
     }
 }
 
@@ -1129,8 +1200,7 @@ async function submitTransaction() {
         }
 
     } catch (error) {
-        console.error('Error submitting:', error);
-        alert(error.message || '記帳失敗，請稍後再試。');
+        reportError(error, '記帳失敗，請稍後再試。');
     } finally {
         const btn = elements.addBtn;
         btn.innerText = editingId ? "更新交易" : "新增交易";
@@ -1166,8 +1236,7 @@ async function deleteTransaction(id) {
         await fetchDashboardData(parseInt(v[0], 10), parseInt(v[1], 10));
         alert('已刪除。');
     } catch (error) {
-        console.error('Error deleting:', error);
-        alert(error.message || '刪除失敗，請稍後再試。');
+        reportError(error, '刪除失敗，請稍後再試。');
     } finally {
         setLoading(false);
     }
@@ -1375,15 +1444,15 @@ function openFilterPopover(btn) {
     if (filterPopoverScrollHandler) {
         window.removeEventListener('scroll', filterPopoverScrollHandler, true);
     }
-    filterPopoverScrollHandler = () => {
+    filterPopoverScrollHandler = debounce(() => {
         if (Date.now() < filterPopoverIgnoreScrollUntil) return;
         closeFilterPopover();
-    };
+    }, DEBOUNCE.SCROLL_MS);
     window.addEventListener('scroll', filterPopoverScrollHandler, true);
 }
 
 function applyTableFilter(shouldScroll) {
-    if (shouldScroll) filterPopoverIgnoreScrollUntil = Date.now() + 800;
+    if (shouldScroll) filterPopoverIgnoreScrollUntil = Date.now() + TIMING.FILTER_IGNORE_SCROLL_MS;
     const list = transactionHistoryFull || [];
     const filtered = list.filter(tx => {
         const cat = (tx.category && String(tx.category).trim()) || '未分類';
@@ -1397,9 +1466,9 @@ function applyTableFilter(shouldScroll) {
 }
 
 function formatDateForDisplay(dateStr) {
-    // 手機版（≤600px）只顯示月-日，桌面版顯示完整日期
+    // 手機版（≤LAYOUT.MOBILE_MAX_WIDTH）只顯示月-日，桌面版顯示完整日期
     if (!dateStr) return '';
-    const isMobile = window.innerWidth <= 600;
+    const isMobile = window.innerWidth <= LAYOUT.MOBILE_MAX_WIDTH;
     if (!isMobile) return dateStr; // 桌面版顯示完整日期
     
     // 手機版：從 "2026-02-01" 格式中提取月-日（保留前導零）
@@ -1588,9 +1657,7 @@ function initSwipe(container) {
         const newTranslate = container._swipeState.prevTranslate + currentX;
         
         // 限制滑動範圍
-        const maxLeft = -90; // 左滑最大距離（刪除按鈕寬度）
-        const maxRight = 90; // 右滑最大距離（編輯按鈕寬度）
-        const limitedTranslate = Math.max(maxLeft, Math.min(maxRight, newTranslate));
+        const limitedTranslate = Math.max(SWIPE.MAX_LEFT, Math.min(SWIPE.MAX_RIGHT, newTranslate));
         
         setTranslateX(limitedTranslate);
     }
@@ -1599,25 +1666,23 @@ function initSwipe(container) {
         if (!isDragging) return;
         isDragging = false;
         
-        content.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        content.style.transition = `transform ${TIMING.SWIPE_TRANSITION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`;
         
-        const threshold = 50; // 滑動閾值
-        const actionWidth = 90; // 操作按鈕寬度
         const currentTranslate = container._swipeState.currentTranslate;
         
-        if (currentTranslate < -threshold) {
+        if (currentTranslate < -SWIPE.THRESHOLD) {
             // 左滑：顯示刪除
-            container._swipeState.currentTranslate = -actionWidth;
-            container._swipeState.prevTranslate = -actionWidth;
-            setTranslateX(-actionWidth);
+            container._swipeState.currentTranslate = -SWIPE.ACTION_WIDTH;
+            container._swipeState.prevTranslate = -SWIPE.ACTION_WIDTH;
+            setTranslateX(-SWIPE.ACTION_WIDTH);
             container.classList.add('swiped-left');
             container.classList.remove('swiped-right');
             currentOpenSwipeContainer = container;
-        } else if (currentTranslate > threshold) {
+        } else if (currentTranslate > SWIPE.THRESHOLD) {
             // 右滑：顯示編輯
-            container._swipeState.currentTranslate = actionWidth;
-            container._swipeState.prevTranslate = actionWidth;
-            setTranslateX(actionWidth);
+            container._swipeState.currentTranslate = SWIPE.ACTION_WIDTH;
+            container._swipeState.prevTranslate = SWIPE.ACTION_WIDTH;
+            setTranslateX(SWIPE.ACTION_WIDTH);
             container.classList.add('swiped-right');
             container.classList.remove('swiped-left');
             currentOpenSwipeContainer = container;
@@ -2070,18 +2135,19 @@ async function loadCurrencyOptions() {
             sel.appendChild(opt);
         });
     } catch (e) {
+        reportError(e, '無法載入幣別選單，將使用 TWD。');
         sel.innerHTML = '<option value="TWD" selected>TWD</option>';
     }
 }
 
 /**
- * 大螢幕（>1200px）時：高度由 CSS Grid 自動控制，不需要 JS 動態調整。
+ * 大螢幕（>LAYOUT.VERTICAL_MAX_WIDTH）時：高度由 CSS Grid 自動控制，不需要 JS 動態調整。
  * 右側儀表板可以隨畫面高度自由滾動。
  */
 function syncDashboardHeightToForm() {
     // 移除所有動態高度設定，讓 CSS Grid 自動處理
     const dashboardColumn = elements.dashboardColumn;
-    if (dashboardColumn && window.innerWidth <= 1200) {
+    if (dashboardColumn && window.innerWidth <= LAYOUT.VERTICAL_MAX_WIDTH) {
         dashboardColumn.style.maxHeight = '';
     }
 }
@@ -2117,7 +2183,7 @@ async function createDefaultDataForOAuth(userId) {
             .from('accounts')
             .insert([
                 { user_id: userId, name: '現金', type: 'cash' },
-                { user_id: userId, name: '信用卡A', type: 'credit_card', credit_limit: 50000, billing_day: 5, payment_due_day: 25 }
+                { user_id: userId, name: '信用卡A', type: 'credit_card', credit_limit: DEFAULT_ACCOUNT.CREDIT_LIMIT, billing_day: DEFAULT_ACCOUNT.BILLING_DAY, payment_due_day: DEFAULT_ACCOUNT.PAYMENT_DUE_DAY }
             ]);
 
         if (accountsError) console.error('建立預設帳戶失敗:', accountsError);
@@ -2220,7 +2286,7 @@ async function loadSettingsData() {
         currentAccounts = accounts || [];
         renderAccounts();
     } catch (error) {
-        console.error('載入設定資料失敗:', error);
+        reportError(error, '載入設定資料失敗，請稍後再試。');
     }
 }
 
@@ -2233,8 +2299,8 @@ function renderCategories() {
         <li class="category-item">
             <span class="category-item__name">${escapeHtml(cat)}</span>
             <div class="category-item__actions">
-                <button type="button" class="category-item__btn" onclick="renameCategoryPrompt('expense', ${index})">重新命名</button>
-                <button type="button" class="category-item__btn category-item__btn--delete" onclick="deleteCategory('expense', ${index})">刪除</button>
+                <button type="button" class="category-item__btn" data-action="rename-category" data-type="expense" data-index="${index}">重新命名</button>
+                <button type="button" class="category-item__btn category-item__btn--delete" data-action="delete-category" data-type="expense" data-index="${index}">刪除</button>
             </div>
         </li>
     `).join('');
@@ -2244,8 +2310,8 @@ function renderCategories() {
         <li class="category-item">
             <span class="category-item__name">${escapeHtml(cat)}</span>
             <div class="category-item__actions">
-                <button type="button" class="category-item__btn" onclick="renameCategoryPrompt('income', ${index})">重新命名</button>
-                <button type="button" class="category-item__btn category-item__btn--delete" onclick="deleteCategory('income', ${index})">刪除</button>
+                <button type="button" class="category-item__btn" data-action="rename-category" data-type="income" data-index="${index}">重新命名</button>
+                <button type="button" class="category-item__btn category-item__btn--delete" data-action="delete-category" data-type="income" data-index="${index}">刪除</button>
             </div>
         </li>
     `).join('');
@@ -2253,63 +2319,73 @@ function renderCategories() {
 
 // 新增類別
 async function addCategory(type) {
-    const name = prompt(type === 'expense' ? '請輸入新的支出類別名稱：' : '請輸入新的收入類別名稱：');
-    if (!name || !name.trim()) return;
+    try {
+        const name = prompt(type === 'expense' ? '請輸入新的支出類別名稱：' : '請輸入新的收入類別名稱：');
+        if (!name || !name.trim()) return;
 
-    const trimmedName = name.trim();
-    const categories = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
+        const trimmedName = name.trim();
+        const categories = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
 
-    if (categories.includes(trimmedName)) {
-        alert('此類別已存在！');
-        return;
+        if (categories.includes(trimmedName)) {
+            alert('此類別已存在！');
+            return;
+        }
+
+        categories.push(trimmedName);
+        await saveCategoriesType(type);
+    } catch (err) {
+        reportError(err, '新增類別失敗，請稍後再試。');
     }
-
-    categories.push(trimmedName);
-    await saveCategoriesType(type);
 }
 
 // 重新命名類別
 async function renameCategoryPrompt(type, index) {
-    const categories = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
-    const oldName = categories[index];
-    const newName = prompt('請輸入新的類別名稱：', oldName);
-    
-    if (!newName || !newName.trim() || newName.trim() === oldName) return;
+    try {
+        const categories = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
+        const oldName = categories[index];
+        const newName = prompt('請輸入新的類別名稱：', oldName);
 
-    const trimmedName = newName.trim();
-    
-    if (categories.includes(trimmedName)) {
-        alert('此類別名稱已存在！');
-        return;
+        if (!newName || !newName.trim() || newName.trim() === oldName) return;
+
+        const trimmedName = newName.trim();
+
+        if (categories.includes(trimmedName)) {
+            alert('此類別名稱已存在！');
+            return;
+        }
+
+        categories[index] = trimmedName;
+        await saveCategoriesType(type);
+
+        // 更新所有使用此類別的交易
+        await updateTransactionCategories(oldName, trimmedName);
+    } catch (err) {
+        reportError(err, '重新命名類別失敗，請稍後再試。');
     }
-
-    categories[index] = trimmedName;
-    await saveCategoriesType(type);
-
-    // 更新所有使用此類別的交易
-    await updateTransactionCategories(oldName, trimmedName);
 }
 
 // 刪除類別
 async function deleteCategory(type, index) {
-    const categories = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
-    const categoryName = categories[index];
-    
-    if (!confirm(`確定要刪除類別「${categoryName}」嗎？\n\n注意：既有交易的類別名稱會保留。`)) return;
+    try {
+        const categories = type === 'expense' ? currentExpenseCategories : currentIncomeCategories;
+        const categoryName = categories[index];
 
-    categories.splice(index, 1);
-    await saveCategoriesType(type);
+        if (!confirm(`確定要刪除類別「${categoryName}」嗎？\n\n注意：既有交易的類別名稱會保留。`)) return;
+
+        categories.splice(index, 1);
+        await saveCategoriesType(type);
+    } catch (err) {
+        reportError(err, '刪除類別失敗，請稍後再試。');
+    }
 }
-
-// 暴露到全局作用域供 HTML onclick 使用
-window.addCategory = addCategory;
-window.renameCategoryPrompt = renameCategoryPrompt;
-window.deleteCategory = deleteCategory;
 
 // 儲存類別
 async function saveCategoriesType(type) {
     const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabase) {
+        reportError(new Error('Supabase 尚未初始化'), 'Supabase 尚未初始化，請重新整理頁面。');
+        return;
+    }
 
     try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -2330,8 +2406,7 @@ async function saveCategoriesType(type) {
 
         renderCategories();
     } catch (error) {
-        console.error('儲存類別失敗:', error);
-        alert('儲存失敗，請稍後再試。');
+        reportError(error, '儲存類別失敗，請稍後再試。');
     }
 }
 
@@ -2352,7 +2427,7 @@ async function updateTransactionCategories(oldName, newName) {
 
         if (error) throw error;
     } catch (error) {
-        console.error('更新交易類別失敗:', error);
+        reportError(error, '更新交易類別失敗，請稍後再試。');
     }
 }
 
@@ -2393,8 +2468,8 @@ function renderAccounts() {
                 <div class="account-item__header">
                     <span class="account-item__name">${escapeHtml(account.name)}</span>
                     <div class="account-item__actions">
-                        <button type="button" class="account-item__btn" onclick="editAccount('${account.id}')">編輯</button>
-                        <button type="button" class="account-item__btn account-item__btn--delete" onclick="deleteAccount('${account.id}')">刪除</button>
+                        <button type="button" class="account-item__btn" data-action="edit-account" data-account-id="${account.id}">編輯</button>
+                        <button type="button" class="account-item__btn account-item__btn--delete" data-action="delete-account" data-account-id="${account.id}">刪除</button>
                     </div>
                 </div>
                 <div class="account-item__details">
@@ -2509,8 +2584,7 @@ async function saveAccount(e) {
         cancelAccountForm();
         await loadSettingsData();
     } catch (error) {
-        console.error('儲存帳戶失敗:', error);
-        alert('儲存失敗，請稍後再試。');
+        reportError(error, '儲存帳戶失敗，請稍後再試。');
     }
 }
 
@@ -2534,14 +2608,9 @@ async function deleteAccount(accountId) {
 
         await loadSettingsData();
     } catch (error) {
-        console.error('刪除帳戶失敗:', error);
-        alert('刪除失敗，請稍後再試。');
+        reportError(error, '刪除帳戶失敗，請稍後再試。');
     }
 }
-
-// 暴露到全局作用域供 HTML onclick 使用
-window.editAccount = editAccount;
-window.deleteAccount = deleteAccount;
 
 // 更新交易的支付方式名稱（批次更新）
 async function updateTransactionPaymentMethods(oldName, newName) {
@@ -2560,7 +2629,7 @@ async function updateTransactionPaymentMethods(oldName, newName) {
 
         if (error) throw error;
     } catch (error) {
-        console.error('更新交易支付方式失敗:', error);
+        reportError(error, '更新交易支付方式失敗，請稍後再試。');
     }
 }
 
@@ -2591,6 +2660,32 @@ if (settingsModal) {
     settingsModal.querySelector('.settings-manage-modal__backdrop')?.addEventListener('click', (e) => {
         if (e.target.hasAttribute('data-close')) {
             closeSettingsModal();
+        }
+    });
+
+    // 事件委派：類別與帳戶管理按鈕（addCategory, renameCategoryPrompt, deleteCategory, editAccount, deleteAccount）
+    settingsModal.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+
+        const action = target.getAttribute('data-action');
+        if (action === 'add-category') {
+            const type = target.getAttribute('data-type');
+            if (type) addCategory(type);
+        } else if (action === 'rename-category') {
+            const type = target.getAttribute('data-type');
+            const index = parseInt(target.getAttribute('data-index'), 10);
+            if (type != null && !isNaN(index)) renameCategoryPrompt(type, index);
+        } else if (action === 'delete-category') {
+            const type = target.getAttribute('data-type');
+            const index = parseInt(target.getAttribute('data-index'), 10);
+            if (type != null && !isNaN(index)) deleteCategory(type, index);
+        } else if (action === 'edit-account') {
+            const accountId = target.getAttribute('data-account-id');
+            if (accountId) editAccount(accountId);
+        } else if (action === 'delete-account') {
+            const accountId = target.getAttribute('data-account-id');
+            if (accountId) deleteAccount(accountId);
         }
     });
 }
@@ -2711,14 +2806,6 @@ if (changelogModal) {
         }
     });
 }
-
-// 類別新增按鈕
-document.querySelectorAll('.btn-add-category').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const type = e.target.getAttribute('data-type');
-        addCategory(type);
-    });
-});
 
 // 帳戶相關按鈕
 if (addAccountBtn) {
