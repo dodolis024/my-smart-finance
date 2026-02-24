@@ -23,6 +23,7 @@ const STREAK_MILESTONES = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
 const TIMING = {
     FOCUS_DELAY: 150,                    // 捲動後 focus 輸入欄的延遲
     FILTER_IGNORE_SCROLL_MS: 800,        // 篩選套用後忽略 scroll 關閉 popover 的時間
+    FILTER_REPOSITION_AFTER_SCROLL_MS: 450,  // 篩選捲動後重新定位 popover 的延遲
     SWIPE_TRANSITION_DURATION: 300,      // 滑動復位動畫時長 (ms)
 };
 

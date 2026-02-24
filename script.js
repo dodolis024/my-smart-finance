@@ -1398,6 +1398,32 @@ function closeFilterPopover() {
     }
 }
 
+function repositionFilterPopover(btn) {
+    if (!filterPopover || !filterPopover.classList.contains('is-open') || !btn) return;
+    const rect = btn.getBoundingClientRect();
+    const gutter = 8;
+    filterPopover.style.left = rect.left + 'px';
+    filterPopover.style.top = (rect.bottom + 4) + 'px';
+    const popoverRect = filterPopover.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    if (popoverRect.bottom > vh - gutter) {
+        const spaceAbove = rect.top;
+        if (spaceAbove >= popoverRect.height + gutter) {
+            filterPopover.style.top = (rect.top - popoverRect.height - 4) + 'px';
+        } else {
+            filterPopover.style.top = Math.max(gutter, vh - popoverRect.height - gutter) + 'px';
+        }
+    }
+    const afterTop = filterPopover.getBoundingClientRect();
+    if (afterTop.right > vw - gutter) {
+        filterPopover.style.left = (vw - popoverRect.width - gutter) + 'px';
+    }
+    if (parseInt(filterPopover.style.left, 10) < gutter) {
+        filterPopover.style.left = gutter + 'px';
+    }
+}
+
 function openFilterPopover(btn) {
     if (filterPopoverAnchor === btn) {
         closeFilterPopover();
@@ -1488,33 +1514,9 @@ function openFilterPopover(btn) {
         });
     }
 
-    const rect = btn.getBoundingClientRect();
-    const gutter = 8;
-    popover.style.left = rect.left + 'px';
-    popover.style.top = (rect.bottom + 4) + 'px';
     popover.classList.add('is-open');
-
-    const popoverRect = popover.getBoundingClientRect();
-    const vh = window.innerHeight;
-    const vw = window.innerWidth;
-
-    if (popoverRect.bottom > vh - gutter) {
-        const spaceAbove = rect.top;
-        if (spaceAbove >= popoverRect.height + gutter) {
-            popover.style.top = (rect.top - popoverRect.height - 4) + 'px';
-        } else {
-            popover.style.top = Math.max(gutter, vh - popoverRect.height - gutter) + 'px';
-        }
-    }
-    const afterTop = popover.getBoundingClientRect();
-    if (afterTop.right > vw - gutter) {
-        popover.style.left = (vw - popoverRect.width - gutter) + 'px';
-    }
-    if (parseInt(popover.style.left, 10) < gutter) {
-        popover.style.left = gutter + 'px';
-    }
-
     filterPopoverAnchor = btn;
+    repositionFilterPopover(btn);
 
     if (filterPopoverScrollHandler) {
         window.removeEventListener('scroll', filterPopoverScrollHandler, true);
@@ -1537,7 +1539,31 @@ function applyTableFilter(shouldScroll) {
     });
     currentTransactions = filtered;
     renderTable(filtered);
-    if (shouldScroll) scrollToTransactionHistory();
+    if (shouldScroll) {
+        if (filterPopoverAnchor) {
+            const anchor = filterPopoverAnchor;
+            let rafId = null;
+            const onScroll = () => {
+                if (rafId) return;
+                rafId = requestAnimationFrame(() => {
+                    repositionFilterPopover(anchor);
+                    rafId = null;
+                });
+            };
+            const onScrollEnd = () => {
+                window.removeEventListener('scroll', onScroll, true);
+                if (rafId) cancelAnimationFrame(rafId);
+                repositionFilterPopover(anchor);
+            };
+            window.addEventListener('scroll', onScroll, true);
+            if ('onscrollend' in window) {
+                window.addEventListener('scrollend', onScrollEnd, { once: true });
+            } else {
+                setTimeout(onScrollEnd, TIMING.FILTER_REPOSITION_AFTER_SCROLL_MS);
+            }
+        }
+        scrollToTransactionHistory();
+    }
 }
 
 function formatDateForDisplay(dateStr) {
@@ -2859,6 +2885,23 @@ async function updateTransactionPaymentMethods(oldName, newName) {
 const creditCardModal = document.getElementById('creditCardModal');
 const creditCardCloseBtn = document.getElementById('creditCardCloseBtn');
 
+/** 計算距離指定日期（每月某日）還有幾天 */
+function getDaysUntilDay(day) {
+    if (!day || day < 1 || day > 31) return null;
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    let nextDate = new Date(currentYear, currentMonth, day);
+    if (currentDay > day) {
+        nextDate.setMonth(currentMonth + 1);
+    }
+    const diffTime = nextDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+}
+
 // 開啟信用卡額度 Modal
 function openCreditCardModal(accountId) {
     if (!creditCardModal) return;
@@ -2877,7 +2920,7 @@ function openCreditCardModal(accountId) {
     // 更新標題
     const titleEl = document.getElementById('creditCardTitle');
     const accountName = account.name || account.accountName || '信用卡';
-    if (titleEl) titleEl.textContent = `${accountName} - 額度資訊`;
+    if (titleEl) titleEl.textContent = `${accountName}`;
     
     // 取得額度與日期資訊（支援兩種命名方式）
     const creditLimit = account.creditLimit || account.credit_limit;
@@ -2891,6 +2934,8 @@ function openCreditCardModal(accountId) {
         document.getElementById('creditTotalText').textContent = '';
         document.getElementById('creditLimitBar').style.width = '0%';
         document.getElementById('creditLimitBar').style.backgroundColor = '#e0e0e0';
+        document.getElementById('creditLimitPercent').textContent = '';
+        document.getElementById('creditLimitPercent').style.color = '';
     } else {
         // 計算已使用額度
         const accountName = account.name || account.accountName;
@@ -2908,6 +2953,7 @@ function openCreditCardModal(accountId) {
         progressBar.style.width = `${Math.min(100, usagePercent)}%`;
         
         // 根據使用率改變顏色
+        const percentColor = usagePercent <= 50 ? '#4caf50' : usagePercent <= 80 ? '#ff9800' : '#f44336';
         if (usagePercent <= 50) {
             progressBar.style.backgroundColor = '#4caf50'; // 綠色
         } else if (usagePercent <= 80) {
@@ -2915,11 +2961,33 @@ function openCreditCardModal(accountId) {
         } else {
             progressBar.style.backgroundColor = '#f44336'; // 紅色
         }
+        // 更新百分比顯示（小數點一位，與進度條同色）
+        const percentEl = document.getElementById('creditLimitPercent');
+        percentEl.textContent = usagePercent % 1 === 0 ? `${Math.round(usagePercent)}%` : `${usagePercent.toFixed(1)}%`;
+        percentEl.style.color = percentColor;
     }
-    
+
     // 更新帳單日與繳款日
     document.getElementById('creditBillingDay').textContent = billingDay ? `每月 ${billingDay} 日` : '未設定';
     document.getElementById('creditPaymentDay').textContent = paymentDueDay ? `每月 ${paymentDueDay} 日` : '未設定';
+
+    // 更新帳單日倒數
+    const billingCountdownEl = document.getElementById('creditBillingCountdown');
+    if (billingDay) {
+        const billingDays = getDaysUntilDay(billingDay);
+        billingCountdownEl.textContent = billingDays !== null ? `還有 ${billingDays} 天` : '';
+    } else {
+        billingCountdownEl.textContent = '';
+    }
+
+    // 更新繳款日倒數
+    const paymentCountdownEl = document.getElementById('creditPaymentCountdown');
+    if (paymentDueDay) {
+        const paymentDays = getDaysUntilDay(paymentDueDay);
+        paymentCountdownEl.textContent = paymentDays !== null ? `還有 ${paymentDays} 天` : '';
+    } else {
+        paymentCountdownEl.textContent = '';
+    }
     
     // 顯示 modal
     creditCardModal.classList.add('is-open');
