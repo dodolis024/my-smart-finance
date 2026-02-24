@@ -1,0 +1,40 @@
+/* ============================================
+   Smart Finance Tracker — CSS Variables
+   ============================================ */
+
+:root {
+  /* Colors */
+  --color-primary: #b59c80; /* 主顏色 */
+  --color-primary-hover: #9E8769; /* 主顏色懸停時的顏色 */
+  --color-bg: #FAF9F6; /* 背景顏色 */
+  --color-card: #ffffff; /* 卡片顏色 */
+  --color-text: #3d3629; /* 文字顏色 */
+  --color-text-secondary: #797169; /* 次要文字顏色 */
+  --color-border: #E0D9D0 ;/* 邊框顏色 */
+  --color-success: #12ae63; /* 成功顏色 */
+  --color-danger: #ef4444; /* 危險顏色 */
+  --color-table-header: #dfdad3; /* 表頭：暖灰米色，呼應主色與邊框 */
+  --color-row-hover: #F5F2ED; /* 列懸停：淺暖米，與背景協調 */
+  --color-row-alt: #FAF8F5; /* 列交替：極淺暖色 */
+
+  /* Spacing */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1); /* 卡片的陰影 */
+  --shadow-focus: 0 0 0 3px rgba(191, 165, 136, 0.35); /* 焦點的陰影 */
+
+  /* Transitions */
+  --transition: all 0.2s ease;
+
+  /* 圓餅圖最大寬度：改此值可調整大小；≤1440px、≤900px 在各自 media 內另有 --chart-max-width 可調 */
+  --chart-max-width: 260px;
+
+  /* 捲軸 */
+  --scrollbar-track: #FAF9F7;
+  --scrollbar-thumb: #e5e0da;
+  --scrollbar-thumb-hover: #d8d2ca;
+}

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="favicons/apple-touch-icon.png">
   <link rel="manifest" href="favicons/site.webmanifest">
   
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
   <div class="app-container">
@@ -253,7 +253,7 @@
       <p class="reaction-modal__text" id="reactionText"></p>
       <!-- NOTE: streak-calendar-root
            - JS 會在這個容器裡渲染日曆（可切換月份）與下方統計卡片
-           - 排版、顏色、emoji 由 script.js + style.css 共同決定 -->
+           - 排版、顏色、emoji 由 script.js + styles/ 共同決定 -->
       <div class="streak-calendar-root" id="streakCalendarRoot"></div>
     </div>
   </div>
@@ -438,10 +438,21 @@
 </svg>
 
 
-  <!-- 重要：Supabase 必須在 script.js 之前載入 -->
+  <!-- 重要：Supabase 必須在 script 之前載入 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="constants.js"></script>
-  <script src="script.js"></script>
+  <script src="src/config.js"></script>
+  <script src="src/utils.js"></script>
+  <script src="src/state.js"></script>
+  <script src="src/auth.js"></script>
+  <script src="src/streak.js"></script>
+  <script src="src/dashboard.js"></script>
+  <script src="src/transactions.js"></script>
+  <script src="src/ui/filters.js"></script>
+  <script src="src/ui/swipe.js"></script>
+  <script src="src/ui/modals.js"></script>
+  <script src="src/settings.js"></script>
+  <script src="src/main.js"></script>
 </body>
 </html>

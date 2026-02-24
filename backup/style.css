@@ -1887,6 +1887,14 @@ html {
   margin-top: 0.25rem;
 }
 
+.credit-countdown-num {
+  font-weight: bold;
+}
+
+.credit-countdown-num.credit-countdown-urgent {
+  color: #f44336;
+}
+
 /* Payment stats clickable style */
 .payment-stats-list li.clickable {
   cursor: pointer;

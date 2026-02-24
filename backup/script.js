@@ -2940,7 +2940,7 @@ function openCreditCardModal(accountId) {
         // 計算已使用額度
         const accountName = account.name || account.accountName;
         const usedAmount = calculateCreditUsage(account.id, accountName, billingDay, paymentDueDay);
-        const available = Math.max(0, creditLimit - usedAmount);
+        const available = Math.floor(Math.max(0, creditLimit - usedAmount)); // 信用卡無小數
         const usagePercent = creditLimit > 0 ? (usedAmount / creditLimit) * 100 : 0;
         
         // 更新額度顯示
@@ -2971,20 +2971,26 @@ function openCreditCardModal(accountId) {
     document.getElementById('creditBillingDay').textContent = billingDay ? `每月 ${billingDay} 日` : '未設定';
     document.getElementById('creditPaymentDay').textContent = paymentDueDay ? `每月 ${paymentDueDay} 日` : '未設定';
 
-    // 更新帳單日倒數
+    // 更新帳單日倒數（僅數字在 5 天內變紅）
     const billingCountdownEl = document.getElementById('creditBillingCountdown');
     if (billingDay) {
         const billingDays = getDaysUntilDay(billingDay);
-        billingCountdownEl.textContent = billingDays !== null ? `還有 ${billingDays} 天` : '';
+        const isBillingUrgent = billingDays !== null && billingDays <= 5;
+        billingCountdownEl.innerHTML = billingDays !== null
+            ? `還有 <span class="credit-countdown-num${isBillingUrgent ? ' credit-countdown-urgent' : ''}">${billingDays}</span> 天`
+            : '';
     } else {
         billingCountdownEl.textContent = '';
     }
 
-    // 更新繳款日倒數
+    // 更新繳款日倒數（僅數字在 5 天內變紅）
     const paymentCountdownEl = document.getElementById('creditPaymentCountdown');
     if (paymentDueDay) {
         const paymentDays = getDaysUntilDay(paymentDueDay);
-        paymentCountdownEl.textContent = paymentDays !== null ? `還有 ${paymentDays} 天` : '';
+        const isPaymentUrgent = paymentDays !== null && paymentDays <= 5;
+        paymentCountdownEl.innerHTML = paymentDays !== null
+            ? `還有 <span class="credit-countdown-num${isPaymentUrgent ? ' credit-countdown-urgent' : ''}">${paymentDays}</span> 天`
+            : '';
     } else {
         paymentCountdownEl.textContent = '';
     }

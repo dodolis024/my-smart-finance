@@ -1,0 +1,43 @@
+/* ============================================
+   Smart Finance Tracker — Badge Components
+   ============================================ */
+
+/* Streak Badge (top-right icon) */
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.streak-badge__icon {
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.streak-badge__count {
+  font-weight: 700;
+  color: var(--color-text);
+}
+.streak-badge__unit {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.streak-badge:hover {
+  background: var(--color-row-hover);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+/* Category badge (in transaction detail & table cells) */
+.transaction-detail-value .badge {
+  display: inline-block;
+}
