@@ -102,10 +102,10 @@ function maybeShowPositiveModalAfterAdd(submittedDate) {
 function openStreakModalForPositive() {
     const count = streakState.count || 0;
     let title = '怎麼這麼乖呀！';
-    let text = '今天是記帳的第 ${count} 天，明天也要繼續保持呦☺️';
+    let text = `今天是記帳的第 ${count} 天，明天也要繼續保持呦☺️`;
     if (STREAK_MILESTONES.includes(count)) {
         title = '里程碑達成！';
-        text = '你已經連續記帳 ${count} 天了！真棒真棒🥹';
+        text = `你已經連續記帳 ${count} 天了！真棒真棒🥹`;
     }
     renderStreakCalendar();
     openReactionModal({

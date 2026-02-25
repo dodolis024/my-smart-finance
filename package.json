@@ -4,13 +4,9 @@
   "description": "Smart Finance Tracker",
   "type": "module",
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:basic": "playwright test tests/e2e/basic.spec.js",
-    "cleanup:e2e": "node scripts/cleanup-e2e-user.js"
+    "test": "vitest run --config config/vitest.config.js",
+    "test:watch": "vitest --config config/vitest.config.js",
+    "test:coverage": "vitest run --coverage --config config/vitest.config.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",

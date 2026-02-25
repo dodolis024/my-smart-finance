@@ -12,6 +12,7 @@ supabase/config.toml
 node_modules/
 dist/
 .DS_Store
+backup/
 
 # Test artifacts
 coverage/

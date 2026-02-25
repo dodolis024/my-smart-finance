@@ -4,7 +4,7 @@
 
 // Layout breakpoints (px)
 const LAYOUT = {
-    VERTICAL_MAX_WIDTH: 1200,  // 垂直顯示（寬度 ≤ 1200px）時，streak 按鈕移到 top-bar
+    VERTICAL_MAX_WIDTH: 870,  // 垂直顯示（寬度 ≤ 870px）時，單欄布局／streak 按鈕移到 top-bar
     MOBILE_MAX_WIDTH: 600,     // 手機版：日期顯示簡化為月-日
 };
 

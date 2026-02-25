@@ -23,8 +23,8 @@ A lightweight personal expense tracker with authentication, multi-currency suppo
 ### 1. Set up Supabase
 
 1. Create a [Supabase](https://supabase.com) project.
-2. Run `supabase-migration.sql` and `supabase-functions.sql` in the Supabase SQL Editor to create tables and functions.
-3. Add your Supabase URL and anon key in `script.js` and `auth.html` (Dashboard → Settings → API). These are safe in the frontend; Supabase RLS protects your data.
+2. Run `database/supabase-migration.sql` and `database/supabase-functions.sql` in the Supabase SQL Editor to create tables and functions.
+3. Add your Supabase URL and anon key in `src/config.js` and `auth.html` (Dashboard → Settings → API). These are safe in the frontend; Supabase RLS protects your data.
 
 ### 2. Run locally
 
@@ -43,17 +43,42 @@ See `docs/QUICK_START.md` and `docs/EXCHANGE_RATE_SETUP_GUIDE.md` for deploying 
 ## Project Structure
 
 ```
-├── index.html          # Main app
-├── auth.html           # Login / signup
-├── style.css
-├── script.js
-├── supabase-migration.sql
-├── supabase-functions.sql
+├── index.html              # Main app
+├── auth.html               # Login / signup
+├── styles/                 # CSS (main.css + imports)
+│   ├── main.css
+│   ├── variables.css
+│   ├── base.css
+│   ├── layout.css
+│   ├── responsive.css
+│   └── components/         # form, table, modal, badge
+├── src/                    # JavaScript modules
+│   ├── constants.js        # Global constants (layout breakpoints, timing, etc.)
+│   ├── config.js           # Supabase config
+│   ├── utils.js            # Utility functions
+│   ├── state.js            # Global state & DOM references
+│   ├── auth.js             # Authentication logic
+│   ├── streak.js           # Streak tracking & calendar
+│   ├── dashboard.js        # Dashboard rendering & charts
+│   ├── transactions.js     # Transaction CRUD
+│   ├── settings.js         # Settings modal (categories, accounts)
+│   ├── main.js             # App initialization & event listeners
+│   └── ui/                 # UI components
+│       ├── filters.js      # Table filtering & rendering
+│       ├── swipe.js        # Mobile swipe gestures
+│       └── modals.js       # Modal dialogs
+├── database/               # SQL scripts
+│   ├── supabase-migration.sql
+│   └── supabase-functions.sql
+├── config/                 # Build & test config
+│   ├── tsconfig.json
+│   ├── vitest.config.js
+│   └── vitest.setup.js
+├── scripts/                # Exchange rate setup scripts
 ├── supabase/
 │   └── functions/
 │       └── update-exchange-rates/   # Edge Function for daily rates
-├── scripts/            # Exchange rate setup scripts
-└── docs/               # Guides and checklists
+└── docs/                   # Guides and checklists
 ```
 
 ## Documentation
