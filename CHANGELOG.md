@@ -2,8 +2,6 @@
 
 本檔案記錄 Smart Finance Tracker 的版本更新內容。
 
-- 優化手機版 filter 使用體驗 
-
 ## [1.1.2] - Feb-24 2026
 - 先祝我森日快樂🥳
 - 優化手機版 filter 使用體驗 
