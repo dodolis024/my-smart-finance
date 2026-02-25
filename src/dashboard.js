@@ -271,7 +271,7 @@ function populateCategories(data) {
             g1.label = '支出';
             expense.forEach(function (c) {
                 var o = document.createElement('option');
-                o.value = c;
+                o.value = 'expense:' + c;
                 o.textContent = c;
                 g1.appendChild(o);
             });
@@ -282,7 +282,7 @@ function populateCategories(data) {
             g2.label = '收入';
             income.forEach(function (c) {
                 var o = document.createElement('option');
-                o.value = c;
+                o.value = 'income:' + c;
                 o.textContent = c;
                 g2.appendChild(o);
             });
@@ -291,7 +291,7 @@ function populateCategories(data) {
     } else {
         flat.forEach(function (c) {
             var o = document.createElement('option');
-            o.value = c;
+            o.value = 'expense:' + c;
             o.textContent = c;
             elements.categorySelect.appendChild(o);
         });

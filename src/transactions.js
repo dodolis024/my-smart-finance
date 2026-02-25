@@ -26,7 +26,7 @@ async function submitTransaction() {
 
         const date = elements.dateInput.value;
         const itemName = elements.itemInput.value;
-        const category = elements.categorySelect.value;
+        const categoryValue = elements.categorySelect.value;
         const paymentMethod = elements.methodInput.value;
         const currency = elements.currencyInput.value || 'TWD';
         const amountValue = parseFormattedNumber(elements.amountInput.value);
@@ -39,15 +39,24 @@ async function submitTransaction() {
         }
         const note = elements.noteInput.value || null;
 
-        const { data: incomeCategories } = await supabase
-            .from('settings')
-            .select('value')
-            .eq('key', 'income_categories')
-            .single();
-
-        const incomeCats = incomeCategories?.value || ['薪水', '投資'];
-        const isIncome = Array.isArray(incomeCats) && incomeCats.includes(category);
-        const type = isIncome ? 'income' : 'expense';
+        let type, category;
+        if (categoryValue.startsWith('expense:')) {
+            type = 'expense';
+            category = categoryValue.slice(8);
+        } else if (categoryValue.startsWith('income:')) {
+            type = 'income';
+            category = categoryValue.slice(7);
+        } else {
+            const { data: incomeCategories } = await supabase
+                .from('settings')
+                .select('value')
+                .eq('key', 'income_categories')
+                .single();
+            const incomeCats = incomeCategories?.value || ['薪水', '投資'];
+            const isIncome = Array.isArray(incomeCats) && incomeCats.includes(categoryValue);
+            type = isIncome ? 'income' : 'expense';
+            category = categoryValue;
+        }
 
         const { data: exchangeRateVal, error: rateErr } = await supabase
             .rpc('get_exchange_rate', { p_currency: currency.trim().toUpperCase() });
@@ -217,14 +226,16 @@ function startEdit(id) {
     if (elements.noteInput) elements.noteInput.value = tx.note || '';
 
     const cat = String(tx.category || '');
+    const txType = String(tx.type || 'expense');
+    const prefixedValue = (txType === 'income' ? 'income:' : 'expense:') + cat;
     if (elements.categorySelect) {
-        if (!Array.from(elements.categorySelect.options).some(function (o) { return o.value === cat; })) {
+        if (!Array.from(elements.categorySelect.options).some(function (o) { return o.value === prefixedValue; })) {
             const opt = document.createElement('option');
-            opt.value = cat;
+            opt.value = prefixedValue;
             opt.textContent = cat;
             elements.categorySelect.appendChild(opt);
         }
-        elements.categorySelect.value = cat;
+        elements.categorySelect.value = prefixedValue;
     }
     const pay = String(tx.paymentMethod || '');
     if (elements.methodInput) {
