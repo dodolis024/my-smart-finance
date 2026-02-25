@@ -10,7 +10,14 @@ supabase/config.toml
 
 # 其他常見要忽略的
 node_modules/
+dist/
 .DS_Store
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+.playwright/
 
 # 其他不重要的檔案
 SUPABASE_MIGRATION_SUMMARY.md
