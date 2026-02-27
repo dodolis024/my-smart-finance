@@ -75,6 +75,14 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
     <>
       <div className="table-wrapper">
         <table>
+          <colgroup>
+            <col style={{ width: '16.67%' }} />
+            <col style={{ width: '13.89%' }} />
+            <col style={{ width: '18.06%' }} />
+            <col style={{ width: '13.89%' }} />
+            <col style={{ width: '18.06%' }} />
+            <col style={{ width: '19.44%' }} />
+          </colgroup>
           <thead>
             <tr>
               <th id="col-date">日期</th>

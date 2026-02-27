@@ -2,6 +2,9 @@
 
 本檔案記錄 Smart Finance Tracker 的版本更新內容。
 
+- 新增 GitHub Pages 自動部署
+- 優化交易表格欄位顯示與本地開發體驗
+
 ## [1.1.5] - Feb-28 2026
 - 將前端架構遷移至 React + Vite
 - 加強應用穩定性與狀態管理（ErrorBoundary、hooks、contexts）

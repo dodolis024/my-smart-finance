@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
-  base: '/my-smart-finance/',
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/my-smart-finance/' : '/',
   plugins: [react()],
   resolve: {
     alias: {
@@ -19,4 +19,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
