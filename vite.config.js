@@ -8,4 +8,14 @@ export default defineConfig({
       '@': '/src',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['chart.js', 'react-chartjs-2'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
+    },
+  },
 });

@@ -1,62 +1,16 @@
 /**
  * 單元測試 - utils 工具函數
- *
- * 注意：由於專案使用傳統 script 載入，utils.js 未使用 ES modules 匯出。
- * 此測試檔使用與 src/utils.js 相同的純函數實作（需保持同步）。
- * 未來可考慮將 utils 重構為可匯出模組以消除重複。
  */
 import { describe, it, expect } from 'vitest';
-
-// 從 src/utils.js 複製的純函數實作（用於測試）
-// 必須與 src/utils.js 保持同步
-function debounce(func, wait) {
-  let timeout;
-  return function (...args) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, args), wait);
-  };
-}
-
-function formatMoney(num) {
-  return new Intl.NumberFormat('zh-TW', {
-    style: 'currency',
-    currency: 'TWD',
-    minimumFractionDigits: 0,
-  }).format(num);
-}
-
-function getTodayYmd() {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function escapeHtml(s) {
-  if (s == null) return '';
-  const t = String(s);
-  return t
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function formatNumberWithCommas(value) {
-  const cleaned = value.replace(/[^\d.]/g, '');
-  const parts = cleaned.split('.');
-  let integerPart = parts[0] || '';
-  const decimalPart = parts.length > 1 ? '.' + parts[1].slice(0, 2) : '';
-  if (integerPart) {
-    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  }
-  return integerPart + decimalPart;
-}
-
-function parseFormattedNumber(value) {
-  return value.replace(/,/g, '');
-}
+import {
+  debounce,
+  formatMoney,
+  getTodayYmd,
+  escapeHtml,
+  formatNumberWithCommas,
+  parseFormattedNumber,
+  parseChangelogMarkdown,
+} from '@/lib/utils';
 
 describe('utils - formatMoney', () => {
   it('應正確格式化台幣金額（含千分位）', () => {
@@ -154,5 +108,48 @@ describe('utils - debounce', () => {
 
     await new Promise((r) => setTimeout(r, 50));
     expect(lastArg).toBe(3);
+  });
+});
+
+describe('utils - parseChangelogMarkdown', () => {
+  it('應解析版本標頭與日期', () => {
+    const text = `## [1.0.0] - 2026-01-15
+
+- 初版上線
+- 交易記帳`;
+    const result = parseChangelogMarkdown(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].version).toBe('1.0.0');
+    expect(result[0].date).toBe('2026-01-15');
+    expect(result[0].changes).toEqual(['初版上線', '交易記帳']);
+  });
+
+  it('應解析多個版本區塊', () => {
+    const text = `## [1.0.0] - 2026-01-15
+
+- 初版
+
+## [1.1.0] - 2026-02-20
+
+- 新功能`;
+    const result = parseChangelogMarkdown(text);
+    expect(result).toHaveLength(2);
+    expect(result[0].version).toBe('1.0.0');
+    expect(result[0].changes).toEqual(['初版']);
+    expect(result[1].version).toBe('1.1.0');
+    expect(result[1].changes).toEqual(['新功能']);
+  });
+
+  it('應去除變化項目前的 - 或 * 前綴', () => {
+    const text = `## [1.0.0] - 2026-01-15
+
+* 星號項目
+-  dash項目`;
+    const result = parseChangelogMarkdown(text);
+    expect(result[0].changes).toEqual(['星號項目', 'dash項目']);
+  });
+
+  it('空字串應回傳空陣列', () => {
+    expect(parseChangelogMarkdown('')).toEqual([]);
   });
 });

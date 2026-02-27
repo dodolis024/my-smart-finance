@@ -24,6 +24,13 @@
 
   --chart-max-width: 260px;
 
+  --z-topbar: 10;
+  --z-dropdown: 100;
+  --z-popover: 1000;
+  --z-modal: 999;
+  --z-modal-high: 9999;
+  --z-modal-top: 10000;
+
   --scrollbar-track: #FAF9F7;
   --scrollbar-thumb: #e5e0da;
   --scrollbar-thumb-hover: #d8d2ca;

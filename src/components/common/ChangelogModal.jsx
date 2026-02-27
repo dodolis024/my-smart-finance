@@ -7,7 +7,7 @@ const CHANGELOG_FALLBACK = [
   {
     version: '1.1.0',
     date: 'Feb-23 2026',
-    changes: ['新增更新日記（Change Log）功能，可於更多選項中查看版本紀錄'],
+    changes: ['新增更新紀錄功能，可於更多選項中查看版本紀錄'],
   },
   {
     version: '1.0.0',
@@ -41,11 +41,11 @@ export default function ChangelogModal({ isOpen, onClose }) {
   }, [isOpen, loaded]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="changelog-modal">
+    <Modal isOpen={isOpen} onClose={onClose} className="changelog-modal" titleId="changelog-modal-title">
       <div className="changelog-modal__backdrop" onClick={onClose} />
       <div ref={dialogRef} className="changelog-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="changelog-modal__close" aria-label="關閉" onClick={onClose}>×</button>
-        <h2 className="changelog-modal__title">Change Log</h2>
+        <h2 id="changelog-modal-title" className="changelog-modal__title">更新紀錄</h2>
         <div className="changelog-content">
           {entries.length === 0 ? (
             <p className="changelog-empty">載入中...</p>

@@ -28,14 +28,18 @@ export default function LoginForm() {
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
+      <label htmlFor="login-email" className="sr-only">電子郵件</label>
       <input
+        id="login-email"
         type="email"
         placeholder="電子郵件"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
       />
+      <label htmlFor="login-password" className="sr-only">密碼</label>
       <input
+        id="login-password"
         type="password"
         placeholder="密碼"
         value={password}

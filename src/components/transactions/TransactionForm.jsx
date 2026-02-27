@@ -288,7 +288,7 @@ export default function TransactionForm({
             value={form.note}
             onChange={handleChange}
             rows={3}
-            placeholder="Optional"
+            placeholder="選填"
             disabled={isFormDisabled}
           />
         </div>

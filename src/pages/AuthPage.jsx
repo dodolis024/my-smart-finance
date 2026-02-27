@@ -5,11 +5,30 @@ import LoginForm from '@/components/auth/LoginForm';
 import SignupForm from '@/components/auth/SignupForm';
 import '@/styles/auth.css';
 
+function LoadingFallback() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '50vh',
+        fontSize: '1.25rem',
+        color: 'var(--color-text-secondary)',
+      }}
+      role="status"
+      aria-live="polite"
+    >
+      載入中…
+    </div>
+  );
+}
+
 export default function AuthPage() {
   const { session, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
 
-  if (loading) return null;
+  if (loading) return <LoadingFallback />;
   if (session) return <Navigate to="/" replace />;
 
   return (

@@ -74,7 +74,7 @@
 
 .filter-popover {
   position: fixed;
-  z-index: 100;
+  z-index: var(--z-dropdown);
   min-width: 10rem;
   max-height: 20rem;
   overflow-y: auto;
@@ -135,15 +135,18 @@
   font-size: 0.9375rem;
 }
 
-.transaction-history-section tbody tr:nth-child(even) .swipe-content {
+.transaction-history-section tbody tr:nth-child(even) .swipe-content,
+.transaction-history-section tbody tr:nth-child(even).transaction-row--semantic td {
   background: var(--color-row-alt);
 }
 
-.transaction-history-section tbody tr:hover .swipe-content {
+.transaction-history-section tbody tr:hover .swipe-content,
+.transaction-history-section tbody tr:hover.transaction-row--semantic td {
   background: var(--color-row-hover);
 }
 
-.transaction-history-section tbody tr:last-child .swipe-content {
+.transaction-history-section tbody tr:last-child .swipe-content,
+.transaction-history-section tbody tr:last-child.transaction-row--semantic td {
   border-bottom: none;
 }
 
@@ -158,6 +161,20 @@
 
 .transaction-row {
   position: relative;
+}
+
+.transaction-row--semantic {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.3fr 1fr 1.3fr 1.4fr;
+  align-items: center;
+}
+
+.transaction-row--semantic td {
+  position: relative;
+  overflow: hidden;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-card);
 }
 
 .transaction-row-cell {
@@ -185,6 +202,18 @@
   box-sizing: border-box;
   will-change: transform;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transaction-row--semantic .cell-date-inner,
+.transaction-row--semantic .cell-category-inner,
+.transaction-row--semantic .cell-item-inner,
+.transaction-row--semantic .cell-payment-inner,
+.transaction-row--semantic .cell-amount-inner,
+.transaction-row--semantic .cell-actions-inner {
+  position: relative;
+  z-index: 2;
+  will-change: transform;
+  min-height: 1.5rem;
 }
 
 .cell-date {

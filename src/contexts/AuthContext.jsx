@@ -44,15 +44,14 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-    if (sessionError || !session) throw new Error('Session 建立失敗，請重試');
+    if (data?.session) {
+      setSession(data.session);
+      setUser(data.session.user);
+      setUserInfo(extractUserInfo(data.session.user));
+    }
 
     return data;
-  }, []);
+  }, [extractUserInfo]);
 
   const signUp = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });

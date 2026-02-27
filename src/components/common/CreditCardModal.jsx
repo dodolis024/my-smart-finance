@@ -1,70 +1,8 @@
 import { useMemo, useRef } from 'react';
 import Modal from './Modal';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
-import { formatMoney, getDaysUntilDay, getTodayYmd } from '@/lib/utils';
-
-function calculateCreditUsage(account, history) {
-  const billingDay = account.billing_day || account.billingDay;
-  const paymentDueDay = account.payment_due_day || account.paymentDueDay;
-  const accountId = account.id;
-  const accountName = account.name || account.accountName;
-
-  if (!billingDay) return 0;
-
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth() + 1;
-  const currentDay = today.getDate();
-
-  let lastBillingYear = currentYear;
-  let lastBillingMonth = currentMonth;
-  if (currentDay < billingDay) {
-    lastBillingMonth -= 1;
-    if (lastBillingMonth < 1) { lastBillingMonth = 12; lastBillingYear -= 1; }
-  }
-
-  let prevBillingYear = lastBillingYear;
-  let prevBillingMonth = lastBillingMonth - 1;
-  if (prevBillingMonth < 1) { prevBillingMonth = 12; prevBillingYear -= 1; }
-
-  const pad = (n) => String(n).padStart(2, '0');
-  const fmt = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
-
-  const prevBillingDate = fmt(prevBillingYear, prevBillingMonth, billingDay);
-  const lastBillingDate = fmt(lastBillingYear, lastBillingMonth, billingDay);
-
-  let endDay = billingDay - 1;
-  let endMonth = lastBillingMonth;
-  let endYear = lastBillingYear;
-  if (endDay < 1) {
-    endMonth -= 1;
-    if (endMonth < 1) { endMonth = 12; endYear -= 1; }
-    endDay = new Date(endYear, endMonth, 0).getDate();
-  }
-  const lastBillingEndDate = fmt(endYear, endMonth, endDay);
-
-  let hasPaid = false;
-  if (paymentDueDay) {
-    if (paymentDueDay > billingDay) {
-      if (currentDay >= billingDay && currentDay >= paymentDueDay) hasPaid = true;
-    } else {
-      if (currentDay < billingDay && currentDay >= paymentDueDay) hasPaid = true;
-    }
-  }
-
-  const todayDate = fmt(currentYear, currentMonth, currentDay);
-  let totalUsed = 0;
-  (history || []).forEach((tx) => {
-    if (tx.type !== 'expense') return;
-    const match = tx.account_id === accountId || tx.paymentMethod === accountName;
-    if (!match) return;
-    const txDate = tx.date;
-    const amt = typeof tx.twdAmount === 'number' ? Math.abs(tx.twdAmount) : 0;
-    if (!hasPaid && txDate >= prevBillingDate && txDate <= lastBillingEndDate) totalUsed += amt;
-    if (txDate >= lastBillingDate && txDate <= todayDate) totalUsed += amt;
-  });
-  return totalUsed;
-}
+import { formatMoney, getDaysUntilDay } from '@/lib/utils';
+import { calculateCreditUsage } from '@/lib/creditCard';
 
 export default function CreditCardModal({ isOpen, onClose, account, history = [] }) {
   const data = useMemo(() => {
@@ -104,11 +42,11 @@ export default function CreditCardModal({ isOpen, onClose, account, history = []
   const accountName = account.name || account.accountName || '信用卡';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="credit-card-modal">
+    <Modal isOpen={isOpen} onClose={onClose} className="credit-card-modal" titleId="credit-card-modal-title">
       <div className="credit-card-modal__backdrop" onClick={onClose} />
       <div ref={dialogRef} className="credit-card-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="credit-card-modal__close" aria-label="關閉" onClick={onClose}>×</button>
-        <h2 className="credit-card-modal__title">{accountName}</h2>
+        <h2 id="credit-card-modal-title" className="credit-card-modal__title">{accountName}</h2>
         <div className="credit-card-info">
           <div className="credit-limit-section">
             <div className="credit-limit-header">

@@ -1,8 +1,14 @@
-import { useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useRef } from 'react';
 
-let globalToastId = 0;
+const ToastContext = createContext(null);
 
-export function useToast() {
+let toastId = 0;
+function nextToastId() {
+  toastId += 1;
+  return toastId;
+}
+
+export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const timersRef = useRef({});
 
@@ -15,16 +21,14 @@ export function useToast() {
 
   const addToast = useCallback(
     (message, type = 'info', duration = 3000) => {
-      const id = ++globalToastId;
+      const id = nextToastId();
       setToasts((prev) => [...prev, { id, message, type, exiting: false }]);
-
       if (duration > 0) {
         timersRef.current[id] = setTimeout(() => {
           removeToast(id);
           delete timersRef.current[id];
         }, duration);
       }
-
       return id;
     },
     [removeToast]
@@ -34,5 +38,15 @@ export function useToast() {
   const error = useCallback((msg) => addToast(msg, 'error', 5000), [addToast]);
   const info = useCallback((msg) => addToast(msg, 'info'), [addToast]);
 
-  return { toasts, addToast, removeToast, success, error, info };
+  const value = { toasts, addToast, removeToast, success, error, info };
+
+  return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
+}
+
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+  return context;
 }

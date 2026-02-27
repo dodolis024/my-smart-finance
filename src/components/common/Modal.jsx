@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-export default function Modal({ isOpen, onClose, className = '', children }) {
+export default function Modal({ isOpen, onClose, className = '', titleId, children }) {
   const overlayRef = useRef(null);
   const openedAtRef = useRef(0);
 
@@ -45,6 +45,7 @@ export default function Modal({ isOpen, onClose, className = '', children }) {
       className={finalClassName}
       role="dialog"
       aria-modal="true"
+      aria-labelledby={titleId}
       onClick={handleBackdropClick}
     >
       {children}

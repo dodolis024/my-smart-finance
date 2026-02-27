@@ -77,8 +77,8 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
         <table>
           <thead>
             <tr>
-              <th>日期</th>
-              <th>
+              <th id="col-date">日期</th>
+              <th id="col-category">
                 分類
                 <button
                   ref={categoryBtnRef}
@@ -94,8 +94,8 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
                   </svg>
                 </button>
               </th>
-              <th>項目</th>
-              <th>
+              <th id="col-item">項目</th>
+              <th id="col-payment">
                 支付方式
                 <button
                   ref={paymentBtnRef}
@@ -111,8 +111,8 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
                   </svg>
                 </button>
               </th>
-              <th>金額</th>
-              <th>操作</th>
+              <th id="col-amount">金額</th>
+              <th id="col-actions">操作</th>
             </tr>
           </thead>
           <tbody>

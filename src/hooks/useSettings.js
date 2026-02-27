@@ -1,18 +1,20 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useSettings() {
+  const { user } = useAuth();
   const [expenseCategories, setExpenseCategories] = useState([]);
   const [incomeCategories, setIncomeCategories] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   const loadSettingsData = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
+    setLoadError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const [{ data: expenseData }, { data: incomeData }, { data: accountsData }] = await Promise.all([
         supabase.from('settings').select('value').eq('user_id', user.id).eq('key', 'expense_categories').single(),
         supabase.from('settings').select('value').eq('user_id', user.id).eq('key', 'income_categories').single(),
@@ -22,13 +24,14 @@ export function useSettings() {
       setExpenseCategories(expenseData?.value || ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他']);
       setIncomeCategories(incomeData?.value || ['薪水', '投資', '其他']);
       setAccounts(accountsData || []);
+    } catch (err) {
+      setLoadError(err?.message || '載入設定失敗，請稍後再試');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   const saveCategoriesType = useCallback(async (type, categories) => {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const key = type === 'expense' ? 'expense_categories' : 'income_categories';
     const { error } = await supabase.from('settings').upsert(
@@ -38,7 +41,7 @@ export function useSettings() {
     if (error) throw error;
     if (type === 'expense') setExpenseCategories([...categories]);
     else setIncomeCategories([...categories]);
-  }, []);
+  }, [user]);
 
   const addCategory = useCallback(async (type, name) => {
     const categories = type === 'expense' ? [...expenseCategories] : [...incomeCategories];
@@ -64,14 +67,12 @@ export function useSettings() {
   }, [expenseCategories, incomeCategories, saveCategoriesType]);
 
   const updateTransactionCategories = useCallback(async (oldName, newName) => {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { error } = await supabase.from('transactions').update({ category: newName }).eq('user_id', user.id).eq('category', oldName);
     if (error) throw error;
-  }, []);
+  }, [user]);
 
   const saveAccount = useCallback(async (accountData, accountId = null) => {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const payload = { ...accountData, user_id: user.id };
     if (accountId) {
@@ -86,7 +87,7 @@ export function useSettings() {
       if (error) throw error;
     }
     await loadSettingsData();
-  }, [accounts, loadSettingsData]);
+  }, [user, accounts, loadSettingsData]);
 
   const deleteAccount = useCallback(async (accountId) => {
     const { error } = await supabase.from('accounts').delete().eq('id', accountId);
@@ -95,17 +96,17 @@ export function useSettings() {
   }, [loadSettingsData]);
 
   const updateTransactionPaymentMethods = useCallback(async (oldName, newName) => {
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { error } = await supabase.from('transactions').update({ payment_method: newName }).eq('user_id', user.id).eq('payment_method', oldName);
     if (error) throw error;
-  }, []);
+  }, [user]);
 
   return {
     expenseCategories,
     incomeCategories,
     accounts,
     loading,
+    loadError,
     loadSettingsData,
     addCategory,
     renameCategory,

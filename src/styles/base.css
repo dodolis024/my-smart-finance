@@ -2,6 +2,19 @@
    Smart Finance Tracker — Reset & Base Typography
    ============================================ */
 
+/* Screen reader only - visually hidden but announced */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* --------------------------------------------
    Reset
    -------------------------------------------- */
@@ -27,13 +40,16 @@ body {
   overflow-x: hidden;
   /* 四邊留白一致（1.25rem），填滿整個螢幕高度 */
   padding: 1.25rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans TC', sans-serif;
   font-size: 1rem;
   font-weight: 400;
   color: var(--color-text);
   background: var(--color-bg);
-  line-height: 1.5;
+  line-height: 1.6;
   box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h2 {

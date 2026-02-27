@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getTodayYmd } from '@/lib/utils';
 
@@ -11,8 +11,10 @@ export function useDashboard() {
   const [currencies, setCurrencies] = useState(['TWD']);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
+  const requestIdRef = useRef(0);
 
   const fetchDashboardData = useCallback(async (year, month) => {
+    const reqId = ++requestIdRef.current;
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('get_dashboard_data', {
@@ -20,6 +22,8 @@ export function useDashboard() {
         p_month: parseInt(month, 10),
         p_year: parseInt(year, 10),
       });
+
+      if (reqId !== requestIdRef.current) return null;
 
       if (error) throw new Error(error.message || '無法取得資料');
       if (!data || !data.success) throw new Error(data?.error || '無法取得資料');
@@ -33,10 +37,13 @@ export function useDashboard() {
 
       return data;
     } catch (error) {
+      if (reqId !== requestIdRef.current) return null;
       console.error('fetchDashboardData error:', error);
       throw error;
     } finally {
-      setLoading(false);
+      if (reqId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 

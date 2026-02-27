@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { getTodayYmd, parseFormattedNumber } from '@/lib/utils';
 
 export function useTransactions() {
-  const [editingId, setEditingId] = useState(null);
+  const { user } = useAuth();
 
   const submitTransaction = useCallback(async (formData, editId = null) => {
     const {
@@ -18,6 +19,7 @@ export function useTransactions() {
 
     if (!itemName || !rawAmount) throw new Error('請填寫項目名稱與金額！');
     if (!paymentMethod) throw new Error('請選擇支付方式！');
+    if (!date) throw new Error('請選擇日期！');
 
     const amountValue = parseFormattedNumber(String(rawAmount));
     const amount = parseFloat(amountValue);
@@ -41,26 +43,18 @@ export function useTransactions() {
       category = categoryValue;
     }
 
-    const { data: exchangeRateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
-      p_currency: currency.trim().toUpperCase(),
-    });
+    if (!user) throw new Error('請先登入');
+
+    const [{ data: exchangeRateVal, error: rateErr }, { data: account }] = await Promise.all([
+      supabase.rpc('get_exchange_rate', { p_currency: currency.trim().toUpperCase() }),
+      supabase.from('accounts').select('id').eq('name', paymentMethod).single(),
+    ]);
 
     const exchangeRate =
       rateErr == null && exchangeRateVal != null && exchangeRateVal > 0
         ? Number(exchangeRateVal)
         : 1.0;
     const twdAmount = Math.round(amount * exchangeRate * 100) / 100;
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) throw new Error('請先登入');
-
-    const { data: account } = await supabase
-      .from('accounts')
-      .select('id')
-      .eq('name', paymentMethod)
-      .single();
 
     const transactionData = {
       user_id: user.id,
@@ -94,7 +88,7 @@ export function useTransactions() {
     }
 
     return { date, isEdit: !!editId };
-  }, []);
+  }, [user]);
 
   const deleteTransaction = useCallback(async (id) => {
     const { error } = await supabase.from('transactions').delete().eq('id', id);
@@ -102,8 +96,6 @@ export function useTransactions() {
   }, []);
 
   return {
-    editingId,
-    setEditingId,
     submitTransaction,
     deleteTransaction,
   };

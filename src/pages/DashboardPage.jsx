@@ -3,8 +3,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useStreak } from '@/hooks/useStreak';
 import { useTransactions } from '@/hooks/useTransactions';
-import { useToast } from '@/hooks/useToast';
-import { useConfirm } from '@/hooks/useConfirm';
+import { useModalStates } from '@/hooks/useModalStates';
+import { useToast } from '@/contexts/ToastContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
 import TopBar from '@/components/layout/TopBar';
 import FormColumn from '@/components/layout/FormColumn';
 import DashboardColumn from '@/components/layout/DashboardColumn';
@@ -14,8 +15,6 @@ import CategoryChart from '@/components/dashboard/CategoryChart';
 import PaymentStats from '@/components/dashboard/PaymentStats';
 import TransactionForm from '@/components/transactions/TransactionForm';
 import TransactionTable from '@/components/transactions/TransactionTable';
-import ToastContainer from '@/components/common/ToastContainer';
-import ConfirmDialog from '@/components/common/ConfirmDialog';
 import CreditCardModal from '@/components/common/CreditCardModal';
 import ChangelogModal from '@/components/common/ChangelogModal';
 import StreakBadge from '@/components/streak/StreakBadge';
@@ -50,17 +49,13 @@ export default function DashboardPage() {
   } = useStreak();
   const { submitTransaction, deleteTransaction } = useTransactions();
   const toast = useToast();
-  const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm();
+  const { confirm } = useConfirm();
+  const modals = useModalStates();
+
 
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [editingTransaction, setEditingTransaction] = useState(null);
-
-  // Modal states
-  const [streakModal, setStreakModal] = useState({ open: false, title: '', variant: 'neutral' });
-  const [creditCardModal, setCreditCardModal] = useState({ open: false, account: null });
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [changelogOpen, setChangelogOpen] = useState(false);
 
   const formRef = useRef(null);
   const historyRef = useRef(null);
@@ -87,13 +82,9 @@ export default function DashboardPage() {
     if (!dashboardData || streakInitialHandled) return;
     setStreakInitialHandled(true);
     if (shouldShowBrokenModal()) {
-      setStreakModal({
-        open: true,
-        title: '小壞蛋 你偷懶被抓到了！！！',
-        variant: 'broken',
-      });
+      modals.openStreakModal('小壞蛋 你偷懶被抓到了！！！', 'broken');
     }
-  }, [dashboardData, streakInitialHandled, setStreakInitialHandled, shouldShowBrokenModal]);
+  }, [dashboardData, streakInitialHandled, setStreakInitialHandled, shouldShowBrokenModal, modals.openStreakModal]);
 
   const handleMonthChange = useCallback((year, month) => {
     setCurrentYear(year);
@@ -114,18 +105,14 @@ export default function DashboardPage() {
         // Show positive streak modal once per day after adding a transaction
         if (!result.isEdit && shouldShowPositiveModal(result.date)) {
           const content = getPositiveModalContent();
-          setStreakModal({
-            open: true,
-            title: content.title,
-            variant: 'positive',
-          });
+          modals.openStreakModal(content.title, 'positive');
         }
       } catch (err) {
         toast.error(err.message || '記帳失敗，請稍後再試。');
         throw err;
       }
     },
-    [submitTransaction, fetchDashboardData, currentYear, currentMonth, toast, shouldShowPositiveModal, getPositiveModalContent]
+    [submitTransaction, fetchDashboardData, currentYear, currentMonth, toast, shouldShowPositiveModal, getPositiveModalContent, modals.openStreakModal]
   );
 
   const handleCancelEdit = useCallback(() => {
@@ -162,31 +149,22 @@ export default function DashboardPage() {
       await submitDailyCheckin();
       await fetchDashboardData(currentYear, currentMonth);
       toast.success('今日簽到成功！');
-      
       const content = getCurrentModalContent();
-      setStreakModal({
-        open: true,
-        title: content.title,
-        variant: content.variant,
-      });
+      modals.openStreakModal(content.title, content.variant);
     } catch (err) {
       toast.error(err.message || '簽到失敗，請稍後再試。');
     }
-  }, [submitDailyCheckin, fetchDashboardData, currentYear, currentMonth, toast, getCurrentModalContent]);
+  }, [submitDailyCheckin, fetchDashboardData, currentYear, currentMonth, toast, getCurrentModalContent, modals.openStreakModal]);
 
   const handleStreakBadgeClick = useCallback(() => {
     const content = getCurrentModalContent();
-    setStreakModal({
-      open: true,
-      title: content.title,
-      variant: content.variant,
-    });
-  }, [getCurrentModalContent]);
+    modals.openStreakModal(content.title, content.variant);
+  }, [getCurrentModalContent, modals.openStreakModal]);
 
   const handleSettingsClose = useCallback(() => {
-    setSettingsOpen(false);
+    modals.closeSettings();
     fetchDashboardData(currentYear, currentMonth).catch(console.error);
-  }, [fetchDashboardData, currentYear, currentMonth]);
+  }, [fetchDashboardData, currentYear, currentMonth, modals.closeSettings]);
 
   const checkedInToday = hasCheckinToday();
 
@@ -199,17 +177,15 @@ export default function DashboardPage() {
 
   return (
     <div className="app-container">
-      <TopBar 
-        streakBadge={streakBadge} 
-        onOpenSettings={() => setSettingsOpen(true)}
-        onOpenChangelog={() => setChangelogOpen(true)}
-        confirm={confirm}
+      <TopBar
+        streakBadge={streakBadge}
+        onOpenSettings={modals.openSettings}
+        onOpenChangelog={modals.openChangelog}
       />
 
       <FormColumn
-        onOpenSettings={() => setSettingsOpen(true)}
-        onOpenChangelog={() => setChangelogOpen(true)}
-        confirm={confirm}
+        onOpenSettings={modals.openSettings}
+        onOpenChangelog={modals.openChangelog}
       >
         <div ref={formRef}>
           <TransactionForm
@@ -263,7 +239,7 @@ export default function DashboardPage() {
                 <PaymentStats
                   history={transactionHistoryFull}
                   accounts={accounts}
-                  onOpenCreditCard={(account) => setCreditCardModal({ open: true, account })}
+                  onOpenCreditCard={modals.openCreditCardModal}
                 />
               )}
             </div>
@@ -281,36 +257,29 @@ export default function DashboardPage() {
         </section>
       </DashboardColumn>
 
-      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-      <ConfirmDialog
-        state={confirmState}
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
-      />
-
       <StreakModal
-        isOpen={streakModal.open}
-        onClose={() => setStreakModal((s) => ({ ...s, open: false }))}
+        isOpen={modals.streakModal.open}
+        onClose={modals.closeStreakModal}
         streakState={streakState}
-        title={streakModal.title}
-        variant={streakModal.variant}
+        title={modals.streakModal.title}
+        variant={modals.streakModal.variant}
       />
 
       <CreditCardModal
-        isOpen={creditCardModal.open}
-        onClose={() => setCreditCardModal({ open: false, account: null })}
-        account={creditCardModal.account}
+        isOpen={modals.creditCardModal.open}
+        onClose={modals.closeCreditCardModal}
+        account={modals.creditCardModal.account}
         history={transactionHistoryFull}
       />
 
       <SettingsModal
-        isOpen={settingsOpen}
+        isOpen={modals.settingsOpen}
         onClose={handleSettingsClose}
       />
 
       <ChangelogModal
-        isOpen={changelogOpen}
-        onClose={() => setChangelogOpen(false)}
+        isOpen={modals.changelogOpen}
+        onClose={modals.closeChangelog}
       />
     </div>
   );

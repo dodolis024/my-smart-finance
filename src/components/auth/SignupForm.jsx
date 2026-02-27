@@ -41,14 +41,18 @@ export default function SignupForm() {
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
+      <label htmlFor="signup-email" className="sr-only">電子郵件</label>
       <input
+        id="signup-email"
         type="email"
         placeholder="電子郵件"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
       />
+      <label htmlFor="signup-password" className="sr-only">密碼（至少6個字元）</label>
       <input
+        id="signup-password"
         type="password"
         placeholder="密碼（至少6個字元）"
         value={password}
@@ -56,7 +60,9 @@ export default function SignupForm() {
         required
         minLength="6"
       />
+      <label htmlFor="signup-password-confirm" className="sr-only">確認密碼</label>
       <input
+        id="signup-password-confirm"
         type="password"
         placeholder="確認密碼"
         value={passwordConfirm}

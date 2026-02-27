@@ -43,7 +43,7 @@
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  z-index: 100;
+  z-index: var(--z-dropdown);
   min-width: 10rem;
   padding: 0.5rem;
   background: var(--color-card);
@@ -238,7 +238,7 @@
   position: absolute;
   top: calc(100% + 0.75rem);
   left: 0;
-  z-index: 100;
+  z-index: var(--z-dropdown);
   min-width: 12rem;
   padding: 0.5rem;
   background: var(--color-card);
@@ -264,12 +264,6 @@
   word-break: break-all;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 0.25rem;
-}
-
-.user-avatar-dropdown--mobile #logoutBtnAvatarMobile {
-  border-top: 1px solid var(--color-border);
-  margin-top: 0.25rem;
-  padding-top: 0.5rem;
 }
 
 .user-avatar-dropdown--mobile {
@@ -335,16 +329,6 @@
   align-items: center;
   gap: 1rem;
 }
-.month-select--hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-}
 .month-picker {
   position: relative;
   display: flex;
@@ -393,7 +377,7 @@
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: var(--z-popover);
   display: none;
 }
 .month-picker-popover.is-open {
@@ -540,8 +524,6 @@
 .stat-card:nth-child(2) .stat-value { color: var(--color-danger); }
 .stat-card:nth-child(3) .stat-value { color: var(--color-text); }
 
-#totalIncome { color: var(--color-success); }
-#totalExpense { color: var(--color-danger); }
 .balance-positive { color: var(--color-success) !important; }
 .balance-negative { color: var(--color-danger) !important; }
 
@@ -575,10 +557,6 @@
 /* --------------------------------------------
    Accessibility & Polish
    -------------------------------------------- */
-html {
-  scroll-behavior: smooth;
-}
-
 #categoryStats,
 #paymentStats {
   margin-top: var(--space-sm);

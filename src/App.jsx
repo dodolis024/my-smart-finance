@@ -1,15 +1,37 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/useToast';
-import { useConfirm } from '@/hooks/useConfirm';
+import { ToastProvider, useToast } from '@/contexts/ToastContext';
+import { ConfirmProvider, useConfirm } from '@/contexts/ConfirmContext';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
-import AuthPage from '@/pages/AuthPage';
-import DashboardPage from '@/pages/DashboardPage';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
+
+const AuthPage = lazy(() => import('@/pages/AuthPage'));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+
+function LoadingFallback() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        fontSize: '1.25rem',
+        color: 'var(--color-text-secondary)',
+      }}
+      role="status"
+      aria-live="polite"
+    >
+      載入中…
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return <LoadingFallback />;
   if (!session) return <Navigate to="/auth" replace />;
   return children;
 }
@@ -20,18 +42,20 @@ function AppShell() {
 
   return (
     <>
-      <Routes>
-        <Route path="/auth" element={<AuthPage />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          <Route path="/auth" element={<AuthPage />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
       <ConfirmDialog
         state={confirmState}
@@ -44,10 +68,16 @@ function AppShell() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <ToastProvider>
+            <ConfirmProvider>
+              <AppShell />
+            </ConfirmProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

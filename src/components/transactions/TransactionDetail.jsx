@@ -16,7 +16,7 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose }) 
   const note = tx.note || '無';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="transaction-detail-modal">
+    <Modal isOpen={isOpen} onClose={onClose} className="transaction-detail-modal" titleId="transactionDetailTitle">
       <div className="transaction-detail-content">
         <div className="transaction-detail-header">
           <h2 id="transactionDetailTitle" className="transaction-detail-title">交易詳情</h2>

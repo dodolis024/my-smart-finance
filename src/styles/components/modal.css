@@ -7,7 +7,7 @@
   position: fixed;
   inset: 0;
   display: none;
-  z-index: 999;
+  z-index: var(--z-modal);
 }
 .reaction-modal.is-open {
   display: block;
@@ -85,7 +85,7 @@
   position: fixed;
   inset: 0;
   display: none;
-  z-index: 999;
+  z-index: var(--z-modal);
 }
 .settings-manage-modal.is-open {
   display: block;
@@ -143,7 +143,7 @@
   position: fixed;
   inset: 0;
   display: none;
-  z-index: 999;
+  z-index: var(--z-modal);
 }
 .changelog-modal.is-open {
   display: block;
@@ -262,7 +262,7 @@
   position: fixed;
   inset: 0;
   display: none;
-  z-index: 999;
+  z-index: var(--z-modal);
 }
 .credit-card-modal.is-open {
   display: block;
@@ -529,13 +529,6 @@
   font-weight: 600;
 }
 
-.streak-calendar__day--has-log .streak-calendar__day-inner {
-  background: rgba(181, 156, 128, 0.35);
-  border: 1px solid rgba(181, 156, 128, 0.8);
-  color: var(--color-text);
-  font-weight: 600;
-}
-
 .streak-calendar__day--today .streak-calendar__day-inner {
   border: 1px solid var(--color-primary);
 }
@@ -668,10 +661,6 @@
   display: block;
 }
 
-body.modal-open {
-  overflow: hidden;
-}
-
 /* Transaction Detail Modal */
 .transaction-detail-modal {
   position: fixed;
@@ -681,7 +670,7 @@ body.modal-open {
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
-  z-index: 9999;
+  z-index: var(--z-modal-high);
   display: none;
   align-items: center;
   justify-content: center;
@@ -705,7 +694,12 @@ body.modal-open {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: slideUp 0.3s ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .transaction-detail-content {
+    animation: slideUp 0.3s ease;
+  }
 }
 
 @keyframes slideUp {

@@ -1,3 +1,5 @@
+import { MONTH_ABBREVS } from './constants';
+
 export function debounce(func, wait) {
   let timeout;
   return function (...args) {
@@ -48,7 +50,6 @@ export function parseFormattedNumber(value) {
 }
 
 export function formatMonthLabel(year, month) {
-  const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return MONTH_ABBREVS[month - 1] + ' ' + year;
 }
 

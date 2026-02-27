@@ -1,13 +1,11 @@
 import { useEffect, useRef } from 'react';
 import Modal from '@/components/common/Modal';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
-import ConfirmDialog from '@/components/common/ConfirmDialog';
 import CategoryManager from './CategoryManager';
 import AccountManager from './AccountManager';
 import { useSettings } from '@/hooks/useSettings';
-import { useConfirm } from '@/hooks/useConfirm';
-import { useToast } from '@/hooks/useToast';
-import ToastContainer from '@/components/common/ToastContainer';
+import { useConfirm } from '@/contexts/ConfirmContext';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function SettingsModal({ isOpen, onClose }) {
   const {
@@ -15,6 +13,7 @@ export default function SettingsModal({ isOpen, onClose }) {
     incomeCategories,
     accounts,
     loading,
+    loadError,
     loadSettingsData,
     addCategory,
     renameCategory,
@@ -23,21 +22,26 @@ export default function SettingsModal({ isOpen, onClose }) {
     deleteAccount,
   } = useSettings();
 
-  const { confirmState, confirm, handleConfirm, handleCancel } = useConfirm();
+  const { confirm } = useConfirm();
   const toast = useToast();
   const dialogRef = useRef(null);
   useScrollbarOnScroll(dialogRef, isOpen);
 
   useEffect(() => {
-    if (isOpen) loadSettingsData().catch(console.error);
+    if (isOpen) loadSettingsData();
   }, [isOpen, loadSettingsData]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="settings-manage-modal">
+    <Modal isOpen={isOpen} onClose={onClose} className="settings-manage-modal" titleId="settings-modal-title">
       <div className="settings-manage-modal__backdrop" onClick={onClose} />
       <div ref={dialogRef} className="settings-manage-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="settings-manage-modal__close" aria-label="關閉" onClick={onClose}>×</button>
-        <h2 className="settings-manage-modal__title">選項管理</h2>
+        <h2 id="settings-modal-title" className="settings-manage-modal__title">選項管理</h2>
+        {loadError && (
+          <div className="auth-error" style={{ marginBottom: '1rem' }} role="alert">
+            {loadError}
+          </div>
+        )}
         <div className="settings-manage-grid">
           <section className="settings-manage__section settings-manage__categories">
             <h3 className="settings-manage__section-title">類別管理</h3>
@@ -73,8 +77,6 @@ export default function SettingsModal({ isOpen, onClose }) {
           </section>
         </div>
       </div>
-      <ConfirmDialog state={confirmState} onConfirm={handleConfirm} onCancel={handleCancel} />
-      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </Modal>
   );
 }
