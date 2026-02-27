@@ -1,0 +1,30 @@
+:root {
+  --color-primary: #b59c80;
+  --color-primary-hover: #9E8769;
+  --color-bg: #FAF9F6;
+  --color-card: #ffffff;
+  --color-text: #3d3629;
+  --color-text-secondary: #797169;
+  --color-border: #E0D9D0;
+  --color-success: #12ae63;
+  --color-danger: #ef4444;
+  --color-table-header: #dfdad3;
+  --color-row-hover: #F5F2ED;
+  --color-row-alt: #FAF8F5;
+
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-focus: 0 0 0 3px rgba(191, 165, 136, 0.35);
+
+  --transition: all 0.2s ease;
+
+  --chart-max-width: 260px;
+
+  --scrollbar-track: #FAF9F7;
+  --scrollbar-thumb: #e5e0da;
+  --scrollbar-thumb-hover: #d8d2ca;
+}

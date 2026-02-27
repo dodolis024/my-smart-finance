@@ -1,0 +1,804 @@
+/* ============================================
+   Smart Finance Tracker — Modal Components
+   ============================================ */
+
+/* Reaction Modal */
+.reaction-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 999;
+}
+.reaction-modal.is-open {
+  display: block;
+}
+.reaction-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.reaction-modal__dialog {
+  position: relative;
+  width: min(560px, calc(100% - 2rem));
+  margin: 8vh auto 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.25rem 1.25rem 1.1rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.reaction-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.reaction-modal__close:hover {
+  background: var(--color-row-hover);
+}
+.reaction-modal__close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.reaction-modal__title {
+  margin: 0 0 0.75rem 0;
+}
+.reaction-modal__text {
+  display: none;
+  margin: 0;
+}
+.reaction-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.reaction-modal__primary {
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.reaction-modal__primary:hover {
+  background: var(--color-primary-hover);
+}
+.reaction-modal__primary:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Settings Management Modal */
+.settings-manage-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 999;
+}
+.settings-manage-modal.is-open {
+  display: block;
+}
+.settings-manage-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.settings-manage-modal__dialog {
+  position: relative;
+  width: min(960px, calc(100% - 2rem));
+  max-height: calc(100vh - 8vh);
+  margin: 4vh auto 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow-y: auto;
+}
+.settings-manage-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+  z-index: 1;
+}
+.settings-manage-modal__close:hover {
+  background: var(--color-row-hover);
+}
+.settings-manage-modal__close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.settings-manage-modal__title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Changelog Modal */
+.changelog-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 999;
+}
+.changelog-modal.is-open {
+  display: block;
+}
+.changelog-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.changelog-modal__dialog {
+  position: relative;
+  width: min(560px, calc(100% - 2rem));
+  max-height: calc(100vh - 8vh);
+  margin: 4vh auto 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow-y: auto;
+}
+.changelog-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+  z-index: 1;
+}
+.changelog-modal__close:hover {
+  background: var(--color-row-hover);
+}
+.changelog-modal__close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.changelog-modal__title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.5rem;
+  color: var(--color-text);
+}
+.changelog-content {
+  margin: 0;
+  padding: 0;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+.changelog-entry {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.changelog-entry:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.changelog-entry__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.changelog-entry__version {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+.changelog-entry__date {
+  font-weight: 400;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+.changelog-entry__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.changelog-entry__list li {
+  position: relative;
+  padding-left: 1.25rem;
+  margin-bottom: 0.35rem;
+}
+.changelog-entry__list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--color-primary);
+  font-weight: bold;
+}
+.changelog-empty {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+.changelog-empty code {
+  background: var(--color-bg);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* Credit Card Limit Modal */
+.credit-card-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 999;
+}
+.credit-card-modal.is-open {
+  display: block;
+}
+.credit-card-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.credit-card-modal__dialog {
+  position: relative;
+  width: min(480px, calc(100% - 2rem));
+  max-height: calc(100vh - 8vh);
+  margin: 4vh auto;
+  padding: 2rem;
+  background: var(--color-card);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow-y: auto;
+}
+.credit-card-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  z-index: 1;
+}
+.credit-card-modal__close:hover {
+  background: var(--color-row-hover);
+}
+.credit-card-modal__close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.credit-card-modal__title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.5rem;
+  color: var(--color-text);
+}
+
+.credit-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.credit-limit-section {
+  background: var(--color-bg);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+}
+
+.credit-limit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1rem;
+}
+
+.credit-limit-label {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.credit-limit-amount {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.credit-limit-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.credit-limit-progress {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.credit-limit-percent {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.credit-limit-bar {
+  height: 100%;
+  background: #4caf50;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 12px;
+}
+
+.credit-limit-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.credit-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.credit-date-item {
+  background: var(--color-bg);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.credit-date-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.credit-date-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.credit-payment-countdown,
+.credit-billing-countdown {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.25rem;
+}
+
+.credit-countdown-num {
+  font-weight: bold;
+}
+
+.credit-countdown-num.credit-countdown-urgent {
+  color: #f44336;
+}
+
+/* Streak Calendar (inside Streak Modal) */
+.streak-calendar-root {
+  margin-top: 0.5rem;
+}
+
+.streak-calendar {
+  background: var(--color-bg);
+  border-radius: 12px;
+  padding: 0.75rem 0.75rem 0.5rem;
+  border: 1px solid var(--color-border);
+}
+
+.streak-calendar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.streak-calendar__month {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.streak-calendar__nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  transition: var(--transition);
+}
+.streak-calendar__nav-btn:hover {
+  background: var(--color-row-hover);
+}
+.streak-calendar__nav-btn:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.streak-calendar__weekdays,
+.streak-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+}
+
+.streak-calendar__weekdays {
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.streak-calendar__weekday {
+  padding: 0.15rem 0;
+}
+
+.streak-calendar__grid {
+  row-gap: 0.25rem;
+}
+
+.streak-calendar__day {
+  padding: 0.2rem 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.streak-calendar__day-inner {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streak-calendar__day--empty .streak-calendar__day-inner {
+  background: transparent;
+}
+
+.streak-calendar__day--transaction .streak-calendar__day-inner {
+  background: rgba(181, 156, 128, 0.35);
+  border: 1px solid rgba(181, 156, 128, 0.8);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.streak-calendar__day--manual .streak-calendar__day-inner {
+  background: rgba(205, 216, 190, 0.6);
+  border: 1px solid rgba(148, 172, 156, 1);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.streak-calendar__day--has-log .streak-calendar__day-inner {
+  background: rgba(181, 156, 128, 0.35);
+  border: 1px solid rgba(181, 156, 128, 0.8);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.streak-calendar__day--today .streak-calendar__day-inner {
+  border: 1px solid var(--color-primary);
+}
+
+.streak-calendar__day--today.streak-calendar__day--transaction .streak-calendar__day-inner {
+  background: rgba(181, 156, 128, 0.35);
+}
+
+.streak-calendar__day--today.streak-calendar__day--manual .streak-calendar__day-inner {
+  background: rgba(205, 216, 190, 0.6);
+  border: 1px solid rgba(148, 172, 156, 1);
+}
+
+.streak-calendar__day--today:not(.streak-calendar__day--transaction):not(.streak-calendar__day--manual) .streak-calendar__day-inner {
+  background: rgba(181, 156, 128, 0.25);
+}
+
+.streak-calendar__legend {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.streak-calendar__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.streak-calendar__legend-item::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.streak-calendar__legend-item--transaction::before {
+  background: rgba(181, 156, 128, 0.35);
+  border: 1px solid rgba(181, 156, 128, 0.8);
+}
+
+.streak-calendar__legend-item--manual::before {
+  background: rgba(205, 216, 190, 0.6);
+  border: 1px solid rgba(148, 172, 156, 1);
+}
+
+.streak-summary {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.streak-summary__card {
+  background: var(--color-card);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+
+.streak-summary__card:first-child::after {
+  content: '';
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4.5rem;
+  height: 4.5rem;
+  background-image: url('../../images/maltese-icon-2.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
+}
+
+.streak-summary__card:nth-child(3)::after {
+  content: '';
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.2rem;
+  height: 3.2rem;
+  background-image: url('../../images/maltese-gif-2.gif');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
+}
+
+.streak-summary__label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.2rem;
+}
+
+.streak-summary__value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.streak-summary__value-emoji {
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streak-summary__value-number {
+  font-size: 1.2rem;
+}
+
+.icon-fire {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: block;
+}
+
+.icon-checkin {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: block;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Transaction Detail Modal */
+.transaction-detail-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.transaction-detail-modal.is-open {
+  display: flex;
+  opacity: 1;
+}
+
+.transaction-detail-content {
+  background: var(--color-card);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.transaction-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.transaction-detail-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.transaction-detail-close {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  border-radius: 4px;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.transaction-detail-close:hover {
+  background: var(--color-row-hover);
+  color: var(--color-text);
+}
+
+.transaction-detail-close:active {
+  transform: scale(0.95);
+}
+
+.transaction-detail-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.transaction-detail-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.transaction-detail-item:last-child {
+  border-bottom: none;
+}
+
+.transaction-detail-item--note {
+  align-items: flex-start;
+}
+
+.transaction-detail-label {
+  flex: 0 0 100px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.transaction-detail-value {
+  flex: 1;
+  color: var(--color-text);
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.transaction-detail-amount {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.transaction-detail-note {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}

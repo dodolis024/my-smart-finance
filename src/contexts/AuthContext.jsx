@@ -1,0 +1,107 @@
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase, createDefaultData } from '@/lib/supabase';
+
+const AuthContext = createContext(null);
+
+export function AuthProvider({ children }) {
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const extractUserInfo = useCallback((user) => {
+    if (!user) return null;
+    const provider = user.app_metadata?.provider || user.identities?.[0]?.provider || 'email';
+    const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+    return {
+      email: user.email || '',
+      provider,
+      avatarUrl,
+      fullName: user.user_metadata?.full_name || user.user_metadata?.name || null,
+    };
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setUserInfo(extractUserInfo(session?.user ?? null));
+      setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setUserInfo(extractUserInfo(session?.user ?? null));
+    });
+
+    return () => subscription.unsubscribe();
+  }, [extractUserInfo]);
+
+  const signInWithPassword = useCallback(async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+    if (sessionError || !session) throw new Error('Session 建立失敗，請重試');
+
+    return data;
+  }, []);
+
+  const signUp = useCallback(async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    if (data.user) {
+      await createDefaultData(data.user.id);
+    }
+    return data;
+  }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    const redirectTo = window.location.origin + '/';
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
+    if (error) throw error;
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  const ensureDefaultDataForOAuth = useCallback(async (userId) => {
+    const { data: accounts } = await supabase.from('accounts').select('id').limit(1);
+    if (!accounts || accounts.length === 0) {
+      await createDefaultData(userId);
+    }
+  }, []);
+
+  const value = {
+    session,
+    user,
+    userInfo,
+    loading,
+    signInWithPassword,
+    signUp,
+    signInWithGoogle,
+    signOut,
+    ensureDefaultDataForOAuth,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
