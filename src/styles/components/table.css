@@ -149,6 +149,10 @@
   border-bottom: none;
 }
 
+.transaction-history-section tbody tr:last-child .row-slider-container {
+  border-bottom: none;
+}
+
 .amount-income { color: var(--color-success); font-weight: 600; }
 .amount-expense { color: var(--color-danger); font-weight: 600; }
 

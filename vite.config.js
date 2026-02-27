@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/my-smart-finance/' : '/',
   plugins: [react()],
+  server: {
+    host: true, // 允許從區網內其他裝置（如手機）連線
+  },
   resolve: {
     alias: {
       '@': '/src',

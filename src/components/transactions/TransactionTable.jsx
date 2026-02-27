@@ -120,7 +120,7 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
                 </button>
               </th>
               <th id="col-amount">金額</th>
-              <th id="col-actions">操作</th>
+              <th id="col-actions" aria-label="操作"></th>
             </tr>
           </thead>
           <tbody>

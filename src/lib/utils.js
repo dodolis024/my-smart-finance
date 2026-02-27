@@ -24,6 +24,17 @@ export function formatMoney(num) {
   }).format(num);
 }
 
+/** 手機版用：四捨五入到整數，無小數 */
+export function formatMoneyInteger(num) {
+  const n = typeof num === 'number' ? num : parseFloat(num);
+  return new Intl.NumberFormat('zh-TW', {
+    style: 'currency',
+    currency: 'TWD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(isNaN(n) ? 0 : Math.round(n));
+}
+
 export function escapeHtml(s) {
   if (s == null) return '';
   const t = String(s);
