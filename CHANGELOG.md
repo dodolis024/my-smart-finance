@@ -2,6 +2,11 @@
 
 本檔案記錄 Smart Finance Tracker 的版本更新內容。
 
+## [1.1.5] - Feb-28 2026
+- 將前端架構遷移至 React + Vite
+- 加強應用穩定性與狀態管理（ErrorBoundary、hooks、contexts）
+- 優化 GitHub Pages 部署設定
+
 ## [1.1.4] - Feb-25 2026
 - 修正重構後多處路徑錯誤與連續記帳天數顯示問題
 
