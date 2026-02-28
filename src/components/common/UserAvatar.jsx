@@ -52,7 +52,7 @@ export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpen
       </button>
       <div
         className={`user-avatar-dropdown user-avatar-dropdown--${variant}${isOpen ? ' is-open' : ''}`}
-        aria-hidden={!isOpen}
+        {...(!isOpen && { inert: true })}
       >
         <div className="user-avatar-dropdown__email">{userInfo.email || '—'}</div>
         {isMobile && onOpenSettings && (
