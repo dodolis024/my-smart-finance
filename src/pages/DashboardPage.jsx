@@ -46,6 +46,7 @@ export default function DashboardPage() {
     shouldShowPositiveModal,
     getPositiveModalContent,
     getCurrentModalContent,
+    getCurrentModalContentFromData,
   } = useStreak();
   const { submitTransaction, deleteTransaction } = useTransactions();
   const toast = useToast();
@@ -77,11 +78,12 @@ export default function DashboardPage() {
     updateStreakFromServer(dashboardData);
   }, [dashboardData, updateStreakFromServer]);
 
-  // Show broken streak modal once per day on initial load
+  // Show broken streak modal once per day on initial load.
+  // 使用 dashboardData.streakBroken 直接傳入，避免 updateStreakFromServer 非同步更新 streakState 時的競態問題
   useEffect(() => {
     if (!dashboardData || streakInitialHandled) return;
     setStreakInitialHandled(true);
-    if (shouldShowBrokenModal()) {
+    if (shouldShowBrokenModal(dashboardData.streakBroken)) {
       modals.openStreakModal('小壞蛋 你偷懶被抓到了！！！', 'broken');
     }
   }, [dashboardData, streakInitialHandled, setStreakInitialHandled, shouldShowBrokenModal, modals.openStreakModal]);
@@ -147,14 +149,20 @@ export default function DashboardPage() {
   const handleCheckin = useCallback(async () => {
     try {
       await submitDailyCheckin();
-      await fetchDashboardData(currentYear, currentMonth);
+      const data = await fetchDashboardData(currentYear, currentMonth);
+      if (data) {
+        updateStreakFromServer(data);
+        const content = getCurrentModalContentFromData(data);
+        modals.openStreakModal(content.title, content.variant);
+      } else {
+        const content = getCurrentModalContent();
+        modals.openStreakModal(content.title, content.variant);
+      }
       toast.success('今日簽到成功！');
-      const content = getCurrentModalContent();
-      modals.openStreakModal(content.title, content.variant);
     } catch (err) {
       toast.error(err.message || '簽到失敗，請稍後再試。');
     }
-  }, [submitDailyCheckin, fetchDashboardData, currentYear, currentMonth, toast, getCurrentModalContent, modals.openStreakModal]);
+  }, [submitDailyCheckin, fetchDashboardData, updateStreakFromServer, currentYear, currentMonth, toast, getCurrentModalContentFromData, getCurrentModalContent, modals.openStreakModal]);
 
   const handleStreakBadgeClick = useCallback(() => {
     const content = getCurrentModalContent();

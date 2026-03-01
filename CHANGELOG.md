@@ -2,7 +2,6 @@
 
 本檔案記錄 Smart Finance Tracker 的版本更新內容。
 
-- 修正 GitHub Pages 部署後 Change Log 僅顯示至 1.1.0 的問題
 
 ## [1.2.1] - Feb-28 2026
 - 優化手機版交易列表滑動操作體驗（4 欄佈局、左滑刪除／右滑編輯）

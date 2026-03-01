@@ -52,8 +52,12 @@ export function useStreak() {
     if (error) throw error;
   }, []);
 
-  const shouldShowBrokenModal = useCallback(() => {
-    if (!streakState.broken) return false;
+  /**
+   * @param {boolean} [brokenFromServer] - 若傳入，優先使用此值（來自 dashboardData），避免 React 狀態尚未更新時的競態問題
+   */
+  const shouldShowBrokenModal = useCallback((brokenFromServer) => {
+    const broken = brokenFromServer ?? streakState.broken;
+    if (!broken) return false;
     const today = getTodayYmd();
     try {
       const shownFor = window.localStorage.getItem('streakBrokenShownDate');
@@ -124,6 +128,34 @@ export function useStreak() {
     };
   }, [streakState.broken, streakState.count]);
 
+  /** 從 API 回傳的原始資料計算 modal 內容，避免 React 狀態尚未更新時的競態問題 */
+  const getCurrentModalContentFromData = useCallback((data) => {
+    const count = data?.streakCount ?? 0;
+    const broken = !!data?.streakBroken;
+    if (broken) {
+      return {
+        title: '目前連續記帳：0 天',
+        text: '目前沒有連續紀錄，今天要重新開始咪～～',
+        buttonLabel: '好鴨',
+        variant: 'neutral',
+      };
+    }
+    if (count > 0) {
+      return {
+        title: `目前連續記帳：${count} 天`,
+        text: `太厲害了！已經連續記錄 ${count} 天，繼續往下一個里程碑前進吧！🔥`,
+        buttonLabel: '好的',
+        variant: 'neutral',
+      };
+    }
+    return {
+      title: '還沒有連續紀錄',
+      text: '從今天開始記第一筆，就會開始累積你的連續紀錄！',
+      buttonLabel: 'Go Go!',
+      variant: 'neutral',
+    };
+  }, []);
+
   return {
     streakState,
     streakInitialHandled,
@@ -135,5 +167,6 @@ export function useStreak() {
     shouldShowPositiveModal,
     getPositiveModalContent,
     getCurrentModalContent,
+    getCurrentModalContentFromData,
   };
 }
