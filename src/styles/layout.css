@@ -80,7 +80,7 @@
 }
 
 .more-menu-item:hover {
-  background: rgba(181, 156, 128, 0.1);
+  background: var(--color-primary-tint-hover);
   color: var(--color-primary);
 }
 
@@ -198,7 +198,7 @@
   border: none;
   border-radius: 50%;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -349,7 +349,7 @@
 }
 .month-picker-trigger:hover {
   border-color: var(--color-primary);
-  background: rgba(181, 156, 128, 0.06);
+  background: var(--color-primary-tint-hover);
 }
 .month-picker-trigger:focus {
   outline: none;
@@ -376,7 +376,7 @@
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-popover);
   z-index: var(--z-popover);
   display: none;
 }
@@ -408,7 +408,7 @@
   transition: var(--transition);
 }
 .month-picker-year-btn:hover {
-  background: rgba(181, 156, 128, 0.12);
+  background: var(--color-primary-tint-light);
   border-color: var(--color-primary);
 }
 .month-picker-year-display {
@@ -433,11 +433,11 @@
   transition: var(--transition);
 }
 .month-picker-item:hover {
-  background: rgba(181, 156, 128, 0.12);
+  background: var(--color-primary-tint-light);
 }
 .month-picker-item.is-selected {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 .month-picker-item:focus {
   outline: none;
@@ -609,7 +609,7 @@
 .payment-stats-list li.clickable {
   cursor: pointer;
   transition: var(--transition);
-  -webkit-tap-highlight-color: rgba(181, 156, 128, 0.15);
+  -webkit-tap-highlight-color: var(--color-primary-tint-focus);
   min-height: 44px;
 }
 

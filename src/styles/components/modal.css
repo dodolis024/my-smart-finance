@@ -15,18 +15,18 @@
 .reaction-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--color-backdrop);
   backdrop-filter: blur(2px);
 }
 .reaction-modal__dialog {
   position: relative;
   width: min(560px, calc(100% - 2rem));
   margin: 8vh auto 0;
-  background: #fff;
+  background: var(--color-card);
   border-radius: 14px;
   padding: 1.25rem 1.25rem 1.1rem;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-modal);
+  border: 1px solid var(--color-border-subtle);
 }
 .reaction-modal__close {
   position: absolute;
@@ -36,7 +36,7 @@
   height: 40px;
   border-radius: 10px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
   font-size: 1.5rem;
   line-height: 1;
@@ -67,7 +67,7 @@
   border-radius: 10px;
   border: none;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   font-weight: 800;
   cursor: pointer;
   transition: var(--transition);
@@ -93,7 +93,7 @@
 .settings-manage-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--color-backdrop);
   backdrop-filter: blur(2px);
 }
 .settings-manage-modal__dialog {
@@ -101,11 +101,11 @@
   width: min(960px, calc(100% - 2rem));
   max-height: calc(100vh - 8vh);
   margin: 4vh auto 0;
-  background: #fff;
+  background: var(--color-card);
   border-radius: 14px;
   padding: 1.5rem;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-modal);
+  border: 1px solid var(--color-border-subtle);
   overflow-y: auto;
 }
 .settings-manage-modal__close {
@@ -116,7 +116,7 @@
   height: 40px;
   border-radius: 10px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
   font-size: 1.5rem;
   line-height: 1;
@@ -151,7 +151,7 @@
 .changelog-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--color-backdrop);
   backdrop-filter: blur(2px);
 }
 .changelog-modal__dialog {
@@ -159,11 +159,11 @@
   width: min(560px, calc(100% - 2rem));
   max-height: calc(100vh - 8vh);
   margin: 4vh auto 0;
-  background: #fff;
+  background: var(--color-card);
   border-radius: 14px;
   padding: 1.5rem;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-modal);
+  border: 1px solid var(--color-border-subtle);
   overflow-y: auto;
 }
 .changelog-modal__close {
@@ -174,7 +174,7 @@
   height: 40px;
   border-radius: 10px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
   font-size: 1.5rem;
   line-height: 1;
@@ -270,7 +270,7 @@
 .credit-card-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--color-backdrop);
   backdrop-filter: blur(2px);
 }
 .credit-card-modal__dialog {
@@ -281,8 +281,8 @@
   padding: 2rem;
   background: var(--color-card);
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-modal-sm);
+  border: 1px solid var(--color-border-subtle);
   overflow-y: auto;
 }
 .credit-card-modal__close {
@@ -293,7 +293,7 @@
   height: 32px;
   border-radius: 999px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text-secondary);
   font-size: 1.25rem;
   cursor: pointer;
@@ -359,7 +359,7 @@
   flex: 1;
   min-width: 0;
   height: 24px;
-  background: #e0e0e0;
+  background: var(--color-progress-track);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -372,7 +372,7 @@
 
 .credit-limit-bar {
   height: 100%;
-  background: #4caf50;
+  background: var(--color-success);
   transition: width 0.3s ease, background-color 0.3s ease;
   border-radius: 12px;
 }
@@ -425,7 +425,7 @@
 }
 
 .credit-countdown-num.credit-countdown-urgent {
-  color: #f44336;
+  color: var(--color-danger);
 }
 
 /* Streak Calendar (inside Streak Modal) */
@@ -457,7 +457,7 @@
   height: 28px;
   border-radius: 999px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -516,15 +516,15 @@
 }
 
 .streak-calendar__day--transaction .streak-calendar__day-inner {
-  background: rgba(181, 156, 128, 0.35);
-  border: 1px solid rgba(181, 156, 128, 0.8);
+  background: var(--color-primary-tint);
+  border: 1px solid var(--color-primary-tint-border);
   color: var(--color-text);
   font-weight: 600;
 }
 
 .streak-calendar__day--manual .streak-calendar__day-inner {
-  background: rgba(205, 216, 190, 0.6);
-  border: 1px solid rgba(148, 172, 156, 1);
+  background: var(--color-manual-bg);
+  border: 1px solid var(--color-manual-border);
   color: var(--color-text);
   font-weight: 600;
 }
@@ -534,16 +534,16 @@
 }
 
 .streak-calendar__day--today.streak-calendar__day--transaction .streak-calendar__day-inner {
-  background: rgba(181, 156, 128, 0.35);
+  background: var(--color-primary-tint);
 }
 
 .streak-calendar__day--today.streak-calendar__day--manual .streak-calendar__day-inner {
-  background: rgba(205, 216, 190, 0.6);
-  border: 1px solid rgba(148, 172, 156, 1);
+  background: var(--color-manual-bg);
+  border: 1px solid var(--color-manual-border);
 }
 
 .streak-calendar__day--today:not(.streak-calendar__day--transaction):not(.streak-calendar__day--manual) .streak-calendar__day-inner {
-  background: rgba(181, 156, 128, 0.25);
+  background: var(--color-primary-tint-light);
 }
 
 .streak-calendar__legend {
@@ -569,13 +569,13 @@
 }
 
 .streak-calendar__legend-item--transaction::before {
-  background: rgba(181, 156, 128, 0.35);
-  border: 1px solid rgba(181, 156, 128, 0.8);
+  background: var(--color-primary-tint);
+  border: 1px solid var(--color-primary-tint-border);
 }
 
 .streak-calendar__legend-item--manual::before {
-  background: rgba(205, 216, 190, 0.6);
-  border: 1px solid rgba(148, 172, 156, 1);
+  background: var(--color-manual-bg);
+  border: 1px solid var(--color-manual-border);
 }
 
 .streak-summary {
@@ -668,7 +668,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-backdrop-subtle);
   backdrop-filter: blur(4px);
   z-index: var(--z-modal-high);
   display: none;
@@ -687,7 +687,7 @@
 .transaction-detail-content {
   background: var(--color-card);
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-dialog);
   max-width: 500px;
   width: 100%;
   max-height: 90vh;

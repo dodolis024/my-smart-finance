@@ -102,7 +102,7 @@ button {
   padding: 0.75rem 1.25rem;
   border-radius: 8px;
   background: var(--color-card);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-toast);
   color: var(--color-text);
   font-size: 0.9rem;
   max-width: 360px;
@@ -154,7 +154,7 @@ button {
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--color-backdrop-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -167,7 +167,7 @@ button {
   padding: 1.5rem;
   max-width: 380px;
   width: calc(100% - 2rem);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-modal-sm);
 }
 
 .confirm-dialog__message {
@@ -200,7 +200,7 @@ button {
 
 .confirm-dialog__btn--confirm {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   border-color: var(--color-primary);
 }
 
@@ -210,7 +210,7 @@ button {
 
 .confirm-dialog__btn--danger {
   background: var(--color-danger);
-  color: #fff;
+  color: var(--color-on-primary);
   border-color: var(--color-danger);
 }
 
@@ -248,7 +248,7 @@ button {
   font-weight: 400;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
   cursor: pointer;
   transition: var(--transition);
@@ -256,6 +256,6 @@ button {
 }
 .account-item__btn:hover { background: var(--color-row-hover); border-color: var(--color-primary); color: var(--color-primary); }
 .account-item__btn:disabled { opacity: 0.5; cursor: default; }
-.account-item__btn--delete:hover { background: #fee; border-color: #d33; color: #d33; }
+.account-item__btn--delete:hover { background: var(--color-danger-hover-bg); border-color: var(--color-danger-hover-border); color: var(--color-danger-hover-border); }
 .account-item__details { display: flex; flex-direction: column; gap: 0.05rem; }
 .account-item__detail { margin: 0.1rem 0; font-size: 0.85rem; font-weight: 400; color: var(--color-text-secondary); }

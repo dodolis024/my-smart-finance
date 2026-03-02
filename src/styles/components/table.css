@@ -59,7 +59,7 @@
 }
 .transaction-history-section th .th-filter-btn:hover {
   color: var(--color-primary);
-  background: rgba(181, 156, 128, 0.15);
+  background: var(--color-primary-tint-light);
 }
 .transaction-history-section th .th-filter-btn:focus {
   outline: none;
@@ -105,7 +105,7 @@
   cursor: pointer;
 }
 .filter-popover__action:hover {
-  background: rgba(181, 156, 128, 0.15);
+  background: var(--color-primary-tint-light);
 }
 .filter-popover__action:focus {
   outline: none;
@@ -192,7 +192,7 @@
   grid-template-columns: 1.2fr 1fr 1.3fr 1fr 1.3fr 1.4fr;
   align-items: center;
   width: 100%;
-  background: #ffffff;
+  background: var(--color-card);
   position: relative;
   z-index: 2;
   padding: 0.5rem 0.75rem;
@@ -277,12 +277,12 @@
 
 .swipe-action--delete {
   right: 0;
-  background: #ef4444 !important;
+  background: var(--color-danger) !important;
 }
 
 .swipe-action--edit {
   left: 0;
-  background: #b59c80 !important;
+  background: var(--color-primary) !important;
 }
 
 .swipe-action-btn {
@@ -294,7 +294,7 @@
   padding: 0.5rem;
   border: none;
   background: transparent;
-  color: white;
+  color: var(--color-on-primary);
   cursor: pointer;
   transition: var(--transition);
 }
@@ -302,7 +302,7 @@
 .swipe-action-btn svg {
   width: 1.75rem;
   height: 1.75rem;
-  color: white;
+  color: var(--color-on-primary);
 }
 
 .swipe-action-btn:active {
@@ -336,7 +336,7 @@
   color: var(--color-primary);
 }
 .btn-edit:hover {
-  background: rgba(181, 156, 128, 0.1);
+  background: var(--color-primary-tint-hover);
   color: var(--color-primary);
 }
 .btn-edit:focus {
@@ -347,10 +347,10 @@
   color: var(--color-danger);
 }
 .btn-delete:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--color-danger-tint);
   color: var(--color-danger);
 }
 .btn-delete:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35);
+  box-shadow: 0 0 0 2px var(--color-danger-focus);
 }

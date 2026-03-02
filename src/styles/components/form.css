@@ -23,7 +23,7 @@
   padding: 0.45rem 0.75rem;
   border-radius: 999px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text-secondary);
   font-size: 0.85rem;
   font-weight: 500;
@@ -174,7 +174,7 @@
   width: 100%;
   padding: 0.875rem;
   background: var(--color-primary);
-  color: white;
+  color: var(--color-on-primary);
   border: none;
   border-radius: 8px;
   font-size: 1rem;
@@ -288,7 +288,7 @@
   padding: 0.4rem 0.8rem;
   border-radius: 8px;
   border: 1px solid var(--color-primary);
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-primary);
   font-size: 0.875rem;
   font-weight: 600;
@@ -298,7 +298,7 @@
 
 .btn-add-category:hover {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .category-list {
@@ -315,7 +315,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 0.8rem;
-  background: #fff;
+  background: var(--color-card);
   border-radius: 8px;
   border: 1px solid var(--color-border);
 }
@@ -336,7 +336,7 @@
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
   font-size: 0.75rem;
   cursor: pointer;
@@ -355,9 +355,9 @@
 }
 
 .category-item__btn--delete:hover {
-  background: #fee;
-  border-color: #d33;
-  color: #d33;
+  background: var(--color-danger-hover-bg);
+  border-color: var(--color-danger-hover-border);
+  color: var(--color-danger-hover-border);
 }
 
 /* Account management */
@@ -377,7 +377,7 @@
   border-radius: 8px;
   border: 1px solid var(--color-primary);
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -423,7 +423,7 @@
   padding: 0.35rem 0.7rem;
   border-radius: 6px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
   font-size: 0.8rem;
   cursor: pointer;
@@ -437,9 +437,9 @@
 }
 
 .account-item__btn--delete:hover {
-  background: #fee;
-  border-color: #d33;
-  color: #d33;
+  background: var(--color-danger-hover-bg);
+  border-color: var(--color-danger-hover-border);
+  color: var(--color-danger-hover-border);
 }
 
 .account-item__details {
@@ -486,7 +486,7 @@
   border-radius: 8px;
   border: 1px solid var(--color-border);
   font-size: 0.9rem;
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
 }
 
@@ -494,7 +494,7 @@
 .account-form .form-group select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(181, 156, 128, 0.15);
+  box-shadow: var(--shadow-focus);
 }
 
 .account-form .form-actions {
@@ -508,7 +508,7 @@
   padding: 0.6rem 1.2rem;
   border-radius: 8px;
   border: 1px solid var(--color-border);
-  background: #fff;
+  background: var(--color-card);
   color: var(--color-text);
   font-size: 0.9rem;
   cursor: pointer;
@@ -524,7 +524,7 @@
   border-radius: 8px;
   border: none;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -551,7 +551,7 @@
   border-radius: 6px;
   font-size: 0.875rem;
   color: var(--color-text);
-  background: #fff;
+  background: var(--color-card);
 }
 
 .category-inline-input__field:focus {

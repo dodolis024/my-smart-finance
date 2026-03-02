@@ -1,24 +1,56 @@
 :root {
   --color-primary: #b59c80;
   --color-primary-hover: #9E8769;
+  --color-primary-dark: #7d6b54;
+  --color-primary-tint: rgba(181, 156, 128, 0.35);
+  --color-primary-tint-border: rgba(181, 156, 128, 0.8);
+  --color-primary-tint-light: rgba(181, 156, 128, 0.15);
+  --color-primary-tint-hover: rgba(181, 156, 128, 0.1);
+  --color-primary-tint-focus: rgba(181, 156, 128, 0.15);
+
   --color-bg: #FAF9F6;
   --color-card: #ffffff;
   --color-text: #3d3629;
   --color-text-secondary: #797169;
+  --color-text-muted: #999999;
   --color-border: #E0D9D0;
+  --color-border-light: #eeeeee;
+  --color-border-input: #dddddd;
   --color-success: #12ae63;
+  --color-success-alt: #2e7d32;
   --color-danger: #ef4444;
+  --color-danger-tint: rgba(239, 68, 68, 0.1);
+  --color-danger-hover-bg: #fef2f2;
+  --color-danger-hover-border: #dc2626;
+  --color-danger-focus: rgba(239, 68, 68, 0.35);
+  --color-error: #d32f2f;
   --color-table-header: #dfdad3;
   --color-row-hover: #F5F2ED;
   --color-row-alt: #FAF8F5;
+
+  --color-manual-bg: rgba(205, 216, 190, 0.6);
+  --color-manual-border: rgba(148, 172, 156, 1);
+
+  --color-backdrop: rgba(0, 0, 0, 0.55);
+  --color-backdrop-light: rgba(0, 0, 0, 0.4);
+  --color-backdrop-subtle: rgba(0, 0, 0, 0.5);
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
+
+  --color-progress-track: #e5e0da;
+  --color-on-primary: #ffffff;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-modal: 0 18px 50px rgba(0, 0, 0, 0.35);
+  --shadow-modal-sm: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --shadow-dialog: 0 20px 60px rgba(0, 0, 0, 0.3);
+  --shadow-popover: 0 8px 24px -4px rgba(0, 0, 0, 0.15);
+  --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-focus: 0 0 0 3px rgba(191, 165, 136, 0.35);
 
   --space-xs: 0.5rem;
   --space-sm: 1rem;
   --space-md: 1.5rem;
   --space-lg: 2rem;
-
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-focus: 0 0 0 3px rgba(191, 165, 136, 0.35);
 
   --transition: all 0.2s ease;
 
