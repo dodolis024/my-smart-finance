@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Supabase Edge Function: 每日簽到提醒
 // 此函數每小時由 pg_cron 觸發，檢查哪些用戶需要收到提醒 email
 // 根據用戶設定的時區與提醒時間，對當天尚未簽到的用戶發送提醒信
