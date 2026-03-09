@@ -1,9 +1,11 @@
 // Supabase Edge Function: 每日簽到提醒
 // 此函數每小時由 pg_cron 觸發，檢查哪些用戶需要收到提醒 email
 // 根據用戶設定的時區與提醒時間，對當天尚未簽到的用戶發送提醒信
+// 使用 Gmail SMTP 發信（透過 App Password 驗證）
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,10 +21,11 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    const gmailUser = Deno.env.get('GMAIL_USER')
+    const gmailAppPassword = Deno.env.get('GMAIL_APP_PASSWORD')
 
-    if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY not configured')
+    if (!gmailUser || !gmailAppPassword) {
+      throw new Error('GMAIL_USER or GMAIL_APP_PASSWORD not configured')
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -53,6 +56,9 @@ serve(async (req) => {
     const now = new Date()
     const emailsSent: string[] = []
     const errors: { userId: string; error: string }[] = []
+
+    // 收集需要發信的用戶
+    const usersToNotify: { userId: string; email: string }[] = []
 
     for (const setting of reminderUsers) {
       const config = setting.value as {
@@ -99,22 +105,41 @@ serve(async (req) => {
         continue
       }
 
-      const userEmail = userData.user.email
+      usersToNotify.push({ userId: setting.user_id, email: userData.user.email })
+    }
 
-      // 6. 發送提醒 email
-      try {
-        const emailResult = await sendReminderEmail(resendApiKey, userEmail)
-        if (emailResult.success) {
-          emailsSent.push(setting.user_id)
-          console.log(`Reminder email sent to ${userEmail}`)
-        } else {
-          console.error(`Failed to send email to ${userEmail}:`, emailResult.error)
-          errors.push({ userId: setting.user_id, error: emailResult.error || 'Send failed' })
+    // 6. 如果有需要通知的用戶，建立 SMTP 連線並發信
+    if (usersToNotify.length > 0) {
+      const client = new SMTPClient({
+        connection: {
+          hostname: 'smtp.gmail.com',
+          port: 465,
+          tls: true,
+          auth: {
+            username: gmailUser,
+            password: gmailAppPassword,
+          },
+        },
+      })
+
+      for (const { userId, email } of usersToNotify) {
+        try {
+          await client.send({
+            from: gmailUser,
+            to: email,
+            subject: '你今天還沒記帳喔！別讓連續紀錄中斷了 🔥',
+            content: '你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！花一分鐘記錄今天的花費，或者按一下 Check-in Button 來維持你的 streak 吧～！',
+            html: buildEmailHtml(),
+          })
+          emailsSent.push(userId)
+          console.log(`Reminder email sent to ${email}`)
+        } catch (emailError) {
+          console.error(`Error sending email to ${email}:`, emailError.message)
+          errors.push({ userId, error: emailError.message })
         }
-      } catch (emailError) {
-        console.error(`Error sending email to ${userEmail}:`, emailError.message)
-        errors.push({ userId: setting.user_id, error: emailError.message })
       }
+
+      await client.close()
     }
 
     return new Response(
@@ -140,6 +165,32 @@ serve(async (req) => {
     )
   }
 })
+
+/**
+ * 組合 email HTML 內容
+ */
+function buildEmailHtml(): string {
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 2rem;">
+      <h2 style="color: #333; margin-bottom: 1rem;">哈嚕！你的提醒已抵達 ✨</h2>
+      <p style="color: #666; line-height: 1.6; font-size: 1rem;">
+        你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！
+      </p>
+      <p style="color: #666; line-height: 1.6; font-size: 1rem;">
+        花一分鐘記錄今天的花費，或者按一下 Check-in Button 來維持你的 streak 吧～！
+      </p>
+      <div style="margin-top: 1.5rem;">
+        <a href="https://dodolis024.github.io/my-smart-finance/"
+           style="display: inline-block; padding: 0.75rem 1.5rem; background: #b59c80; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+          前往記帳
+        </a>
+      </div>
+      <p style="color: #999; font-size: 0.8rem; margin-top: 2rem;">
+        你可以在 My Smart Finance 的 更多->簽到提醒 關閉此提醒。
+      </p>
+    </div>
+  `
+}
 
 /**
  * 判斷現在是否為該用戶的提醒時刻（±30 分鐘容差）
@@ -192,52 +243,4 @@ function getUserToday(now: Date, timezone: string): string {
     }).format(now)
     return parts
   }
-}
-
-/**
- * 透過 Resend API 發送提醒 email
- */
-async function sendReminderEmail(
-  apiKey: string,
-  to: string
-): Promise<{ success: boolean; error?: string }> {
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: 'Smart Finance <noreply@smartfinance.app>',
-      to: [to],
-      subject: '你今天還沒記帳喔！別讓連續紀錄中斷了 🔥',
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 2rem;">
-          <h2 style="color: #333; margin-bottom: 1rem;">嗨！提醒你記帳喔 ✨</h2>
-          <p style="color: #666; line-height: 1.6; font-size: 1rem;">
-            今天還沒有記帳或簽到，你的連續記帳紀錄快要中斷了！
-          </p>
-          <p style="color: #666; line-height: 1.6; font-size: 1rem;">
-            花一分鐘記錄今天的花費，或者按一下「今日無消費」來維持你的 streak 吧！
-          </p>
-          <div style="margin-top: 1.5rem;">
-            <a href="https://your-app-url.com"
-               style="display: inline-block; padding: 0.75rem 1.5rem; background: #6366f1; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-              前往記帳
-            </a>
-          </div>
-          <p style="color: #999; font-size: 0.8rem; margin-top: 2rem;">
-            你可以在 Smart Finance 的設定中關閉此提醒。
-          </p>
-        </div>
-      `,
-    }),
-  })
-
-  if (!response.ok) {
-    const errorBody = await response.text()
-    return { success: false, error: `Resend API error: ${response.status} ${errorBody}` }
-  }
-
-  return { success: true }
 }

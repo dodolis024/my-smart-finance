@@ -2,6 +2,8 @@
 
 本檔案記錄 Smart Finance Tracker 的版本更新內容。
 
+- 將簽到提醒 Email 改為使用 Gmail SMTP 發送（無需購買網域）
+
 ## [1.3.0] - Mar-09 2026
 - 新增簽到提醒功能：用戶可設定時區與提醒時間，系統每天定時發送 Email 提醒尚未簽到的用戶
 - 新增 Supabase Edge Function `send-streak-reminder`，搭配 pg_cron 每小時檢查
