@@ -2,6 +2,11 @@
 
 本檔案記錄 Smart Finance Tracker 的版本更新內容。
 
+## [1.3.0] - Mar-09 2026
+- 新增簽到提醒功能：用戶可設定時區與提醒時間，系統每天定時發送 Email 提醒尚未簽到的用戶
+- 新增 Supabase Edge Function `send-streak-reminder`，搭配 pg_cron 每小時檢查
+- 在選單中新增「簽到提醒」設定入口（桌面版 MoreMenu + 手機版 UserAvatar）
+
 ## [1.2.3] - Mar-09 2026
 - 修正簽到日曆與 Dashboard 統計卡旁瑪爾濟斯插圖不顯示的問題
 - 優化樣式，以 CSS 變數取代硬編碼顏色

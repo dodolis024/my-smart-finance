@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
-export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpenChangelog }) {
+export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpenReminder, onOpenChangelog }) {
   const { userInfo, signOut } = useAuth();
   const { confirm } = useConfirm();
   const [isOpen, setIsOpen] = useState(false);
@@ -61,6 +61,14 @@ export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpen
               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
             </svg>
             <span>選項管理</span>
+          </button>
+        )}
+        {isMobile && onOpenReminder && (
+          <button className="more-menu-item" onClick={() => { setIsOpen(false); onOpenReminder(); }}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="more-menu-item-icon">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            <span>簽到提醒</span>
           </button>
         )}
         {isMobile && onOpenChangelog && (

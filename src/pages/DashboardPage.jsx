@@ -20,6 +20,7 @@ import ChangelogModal from '@/components/common/ChangelogModal';
 import StreakBadge from '@/components/streak/StreakBadge';
 import StreakModal from '@/components/streak/StreakModal';
 import SettingsModal from '@/components/settings/SettingsModal';
+import ReminderSettingsModal from '@/components/settings/ReminderSettingsModal';
 
 export default function DashboardPage() {
   const { user, ensureDefaultDataForOAuth } = useAuth();
@@ -188,11 +189,13 @@ export default function DashboardPage() {
       <TopBar
         streakBadge={streakBadge}
         onOpenSettings={modals.openSettings}
+        onOpenReminder={modals.openReminder}
         onOpenChangelog={modals.openChangelog}
       />
 
       <FormColumn
         onOpenSettings={modals.openSettings}
+        onOpenReminder={modals.openReminder}
         onOpenChangelog={modals.openChangelog}
       >
         <div ref={formRef}>
@@ -283,6 +286,11 @@ export default function DashboardPage() {
       <SettingsModal
         isOpen={modals.settingsOpen}
         onClose={handleSettingsClose}
+      />
+
+      <ReminderSettingsModal
+        isOpen={modals.reminderOpen}
+        onClose={modals.closeReminder}
       />
 
       <ChangelogModal
