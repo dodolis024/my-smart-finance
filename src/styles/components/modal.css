@@ -601,7 +601,7 @@
   transform: translateY(-50%);
   width: 4.5rem;
   height: 4.5rem;
-  background-image: url('../../images/maltese-icon-2.png');
+  background-image: url('/images/maltese-icon-2.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -616,7 +616,7 @@
   transform: translateY(-50%);
   width: 3.2rem;
   height: 3.2rem;
-  background-image: url('../../images/maltese-gif-2.gif');
+  background-image: url('/images/maltese-gif-2.gif');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

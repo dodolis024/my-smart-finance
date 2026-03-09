@@ -468,7 +468,7 @@
   width: 5rem;
   height: 5rem;
   right: 0rem;
-  background-image: url('../images/maltese-gif-3.gif');
+  background-image: url('/images/maltese-gif-3.gif');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -483,7 +483,7 @@
   transform: translateY(-50%);
   width: 11rem;
   height: 11rem;
-  background-image: url('../images/maltese-gif-5.png');
+  background-image: url('/images/maltese-gif-5.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -498,7 +498,7 @@
   transform: translateY(-50%);
   width: 6rem;
   height: 6rem;
-  background-image: url('../images/maltese-gif-6.png');
+  background-image: url('/images/maltese-gif-6.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
