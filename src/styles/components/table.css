@@ -166,6 +166,11 @@
   position: relative;
 }
 
+/* 訂閱自動新增：左側細線（不影響排版） */
+.transaction-row--subscription td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-subscription);
+}
+
 .transaction-row--semantic td {
   position: relative;
   overflow: hidden;

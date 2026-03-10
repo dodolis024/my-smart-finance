@@ -40,6 +40,7 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
   const rowClass = [
     'transaction-row',
     'transaction-row--semantic',
+    tx.subscriptionId && 'transaction-row--subscription',
     swipedRight && 'swiped-right',
     swipedLeft && 'swiped-left',
   ]

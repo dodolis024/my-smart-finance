@@ -6,6 +6,7 @@ export function useModalStates() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
   const openStreakModal = useCallback((title, variant = 'neutral') => {
     setStreakModal({ open: true, title, variant });
@@ -29,6 +30,8 @@ export function useModalStates() {
   const closeChangelog = useCallback(() => setChangelogOpen(false), []);
   const openReminder = useCallback(() => setReminderOpen(true), []);
   const closeReminder = useCallback(() => setReminderOpen(false), []);
+  const openSubscription = useCallback(() => setSubscriptionOpen(true), []);
+  const closeSubscription = useCallback(() => setSubscriptionOpen(false), []);
 
   return {
     streakModal,
@@ -47,5 +50,8 @@ export function useModalStates() {
     reminderOpen,
     openReminder,
     closeReminder,
+    subscriptionOpen,
+    openSubscription,
+    closeSubscription,
   };
 }

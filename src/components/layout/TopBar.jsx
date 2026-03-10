@@ -1,10 +1,10 @@
 import UserAvatar from '@/components/common/UserAvatar';
 
-export default function TopBar({ streakBadge, onOpenSettings, onOpenReminder, onOpenChangelog }) {
+export default function TopBar({ streakBadge, onOpenSettings, onOpenReminder, onOpenChangelog, onOpenSubscription }) {
   return (
     <header className="app-top-bar" aria-label="頂部導覽">
       <div className="app-top-bar__left">
-        <UserAvatar variant="mobile" onOpenSettings={onOpenSettings} onOpenReminder={onOpenReminder} onOpenChangelog={onOpenChangelog} />
+        <UserAvatar variant="mobile" onOpenSettings={onOpenSettings} onOpenReminder={onOpenReminder} onOpenChangelog={onOpenChangelog} onOpenSubscription={onOpenSubscription} />
       </div>
       <div className="app-top-bar__right">
         {streakBadge}

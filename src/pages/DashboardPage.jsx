@@ -21,6 +21,7 @@ import StreakBadge from '@/components/streak/StreakBadge';
 import StreakModal from '@/components/streak/StreakModal';
 import SettingsModal from '@/components/settings/SettingsModal';
 import ReminderSettingsModal from '@/components/settings/ReminderSettingsModal';
+import SubscriptionModal from '@/components/settings/SubscriptionModal';
 
 export default function DashboardPage() {
   const { user, ensureDefaultDataForOAuth } = useAuth();
@@ -175,6 +176,11 @@ export default function DashboardPage() {
     fetchDashboardData(currentYear, currentMonth).catch(console.error);
   }, [fetchDashboardData, currentYear, currentMonth, modals.closeSettings]);
 
+  const handleSubscriptionClose = useCallback(() => {
+    modals.closeSubscription();
+    fetchDashboardData(currentYear, currentMonth).catch(console.error);
+  }, [fetchDashboardData, currentYear, currentMonth, modals.closeSubscription]);
+
   const checkedInToday = hasCheckinToday();
 
   const streakBadge = (
@@ -191,12 +197,14 @@ export default function DashboardPage() {
         onOpenSettings={modals.openSettings}
         onOpenReminder={modals.openReminder}
         onOpenChangelog={modals.openChangelog}
+        onOpenSubscription={modals.openSubscription}
       />
 
       <FormColumn
         onOpenSettings={modals.openSettings}
         onOpenReminder={modals.openReminder}
         onOpenChangelog={modals.openChangelog}
+        onOpenSubscription={modals.openSubscription}
       >
         <div ref={formRef}>
           <TransactionForm
@@ -291,6 +299,14 @@ export default function DashboardPage() {
       <ReminderSettingsModal
         isOpen={modals.reminderOpen}
         onClose={modals.closeReminder}
+      />
+
+      <SubscriptionModal
+        isOpen={modals.subscriptionOpen}
+        onClose={handleSubscriptionClose}
+        categoriesExpense={categoriesExpense}
+        accounts={accounts}
+        currencies={currencies}
       />
 
       <ChangelogModal
