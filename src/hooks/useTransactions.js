@@ -80,10 +80,11 @@ export function useTransactions() {
 
       const today = getTodayYmd();
       if (date === today) {
-        await supabase.from('checkins').upsert(
+        const { error: checkinError } = await supabase.from('checkins').upsert(
           { user_id: user.id, date: today, source: 'onTimeTransaction' },
           { onConflict: 'user_id,date' }
         );
+        if (checkinError) console.warn('Auto check-in failed:', checkinError.message);
       }
     }
 

@@ -22,12 +22,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setUserInfo(extractUserInfo(session?.user ?? null));
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setUserInfo(extractUserInfo(session?.user ?? null));
+      })
+      .catch(() => {
+        /* network error — stay logged out */
+      })
+      .finally(() => setLoading(false));
 
     const {
       data: { subscription },
@@ -63,7 +68,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    const redirectTo = window.location.origin + '/';
+    const redirectTo = window.location.origin + import.meta.env.BASE_URL;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },
@@ -76,7 +81,11 @@ export function AuthProvider({ children }) {
   }, []);
 
   const ensureDefaultDataForOAuth = useCallback(async (userId) => {
-    const { data: accounts } = await supabase.from('accounts').select('id').limit(1);
+    const { data: accounts } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1);
     if (!accounts || accounts.length === 0) {
       await createDefaultData(userId);
     }

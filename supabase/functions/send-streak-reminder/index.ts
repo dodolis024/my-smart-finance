@@ -123,24 +123,26 @@ serve(async (req) => {
         },
       })
 
-      for (const { userId, email } of usersToNotify) {
-        try {
-          await client.send({
-            from: gmailUser,
-            to: email,
-            subject: '你今天還沒記帳喔！別讓連續紀錄中斷了 🔥',
-            content: '你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！花一分鐘記錄今天的花費，或者按一下 Check-in Button 來維持你的 streak 吧～！',
-            html: buildEmailHtml(),
-          })
-          emailsSent.push(userId)
-          console.log(`Reminder email sent to ${email}`)
-        } catch (emailError) {
-          console.error(`Error sending email to ${email}:`, emailError.message)
-          errors.push({ userId, error: emailError.message })
+      try {
+        for (const { userId, email } of usersToNotify) {
+          try {
+            await client.send({
+              from: gmailUser,
+              to: email,
+              subject: '你今天還沒記帳喔！別讓連續紀錄中斷了 🔥',
+              content: '你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！花一分鐘記錄今天的花費，或者按一下 Check-in Button 來維持你的 streak 吧～！',
+              html: buildEmailHtml(),
+            })
+            emailsSent.push(userId)
+            console.log(`Reminder email sent to ${email}`)
+          } catch (emailError) {
+            console.error(`Error sending email to ${email}:`, emailError.message)
+            errors.push({ userId, error: emailError.message })
+          }
         }
+      } finally {
+        await client.close()
       }
-
-      await client.close()
     }
 
     return new Response(
@@ -215,7 +217,7 @@ function isReminderTime(now: Date, timezone: string, reminderTime: string): bool
     // 處理跨午夜的情況（例如 23:50 vs 00:10）
     const wrappedDiff = Math.min(diff, 1440 - diff)
 
-    return wrappedDiff <= 30
+    return wrappedDiff < 30
   } catch {
     console.error(`Invalid timezone: ${timezone}`)
     return false

@@ -14,7 +14,7 @@
 
 1. 前往 https://www.exchangerate-api.com/
 2. 註冊免費帳號（每月 1,500 次請求免費）
-3. 複製你的 API Key：10354d97d0727ec2e2cd92cf
+3. 複製你的 API Key（格式如 xxxxxxxxxxxx，請勿分享或 commit 到版本控制）
 
 ### 2. 部署 Edge Function
 

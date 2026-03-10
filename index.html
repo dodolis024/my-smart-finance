@@ -48,6 +48,16 @@
     </symbol>
   </svg>
 
+  <script>
+    (function () {
+      var r = sessionStorage.getItem('spa-redirect');
+      if (r) {
+        sessionStorage.removeItem('spa-redirect');
+        var u = new URL(r);
+        window.history.replaceState(null, null, u.pathname + u.search + u.hash);
+      }
+    })();
+  </script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
