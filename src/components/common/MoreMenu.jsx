@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function MoreMenu({ onOpenSettings, onOpenReminder, onOpenChangelog }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function MoreMenu({ onOpenSettings, onOpenReminder, onOpenChangelog, isOpen: controlledOpen, onOpenChange }) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const btnRef = useRef(null);
   const dropdownRef = useRef(null);
+
+  const isControlled = onOpenChange != null;
+  const isOpen = isControlled ? controlledOpen : internalOpen;
+  const setIsOpen = isControlled ? (v) => onOpenChange?.(v) : setInternalOpen;
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -13,17 +17,17 @@ export default function MoreMenu({ onOpenSettings, onOpenReminder, onOpenChangel
     };
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
-  }, []);
+  }, [isControlled]);
 
   return (
-    <>
+    <div className="more-menu-wrapper more-menu-wrapper--desktop">
       <button
         ref={btnRef}
         type="button"
         className="more-menu-btn more-menu-btn--desktop"
         aria-label="更多選項"
         aria-expanded={isOpen}
-        onClick={(e) => { e.stopPropagation(); setIsOpen((prev) => !prev); }}
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="more-menu-icon">
           <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -64,6 +68,6 @@ export default function MoreMenu({ onOpenSettings, onOpenReminder, onOpenChangel
           <span>更新紀錄</span>
         </button>
       </div>
-    </>
+    </div>
   );
 }

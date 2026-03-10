@@ -2,11 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
-export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpenReminder, onOpenChangelog }) {
+export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpenReminder, onOpenChangelog, isOpen: controlledOpen, onOpenChange }) {
   const { userInfo, signOut } = useAuth();
   const { confirm } = useConfirm();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const wrapperRef = useRef(null);
+
+  const isControlled = onOpenChange != null;
+  const isOpen = isControlled ? controlledOpen : internalOpen;
+  const setIsOpen = isControlled ? (v) => onOpenChange?.(v) : setInternalOpen;
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -16,7 +20,7 @@ export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpen
     };
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
-  }, []);
+  }, [isControlled]);
 
   if (!userInfo) return null;
 
@@ -37,7 +41,7 @@ export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpen
         className="user-avatar-btn"
         onClick={(e) => {
           e.stopPropagation();
-          setIsOpen((prev) => !prev);
+          setIsOpen(!isOpen);
         }}
         aria-expanded={isOpen}
         aria-haspopup="true"

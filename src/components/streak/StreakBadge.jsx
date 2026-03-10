@@ -1,7 +1,9 @@
 export default function StreakBadge({ streakState, onClick }) {
   const count = streakState?.count || 0;
+  const totalDays = streakState?.totalDays ?? 0;
+  const isNewUser = totalDays === 0;
   let icon;
-  if (streakState?.broken) {
+  if (streakState?.broken && !isNewUser) {
     icon = <span className="streak-badge__icon" aria-hidden="true">😡</span>;
   } else if (count > 0) {
     icon = (

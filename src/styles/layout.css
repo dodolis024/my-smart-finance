@@ -163,10 +163,15 @@
   margin-left: 0.4rem;
 }
 
-.form-column__more-menu .more-menu-btn--desktop {
+.form-column__more-menu .more-menu-wrapper--desktop {
   flex: 1;
-  margin-left: 0;
+  display: flex;
   justify-content: flex-end;
+  position: relative;
+}
+
+.form-column__more-menu .more-menu-btn--desktop {
+  flex: none;
 }
 
 .form-column__more-menu .more-menu-dropdown {
@@ -261,9 +266,19 @@
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   color: var(--color-text-secondary);
-  word-break: break-all;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 0.25rem;
+}
+
+/* 電腦版：郵箱不換行 */
+.user-avatar-dropdown--desktop .user-avatar-dropdown__email {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-avatar-dropdown--mobile .user-avatar-dropdown__email {
+  word-break: break-all;
 }
 
 .user-avatar-dropdown--mobile {
