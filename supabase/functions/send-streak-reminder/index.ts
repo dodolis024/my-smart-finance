@@ -23,10 +23,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const gmailUser = Deno.env.get('GMAIL_USER')
-    const gmailAppPassword = Deno.env.get('GMAIL_APP_PASSWORD')
+    const gmailAppPassword = Deno.env.get('GMAIL_PASSWORD')
 
     if (!gmailUser || !gmailAppPassword) {
-      throw new Error('GMAIL_USER or GMAIL_APP_PASSWORD not configured')
+      throw new Error('GMAIL_USER or GMAIL_PASSWORD not configured')
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)

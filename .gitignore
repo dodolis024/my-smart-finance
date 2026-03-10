@@ -30,3 +30,6 @@ test.html
 test-script.html
 TESTING_CHECKLIST.md
 to-do.md
+
+# AI assistant workspace (local only)
+.claude/
