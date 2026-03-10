@@ -1,8 +1,9 @@
 // @ts-nocheck
 // Supabase Edge Function: 每日簽到提醒
-// 此函數每小時由 pg_cron 觸發，檢查哪些用戶需要收到提醒 email
+// 此函數每 5 分鐘由 pg_cron 觸發，檢查哪些用戶需要收到提醒 email
 // 根據用戶設定的時區與提醒時間，對當天尚未簽到的用戶發送提醒信
 // 使用 Gmail SMTP 發信（透過 App Password 驗證）
+// 防重複機制：使用獨立的 reminder_last_sent 紀錄追蹤每日寄信狀態
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
@@ -31,17 +32,17 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // 1. 取得所有啟用提醒的用戶設定
-    const { data: reminderUsers, error: settingsError } = await supabase
+    // 1. 一次撈出所有 reminder_settings 和 reminder_last_sent 紀錄
+    const { data: allSettings, error: settingsError } = await supabase
       .from('settings')
-      .select('user_id, value')
-      .eq('key', 'reminder_settings')
+      .select('user_id, key, value')
+      .in('key', ['reminder_settings', 'reminder_last_sent'])
 
     if (settingsError) {
-      throw new Error(`Failed to fetch reminder settings: ${settingsError.message}`)
+      throw new Error(`Failed to fetch settings: ${settingsError.message}`)
     }
 
-    if (!reminderUsers || reminderUsers.length === 0) {
+    if (!allSettings || allSettings.length === 0) {
       console.log('No users with reminder settings found')
       return new Response(
         JSON.stringify({
@@ -54,24 +55,35 @@ serve(async (req) => {
       )
     }
 
+    // 2. 按 user_id 分組：把 config 和 lastSentDate 整理到一起
+    const userMap = new Map<string, {
+      config?: { enabled: boolean; timezone: string; time: string }
+      lastSentDate?: string
+    }>()
+
+    for (const row of allSettings) {
+      if (!userMap.has(row.user_id)) userMap.set(row.user_id, {})
+      const entry = userMap.get(row.user_id)!
+      if (row.key === 'reminder_settings') {
+        entry.config = row.value as { enabled: boolean; timezone: string; time: string }
+      }
+      if (row.key === 'reminder_last_sent') {
+        entry.lastSentDate = (row.value as { date?: string })?.date
+      }
+    }
+
     const now = new Date()
     const emailsSent: string[] = []
     const errors: { userId: string; error: string }[] = []
 
-    // 收集需要發信的用戶
-    const usersToNotify: { userId: string; email: string }[] = []
+    // 收集需要發信的用戶（含 userToday，供寄信後更新用）
+    const usersToNotify: { userId: string; email: string; userToday: string }[] = []
 
-    for (const setting of reminderUsers) {
-      const config = setting.value as {
-        enabled: boolean
-        timezone: string
-        time: string
-      }
+    for (const [userId, { config, lastSentDate }] of userMap) {
+      // 跳過沒設定或未啟用的用戶
+      if (!config?.enabled) continue
 
-      // 跳過未啟用的用戶
-      if (!config.enabled) continue
-
-      // 2. 檢查現在是否為該用戶的提醒時刻（±30 分鐘容差）
+      // 3. 檢查現在是否為該用戶的提醒時刻（±2 分鐘容差）
       const userTimezone = config.timezone || 'Asia/Taipei'
       const reminderTime = config.time || '20:00'
 
@@ -79,37 +91,41 @@ serve(async (req) => {
         continue
       }
 
-      // 3. 取得該用戶時區的「今天」日期
+      // 4. 取得該用戶時區的「今天」日期
       const userToday = getUserToday(now, userTimezone)
 
-      // 4. 檢查今天是否已簽到
+      // 5. 防重複：如果今天已經寄過，跳過
+      if (lastSentDate === userToday) {
+        console.log(`User ${userId} already received reminder for ${userToday}, skipping duplicate`)
+        continue
+      }
+
+      // 6. 檢查今天是否已簽到（已簽到就不需要提醒）
       const { data: checkinData } = await supabase
         .from('checkins')
         .select('id')
-        .eq('user_id', setting.user_id)
+        .eq('user_id', userId)
         .eq('date', userToday)
         .limit(1)
 
       if (checkinData && checkinData.length > 0) {
-        console.log(`User ${setting.user_id} already checked in today (${userToday}), skipping`)
+        console.log(`User ${userId} already checked in today (${userToday}), skipping`)
         continue
       }
 
-      // 5. 取得用戶 email
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
-        setting.user_id
-      )
+      // 7. 取得用戶 email
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
 
       if (userError || !userData?.user?.email) {
-        console.error(`Failed to get email for user ${setting.user_id}:`, userError?.message)
-        errors.push({ userId: setting.user_id, error: userError?.message || 'No email found' })
+        console.error(`Failed to get email for user ${userId}:`, userError?.message)
+        errors.push({ userId, error: userError?.message || 'No email found' })
         continue
       }
 
-      usersToNotify.push({ userId: setting.user_id, email: userData.user.email })
+      usersToNotify.push({ userId, email: userData.user.email, userToday })
     }
 
-    // 6. 如果有需要通知的用戶，建立 SMTP 連線並發信
+    // 8. 如果有需要通知的用戶，建立 SMTP 連線並發信
     if (usersToNotify.length > 0) {
       const client = new SMTPClient({
         connection: {
@@ -124,15 +140,23 @@ serve(async (req) => {
       })
 
       try {
-        for (const { userId, email } of usersToNotify) {
+        for (const { userId, email, userToday } of usersToNotify) {
           try {
             await client.send({
               from: gmailUser,
               to: email,
-              subject: '你今天還沒記帳喔！別讓連續紀錄中斷了 🔥',
-              content: '你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！花一分鐘記錄今天的花費，或者按一下 Check-in Button 來維持你的 streak 吧～！',
+              subject: encodeSubjectBase64('你今天還沒記帳喔！別讓連續紀錄中斷了 🔥'),
               html: buildEmailHtml(),
             })
+
+            // 寄信成功 → 寫入 reminder_last_sent 防止重複
+            await supabase
+              .from('settings')
+              .upsert(
+                { user_id: userId, key: 'reminder_last_sent', value: { date: userToday } },
+                { onConflict: 'user_id,key' }
+              )
+
             emailsSent.push(userId)
             console.log(`Reminder email sent to ${email}`)
           } catch (emailError) {
@@ -170,34 +194,59 @@ serve(async (req) => {
 })
 
 /**
- * 組合 email HTML 內容
+ * 把字串中所有非 ASCII 字元（含中文、emoji）轉成 HTML decimal entity。
+ * 這樣 HTML body 全為 ASCII，denomailer 的 QP 編碼就不會碰到多位元組序列，
+ * 避免 QP 切行時把 =e5=90=a7 斷成 =e5=9 + 換行 + 0=a7 的格式錯誤。
+ */
+function encodeNonAscii(str: string): string {
+  return [...str].map(char => {
+    const code = char.codePointAt(0)!
+    return code > 127 ? `&#${code};` : char
+  }).join('')
+}
+
+/**
+ * 把 subject 字串編成 RFC 2047 Base64 格式（=?utf-8?B?...?=）。
+ * denomailer 使用 QP 格式（=?utf-8?Q?...?=），有切行 bug 導致中文亂碼；
+ * 預先用 Base64 編好後整串都是 ASCII，denomailer 就不會再動它。
+ */
+function encodeSubjectBase64(subject: string): string {
+  const bytes = new TextEncoder().encode(subject)
+  const binary = Array.from(bytes).map(b => String.fromCharCode(b)).join('')
+  return `=?utf-8?B?${btoa(binary)}?=`
+}
+
+/**
+ * 組合 email HTML 內容（所有中文與非 ASCII 字元轉為 HTML entity）
  */
 function buildEmailHtml(): string {
+  const e = encodeNonAscii
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 2rem;">
-      <h2 style="color: #333; margin-bottom: 1rem;">哈嚕！你的提醒已抵達 ✨</h2>
+      <h2 style="color: #333; margin-bottom: 1rem;">${e('哈嚕！你的提醒已抵達 ✨')}</h2>
       <p style="color: #666; line-height: 1.6; font-size: 1rem;">
-        你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！
+        ${e('你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！')}
       </p>
       <p style="color: #666; line-height: 1.6; font-size: 1rem;">
-        花一分鐘記錄今天的花費，或者按一下 Check-in Button 來維持你的 streak 吧～！
+        ${e('花一分鐘記錄今天的花費，或者按一下')} Check-in Button ${e('來維持你的')} streak ${e('吧～！')}
       </p>
       <div style="margin-top: 1.5rem;">
         <a href="https://dodolis024.github.io/my-smart-finance/"
            style="display: inline-block; padding: 0.75rem 1.5rem; background: #b59c80; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-          前往記帳
+          ${e('前往記帳')}
         </a>
       </div>
       <p style="color: #999; font-size: 0.8rem; margin-top: 2rem;">
-        你可以在 My Smart Finance 的 更多->簽到提醒 關閉此提醒。
+        ${e('你可以在 My Smart Finance 的 更多->簽到提醒 關閉此提醒。')}
       </p>
     </div>
   `
 }
 
 /**
- * 判斷現在是否為該用戶的提醒時刻（±30 分鐘容差）
- * 因為 cron 每小時跑一次，容差設為 30 分鐘確保不漏發
+ * 判斷現在是否為該用戶的提醒時刻（±2 分鐘容差）
+ * cron 每 5 分鐘跑一次，用戶最小設定單位也是 5 分鐘，
+ * 所以 ±2 分鐘保證每個 target 只被一次 cron 命中，不會重複觸發
  */
 function isReminderTime(now: Date, timezone: string, reminderTime: string): boolean {
   try {
@@ -214,10 +263,10 @@ function isReminderTime(now: Date, timezone: string, reminderTime: string): bool
     const targetMinutes = targetHour * 60 + targetMinute
     const diff = Math.abs(currentMinutes - targetMinutes)
 
-    // 處理跨午夜的情況（例如 23:50 vs 00:10）
+    // 處理跨午夜的情況（例如 23:58 vs 00:00）
     const wrappedDiff = Math.min(diff, 1440 - diff)
 
-    return wrappedDiff < 30
+    return wrappedDiff <= 2
   } catch {
     console.error(`Invalid timezone: ${timezone}`)
     return false
