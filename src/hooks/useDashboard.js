@@ -5,6 +5,7 @@ import { getTodayYmd } from '@/lib/utils';
 export function useDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [transactionHistoryFull, setTransactionHistoryFull] = useState([]);
+  const [creditHistory, setCreditHistory] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [categoriesExpense, setCategoriesExpense] = useState([]);
   const [categoriesIncome, setCategoriesIncome] = useState([]);
@@ -47,6 +48,49 @@ export function useDashboard() {
     }
   }, []);
 
+  const fetchCreditHistory = useCallback(async (account) => {
+    const billingDay = account.billing_day || account.billingDay;
+    if (!billingDay) return;
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    const currentDay = today.getDate();
+
+    let lastBillingYear = currentYear;
+    let lastBillingMonth = currentMonth;
+    if (currentDay < billingDay) {
+      lastBillingMonth -= 1;
+      if (lastBillingMonth < 1) { lastBillingMonth = 12; lastBillingYear -= 1; }
+    }
+    let prevBillingYear = lastBillingYear;
+    let prevBillingMonth = lastBillingMonth - 1;
+    if (prevBillingMonth < 1) { prevBillingMonth = 12; prevBillingYear -= 1; }
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const fromDate = `${prevBillingYear}-${pad(prevBillingMonth)}-${pad(billingDay)}`;
+    const toDate = `${currentYear}-${pad(currentMonth)}-${pad(currentDay)}`;
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, type, date, account_id, payment_method, twd_amount')
+      .gte('date', fromDate)
+      .lte('date', toDate);
+
+    if (error) {
+      console.error('fetchCreditHistory error:', error);
+      return;
+    }
+
+    setCreditHistory(
+      (data || []).map((tx) => ({
+        ...tx,
+        paymentMethod: tx.payment_method,
+        twdAmount: tx.twd_amount,
+      }))
+    );
+  }, []);
+
   const fetchCurrencies = useCallback(async () => {
     try {
       const { data: codes, error } = await supabase.rpc('get_available_currencies');
@@ -63,6 +107,8 @@ export function useDashboard() {
   return {
     dashboardData,
     transactionHistoryFull,
+    creditHistory,
+    fetchCreditHistory,
     accounts,
     categoriesExpense,
     categoriesIncome,

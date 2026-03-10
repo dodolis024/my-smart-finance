@@ -28,6 +28,8 @@ export default function DashboardPage() {
   const {
     dashboardData,
     transactionHistoryFull,
+    creditHistory,
+    fetchCreditHistory,
     summary,
     accounts,
     categoriesExpense,
@@ -62,6 +64,11 @@ export default function DashboardPage() {
 
   const formRef = useRef(null);
   const historyRef = useRef(null);
+
+  const handleOpenCreditCard = useCallback(async (account) => {
+    await fetchCreditHistory(account);
+    modals.openCreditCardModal(account);
+  }, [fetchCreditHistory, modals]);
 
   useEffect(() => {
     if (user) ensureDefaultDataForOAuth(user.id);
@@ -258,7 +265,7 @@ export default function DashboardPage() {
                 <PaymentStats
                   history={transactionHistoryFull}
                   accounts={accounts}
-                  onOpenCreditCard={modals.openCreditCardModal}
+                  onOpenCreditCard={handleOpenCreditCard}
                 />
               )}
             </div>
@@ -288,7 +295,7 @@ export default function DashboardPage() {
         isOpen={modals.creditCardModal.open}
         onClose={modals.closeCreditCardModal}
         account={modals.creditCardModal.account}
-        history={transactionHistoryFull}
+        history={creditHistory}
       />
 
       <SettingsModal
