@@ -20,7 +20,14 @@ export default function LoginForm() {
       await signInWithPassword(email, password);
       navigate('/');
     } catch (err) {
-      setError(err.message || '登入失敗，請檢查帳號密碼');
+      const msg = (typeof err === 'string' ? err : err?.message ?? err?.error?.message ?? '').toString();
+      const lower = msg.toLowerCase();
+      const friendly =
+        (lower.includes('invalid') && lower.includes('credential')) ? '帳號或密碼錯誤，請再試一次' :
+        lower.includes('email not confirmed') ? '請先到信箱收取驗證信並完成驗證' :
+        (lower.includes('rate') || lower.includes('too many')) ? '嘗試次數過多，請稍後再試' :
+        msg || '登入失敗，請檢查帳號密碼';
+      setError(friendly);
     } finally {
       setSubmitting(false);
     }
