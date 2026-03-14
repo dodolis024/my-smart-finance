@@ -2,6 +2,8 @@
 
 本檔案記錄 Smart Finance Tracker 的版本更新內容。
 
+- 優化簽到提醒改由 Brevo API 發信，取代 Gmail SMTP
+
 ## [1.4.1] - Mar-10 2026
 - 修正信用卡餘額管理 餘額顯示錯誤
 

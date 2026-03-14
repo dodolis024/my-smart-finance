@@ -2,12 +2,11 @@
 // Supabase Edge Function: 每日簽到提醒
 // 此函數每 5 分鐘由 pg_cron 觸發，檢查哪些用戶需要收到提醒 email
 // 根據用戶設定的時區與提醒時間，對當天尚未簽到的用戶發送提醒信
-// 使用 Gmail SMTP 發信（透過 App Password 驗證）
+// 使用 Brevo Transactional Email API 發信
 // 防重複機制：使用獨立的 reminder_last_sent 紀錄追蹤每日寄信狀態
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,11 +22,10 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const gmailUser = Deno.env.get('GMAIL_USER')
-    const gmailAppPassword = Deno.env.get('GMAIL_PASSWORD')
+    const brevoApiKey = Deno.env.get('BREVO_API_KEY')
 
-    if (!gmailUser || !gmailAppPassword) {
-      throw new Error('GMAIL_USER or GMAIL_PASSWORD not configured')
+    if (!brevoApiKey) {
+      throw new Error('BREVO_API_KEY not configured')
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -87,7 +85,9 @@ serve(async (req) => {
       const userTimezone = config.timezone || 'Asia/Taipei'
       const reminderTime = config.time || '20:00'
 
-      if (!isReminderTime(now, userTimezone, reminderTime)) {
+      const reminderMatch = isReminderTime(now, userTimezone, reminderTime)
+      console.log(`User ${userId} reminderTime=${reminderTime} timezone=${userTimezone} match=${reminderMatch} now=${now.toISOString()}`)
+      if (!reminderMatch) {
         continue
       }
 
@@ -125,47 +125,42 @@ serve(async (req) => {
       usersToNotify.push({ userId, email: userData.user.email, userToday })
     }
 
-    // 8. 如果有需要通知的用戶，建立 SMTP 連線並發信
-    if (usersToNotify.length > 0) {
-      const client = new SMTPClient({
-        connection: {
-          hostname: 'smtp.gmail.com',
-          port: 465,
-          tls: true,
-          auth: {
-            username: gmailUser,
-            password: gmailAppPassword,
-          },
-        },
-      })
-
+    // 8. 如果有需要通知的用戶，透過 Brevo API 發信
+    const emailHtml = buildEmailHtml()
+    for (const { userId, email, userToday } of usersToNotify) {
       try {
-        for (const { userId, email, userToday } of usersToNotify) {
-          try {
-            await client.send({
-              from: gmailUser,
-              to: email,
-              subject: encodeSubjectBase64('你今天還沒記帳喔！別讓連續紀錄中斷了 🔥'),
-              html: buildEmailHtml(),
-            })
+        const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'api-key': brevoApiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sender: { name: 'My Smart Finance', email: 'dorischen0910224@gmail.com' },
+            to: [{ email }],
+            subject: '你今天還沒記帳喔！別讓連續紀錄中斷了 🔥',
+            htmlContent: emailHtml,
+          }),
+        })
 
-            // 寄信成功 → 寫入 reminder_last_sent 防止重複
-            await supabase
-              .from('settings')
-              .upsert(
-                { user_id: userId, key: 'reminder_last_sent', value: { date: userToday } },
-                { onConflict: 'user_id,key' }
-              )
-
-            emailsSent.push(userId)
-            console.log(`Reminder email sent to ${email}`)
-          } catch (emailError) {
-            console.error(`Error sending email to ${email}:`, emailError.message)
-            errors.push({ userId, error: emailError.message })
-          }
+        if (!res.ok) {
+          const errBody = await res.text()
+          throw new Error(`Brevo API error ${res.status}: ${errBody}`)
         }
-      } finally {
-        await client.close()
+
+        // 寄信成功 → 寫入 reminder_last_sent 防止重複
+        await supabase
+          .from('settings')
+          .upsert(
+            { user_id: userId, key: 'reminder_last_sent', value: { date: userToday } },
+            { onConflict: 'user_id,key' }
+          )
+
+        emailsSent.push(userId)
+        console.log(`Reminder email sent to ${email}`)
+      } catch (emailError) {
+        console.error(`Error sending email to ${email}:`, emailError.message)
+        errors.push({ userId, error: emailError.message })
       }
     }
 
@@ -194,50 +189,26 @@ serve(async (req) => {
 })
 
 /**
- * 把字串中所有非 ASCII 字元（含中文、emoji）轉成 HTML decimal entity。
- * 這樣 HTML body 全為 ASCII，denomailer 的 QP 編碼就不會碰到多位元組序列，
- * 避免 QP 切行時把 =e5=90=a7 斷成 =e5=9 + 換行 + 0=a7 的格式錯誤。
- */
-function encodeNonAscii(str: string): string {
-  return [...str].map(char => {
-    const code = char.codePointAt(0)!
-    return code > 127 ? `&#${code};` : char
-  }).join('')
-}
-
-/**
- * 把 subject 字串編成 RFC 2047 Base64 格式（=?utf-8?B?...?=）。
- * denomailer 使用 QP 格式（=?utf-8?Q?...?=），有切行 bug 導致中文亂碼；
- * 預先用 Base64 編好後整串都是 ASCII，denomailer 就不會再動它。
- */
-function encodeSubjectBase64(subject: string): string {
-  const bytes = new TextEncoder().encode(subject)
-  const binary = Array.from(bytes).map(b => String.fromCharCode(b)).join('')
-  return `=?utf-8?B?${btoa(binary)}?=`
-}
-
-/**
- * 組合 email HTML 內容（所有中文與非 ASCII 字元轉為 HTML entity）
+ * 組合 email HTML 內容
  */
 function buildEmailHtml(): string {
-  const e = encodeNonAscii
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 2rem;">
-      <h2 style="color: #333; margin-bottom: 1rem;">${e('哈嚕！你的提醒已抵達 ✨')}</h2>
+      <h2 style="color: #333; margin-bottom: 1rem;">哈嚕！你的提醒已抵達 ✨</h2>
       <p style="color: #666; line-height: 1.6; font-size: 1rem;">
-        ${e('你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！')}
+        你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！
       </p>
       <p style="color: #666; line-height: 1.6; font-size: 1rem;">
-        ${e('花一分鐘記錄今天的花費，或者按一下')} Check-in Button ${e('來維持你的')} streak ${e('吧～！')}
+        快去紀錄今天的花費，或者按一下 Check-in Button 來維持你的 streak 吧～！
       </p>
       <div style="margin-top: 1.5rem;">
         <a href="https://dodolis024.github.io/my-smart-finance/"
            style="display: inline-block; padding: 0.75rem 1.5rem; background: #b59c80; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-          ${e('前往記帳')}
+          前往記帳
         </a>
       </div>
       <p style="color: #999; font-size: 0.8rem; margin-top: 2rem;">
-        ${e('你可以在 My Smart Finance 的 更多->簽到提醒 關閉此提醒。')}
+        你可以在 My Smart Finance 的 更多->簽到提醒 關閉此提醒。
       </p>
     </div>
   `
