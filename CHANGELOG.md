@@ -2,6 +2,7 @@
 
 本檔案記錄 Smart Finance Tracker 的版本更新內容。
 
+## [1.5.0] - Mar-11 2026
 - 優化簽到提醒改由 Brevo API 發信，取代 Gmail SMTP
 - 優化設定介面：整合選項管理、簽到提醒、訂閱管理至單一設定彈窗
 
