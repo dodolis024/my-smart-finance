@@ -2,7 +2,7 @@ import { useState } from 'react';
 import UserAvatar from '@/components/common/UserAvatar';
 import MoreMenu from '@/components/common/MoreMenu';
 
-export default function FormColumn({ onOpenSettings, onOpenReminder, onOpenChangelog, onOpenSubscription, children }) {
+export default function FormColumn({ onOpenSettings, onOpenChangelog, children }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
 
   return (
@@ -15,9 +15,7 @@ export default function FormColumn({ onOpenSettings, onOpenReminder, onOpenChang
         />
         <MoreMenu
           onOpenSettings={onOpenSettings}
-          onOpenReminder={onOpenReminder}
           onOpenChangelog={onOpenChangelog}
-          onOpenSubscription={onOpenSubscription}
           isOpen={activeDropdown === 'more'}
           onOpenChange={(open) => setActiveDropdown(open ? 'more' : null)}
         />

@@ -5,8 +5,6 @@ export function useModalStates() {
   const [creditCardModal, setCreditCardModal] = useState({ open: false, account: null });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
-  const [reminderOpen, setReminderOpen] = useState(false);
-  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
 
   const openStreakModal = useCallback((title, variant = 'neutral') => {
     setStreakModal({ open: true, title, variant });
@@ -28,10 +26,6 @@ export function useModalStates() {
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const openChangelog = useCallback(() => setChangelogOpen(true), []);
   const closeChangelog = useCallback(() => setChangelogOpen(false), []);
-  const openReminder = useCallback(() => setReminderOpen(true), []);
-  const closeReminder = useCallback(() => setReminderOpen(false), []);
-  const openSubscription = useCallback(() => setSubscriptionOpen(true), []);
-  const closeSubscription = useCallback(() => setSubscriptionOpen(false), []);
 
   return {
     streakModal,
@@ -47,11 +41,5 @@ export function useModalStates() {
     changelogOpen,
     openChangelog,
     closeChangelog,
-    reminderOpen,
-    openReminder,
-    closeReminder,
-    subscriptionOpen,
-    openSubscription,
-    closeSubscription,
   };
 }
