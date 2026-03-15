@@ -53,9 +53,9 @@ export default function StreakCalendar({ streakState }) {
     <div className="streak-calendar-root">
       <div className="streak-calendar">
         <div className="streak-calendar__header">
-          <button type="button" className="streak-calendar__nav-btn" aria-label="上一個月" onClick={() => navigate(-1)}>‹</button>
+          <button type="button" className="streak-calendar__nav-btn" aria-label="上一個月" onClick={(e) => { navigate(-1); e.currentTarget.blur(); }}>‹</button>
           <div className="streak-calendar__month">{calYear} 年 {calMonth} 月</div>
-          <button type="button" className="streak-calendar__nav-btn" aria-label="下一個月" onClick={() => navigate(1)}>›</button>
+          <button type="button" className="streak-calendar__nav-btn" aria-label="下一個月" onClick={(e) => { navigate(1); e.currentTarget.blur(); }}>›</button>
         </div>
         <div className="streak-calendar__weekdays">
           {WEEK_LABELS.map((w) => (

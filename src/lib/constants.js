@@ -42,6 +42,18 @@ export const CHART_COLORS = [
   'hsl(119, 36%, 60%)',
 ];
 
+export const CHART_COLORS_ROSE = [
+  'hsl(350, 56%, 63%)',
+  'hsl(340, 46%, 74%)',
+  'hsl(330, 56%, 63%)',
+  'hsl(320, 46%, 74%)',
+  'hsl(310, 56%, 63%)',
+  'hsl(300, 46%, 74%)',
+  'hsl(290, 56%, 63%)',
+  'hsl(280, 46%, 74%)',
+  'hsl(270, 56%, 63%)',
+];
+
 export const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const ACCOUNT_TYPE_NAMES = {

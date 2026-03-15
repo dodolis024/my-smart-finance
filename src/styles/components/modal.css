@@ -110,7 +110,7 @@
   padding: 1.25rem 1.5rem;
   min-width: 0;
 }
-.usm-panel { width: 100%; }
+.usm-panel { width: 100%; display: flex; flex-direction: column; gap: 2rem; }
 .usm-panel > .settings-manage__section-title { margin-bottom: 1.5rem; }
 
 /* ─── Mobile ──────────────────────────────────────────────────── */
@@ -626,13 +626,24 @@
   color: var(--color-text-secondary);
   font-size: 0.8rem;
   transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
 }
-.streak-calendar__nav-btn:hover {
+@media (hover: hover) {
+  .streak-calendar__nav-btn:hover {
+    background: var(--color-row-hover);
+  }
+}
+.streak-calendar__nav-btn:active {
   background: var(--color-row-hover);
 }
-.streak-calendar__nav-btn:focus {
+.streak-calendar__nav-btn:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
+}
+.streak-calendar__nav-btn:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+  background: var(--color-card);
 }
 
 .streak-calendar__weekdays,
@@ -757,7 +768,7 @@
 .streak-summary__card:first-child::after {
   content: '';
   position: absolute;
-  right: 0.5rem;
+  right: 0.3rem;
   top: 50%;
   transform: translateY(-50%);
   width: 4.5rem;
@@ -782,6 +793,13 @@
   background-repeat: no-repeat;
   background-position: center;
   opacity: 0.85;
+}
+
+[data-theme="rose"] .streak-summary__card:nth-child(3)::after {
+  background-image: url('/images/maltese-gif-4.gif');
+  width: 4.0rem;
+  height: 4.0rem;
+  right: 0.3rem;
 }
 
 .streak-summary__label {

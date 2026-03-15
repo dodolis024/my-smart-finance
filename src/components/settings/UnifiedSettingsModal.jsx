@@ -4,6 +4,7 @@ import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import CategoryManager from './CategoryManager';
 import AccountManager from './AccountManager';
 import { useSettings } from '@/hooks/useSettings';
+import { useTheme } from '@/hooks/useTheme';
 import { useReminderSettings } from '@/hooks/useReminderSettings';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -157,12 +158,26 @@ const TABS = [
   { id: 'subscription', label: '訂閱管理', Icon: IconSubscription },
 ];
 
+const THEME_OPTIONS = [
+  {
+    id: 'default',
+    label: '奶茶',
+    swatch: ['#b59c80', '#FAF9F6', '#dfdad3'],
+  },
+  {
+    id: 'rose',
+    label: '玫瑰',
+    swatch: ['#c06373', '#fcf8f5', '#efd0d9'],
+  },
+];
+
 // ─── Options Panel ────────────────────────────────────────────────
 function OptionsPanel({ isOpen, confirm, toast }) {
   const {
     expenseCategories, incomeCategories, loading, loadError,
     loadSettingsData, addCategory, renameCategory, deleteCategory,
   } = useSettings();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (isOpen) loadSettingsData();
@@ -171,6 +186,34 @@ function OptionsPanel({ isOpen, confirm, toast }) {
   return (
     <div className="usm-panel">
       {loadError && <div className="auth-error" style={{ marginBottom: '1rem' }} role="alert">{loadError}</div>}
+
+      <section className="settings-manage__section">
+        <h3 className="settings-manage__section-title">外觀主題</h3>
+        <div className="theme-picker">
+          {THEME_OPTIONS.map(({ id, label, swatch }) => (
+            <button
+              key={id}
+              type="button"
+              className={`theme-picker__item${theme === id ? ' is-active' : ''}`}
+              onClick={() => setTheme(id)}
+              aria-pressed={theme === id}
+            >
+              <span className="theme-picker__swatch">
+                {swatch.map((color, i) => (
+                  <span key={i} style={{ background: color }} />
+                ))}
+              </span>
+              <span className="theme-picker__label">{label}</span>
+              {theme === id && (
+                <svg className="theme-picker__check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="settings-manage__section">
         <h3 className="settings-manage__section-title">類別管理</h3>
         {loading ? <p className="settings-manage__loading">載入中...</p> : (

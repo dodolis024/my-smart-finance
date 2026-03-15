@@ -173,7 +173,6 @@
 
 .transaction-row--semantic td {
   position: relative;
-  overflow: hidden;
   padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-card);
@@ -261,10 +260,13 @@
 }
 
 .cell-actions {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
   padding: 0 0.5rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.cell-actions .row-actions {
+  justify-content: center;
 }
 
 .swipe-action {

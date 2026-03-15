@@ -13,14 +13,16 @@ export default function CreditCardModal({ isOpen, onClose, account, history = []
     let usedAmount = 0;
     let available = null;
     let usagePercent = 0;
-    let barColor = '#e0e0e0';
+    let barColor = 'var(--color-progress-track)';
     let percentText = '';
 
     if (creditLimit) {
       usedAmount = calculateCreditUsage(account, history);
       available = Math.floor(Math.max(0, creditLimit - usedAmount));
       usagePercent = creditLimit > 0 ? (usedAmount / creditLimit) * 100 : 0;
-      barColor = usagePercent <= 50 ? '#4caf50' : usagePercent <= 80 ? '#ff9800' : '#f44336';
+      barColor = usagePercent <= 50 ? 'var(--color-progress-safe)'
+        : usagePercent <= 80 ? 'var(--color-progress-warn)'
+        : 'var(--color-progress-danger)';
       percentText = usagePercent % 1 === 0 ? `${Math.round(usagePercent)}%` : `${usagePercent.toFixed(1)}%`;
     }
 

@@ -38,7 +38,12 @@
   --color-border-subtle: rgba(0, 0, 0, 0.08);
 
   --color-progress-track: #e5e0da;
+  --color-progress-safe: #4caf50;
+  --color-progress-warn: #ff9800;
+  --color-progress-danger: #f44336;
   --color-on-primary: #ffffff;
+
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233d3629'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
 
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-modal: 0 18px 50px rgba(0, 0, 0, 0.35);
@@ -67,4 +72,51 @@
   --scrollbar-track: #FAF9F7;
   --scrollbar-thumb: #e5e0da;
   --scrollbar-thumb-hover: #d8d2ca;
+
+}
+
+
+[data-theme="rose"] {
+  --color-primary: #c06373;
+  --color-primary-hover: #a8515f;
+  --color-primary-dark: #8c3f4c;
+  --color-primary-tint: rgba(192, 99, 115, 0.35);
+  --color-primary-tint-border: rgba(192, 99, 115, 0.8);
+  --color-primary-tint-light: rgba(192, 99, 115, 0.15);
+  --color-primary-tint-hover: rgba(192, 99, 115, 0.1);
+  --color-primary-tint-focus: rgba(192, 99, 115, 0.15);
+
+  --color-bg: #fcf8f5;
+  --color-card: #ffffff;
+  --color-text: #3a2328;
+  --color-text-secondary: #7a5f65;
+  --color-text-muted: #a08890;
+  --color-border: #e2c8cf;
+  --color-border-light: #f0dde2;
+  --color-border-input: #ddc4cb;
+  --color-border-subtle: rgba(192, 99, 115, 0.08);
+
+  --color-table-header: #e8cdd4;
+  --color-row-hover: #faf0f2;
+  --color-row-alt: #fdf6f8;
+
+  --color-progress-track: #efd0d9;
+  --color-progress-safe: #7aaa8e;
+  --color-progress-warn: #c99a6e;
+  --color-progress-danger: #c06373;
+
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233a2328'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(192, 99, 115, 0.3);
+
+  --scrollbar-track: #fcf8f5;
+  --scrollbar-thumb: #efd0d9;
+  --scrollbar-thumb-hover: #bb9eab;
+
+  --color-subscription: #b89ab4;
+
+  --icon-checkin-color: #9884b4;
+
+  --color-manual-bg: rgba(168, 152, 196, 0.3);
+  --color-manual-border: rgba(152, 132, 180, 1);
 }

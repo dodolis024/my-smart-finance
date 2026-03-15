@@ -1,12 +1,16 @@
 import { useMemo, useRef, useEffect } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip } from 'chart.js';
-import { CHART_COLORS } from '@/lib/constants';
+import { CHART_COLORS, CHART_COLORS_ROSE } from '@/lib/constants';
+import { useTheme } from '@/hooks/useTheme';
 import { formatMoney } from '@/lib/utils';
 
 ChartJS.register(ArcElement, Tooltip);
 
 export default function CategoryChart({ history = [], incomeCategories = [] }) {
+  const { theme } = useTheme();
+  const palette = theme === 'rose' ? CHART_COLORS_ROSE : CHART_COLORS;
+
   const pairs = useMemo(() => {
     const incomeSet = new Set(incomeCategories);
     const byCat = {};
@@ -25,7 +29,7 @@ export default function CategoryChart({ history = [], incomeCategories = [] }) {
     labels: pairs.map((p) => p.label),
     datasets: [{
       data: pairs.map((p) => Math.abs(p.value)),
-      backgroundColor: pairs.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
+      backgroundColor: pairs.map((_, i) => palette[i % palette.length]),
       borderColor: '#fff',
       borderWidth: 2,
       hoverOffset: 6,
@@ -57,7 +61,7 @@ export default function CategoryChart({ history = [], incomeCategories = [] }) {
     return <p className="category-stats-empty">本月尚無消費資料</p>;
   }
 
-  const colors = pairs.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
+  const colors = pairs.map((_, i) => palette[i % palette.length]);
 
   return (
     <>
