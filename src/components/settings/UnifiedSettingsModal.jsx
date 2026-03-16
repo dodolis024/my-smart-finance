@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import Modal from '@/components/common/Modal';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import CategoryManager from './CategoryManager';
@@ -57,16 +57,16 @@ function WheelPicker({ items, value, onChange, disabled = false }) {
   const midBase = Math.floor(COPIES / 2) * len;
   const getVal = (item) => (typeof item === 'object' ? item.value : item);
   const getLabel = (item) => (typeof item === 'object' ? String(item.label) : String(item));
-  const findIdx = (val) => { const i = items.findIndex((it) => getVal(it) === val); return i >= 0 ? i : 0; };
+  const findIdx = useCallback((val) => { const i = items.findIndex((it) => getVal(it) === val); return i >= 0 ? i : 0; }, [items]);
 
-  const scrollTo = (lIdx, smooth = false) => {
+  const scrollTo = useCallback((lIdx, smooth = false) => {
     const el = scrollRef.current;
     if (!el) return;
     el.style.scrollBehavior = smooth ? 'smooth' : 'auto';
     el.scrollTop = (midBase + lIdx) * ITEM_H;
-  };
+  }, [midBase]);
 
-  useLayoutEffect(() => { scrollTo(findIdx(value)); }, []); // eslint-disable-line
+  useLayoutEffect(() => { scrollTo(findIdx(value)); }, [scrollTo, findIdx, value]);
 
   const prevValueRef = useRef(value);
   useEffect(() => {
@@ -74,7 +74,7 @@ function WheelPicker({ items, value, onChange, disabled = false }) {
       prevValueRef.current = value;
       if (!userScrollingRef.current) scrollTo(findIdx(value));
     }
-  }, [value]); // eslint-disable-line
+  }, [value, scrollTo, findIdx]);
 
   const handleScroll = () => {
     userScrollingRef.current = true;

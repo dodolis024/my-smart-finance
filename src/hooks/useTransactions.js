@@ -51,7 +51,7 @@ export function useTransactions() {
     ]);
 
     const exchangeRate =
-      rateErr == null && exchangeRateVal != null && exchangeRateVal > 0
+      rateErr === null && exchangeRateVal != null && exchangeRateVal > 0
         ? Number(exchangeRateVal)
         : 1.0;
     const twdAmount = Math.round(amount * exchangeRate * 100) / 100;
@@ -84,7 +84,7 @@ export function useTransactions() {
           { user_id: user.id, date: today, source: 'onTimeTransaction' },
           { onConflict: 'user_id,date' }
         );
-        if (checkinError) console.warn('Auto check-in failed:', checkinError.message);
+        // checkin failure is non-critical, silently ignore
       }
     }
 

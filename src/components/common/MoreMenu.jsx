@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 export default function MoreMenu({ onOpenSettings, onOpenChangelog, isOpen: controlledOpen, onOpenChange }) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -7,7 +7,10 @@ export default function MoreMenu({ onOpenSettings, onOpenChangelog, isOpen: cont
 
   const isControlled = onOpenChange != null;
   const isOpen = isControlled ? controlledOpen : internalOpen;
-  const setIsOpen = isControlled ? (v) => onOpenChange?.(v) : setInternalOpen;
+  const setIsOpen = useCallback((v) => {
+    if (onOpenChange != null) onOpenChange(v);
+    else setInternalOpen(v);
+  }, [onOpenChange]);
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -17,7 +20,7 @@ export default function MoreMenu({ onOpenSettings, onOpenChangelog, isOpen: cont
     };
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
-  }, [isControlled]);
+  }, [setIsOpen]);
 
   return (
     <div className="more-menu-wrapper more-menu-wrapper--desktop">

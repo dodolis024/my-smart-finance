@@ -73,11 +73,11 @@ export default function DashboardPage() {
   }, [user, ensureDefaultDataForOAuth]);
 
   useEffect(() => {
-    fetchDashboardData(currentYear, currentMonth).catch(console.error);
+    fetchDashboardData(currentYear, currentMonth).catch(() => {});
   }, [currentYear, currentMonth, fetchDashboardData]);
 
   useEffect(() => {
-    fetchCurrencies().catch(console.error);
+    fetchCurrencies().catch(() => {});
   }, [fetchCurrencies]);
 
   useEffect(() => {
@@ -178,7 +178,7 @@ export default function DashboardPage() {
 
   const handleSettingsClose = useCallback(() => {
     modals.closeSettings();
-    fetchDashboardData(currentYear, currentMonth).catch(console.error);
+    fetchDashboardData(currentYear, currentMonth).catch(() => {});
   }, [fetchDashboardData, currentYear, currentMonth, modals.closeSettings]);
 
   const checkedInToday = hasCheckinToday();

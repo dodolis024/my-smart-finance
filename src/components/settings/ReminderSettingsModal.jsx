@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect, useMemo } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import Modal from '@/components/common/Modal';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { useReminderSettings } from '@/hooks/useReminderSettings';
@@ -58,24 +58,23 @@ function WheelPicker({ items, value, onChange, disabled = false }) {
   const getVal = (item) => (typeof item === 'object' ? item.value : item);
   const getLabel = (item) => (typeof item === 'object' ? String(item.label) : String(item));
 
-  const findIdx = (val) => {
+  const findIdx = useCallback((val) => {
     const i = items.findIndex((it) => getVal(it) === val);
     return i >= 0 ? i : 0;
-  };
+  }, [items]);
 
   /** Scroll so that local-index lIdx is centred, instantly or smoothly. */
-  const scrollTo = (lIdx, smooth = false) => {
+  const scrollTo = useCallback((lIdx, smooth = false) => {
     const el = scrollRef.current;
     if (!el) return;
     el.style.scrollBehavior = smooth ? 'smooth' : 'auto';
     el.scrollTop = (midBase + lIdx) * ITEM_H;
-  };
+  }, [midBase]);
 
   // Initialise on mount
   useLayoutEffect(() => {
     scrollTo(findIdx(value));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [scrollTo, findIdx, value]);
 
   // Sync when value is changed from outside (e.g. settings loaded)
   const prevValueRef = useRef(value);
@@ -84,8 +83,7 @@ function WheelPicker({ items, value, onChange, disabled = false }) {
       prevValueRef.current = value;
       if (!userScrollingRef.current) scrollTo(findIdx(value));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, scrollTo, findIdx]);
 
   const handleScroll = () => {
     // Mark user-initiated scroll so external sync is suppressed briefly

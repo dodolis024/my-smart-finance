@@ -39,7 +39,6 @@ export function useDashboard() {
       return data;
     } catch (error) {
       if (reqId !== requestIdRef.current) return null;
-      console.error('fetchDashboardData error:', error);
       throw error;
     } finally {
       if (reqId === requestIdRef.current) {
@@ -77,10 +76,7 @@ export function useDashboard() {
       .gte('date', fromDate)
       .lte('date', toDate);
 
-    if (error) {
-      console.error('fetchCreditHistory error:', error);
-      return;
-    }
+    if (error) return;
 
     setCreditHistory(
       (data || []).map((tx) => ({

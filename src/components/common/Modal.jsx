@@ -37,7 +37,7 @@ export default function Modal({ isOpen, onClose, className = '', titleId, childr
     }
   };
 
-  const finalClassName = `modal-overlay ${className} ${isOpen ? 'is-open' : ''}`;
+  const finalClassName = `modal-overlay ${className} is-open`;
 
   return (
     <div

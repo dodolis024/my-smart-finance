@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
@@ -6,11 +6,15 @@ export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpen
   const { userInfo, signOut } = useAuth();
   const { confirm } = useConfirm();
   const [internalOpen, setInternalOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const wrapperRef = useRef(null);
 
   const isControlled = onOpenChange != null;
   const isOpen = isControlled ? controlledOpen : internalOpen;
-  const setIsOpen = isControlled ? (v) => onOpenChange?.(v) : setInternalOpen;
+  const setIsOpen = useCallback((v) => {
+    if (onOpenChange != null) onOpenChange(v);
+    else setInternalOpen(v);
+  }, [onOpenChange]);
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -20,7 +24,7 @@ export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpen
     };
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
-  }, [isControlled]);
+  }, [setIsOpen]);
 
   if (!userInfo) return null;
 
@@ -47,8 +51,8 @@ export default function UserAvatar({ variant = 'desktop', onOpenSettings, onOpen
         aria-haspopup="true"
       >
         <span className="user-avatar-inner">
-          {isGoogle ? (
-            <img src={userInfo.avatarUrl} alt="User Avatar" onError={(e) => { e.target.replaceWith(document.createTextNode(initial)); }} />
+          {isGoogle && !imgError ? (
+            <img src={userInfo.avatarUrl} alt="User Avatar" onError={() => setImgError(true)} />
           ) : (
             initial
           )}

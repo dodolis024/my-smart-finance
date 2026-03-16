@@ -25,7 +25,6 @@ export async function createDefaultData(userId) {
     },
   ]);
 
-  if (accountsError) console.error('建立預設帳戶失敗:', accountsError);
 
   const { error: settingsError } = await supabase.from('settings').insert([
     { user_id: userId, key: 'TWD', value: { rate: 1.0 } },
@@ -37,5 +36,4 @@ export async function createDefaultData(userId) {
     { user_id: userId, key: 'income_categories', value: ['薪水', '投資', '其他'] },
   ]);
 
-  if (settingsError) console.error('建立預設設定失敗:', settingsError);
 }
