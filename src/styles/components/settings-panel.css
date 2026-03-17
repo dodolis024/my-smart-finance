@@ -1,0 +1,409 @@
+/* ============================================
+   Settings Panel — Theme, Category & Account Management
+   ============================================ */
+
+/* Settings modal: Grid layout */
+.settings-manage-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.settings-manage__section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-manage__section-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  color: var(--color-text);
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: 0.5rem;
+}
+
+.settings-manage__loading {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* ─── Theme Picker ───────────────────────────────────────────── */
+.theme-picker {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.theme-picker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  border: 2px solid var(--color-border);
+  background: var(--color-card);
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  min-width: 80px;
+}
+.theme-picker__item:hover {
+  border-color: var(--color-primary);
+}
+.theme-picker__item.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-tint-light);
+}
+
+.theme-picker__swatch {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 54px;
+  height: 28px;
+  border: 1px solid var(--color-border-subtle);
+}
+.theme-picker__swatch span {
+  flex: 1;
+}
+
+.theme-picker__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+.theme-picker__item.is-active .theme-picker__label {
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+.theme-picker__check {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 14px;
+  height: 14px;
+  color: var(--color-primary);
+}
+
+/* Category management */
+.category-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.category-group {
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.category-group__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.category-group__header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.category-group__inline-add {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-add-category {
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-card);
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-add-category:hover {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.category-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  background: var(--color-card);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.category-item__name {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.category-item__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.category-item__btn {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.category-item__btn:hover {
+  background: var(--color-row-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.category-item__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.category-item__btn--delete:hover {
+  background: var(--color-danger-hover-bg);
+  border-color: var(--color-danger-hover-border);
+  color: var(--color-danger-hover-border);
+}
+
+/* Account management */
+.account-manager__empty {
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 1rem;
+  margin: 0;
+}
+
+.accounts-header {
+  margin-bottom: 1rem;
+}
+
+.btn-add-account {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-add-account:hover {
+  background: var(--color-primary-hover);
+}
+
+.accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.account-item {
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.account-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.account-item__name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.account-item__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.account-item__btn {
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.account-item__btn:hover {
+  background: var(--color-row-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.account-item__btn--delete:hover {
+  background: var(--color-danger-hover-bg);
+  border-color: var(--color-danger-hover-border);
+  color: var(--color-danger-hover-border);
+}
+
+.account-item__details {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.account-item__detail {
+  margin: 0.1rem 0;
+}
+
+/* Account form */
+.account-form {
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 1.25rem;
+  border: 1px solid var(--color-primary);
+  margin-top: 1rem;
+}
+
+.account-form h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.account-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.account-form .form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.account-form .form-group input,
+.account-form .form-group select {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  background: var(--color-card);
+  color: var(--color-text);
+}
+
+.account-form .form-group input:focus,
+.account-form .form-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.account-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.account-form .btn-cancel {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.account-form .btn-cancel:hover {
+  background: var(--color-row-hover);
+}
+
+.account-form .btn-save {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.account-form .btn-save:hover {
+  background: var(--color-primary-hover);
+}
+
+/* Category inline input */
+.category-inline-input {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.category-inline-input__field {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  background: var(--color-card);
+}
+
+.category-inline-input__field:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Inline input inside category-item (rename) fills the row */
+.category-item .category-inline-input {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .settings-manage-grid {
+    grid-template-columns: 1fr;
+  }
+}

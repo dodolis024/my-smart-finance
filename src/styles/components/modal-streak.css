@@ -1,0 +1,331 @@
+/* ============================================
+   Modal — Reaction, Streak Calendar & Summary
+   ============================================ */
+
+/* Reaction Modal */
+.reaction-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: var(--z-modal);
+}
+.reaction-modal.is-open {
+  display: block;
+}
+.reaction-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--color-backdrop);
+}
+.reaction-modal__dialog {
+  position: relative;
+  width: min(560px, calc(100% - 2rem));
+  margin: 8dvh auto 0;
+  background: var(--color-card);
+  border-radius: 14px;
+  padding: 1.25rem 1.25rem 1.1rem;
+  box-shadow: var(--shadow-modal);
+  border: 1px solid var(--color-border-subtle);
+}
+.reaction-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.reaction-modal__close:hover {
+  background: var(--color-row-hover);
+}
+.reaction-modal__close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.reaction-modal__title {
+  margin: 0 0 0.75rem 0;
+}
+.reaction-modal__text {
+  display: none;
+  margin: 0;
+}
+.reaction-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.reaction-modal__primary {
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.reaction-modal__primary:hover {
+  background: var(--color-primary-hover);
+}
+.reaction-modal__primary:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Streak Calendar (inside Streak Modal) */
+.streak-calendar-root {
+  margin-top: 0.5rem;
+}
+
+.streak-calendar {
+  background: var(--color-bg);
+  border-radius: 12px;
+  padding: 0.75rem 0.75rem 0.5rem;
+  border: 1px solid var(--color-border);
+}
+
+.streak-calendar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.streak-calendar__month {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.streak-calendar__nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .streak-calendar__nav-btn:hover {
+    background: var(--color-row-hover);
+  }
+}
+.streak-calendar__nav-btn:active {
+  background: var(--color-row-hover);
+}
+.streak-calendar__nav-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.streak-calendar__nav-btn:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+  background: var(--color-card);
+}
+
+.streak-calendar__weekdays,
+.streak-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+}
+
+.streak-calendar__weekdays {
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.streak-calendar__weekday {
+  padding: 0.15rem 0;
+}
+
+.streak-calendar__grid {
+  row-gap: 0.25rem;
+}
+
+.streak-calendar__day {
+  padding: 0.2rem 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.streak-calendar__day-inner {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streak-calendar__day--empty .streak-calendar__day-inner {
+  background: transparent;
+}
+
+.streak-calendar__day--transaction .streak-calendar__day-inner {
+  background: var(--color-primary-tint);
+  border: 1px solid var(--color-primary-tint-border);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.streak-calendar__day--manual .streak-calendar__day-inner {
+  background: var(--color-manual-bg);
+  border: 1px solid var(--color-manual-border);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.streak-calendar__day--today .streak-calendar__day-inner {
+  border: 1px solid var(--color-primary);
+}
+
+.streak-calendar__day--today.streak-calendar__day--transaction .streak-calendar__day-inner {
+  background: var(--color-primary-tint);
+}
+
+.streak-calendar__day--today.streak-calendar__day--manual .streak-calendar__day-inner {
+  background: var(--color-manual-bg);
+  border: 1px solid var(--color-manual-border);
+}
+
+.streak-calendar__day--today:not(.streak-calendar__day--transaction):not(.streak-calendar__day--manual) .streak-calendar__day-inner {
+  background: var(--color-primary-tint-light);
+}
+
+.streak-calendar__legend {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.streak-calendar__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.streak-calendar__legend-item::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.streak-calendar__legend-item--transaction::before {
+  background: var(--color-primary-tint);
+  border: 1px solid var(--color-primary-tint-border);
+}
+
+.streak-calendar__legend-item--manual::before {
+  background: var(--color-manual-bg);
+  border: 1px solid var(--color-manual-border);
+}
+
+.streak-summary {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.streak-summary__card {
+  background: var(--color-card);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+
+.streak-summary__card:first-child::after {
+  content: '';
+  position: absolute;
+  right: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4.5rem;
+  height: 4.5rem;
+  background-image: url('/images/maltese-icon-2.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
+}
+
+.streak-summary__card:nth-child(3)::after {
+  content: '';
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.2rem;
+  height: 3.2rem;
+  background-image: url('/images/maltese-gif-2.gif');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.85;
+}
+
+[data-theme="rose"] .streak-summary__card:nth-child(3)::after {
+  background-image: url('/images/maltese-gif-4.gif');
+  width: 4.0rem;
+  height: 4.0rem;
+  right: 0.3rem;
+}
+
+.streak-summary__label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.2rem;
+}
+
+.streak-summary__value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.streak-summary__value-emoji {
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.streak-summary__value-number {
+  font-size: 1.2rem;
+}
+
+.icon-fire {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: block;
+}
+
+.icon-checkin {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: block;
+}

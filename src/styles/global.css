@@ -1,11 +1,20 @@
 @import url('./variables.css');
 @import url('./base.css');
 @import url('./layout.css');
+@import url('./components/dashboard-widgets.css');
 @import url('./components/form.css');
+@import url('./components/settings-panel.css');
 @import url('./components/table.css');
 @import url('./components/modal.css');
+@import url('./components/modal-usm.css');
+@import url('./components/modal-reminder.css');
+@import url('./components/modal-subscription.css');
+@import url('./components/modal-streak.css');
+@import url('./components/modal-misc.css');
 @import url('./components/badge.css');
-@import url('./components/split.css');
+@import url('./components/split-page.css');
+@import url('./components/split-detail.css');
+@import url('./components/split-modal-forms.css');
 @import url('./components/nav.css');
 @import url('./responsive.css');
 

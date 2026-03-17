@@ -1,0 +1,162 @@
+/* ============================================
+   Modal — Unified Settings Modal (usm)
+   ============================================ */
+
+.usm {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: var(--z-modal);
+}
+.usm.is-open { display: block; }
+
+.usm__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--color-backdrop);
+}
+
+.usm__dialog {
+  position: relative;
+  width: min(860px, calc(100% - 2rem));
+  max-height: min(780px, calc(100dvh - 4rem));
+  margin: 4dvh auto 0;
+  background: var(--color-card);
+  border-radius: 16px;
+  box-shadow: var(--shadow-modal);
+  border: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Close button */
+.usm__close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.usm__close:hover { background: var(--color-row-hover); }
+.usm__close:focus { outline: none; box-shadow: var(--shadow-focus); }
+
+/* Body: sidebar + content */
+.usm__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Sidebar (desktop) */
+.usm__sidebar {
+  width: 152px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border-light);
+  padding: 0.75rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--color-row-alt);
+}
+.usm__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+  width: 100%;
+}
+.usm__nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.usm__nav-item:hover {
+  background: var(--color-primary-tint-hover);
+  color: var(--color-text);
+}
+.usm__nav-item.is-active {
+  background: var(--color-primary-tint-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+/* Tab bar (mobile only) */
+.usm__tabs { display: none; }
+
+/* Content area */
+.usm__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  min-width: 0;
+}
+.usm-panel { width: 100%; display: flex; flex-direction: column; gap: 2rem; }
+.usm-panel > .settings-manage__section-title { margin-bottom: 1.5rem; }
+
+/* ─── Mobile ──────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .usm__dialog {
+    width: 100%;
+    max-height: calc(100dvh - 1rem);
+    border-radius: 16px 16px 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+  }
+
+  .usm__sidebar { display: none; }
+
+  .usm__tabs {
+    display: flex;
+    border-top: 1px solid var(--color-border-light);
+    background: var(--color-row-alt);
+    flex-shrink: 0;
+    order: 1;
+  }
+
+  .usm__tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.6rem 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: var(--transition);
+    border-top: 2px solid transparent;
+    margin-top: -1px;
+  }
+  .usm__tab svg { width: 18px; height: 18px; }
+  .usm__tab.is-active {
+    color: var(--color-primary-dark);
+    border-top-color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .usm__body { flex-direction: column; }
+  .usm__content { padding: 1rem; order: 0; }
+}

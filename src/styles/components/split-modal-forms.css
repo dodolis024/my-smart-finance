@@ -1,0 +1,337 @@
+/* ── 分帳 Modal 表單元件 ────────────────────────────────────────────────── */
+
+.split-modal__dialog {
+  background: var(--color-card);
+  border-radius: 18px;
+  padding: 1.75rem;
+  width: min(460px, calc(100% - 2rem));
+  max-height: calc(100dvh - 8vh);
+  overflow-y: auto;
+  margin: 4vh auto;
+  position: relative;
+  box-shadow: var(--shadow-modal);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s;
+}
+
+.split-modal__dialog:hover,
+.split-modal__dialog:active {
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.split-modal__dialog::-webkit-scrollbar {
+  width: 4px;
+}
+
+.split-modal__dialog::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.split-modal__dialog::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.split-modal__dialog:hover::-webkit-scrollbar-thumb,
+.split-modal__dialog:active::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+.split-modal__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 1.25rem;
+}
+
+.split-modal__field {
+  margin-bottom: 1rem;
+}
+
+.split-modal__label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.split-modal__input {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--color-border-input);
+  border-radius: 9px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  background: var(--color-bg);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+}
+
+.split-modal__input:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.split-modal__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.split-modal__select {
+  width: 100%;
+  padding: 0.6rem 2rem 0.6rem 0.8rem;
+  border: 1px solid var(--color-border-input);
+  border-radius: 9px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  background: var(--color-bg) var(--select-arrow) right 0.6rem center / 16px no-repeat;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.split-modal__select:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.split-modal__members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.split-modal__member-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.split-modal__member-row--existing {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.split-modal__member-row--existing:last-child {
+  border-bottom: none;
+}
+
+.split-modal__member-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.split-modal__member-avatar--initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-tint-light);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.split-modal__member-name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.split-modal__member-linked {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.split-modal__member-row .split-modal__input {
+  flex: 1;
+}
+
+.split-modal__member-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 0.3rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.split-modal__member-remove:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+.split-modal__member-remove svg {
+  width: 16px;
+  height: 16px;
+}
+
+.split-modal__add-member-btn {
+  background: none;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: border-color 0.15s, color 0.15s;
+  width: 100%;
+}
+
+.split-modal__add-member-btn:hover {
+  border-color: var(--color-primary-tint-border);
+  color: var(--color-primary-dark);
+}
+
+.split-modal__actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+.split-modal__actions .split-btn-primary {
+  flex: 1;
+}
+
+.split-modal__share-modes {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.split-modal__share-mode-btn {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  background: none;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.split-modal__share-mode-btn.is-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-tint-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+.split-modal__participant-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+}
+
+.split-modal__participant-check {
+  accent-color: var(--color-primary);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.split-modal__participant-name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.split-modal__participant-share {
+  width: 90px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border-input);
+  border-radius: 7px;
+  font-size: 0.85rem;
+  text-align: right;
+  color: var(--color-text);
+  background: var(--color-bg);
+  outline: none;
+}
+
+.split-modal__participant-share:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.split-modal__participant-share.is-auto {
+  color: var(--color-text-secondary, var(--color-text));
+  opacity: 0.55;
+}
+
+.split-modal__share-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.split-modal__auto-tag {
+  position: absolute;
+  right: 100%;
+  margin-right: 0.3rem;
+  font-size: 0.65rem;
+  color: var(--color-text-secondary, var(--color-text));
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.split-modal__share-status {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary, var(--color-text));
+  padding: 0.3rem 0.5rem;
+  margin-bottom: 0.35rem;
+  border-radius: 6px;
+  background: var(--color-bg);
+  text-align: center;
+}
+
+.split-modal__share-status.is-balanced {
+  color: var(--color-progress-safe);
+}
+
+.split-modal__share-status.is-over {
+  color: var(--color-error);
+}
+
+.split-modal__error {
+  font-size: 0.82rem;
+  color: var(--color-error);
+  margin-top: 0.35rem;
+}
+
+.split-modal__amount-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.split-modal__amount-row .split-modal__input {
+  flex: 1;
+}
+
+.split-modal__currency-select {
+  width: auto !important;
+  padding-left: 0.6rem !important;
+  padding-right: 1.75rem !important;
+  flex-shrink: 0;
+}
