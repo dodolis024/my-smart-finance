@@ -9,6 +9,8 @@ import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const SplitPage = lazy(() => import('@/pages/SplitPage'));
+const JoinPage = lazy(() => import('@/pages/SplitPage').then(m => ({ default: m.JoinPage })));
 
 function LoadingFallback() {
   return (
@@ -50,6 +52,22 @@ function AppShell() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/split"
+            element={
+              <ProtectedRoute>
+                <SplitPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/split/join/:code?"
+            element={
+              <ProtectedRoute>
+                <JoinPage />
               </ProtectedRoute>
             }
           />

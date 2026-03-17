@@ -298,7 +298,8 @@
   }
 
   .more-menu-btn--desktop,
-  .form-column__more-menu .more-menu-dropdown {
+  .form-column__more-menu .more-menu-dropdown,
+  .form-column__right-actions {
     display: none !important;
   }
 

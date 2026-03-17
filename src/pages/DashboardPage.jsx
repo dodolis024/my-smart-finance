@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useStreak } from '@/hooks/useStreak';
@@ -22,6 +23,7 @@ import StreakModal from '@/components/streak/StreakModal';
 import UnifiedSettingsModal from '@/components/settings/UnifiedSettingsModal';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { user, ensureDefaultDataForOAuth } = useAuth();
   const {
     dashboardData,
@@ -176,6 +178,8 @@ export default function DashboardPage() {
     modals.openStreakModal(content.title, content.variant);
   }, [getCurrentModalContent, modals.openStreakModal]);
 
+  const handleOpenSplit = useCallback(() => navigate('/split'), [navigate]);
+
   const handleSettingsClose = useCallback(() => {
     modals.closeSettings();
     fetchDashboardData(currentYear, currentMonth).catch(() => {});
@@ -196,11 +200,13 @@ export default function DashboardPage() {
         streakBadge={streakBadge}
         onOpenSettings={modals.openSettings}
         onOpenChangelog={modals.openChangelog}
+        onOpenSplit={handleOpenSplit}
       />
 
       <FormColumn
         onOpenSettings={modals.openSettings}
         onOpenChangelog={modals.openChangelog}
+        onOpenSplit={handleOpenSplit}
       >
         <div ref={formRef}>
           <TransactionForm
