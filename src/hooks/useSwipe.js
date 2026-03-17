@@ -4,7 +4,7 @@ import { SWIPE, TIMING } from '@/lib/constants';
 /** Module-level singleton: holds reset fn of whichever row is currently swiped open */
 let currentResetFn = null;
 
-export function useSwipe({ onEdit, onDelete, onClick, isMobile }) {
+export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = false }) {
   const [translateX, setTranslateX] = useState(0);
   const isDragging = useRef(false);
   const startX = useRef(0);
@@ -52,7 +52,8 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile }) {
       const deltaY = touch.clientY - startY.current;
       if (Math.abs(delta) > 4 || Math.abs(deltaY) > 4) didMove.current = true;
       const newTranslate = prevTranslate.current + delta;
-      const limited = Math.max(SWIPE.MAX_LEFT, Math.min(SWIPE.MAX_RIGHT, newTranslate));
+      const maxRight = disableRight ? 0 : SWIPE.MAX_RIGHT;
+      const limited = Math.max(SWIPE.MAX_LEFT, Math.min(maxRight, newTranslate));
       setTranslateX(limited);
     },
     []

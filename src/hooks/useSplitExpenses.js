@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 export function useSplitExpenses(groupId) {
   const [expenses, setExpenses] = useState([]);
+  const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const fetchExpenses = useCallback(async () => {
@@ -20,13 +21,20 @@ export function useSplitExpenses(groupId) {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setExpenses(data || []);
+
+      // 還款紀錄獨立查詢，表不存在時不影響費用載入
+      const setRes = await supabase
+        .from('split_settlements')
+        .select('*')
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: false });
+      if (!setRes.error) setSettlements(setRes.data || []);
     } finally {
       setLoading(false);
     }
   }, [groupId]);
 
   const addExpense = useCallback(async ({ title, amount, currency, date, note, paidBy, shares }) => {
-    // shares: [{ member_id, share }]
     const { data: expense, error: expenseError } = await supabase
       .from('split_expenses')
       .insert({
@@ -51,6 +59,35 @@ export function useSplitExpenses(groupId) {
     return expense;
   }, [groupId, fetchExpenses]);
 
+  const updateExpense = useCallback(async (expenseId, { title, amount, currency, date, note, paidBy, shares }) => {
+    const { error: expenseError } = await supabase
+      .from('split_expenses')
+      .update({
+        paid_by: paidBy,
+        title,
+        amount,
+        currency: currency || 'TWD',
+        date,
+        note: note || null,
+      })
+      .eq('id', expenseId);
+    if (expenseError) throw expenseError;
+
+    // 刪除舊的分攤明細，重新插入
+    const { error: delError } = await supabase
+      .from('split_expense_shares')
+      .delete()
+      .eq('expense_id', expenseId);
+    if (delError) throw delError;
+
+    const { error: sharesError } = await supabase
+      .from('split_expense_shares')
+      .insert(shares.map(s => ({ expense_id: expenseId, member_id: s.member_id, share: s.share })));
+    if (sharesError) throw sharesError;
+
+    await fetchExpenses();
+  }, [fetchExpenses]);
+
   const deleteExpense = useCallback(async (expenseId) => {
     const { error } = await supabase
       .from('split_expenses')
@@ -60,27 +97,60 @@ export function useSplitExpenses(groupId) {
     setExpenses(prev => prev.filter(e => e.id !== expenseId));
   }, []);
 
+  // 新增還款紀錄
+  const addSettlement = useCallback(async ({ fromMember, toMember, amount, currency }) => {
+    const { error } = await supabase
+      .from('split_settlements')
+      .insert({
+        group_id: groupId,
+        from_member: fromMember,
+        to_member: toMember,
+        amount,
+        currency: currency || 'TWD',
+      });
+    if (error) throw error;
+    await fetchExpenses();
+  }, [groupId, fetchExpenses]);
+
+  // 刪除還款紀錄
+  const deleteSettlement = useCallback(async (settlementId) => {
+    const { error } = await supabase
+      .from('split_settlements')
+      .delete()
+      .eq('id', settlementId);
+    if (error) throw error;
+    setSettlements(prev => prev.filter(s => s.id !== settlementId));
+  }, []);
+
   // 結算算法：Minimize Transactions（貪婪配對）
   // rates: { TWD: 1, USD: 31.5, ... }（1單位=多少TWD）；settlementCurrency: 結算幣別
-  const calcSettlement = useCallback((members, expenseList, rates, settlementCurrency) => {
-    // 計算每位成員的淨餘額：paid - owed（全部轉換成結算幣別）
+  const calcSettlement = useCallback((members, expenseList, settlementList, rates, settlementCurrency) => {
     const balance = {};
     members.forEach(m => { balance[m.id] = 0; });
 
     const toRate = (rates && settlementCurrency) ? (rates[settlementCurrency] ?? 1) : 1;
 
+    // 費用：付款人 +amount，參與者 -share
     expenseList.forEach(expense => {
       const fromRate = (rates && expense.currency) ? (rates[expense.currency] ?? 1) : 1;
       const factor = toRate > 0 ? fromRate / toRate : 1;
 
-      // 付款人加上全額（換算後）
       if (expense.paid_by) {
         balance[expense.paid_by] = (balance[expense.paid_by] || 0) + Number(expense.amount) * factor;
       }
-      // 每位參與者扣掉應付份額（換算後）
       (expense.split_expense_shares || []).forEach(s => {
         balance[s.member_id] = (balance[s.member_id] || 0) - Number(s.share) * factor;
       });
+    });
+
+    // 還款紀錄：from_member 付了錢（balance +），to_member 收了錢（balance -）
+    (settlementList || []).forEach(s => {
+      const fromRate = (rates && s.currency) ? (rates[s.currency] ?? 1) : 1;
+      const factor = toRate > 0 ? fromRate / toRate : 1;
+      const amt = Number(s.amount) * factor;
+
+      balance[s.from_member] = (balance[s.from_member] || 0) + amt;
+      balance[s.to_member] = (balance[s.to_member] || 0) - amt;
     });
 
     // 分成債主（balance > 0）和欠款人（balance < 0）
@@ -100,8 +170,8 @@ export function useSplitExpenses(groupId) {
     while (ci < creditors.length && di < debtors.length) {
       const pay = Math.min(creditors[ci].amount, debtors[di].amount);
       transactions.push({
-        from: debtors[di].id,
-        to: creditors[ci].id,
+        fromId: debtors[di].id,
+        toId: creditors[ci].id,
         amount: Math.round(pay * 100) / 100,
       });
       creditors[ci].amount -= pay;
@@ -110,21 +180,26 @@ export function useSplitExpenses(groupId) {
       if (debtors[di].amount < 0.01) di++;
     }
 
-    // 帶入成員名稱
     const memberMap = Object.fromEntries(members.map(m => [m.id, m.name]));
     return transactions.map(t => ({
-      from: memberMap[t.from] || t.from,
-      to: memberMap[t.to] || t.to,
+      fromId: t.fromId,
+      toId: t.toId,
+      from: memberMap[t.fromId] || t.fromId,
+      to: memberMap[t.toId] || t.toId,
       amount: t.amount,
     }));
   }, []);
 
   return {
     expenses,
+    settlements,
     loading,
     fetchExpenses,
     addExpense,
+    updateExpense,
     deleteExpense,
+    addSettlement,
+    deleteSettlement,
     calcSettlement,
   };
 }

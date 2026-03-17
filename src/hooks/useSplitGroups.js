@@ -19,7 +19,30 @@ export function useSplitGroups() {
         `)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setGroups(data || []);
+
+      // 為每個群組的已連結成員取得頭像
+      const groupsWithAvatars = await Promise.all(
+        (data || []).map(async (g) => {
+          const hasLinkedMembers = g.split_members?.some(m => m.user_id);
+          if (!hasLinkedMembers) return g;
+
+          const { data: avatars } = await supabase.rpc('get_split_member_avatars', { p_group_id: g.id });
+          if (!avatars?.length) return g;
+
+          const avatarMap = {};
+          avatars.forEach(a => { avatarMap[a.member_id] = a.avatar_url; });
+
+          return {
+            ...g,
+            split_members: g.split_members.map(m => ({
+              ...m,
+              avatar_url: avatarMap[m.id] || null,
+            })),
+          };
+        })
+      );
+
+      setGroups(groupsWithAvatars);
     } finally {
       setLoading(false);
     }
@@ -55,6 +78,18 @@ export function useSplitGroups() {
     return group;
   }, [user, fetchGroups]);
 
+  const updateGroup = useCallback(async (groupId, updates) => {
+    const { data, error } = await supabase
+      .from('split_groups')
+      .update(updates)
+      .eq('id', groupId)
+      .select()
+      .single();
+    if (error) throw error;
+    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, ...data } : g));
+    return data;
+  }, []);
+
   const deleteGroup = useCallback(async (groupId) => {
     const { error } = await supabase
       .from('split_groups')
@@ -79,6 +114,19 @@ export function useSplitGroups() {
     return data;
   }, []);
 
+  const removeMember = useCallback(async (groupId, memberId) => {
+    const { error } = await supabase
+      .from('split_members')
+      .delete()
+      .eq('id', memberId);
+    if (error) throw error;
+    setGroups(prev => prev.map(g =>
+      g.id === groupId
+        ? { ...g, split_members: (g.split_members || []).filter(m => m.id !== memberId) }
+        : g
+    ));
+  }, []);
+
   // 用邀請代碼查詢群組（RPC，任何登入用戶皆可）
   const getGroupByCode = useCallback(async (code) => {
     const { data, error } = await supabase.rpc('get_group_by_invite_code', { p_code: code });
@@ -86,26 +134,21 @@ export function useSplitGroups() {
     return data;
   }, []);
 
-  // 連結自己的帳號到某個成員位置
+  // 連結自己的帳號到某個成員位置（透過 RPC 繞過 RLS）
   const linkSelfToMember = useCallback(async (memberId) => {
     if (!user) throw new Error('請先登入');
-    const { error } = await supabase
-      .from('split_members')
-      .update({ user_id: user.id })
-      .eq('id', memberId)
-      .is('user_id', null);
+    const { error } = await supabase.rpc('link_self_to_split_member', { p_member_id: memberId });
     if (error) throw error;
     await fetchGroups();
   }, [user, fetchGroups]);
 
-  // 新增自己為群組新成員並連結帳號
+  // 新增自己為群組新成員並連結帳號（透過 RPC 繞過 RLS）
   const joinGroupAsNewMember = useCallback(async (groupId, name) => {
     if (!user) throw new Error('請先登入');
-    const { data, error } = await supabase
-      .from('split_members')
-      .insert({ group_id: groupId, name: name.trim(), user_id: user.id })
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc('join_split_group_as_new_member', {
+      p_group_id: groupId,
+      p_name: name.trim(),
+    });
     if (error) throw error;
     await fetchGroups();
     return data;
@@ -116,8 +159,10 @@ export function useSplitGroups() {
     loading,
     fetchGroups,
     createGroup,
+    updateGroup,
     deleteGroup,
     addMember,
+    removeMember,
     getGroupByCode,
     linkSelfToMember,
     joinGroupAsNewMember,

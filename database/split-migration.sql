@@ -45,8 +45,9 @@ CREATE TABLE IF NOT EXISTS split_groups (
 CREATE TABLE IF NOT EXISTS split_members (
   id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id UUID NOT NULL REFERENCES split_groups(id) ON DELETE CASCADE,
-  name     TEXT NOT NULL,
-  user_id  UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  name       TEXT NOT NULL,
+  user_id    UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (group_id, user_id)  -- 同一群組內一個帳號只能連結一位成員
 );
 
@@ -76,6 +77,20 @@ CREATE TABLE IF NOT EXISTS split_expense_shares (
 );
 
 -- =============================================================================
+-- 5.5 建立 split_settlements 表（還款紀錄）
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS split_settlements (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id   UUID NOT NULL REFERENCES split_groups(id) ON DELETE CASCADE,
+  from_member UUID NOT NULL REFERENCES split_members(id) ON DELETE CASCADE,
+  to_member  UUID NOT NULL REFERENCES split_members(id) ON DELETE CASCADE,
+  amount     NUMERIC(12, 2) NOT NULL,
+  currency   TEXT NOT NULL DEFAULT 'TWD',
+  date       DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =============================================================================
 -- 6. 索引
 -- =============================================================================
 CREATE INDEX IF NOT EXISTS idx_split_groups_owner ON split_groups(owner_id);
@@ -83,6 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_split_members_group ON split_members(group_id);
 CREATE INDEX IF NOT EXISTS idx_split_members_user ON split_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_split_expenses_group ON split_expenses(group_id);
 CREATE INDEX IF NOT EXISTS idx_split_expense_shares_expense ON split_expense_shares(expense_id);
+CREATE INDEX IF NOT EXISTS idx_split_settlements_group ON split_settlements(group_id);
 
 -- =============================================================================
 -- 7. RLS 啟用
@@ -91,6 +107,7 @@ ALTER TABLE split_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE split_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE split_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE split_expense_shares ENABLE ROW LEVEL SECURITY;
+ALTER TABLE split_settlements ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================================
 -- 7.5 輔助函數（SECURITY DEFINER 打破 RLS 循環遞迴）
@@ -147,10 +164,10 @@ CREATE POLICY "split_members_select" ON split_members
     can_access_split_group(group_id, auth.uid())
   );
 
--- owner 可新增成員；加入群組時自己也可新增（透過 RPC）
+-- 群組成員或 owner 可新增成員；加入群組時自己也可新增
 CREATE POLICY "split_members_insert" ON split_members
   FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM split_groups WHERE id = group_id AND owner_id = auth.uid())
+    can_access_split_group(group_id, auth.uid())
     OR user_id = auth.uid()
   );
 
@@ -211,6 +228,18 @@ CREATE POLICY "split_expense_shares_delete" ON split_expense_shares
   );
 
 -- =============================================================================
+-- 11.5 split_settlements RLS policies
+-- =============================================================================
+CREATE POLICY "split_settlements_select" ON split_settlements
+  FOR SELECT USING (can_access_split_group(group_id, auth.uid()));
+
+CREATE POLICY "split_settlements_insert" ON split_settlements
+  FOR INSERT WITH CHECK (can_access_split_group(group_id, auth.uid()));
+
+CREATE POLICY "split_settlements_delete" ON split_settlements
+  FOR DELETE USING (can_access_split_group(group_id, auth.uid()));
+
+-- =============================================================================
 -- 12. 代碼查詢 RPC（SECURITY DEFINER，允許未連結用戶用代碼查群組）
 -- =============================================================================
 CREATE OR REPLACE FUNCTION get_group_by_invite_code(p_code TEXT)
@@ -239,5 +268,74 @@ BEGIN
     'owner_id', g.owner_id,
     'members', COALESCE(members, '[]'::json)
   );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================================================
+-- 13. 加入群組 RPC（SECURITY DEFINER，繞過 RLS FK 限制）
+-- =============================================================================
+-- 取得群組成員的頭像資訊（從 auth.users metadata 讀取）
+CREATE OR REPLACE FUNCTION get_split_member_avatars(p_group_id UUID)
+RETURNS JSON AS $$
+  SELECT COALESCE(json_agg(json_build_object(
+    'member_id', sm.id,
+    'avatar_url', COALESCE(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture')
+  )), '[]'::json)
+  FROM split_members sm
+  JOIN auth.users u ON u.id = sm.user_id
+  WHERE sm.group_id = p_group_id
+    AND sm.user_id IS NOT NULL;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- 連結自己到已存在的成員位置
+CREATE OR REPLACE FUNCTION link_self_to_split_member(p_member_id UUID)
+RETURNS VOID AS $$
+DECLARE
+  v_group_id UUID;
+  v_existing_user UUID;
+BEGIN
+  -- 取得成員所屬群組與現有 user_id
+  SELECT group_id, user_id INTO v_group_id, v_existing_user
+  FROM split_members WHERE id = p_member_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION '找不到此成員';
+  END IF;
+
+  -- 確保該位置尚未被連結
+  IF v_existing_user IS NOT NULL THEN
+    RAISE EXCEPTION '此成員已被其他用戶連結';
+  END IF;
+
+  -- 確保用戶未重複加入同一群組
+  IF EXISTS (SELECT 1 FROM split_members WHERE group_id = v_group_id AND user_id = auth.uid()) THEN
+    RAISE EXCEPTION '你已經是此群組的成員';
+  END IF;
+
+  UPDATE split_members SET user_id = auth.uid() WHERE id = p_member_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 以新成員身份加入群組
+CREATE OR REPLACE FUNCTION join_split_group_as_new_member(p_group_id UUID, p_name TEXT)
+RETURNS JSON AS $$
+DECLARE
+  v_member split_members%ROWTYPE;
+BEGIN
+  -- 確認群組存在
+  IF NOT EXISTS (SELECT 1 FROM split_groups WHERE id = p_group_id) THEN
+    RAISE EXCEPTION '找不到此群組';
+  END IF;
+
+  -- 確保用戶未重複加入同一群組
+  IF EXISTS (SELECT 1 FROM split_members WHERE group_id = p_group_id AND user_id = auth.uid()) THEN
+    RAISE EXCEPTION '你已經是此群組的成員';
+  END IF;
+
+  INSERT INTO split_members (group_id, name, user_id)
+  VALUES (p_group_id, trim(p_name), auth.uid())
+  RETURNING * INTO v_member;
+
+  RETURN json_build_object('id', v_member.id, 'name', v_member.name, 'user_id', v_member.user_id);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
