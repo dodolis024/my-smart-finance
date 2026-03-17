@@ -1,15 +1,31 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Module-level cache — survives component unmount/remount
+let cachedGroups = null;
+let cachedUserId = null;
+
 export function useSplitGroups() {
   const { user, userInfo } = useAuth();
-  const [groups, setGroups] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // Initialise from cache if same user
+  const [groups, setGroups] = useState(() =>
+    (cachedGroups && cachedUserId === user?.id) ? cachedGroups : []
+  );
+  const [loading, setLoading] = useState(() =>
+    !(cachedGroups && cachedUserId === user?.id)
+  );
+
+  // Keep module cache in sync
+  useEffect(() => {
+    cachedGroups = groups;
+    cachedUserId = user?.id ?? null;
+  }, [groups, user?.id]);
 
   const fetchGroups = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    // Only show loading spinner when there's no cached data
+    if (!cachedGroups || cachedUserId !== user.id) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('split_groups')

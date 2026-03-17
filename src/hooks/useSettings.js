@@ -1,18 +1,40 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Module-level cache
+let cachedExpenseCats = null;
+let cachedIncomeCats = null;
+let cachedAccounts = null;
+let cachedUserId = null;
+
 export function useSettings() {
   const { user } = useAuth();
-  const [expenseCategories, setExpenseCategories] = useState([]);
-  const [incomeCategories, setIncomeCategories] = useState([]);
-  const [accounts, setAccounts] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const hasCached = cachedUserId === user?.id && cachedExpenseCats;
+
+  const [expenseCategories, setExpenseCategories] = useState(() =>
+    hasCached ? cachedExpenseCats : []
+  );
+  const [incomeCategories, setIncomeCategories] = useState(() =>
+    hasCached ? cachedIncomeCats : []
+  );
+  const [accounts, setAccounts] = useState(() =>
+    hasCached ? cachedAccounts : []
+  );
+  const [loading, setLoading] = useState(() => !hasCached);
   const [loadError, setLoadError] = useState(null);
+
+  // Keep cache in sync
+  useEffect(() => {
+    cachedExpenseCats = expenseCategories;
+    cachedIncomeCats = incomeCategories;
+    cachedAccounts = accounts;
+    cachedUserId = user?.id ?? null;
+  }, [expenseCategories, incomeCategories, accounts, user?.id]);
 
   const loadSettingsData = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    if (!cachedExpenseCats || cachedUserId !== user.id) setLoading(true);
     setLoadError(null);
     try {
       const [{ data: expenseData }, { data: incomeData }, { data: accountsData }] = await Promise.all([

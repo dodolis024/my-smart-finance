@@ -15,14 +15,13 @@
   position: absolute;
   inset: 0;
   background: var(--color-backdrop);
-  backdrop-filter: blur(2px);
 }
 
 .usm__dialog {
   position: relative;
   width: min(860px, calc(100% - 2rem));
-  max-height: min(780px, calc(100vh - 4rem));
-  margin: 4vh auto 0;
+  max-height: min(780px, calc(100dvh - 4rem));
+  margin: 4dvh auto 0;
   background: var(--color-card);
   border-radius: 16px;
   box-shadow: var(--shadow-modal);
@@ -117,7 +116,7 @@
 @media (max-width: 600px) {
   .usm__dialog {
     width: 100%;
-    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
     border-radius: 16px 16px 0 0;
     position: fixed;
     bottom: 0;
@@ -177,12 +176,11 @@
   position: absolute;
   inset: 0;
   background: var(--color-backdrop);
-  backdrop-filter: blur(2px);
 }
 .reaction-modal__dialog {
   position: relative;
   width: min(560px, calc(100% - 2rem));
-  margin: 8vh auto 0;
+  margin: 8dvh auto 0;
   background: var(--color-card);
   border-radius: 14px;
   padding: 1.25rem 1.25rem 1.1rem;
@@ -255,13 +253,12 @@
   position: absolute;
   inset: 0;
   background: var(--color-backdrop);
-  backdrop-filter: blur(2px);
 }
 .settings-manage-modal__dialog {
   position: relative;
   width: min(960px, calc(100% - 2rem));
-  max-height: calc(100vh - 8vh);
-  margin: 4vh auto 0;
+  max-height: calc(100dvh - 8dvh);
+  margin: 4dvh auto 0;
   background: var(--color-card);
   border-radius: 14px;
   padding: 1.5rem;
@@ -313,24 +310,38 @@
   position: absolute;
   inset: 0;
   background: var(--color-backdrop);
-  backdrop-filter: blur(2px);
 }
+
 .changelog-modal__dialog {
   position: relative;
   width: min(560px, calc(100% - 2rem));
-  max-height: calc(100vh - 8vh);
-  margin: 4vh auto 0;
+  max-height: calc(100dvh - 8dvh);
+  margin: 4dvh auto 0;
   background: var(--color-card);
   border-radius: 14px;
-  padding: 1.5rem;
   box-shadow: var(--shadow-modal);
   border: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.changelog-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 1rem;
+  flex-shrink: 0;
+}
+.changelog-modal__header .changelog-modal__title {
+  margin: 0;
+}
+.changelog-modal__body {
+  flex: 1;
   overflow-y: auto;
+  padding: 0 1.5rem 1.5rem;
+  min-height: 0;
 }
 .changelog-modal__close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
   width: 40px;
   height: 40px;
   border-radius: 10px;
@@ -341,7 +352,7 @@
   line-height: 1;
   cursor: pointer;
   transition: var(--transition);
-  z-index: 1;
+  flex-shrink: 0;
 }
 .changelog-modal__close:hover {
   background: var(--color-row-hover);
@@ -351,7 +362,7 @@
   box-shadow: var(--shadow-focus);
 }
 .changelog-modal__title {
-  margin: 0 0 1.5rem 0;
+  margin: 0;
   font-size: 1.5rem;
   color: var(--color-text);
 }
@@ -432,13 +443,12 @@
   position: absolute;
   inset: 0;
   background: var(--color-backdrop);
-  backdrop-filter: blur(2px);
 }
 .credit-card-modal__dialog {
   position: relative;
   width: min(480px, calc(100% - 2rem));
-  max-height: calc(100vh - 8vh);
-  margin: 4vh auto;
+  max-height: calc(100dvh - 8dvh);
+  margin: 4dvh auto;
   padding: 2rem;
   background: var(--color-card);
   border-radius: 16px;
@@ -450,13 +460,14 @@
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   border: 1px solid var(--color-border);
   background: var(--color-card);
-  color: var(--color-text-secondary);
-  font-size: 1.25rem;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -848,7 +859,6 @@
   width: 100%;
   height: 100%;
   background: var(--color-backdrop-subtle);
-  backdrop-filter: blur(4px);
   z-index: var(--z-modal-high);
   display: none;
   align-items: center;
@@ -869,7 +879,7 @@
   box-shadow: var(--shadow-dialog);
   max-width: 500px;
   width: 100%;
-  max-height: 90vh;
+  max-height: 90dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -990,13 +1000,12 @@
   position: absolute;
   inset: 0;
   background: var(--color-backdrop);
-  backdrop-filter: blur(2px);
 }
 .reminder-modal__dialog {
   position: relative;
   width: min(480px, calc(100% - 2rem));
-  max-height: calc(100vh - 8vh);
-  margin: 4vh auto 0;
+  max-height: calc(100dvh - 8dvh);
+  margin: 4dvh auto 0;
   background: var(--color-card);
   border-radius: 14px;
   padding: 1.5rem;
@@ -1273,13 +1282,12 @@
   position: absolute;
   inset: 0;
   background: var(--color-backdrop);
-  backdrop-filter: blur(2px);
 }
 .subscription-modal__dialog {
   position: relative;
   width: min(520px, calc(100% - 2rem));
-  max-height: calc(100vh - 8vh);
-  margin: 4vh auto 0;
+  max-height: calc(100dvh - 8dvh);
+  margin: 4dvh auto 0;
   background: var(--color-card);
   border-radius: 14px;
   padding: 1.5rem;

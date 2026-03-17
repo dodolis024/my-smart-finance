@@ -2,6 +2,9 @@ import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getTodayYmd } from '@/lib/utils';
 
+// Module-level cache for currencies (rarely changes)
+let cachedCurrencies = null;
+
 export function useDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [transactionHistoryFull, setTransactionHistoryFull] = useState([]);
@@ -9,7 +12,7 @@ export function useDashboard() {
   const [accounts, setAccounts] = useState([]);
   const [categoriesExpense, setCategoriesExpense] = useState([]);
   const [categoriesIncome, setCategoriesIncome] = useState([]);
-  const [currencies, setCurrencies] = useState(['TWD']);
+  const [currencies, setCurrencies] = useState(() => cachedCurrencies || ['TWD']);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
   const requestIdRef = useRef(0);
@@ -88,12 +91,14 @@ export function useDashboard() {
   }, []);
 
   const fetchCurrencies = useCallback(async () => {
+    if (cachedCurrencies) return;
     try {
       const { data: codes, error } = await supabase.rpc('get_available_currencies');
       const list = Array.isArray(codes) ? codes : codes ? [codes] : [];
       if (error || list.length === 0) return;
       const upper = list.map((c) => String(c).toUpperCase());
       if (!upper.includes('TWD')) upper.unshift('TWD');
+      cachedCurrencies = upper;
       setCurrencies(upper);
     } catch {
       // Keep default ['TWD']

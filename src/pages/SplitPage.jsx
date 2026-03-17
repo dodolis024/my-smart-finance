@@ -11,6 +11,9 @@ import CreateGroupModal from '@/components/split/CreateGroupModal';
 
 const SPLIT_CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'];
 
+// Module-level cache for exchange rates
+let cachedRates = null;
+
 // ── 加入群組頁面（/split/join/:code）────────────────────────────────────────
 function JoinPage() {
   const { code } = useParams();
@@ -93,7 +96,7 @@ function JoinPage() {
   return (
     <div className="split-join-page">
       <div className="split-join-page__card">
-        <p className="split-join-page__title">加入分帳群組</p>
+        <p className="split-join-page__title">加入群組</p>
         <p className="split-join-page__subtitle">輸入邀請代碼或點擊邀請連結加入</p>
 
         <div className="split-modal__field">
@@ -166,7 +169,7 @@ export default function SplitPage() {
   const { groups, loading, fetchGroups, createGroup, updateGroup, deleteGroup, addMember, removeMember } = useSplitGroups();
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [rates, setRates] = useState({ TWD: 1 });
+  const [rates, setRates] = useState(() => cachedRates || { TWD: 1 });
   const toast = useToast();
   const { confirm } = useConfirm();
 
@@ -180,8 +183,9 @@ export default function SplitPage() {
     }
   }, [groups, selectedGroup]);
 
-  // 進入分帳頁面時一次性載入所有支援幣別的匯率
+  // 載入匯率（有 cache 就跳過）
   useEffect(() => {
+    if (cachedRates) return;
     supabase
       .from('exchange_rates')
       .select('currency_code, rate')
@@ -190,6 +194,7 @@ export default function SplitPage() {
         if (!data) return;
         const obj = { TWD: 1 };
         data.forEach(r => { obj[r.currency_code] = Number(r.rate); });
+        cachedRates = obj;
         setRates(obj);
       });
   }, []);
@@ -212,7 +217,7 @@ export default function SplitPage() {
               </svg>
               返回
             </button>
-            <h1 className="split-page__title">分帳</h1>
+            <h1 className="split-page__title">Split</h1>
           </div>
           <SplitGroupDetail
             group={selectedGroup}
@@ -247,7 +252,7 @@ export default function SplitPage() {
               </svg>
               返回
             </button>
-            <h1 className="split-page__title">分帳</h1>
+            <h1 className="split-page__title">Split</h1>
           </div>
 
           {loading ? (

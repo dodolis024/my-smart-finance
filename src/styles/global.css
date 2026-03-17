@@ -6,6 +6,7 @@
 @import url('./components/modal.css');
 @import url('./components/badge.css');
 @import url('./components/split.css');
+@import url('./components/nav.css');
 @import url('./responsive.css');
 
 /* Overrides & additions */
@@ -13,6 +14,10 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+button, a {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body.modal-open {
@@ -143,12 +148,23 @@ button {
   to { transform: translateX(100%); opacity: 0; }
 }
 
-/* React Modal overlay — visibility controlled via conditional render, not CSS */
+/* React Modal overlay — fade in/out via opacity */
 .modal-overlay {
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
   display: block;
+  opacity: 0;
+  transition: opacity 50ms ease;
+  pointer-events: none;
+}
+.modal-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-overlay.is-closing {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Confirm modal */

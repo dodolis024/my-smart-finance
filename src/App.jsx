@@ -3,9 +3,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ToastProvider, useToast } from '@/contexts/ToastContext';
 import { ConfirmProvider, useConfirm } from '@/contexts/ConfirmContext';
+import { NavActionsProvider } from '@/contexts/NavActionsContext';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import AppLayout from '@/components/layout/AppLayout';
 
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
@@ -51,7 +53,9 @@ function AppShell() {
             path="/"
             element={
               <ProtectedRoute>
-                <DashboardPage />
+                <AppLayout>
+                  <DashboardPage />
+                </AppLayout>
               </ProtectedRoute>
             }
           />
@@ -59,7 +63,9 @@ function AppShell() {
             path="/split"
             element={
               <ProtectedRoute>
-                <SplitPage />
+                <AppLayout>
+                  <SplitPage />
+                </AppLayout>
               </ProtectedRoute>
             }
           />
@@ -91,7 +97,9 @@ export default function App() {
         <AuthProvider>
           <ToastProvider>
             <ConfirmProvider>
-              <AppShell />
+              <NavActionsProvider>
+                <AppShell />
+              </NavActionsProvider>
             </ConfirmProvider>
           </ToastProvider>
         </AuthProvider>

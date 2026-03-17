@@ -1,15 +1,28 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Module-level cache
+let cachedSubscriptions = null;
+let cachedUserId = null;
+
 export function useSubscriptions() {
   const { user } = useAuth();
-  const [subscriptions, setSubscriptions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [subscriptions, setSubscriptions] = useState(() =>
+    (cachedSubscriptions && cachedUserId === user?.id) ? cachedSubscriptions : []
+  );
+  const [loading, setLoading] = useState(() =>
+    !(cachedSubscriptions && cachedUserId === user?.id)
+  );
+
+  useEffect(() => {
+    cachedSubscriptions = subscriptions;
+    cachedUserId = user?.id ?? null;
+  }, [subscriptions, user?.id]);
 
   const loadSubscriptions = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    if (!cachedSubscriptions || cachedUserId !== user.id) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('subscriptions')

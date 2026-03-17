@@ -13,6 +13,7 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
   const didMove = useRef(false);
   const skipNextClick = useRef(false);
   const isSwiped = useRef(false);
+  const directionLocked = useRef(null); // 'horizontal' | 'vertical' | null
 
   const onEditRef = useRef(onEdit);
   const onDeleteRef = useRef(onDelete);
@@ -38,6 +39,7 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
       startY.current = touch.clientY;
       didMove.current = false;
       isDragging.current = true;
+      directionLocked.current = null;
       prevTranslate.current = translateX;
     },
     [isMobile, translateX, resetSwipe]
@@ -46,10 +48,22 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
   const handleTouchMove = useCallback(
     (e) => {
       if (!isDragging.current) return;
-      e.preventDefault();
       const touch = e.touches[0];
       const delta = touch.clientX - startX.current;
       const deltaY = touch.clientY - startY.current;
+
+      // 方向鎖定：首次移動超過 6px 時決定方向
+      if (!directionLocked.current && (Math.abs(delta) > 6 || Math.abs(deltaY) > 6)) {
+        directionLocked.current = Math.abs(deltaY) > Math.abs(delta) ? 'vertical' : 'horizontal';
+      }
+
+      // 垂直滑動 → 放棄水平滑動，讓瀏覽器正常捲頁
+      if (directionLocked.current === 'vertical') {
+        isDragging.current = false;
+        return;
+      }
+
+      e.preventDefault();
       if (Math.abs(delta) > 4 || Math.abs(deltaY) > 4) didMove.current = true;
       const newTranslate = prevTranslate.current + delta;
       const maxRight = disableRight ? 0 : SWIPE.MAX_RIGHT;

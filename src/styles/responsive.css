@@ -256,8 +256,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 0.5rem 0 0.75rem;
-    margin-bottom: -0.75rem;
+    padding: 0.75rem 0.5rem 0.5rem 0.75rem;
+    margin-bottom: 0;
     grid-column: 1 / -1;
     background: transparent;
     border-bottom: none;
@@ -294,12 +294,6 @@
   }
 
   .stats-section-header .streak-badge {
-    display: none !important;
-  }
-
-  .more-menu-btn--desktop,
-  .form-column__more-menu .more-menu-dropdown,
-  .form-column__right-actions {
     display: none !important;
   }
 
@@ -389,8 +383,8 @@
     background: transparent;
     border-bottom: none;
     box-shadow: none;
-    padding: 0.75rem 0.5rem 0 0.75rem;
-    margin: 0 0 -0.75rem 0;
+    padding: 0.75rem 0.5rem 0.5rem 0.75rem;
+    margin: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;

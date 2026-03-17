@@ -1,12 +1,12 @@
 /* ── 分帳頁面 ─────────────────────────────────────────────────────────────── */
 
 .split-page {
-  /* 自己成為 scroll container，讓 sticky 不受 html overflow-x:hidden 影響 */
-  height: calc(100vh - 2.5rem); /* 扣掉 body padding 上下各 1.25rem */
+  width: 100%;
+  flex: 1;
   overflow-y: auto;
   scrollbar-width: none;         /* Firefox */
   background: var(--color-bg);
-  padding: 1.5rem 1rem 0;
+  padding: 1.5rem 1rem 1.5rem;
   max-width: 860px;
   margin: 0 auto;
 }

@@ -7,6 +7,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useReminderSettings } from '@/hooks/useReminderSettings';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
+import { useDashboard } from '@/hooks/useDashboard';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -372,7 +373,9 @@ function ReminderPanel({ isOpen, toast }) {
 // ─── Subscription Panel ───────────────────────────────────────────
 const EMPTY_FORM = { name: '', amount: '', currency: 'TWD', category: '', payment_method: '', renewal_day: 1 };
 
-function SubscriptionPanel({ isOpen, categoriesExpense, accounts, currencies, confirm, toast }) {
+function SubscriptionPanel({ isOpen, confirm, toast }) {
+  const { categoriesExpense, accounts } = useSettings();
+  const { currencies } = useDashboard();
   const { subscriptions, loading, loadSubscriptions, saveSubscription, deleteSubscription, toggleSubscription } = useSubscriptions();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -511,7 +514,7 @@ function SubscriptionPanel({ isOpen, categoriesExpense, accounts, currencies, co
 }
 
 // ─── Main component ───────────────────────────────────────────────
-export default function UnifiedSettingsModal({ isOpen, onClose, categoriesExpense = [], accounts = [], currencies = ['TWD'] }) {
+export default function UnifiedSettingsModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('options');
   const dialogRef = useRef(null);
   useScrollbarOnScroll(dialogRef, isOpen);
@@ -571,14 +574,7 @@ export default function UnifiedSettingsModal({ isOpen, onClose, categoriesExpens
             <div hidden={activeTab !== 'accounts'}><AccountsPanel isOpen={isOpen} confirm={confirm} toast={toast} /></div>
             <div hidden={activeTab !== 'reminder'}><ReminderPanel isOpen={isOpen} toast={toast} /></div>
             <div hidden={activeTab !== 'subscription'}>
-              <SubscriptionPanel
-                isOpen={isOpen}
-                categoriesExpense={categoriesExpense}
-                accounts={accounts}
-                currencies={currencies}
-                confirm={confirm}
-                toast={toast}
-              />
+              <SubscriptionPanel isOpen={isOpen} confirm={confirm} toast={toast} />
             </div>
           </div>
         </div>

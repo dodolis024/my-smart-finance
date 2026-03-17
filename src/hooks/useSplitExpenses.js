@@ -1,14 +1,32 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+// Module-level cache keyed by groupId
+const expenseCache = {};   // { [groupId]: expenses[] }
+const settlementCache = {}; // { [groupId]: settlements[] }
+
 export function useSplitExpenses(groupId) {
-  const [expenses, setExpenses] = useState([]);
-  const [settlements, setSettlements] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const hasCached = groupId && expenseCache[groupId];
+
+  const [expenses, setExpenses] = useState(() =>
+    hasCached ? expenseCache[groupId] : []
+  );
+  const [settlements, setSettlements] = useState(() =>
+    groupId && settlementCache[groupId] ? settlementCache[groupId] : []
+  );
+  const [loading, setLoading] = useState(() => !hasCached);
+
+  // Keep cache in sync
+  useEffect(() => {
+    if (groupId) {
+      expenseCache[groupId] = expenses;
+      settlementCache[groupId] = settlements;
+    }
+  }, [expenses, settlements, groupId]);
 
   const fetchExpenses = useCallback(async () => {
     if (!groupId) return;
-    setLoading(true);
+    if (!expenseCache[groupId]) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('split_expenses')

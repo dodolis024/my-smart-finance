@@ -47,7 +47,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
       <div className="reminder-modal__backdrop" onClick={handleClose} />
       <div className="split-modal__dialog" onClick={e => e.stopPropagation()}>
         <button type="button" className="reminder-modal__close" aria-label="關閉" onClick={handleClose}>×</button>
-        <h2 id="create-group-title" className="split-modal__title">新增分帳群組</h2>
+        <h2 id="create-group-title" className="split-modal__title">新增群組</h2>
 
         <div className="split-modal__field">
           <label className="split-modal__label" htmlFor="group-name">群組名稱</label>

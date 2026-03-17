@@ -17,10 +17,8 @@ import PaymentStats from '@/components/dashboard/PaymentStats';
 import TransactionForm from '@/components/transactions/TransactionForm';
 import TransactionTable from '@/components/transactions/TransactionTable';
 import CreditCardModal from '@/components/common/CreditCardModal';
-import ChangelogModal from '@/components/common/ChangelogModal';
 import StreakBadge from '@/components/streak/StreakBadge';
 import StreakModal from '@/components/streak/StreakModal';
-import UnifiedSettingsModal from '@/components/settings/UnifiedSettingsModal';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -58,6 +56,7 @@ export default function DashboardPage() {
   const modals = useModalStates();
 
 
+
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -65,9 +64,9 @@ export default function DashboardPage() {
   const formRef = useRef(null);
   const historyRef = useRef(null);
 
-  const handleOpenCreditCard = useCallback(async (account) => {
-    await fetchCreditHistory(account);
+  const handleOpenCreditCard = useCallback((account) => {
     modals.openCreditCardModal(account);
+    fetchCreditHistory(account);
   }, [fetchCreditHistory, modals]);
 
   useEffect(() => {
@@ -88,7 +87,6 @@ export default function DashboardPage() {
   }, [dashboardData, updateStreakFromServer]);
 
   // Show broken streak modal once per day on initial load.
-  // 使用 dashboardData.streakBroken 直接傳入，避免 updateStreakFromServer 非同步更新 streakState 時的競態問題
   useEffect(() => {
     if (!dashboardData || streakInitialHandled) return;
     setStreakInitialHandled(true);
@@ -113,7 +111,6 @@ export default function DashboardPage() {
         setEditingTransaction(null);
         toast.success(result.isEdit ? '已更新。' : '記帳成功！');
 
-        // Show positive streak modal once per day after adding a transaction
         if (!result.isEdit && shouldShowPositiveModal(result.date)) {
           const content = getPositiveModalContent();
           modals.openStreakModal(content.title, 'positive');
@@ -178,12 +175,6 @@ export default function DashboardPage() {
     modals.openStreakModal(content.title, content.variant);
   }, [getCurrentModalContent, modals.openStreakModal]);
 
-  const handleOpenSplit = useCallback(() => navigate('/split'), [navigate]);
-
-  const handleSettingsClose = useCallback(() => {
-    modals.closeSettings();
-    fetchDashboardData(currentYear, currentMonth).catch(() => {});
-  }, [fetchDashboardData, currentYear, currentMonth, modals.closeSettings]);
 
   const checkedInToday = hasCheckinToday();
 
@@ -196,18 +187,9 @@ export default function DashboardPage() {
 
   return (
     <div className="app-container">
-      <TopBar
-        streakBadge={streakBadge}
-        onOpenSettings={modals.openSettings}
-        onOpenChangelog={modals.openChangelog}
-        onOpenSplit={handleOpenSplit}
-      />
+      <TopBar streakBadge={streakBadge} />
 
-      <FormColumn
-        onOpenSettings={modals.openSettings}
-        onOpenChangelog={modals.openChangelog}
-        onOpenSplit={handleOpenSplit}
-      >
+      <FormColumn>
         <div ref={formRef}>
           <TransactionForm
             categoriesExpense={categoriesExpense}
@@ -293,18 +275,6 @@ export default function DashboardPage() {
         history={creditHistory}
       />
 
-      <UnifiedSettingsModal
-        isOpen={modals.settingsOpen}
-        onClose={handleSettingsClose}
-        categoriesExpense={categoriesExpense}
-        accounts={accounts}
-        currencies={currencies}
-      />
-
-      <ChangelogModal
-        isOpen={modals.changelogOpen}
-        onClose={modals.closeChangelog}
-      />
     </div>
   );
 }

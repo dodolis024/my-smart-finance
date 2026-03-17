@@ -32,9 +32,9 @@
   --color-manual-border: rgba(148, 172, 156, 1);
   --color-subscription: #8faab3;
 
-  --color-backdrop: rgba(0, 0, 0, 0.55);
-  --color-backdrop-light: rgba(0, 0, 0, 0.4);
-  --color-backdrop-subtle: rgba(0, 0, 0, 0.5);
+  --color-backdrop: rgba(0, 0, 0, 0.35);
+  --color-backdrop-light: rgba(0, 0, 0, 0.25);
+  --color-backdrop-subtle: rgba(0, 0, 0, 0.3);
   --color-border-subtle: rgba(0, 0, 0, 0.08);
 
   --color-progress-track: #e5e0da;
