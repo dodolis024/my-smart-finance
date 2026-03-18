@@ -484,13 +484,13 @@
   .stat-card:nth-child(2)::after {
     width: 3.5rem;
     height: 3.5rem;
-    right: 0.5rem;
+    right: 1.5rem;
   }
 
   .stat-card:nth-child(3)::after {
     width: 3.5rem;
     height: 3.5rem;
-    right: 0.5rem;
+    right: 1.7rem;
   }
 
   .stat-value {
