@@ -3,7 +3,12 @@ import { useState } from 'react';
 export default function SplitSettlement({ transactions, currency, onSettle, settlementHistory, onDeleteSettlement }) {
   const [showHistory, setShowHistory] = useState(false);
   const cur = currency || 'TWD';
-  const fmtAmt = (amt) => amt % 1 === 0 ? amt.toLocaleString() : amt.toFixed(2);
+  const ZERO_DECIMAL = new Set(['TWD', 'JPY', 'KRW', 'VND']);
+  const fmtAmt = (amt, c = cur) => {
+    const d = ZERO_DECIMAL.has(c) ? 0 : 2;
+    const rounded = Number(amt.toFixed(d));
+    return rounded.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+  };
 
   return (
     <div className="split-settlement">
@@ -55,7 +60,7 @@ export default function SplitSettlement({ transactions, currency, onSettle, sett
                     <span className="split-settlement__from">{s.fromName}</span>
                     <span className="split-settlement__arrow">→</span>
                     <span className="split-settlement__to">{s.toName}</span>
-                    <span className="split-settlement__amount">{s.currency || cur} {fmtAmt(Number(s.amount))}</span>
+                    <span className="split-settlement__amount">{s.currency || cur} {fmtAmt(Number(s.amount), s.currency || cur)}</span>
                   </div>
                   <div className="split-settlement__history-actions">
                     <span className="split-settlement__history-date">

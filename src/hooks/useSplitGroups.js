@@ -158,11 +158,11 @@ export function useSplitGroups() {
     await fetchGroups();
   }, [user, fetchGroups]);
 
-  // 新增自己為群組新成員並連結帳號（透過 RPC 繞過 RLS）
-  const joinGroupAsNewMember = useCallback(async (groupId, name) => {
+  // 新增自己為群組新成員並連結帳號（透過 RPC 繞過 RLS，傳邀請碼而非 group_id）
+  const joinGroupAsNewMember = useCallback(async (inviteCode, name) => {
     if (!user) throw new Error('請先登入');
     const { data, error } = await supabase.rpc('join_split_group_as_new_member', {
-      p_group_id: groupId,
+      p_invite_code: inviteCode,
       p_name: name.trim(),
     });
     if (error) throw error;

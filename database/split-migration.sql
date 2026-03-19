@@ -254,7 +254,8 @@ BEGIN
   SELECT json_agg(json_build_object(
     'id', id,
     'name', name,
-    'user_id', user_id
+    'is_linked', (user_id IS NOT NULL),
+    'is_self', (user_id = auth.uid())
   ) ORDER BY created_at)
   INTO members
   FROM split_members WHERE group_id = g.id;
@@ -265,7 +266,6 @@ BEGIN
     'description', g.description,
     'currency', g.currency,
     'invite_code', g.invite_code,
-    'owner_id', g.owner_id,
     'members', COALESCE(members, '[]'::json)
   );
 END;
@@ -277,15 +277,24 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 取得群組成員的頭像資訊（從 auth.users metadata 讀取）
 CREATE OR REPLACE FUNCTION get_split_member_avatars(p_group_id UUID)
 RETURNS JSON AS $$
-  SELECT COALESCE(json_agg(json_build_object(
-    'member_id', sm.id,
-    'avatar_url', COALESCE(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture')
-  )), '[]'::json)
-  FROM split_members sm
-  JOIN auth.users u ON u.id = sm.user_id
-  WHERE sm.group_id = p_group_id
-    AND sm.user_id IS NOT NULL;
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+BEGIN
+  -- 驗證呼叫者是否為群組成員或 owner
+  IF NOT can_access_split_group(p_group_id, auth.uid()) THEN
+    RETURN '[]'::json;
+  END IF;
+
+  RETURN (
+    SELECT COALESCE(json_agg(json_build_object(
+      'member_id', sm.id,
+      'avatar_url', COALESCE(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture')
+    )), '[]'::json)
+    FROM split_members sm
+    JOIN auth.users u ON u.id = sm.user_id
+    WHERE sm.group_id = p_group_id
+      AND sm.user_id IS NOT NULL
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
 -- 連結自己到已存在的成員位置
 CREATE OR REPLACE FUNCTION link_self_to_split_member(p_member_id UUID)
@@ -316,24 +325,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 以新成員身份加入群組
-CREATE OR REPLACE FUNCTION join_split_group_as_new_member(p_group_id UUID, p_name TEXT)
+-- 以新成員身份加入群組（接受邀請碼，不接受 group_id，防止 group_id 外洩後繞過邀請機制）
+CREATE OR REPLACE FUNCTION join_split_group_as_new_member(p_invite_code TEXT, p_name TEXT)
 RETURNS JSON AS $$
 DECLARE
+  v_group_id UUID;
   v_member split_members%ROWTYPE;
 BEGIN
-  -- 確認群組存在
-  IF NOT EXISTS (SELECT 1 FROM split_groups WHERE id = p_group_id) THEN
-    RAISE EXCEPTION '找不到此群組';
+  -- 用邀請碼查 group_id，查不到直接擋
+  SELECT id INTO v_group_id
+  FROM split_groups
+  WHERE invite_code = upper(trim(p_invite_code));
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION '邀請碼無效';
   END IF;
 
   -- 確保用戶未重複加入同一群組
-  IF EXISTS (SELECT 1 FROM split_members WHERE group_id = p_group_id AND user_id = auth.uid()) THEN
+  IF EXISTS (SELECT 1 FROM split_members WHERE group_id = v_group_id AND user_id = auth.uid()) THEN
     RAISE EXCEPTION '你已經是此群組的成員';
   END IF;
 
   INSERT INTO split_members (group_id, name, user_id)
-  VALUES (p_group_id, trim(p_name), auth.uid())
+  VALUES (v_group_id, trim(p_name), auth.uid())
   RETURNING * INTO v_member;
 
   RETURN json_build_object('id', v_member.id, 'name', v_member.name, 'user_id', v_member.user_id);

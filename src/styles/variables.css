@@ -120,3 +120,48 @@
   --color-manual-bg: rgba(168, 152, 196, 0.3);
   --color-manual-border: rgba(152, 132, 180, 1);
 }
+
+[data-theme="gray"] {
+  --color-primary: #7d8287;
+  --color-primary-hover: #6c7176;
+  --color-primary-dark: #5b6064;
+  --color-primary-tint: rgba(125, 130, 135, 0.35);
+  --color-primary-tint-border: rgba(125, 130, 135, 0.8);
+  --color-primary-tint-light: rgba(125, 130, 135, 0.15);
+  --color-primary-tint-hover: rgba(125, 130, 135, 0.1);
+  --color-primary-tint-focus: rgba(125, 130, 135, 0.15);
+
+  --color-bg: #f7f7f8;
+  --color-card: #ffffff;
+  --color-text: #3c3f42;
+  --color-text-secondary: #6c7074;
+  --color-text-muted: #999da1;
+  --color-border: #d7d9dc;
+  --color-border-light: #e8e9eb;
+  --color-border-input: #cbcdd0;
+  --color-border-subtle: rgba(125, 130, 135, 0.08);
+
+  --color-table-header: #dddfe2;
+  --color-row-hover: #f0f1f2;
+  --color-row-alt: #f8f8f9;
+
+  --color-progress-track: #dddfe2;
+  --color-progress-safe: #4a9e68;
+  --color-progress-warn: #c49040;
+  --color-progress-danger: #c45454;
+
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233c3f42'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(125, 130, 135, 0.3);
+
+  --scrollbar-track: #f7f7f8;
+  --scrollbar-thumb: #d7d9dc;
+  --scrollbar-thumb-hover: #bdbfc3;
+
+  --color-subscription: #909598;
+
+  --icon-checkin-color: #8f9396;
+
+  --color-manual-bg: rgba(145, 148, 152, 0.22);
+  --color-manual-border: rgba(125, 130, 135, 1);
+}

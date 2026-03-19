@@ -170,6 +170,11 @@ const THEME_OPTIONS = [
     label: '玫瑰',
     swatch: ['#c06373', '#fcf8f5', '#efd0d9'],
   },
+  {
+    id: 'gray',
+    label: '石墨',
+    swatch: ['#7d8287', '#f7f7f8', '#dddfe2'],
+  },
 ];
 
 // ─── Options Panel ────────────────────────────────────────────────

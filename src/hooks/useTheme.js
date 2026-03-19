@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'app-theme';
-const THEMES = ['default', 'rose'];
+const THEMES = ['default', 'rose', 'gray'];
 
 function applyTheme(theme) {
   if (theme === 'default') {

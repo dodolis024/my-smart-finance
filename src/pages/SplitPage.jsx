@@ -73,7 +73,7 @@ function JoinPage() {
     setError('');
     try {
       if (selected === 'new') {
-        await joinGroupAsNewMember(groupInfo.id, newName.trim());
+        await joinGroupAsNewMember(inputCode.trim().toUpperCase(), newName.trim());
       } else {
         await linkSelfToMember(selected);
       }
@@ -86,7 +86,8 @@ function JoinPage() {
     }
   };
 
-  const alreadyLinked = groupInfo?.members?.find(m => m.user_id === user?.id);
+  // 用 is_self 布林欄位取代直接暴露 user_id UUID
+  const alreadyLinked = groupInfo?.members?.find(m => m.is_self);
   useEffect(() => {
     if (alreadyLinked) navigate('/split');
   }, [alreadyLinked, navigate]);
@@ -117,7 +118,7 @@ function JoinPage() {
             <p className="split-join-page__group-name">{groupInfo.name}</p>
             <p className="split-join-page__members-label">請選擇你是哪位成員：</p>
             {groupInfo.members?.map(m => {
-              const isTaken = m.user_id && m.user_id !== user?.id;
+              const isTaken = m.is_linked && !m.is_self;
               return (
                 <div
                   key={m.id}
