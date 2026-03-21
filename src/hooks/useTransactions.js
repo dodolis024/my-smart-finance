@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { getTodayYmd, parseFormattedNumber } from '@/lib/utils';
 
 export function useTransactions() {

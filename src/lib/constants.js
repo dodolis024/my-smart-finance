@@ -69,6 +69,20 @@ export const CHART_COLORS_GRAY = [
   'hsl(210, 8%, 56%)',
 ];
 
+// Rose Quartz (#f7cac9) × Serenity (#92a8d1) — 晨曦主題圖表色，粉藍雙色系交替
+// 晨曦：薰衣草紫為軸，向粉（Rose Quartz）與藍（Serenity）兩側延伸
+export const CHART_COLORS_DAWN = [
+  'hsl(240, 38%, 68%)',
+  'hsl(350, 68%, 80%)',
+  'hsl(260, 34%, 65%)',
+  'hsl(330, 55%, 74%)',
+  'hsl(220, 42%, 70%)',
+  'hsl(280, 32%, 68%)',
+  'hsl(355, 62%, 77%)',
+  'hsl(210, 38%, 72%)',
+  'hsl(300, 28%, 70%)',
+];
+
 export const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const ACCOUNT_TYPE_NAMES = {

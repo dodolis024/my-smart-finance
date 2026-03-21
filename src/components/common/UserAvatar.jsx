@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useConfirm } from '@/contexts/ConfirmContext';
 
 export default function UserAvatar({ variant = 'desktop', isOpen: controlledOpen, onOpenChange }) {

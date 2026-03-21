@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext, createElement } from 'react';
 
 const STORAGE_KEY = 'app-theme';
 const SHUFFLE_ENABLED_KEY = 'theme-shuffle-enabled';
@@ -6,7 +6,7 @@ const SHUFFLE_THEMES_KEY = 'theme-shuffle-themes';
 const SHUFFLE_INTERVAL_KEY = 'theme-shuffle-interval';
 const SHUFFLE_LAST_KEY = 'theme-shuffle-last';
 
-export const THEMES = ['default', 'rose', 'gray'];
+export const THEMES = ['default', 'rose', 'gray', 'dawn'];
 
 function applyTheme(theme) {
   if (theme === 'default') {
@@ -60,7 +60,9 @@ function initTheme() {
   return theme;
 }
 
-export function useTheme() {
+const ThemeContext = createContext(null);
+
+export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => initTheme());
 
   const [shuffleEnabled, setShuffleEnabledState] = useState(() =>
@@ -101,10 +103,16 @@ export function useTheme() {
     localStorage.setItem(SHUFFLE_INTERVAL_KEY, v);
   };
 
-  return {
-    theme, setTheme,
-    shuffleEnabled, setShuffleEnabled,
-    shuffleThemes, setShuffleThemes,
-    shuffleInterval, setShuffleInterval,
-  };
+  return createElement(ThemeContext.Provider, {
+    value: {
+      theme, setTheme,
+      shuffleEnabled, setShuffleEnabled,
+      shuffleThemes, setShuffleThemes,
+      shuffleInterval, setShuffleInterval,
+    },
+  }, children);
+}
+
+export function useTheme() {
+  return useContext(ThemeContext);
 }

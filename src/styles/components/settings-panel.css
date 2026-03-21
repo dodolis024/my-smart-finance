@@ -24,6 +24,22 @@
   padding-bottom: 0.5rem;
 }
 
+[data-theme="dawn"] .settings-manage__section-title {
+  border-bottom: none;
+  position: relative;
+}
+
+[data-theme="dawn"] .settings-manage__section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #f7cac9, #92a8d1);
+  border-radius: 1px;
+}
+
 .settings-manage__loading {
   margin: 0;
   color: var(--color-text-secondary);

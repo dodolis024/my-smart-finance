@@ -188,6 +188,11 @@ const THEME_OPTIONS = [
     label: '石墨',
     swatch: ['#656a6c', '#fdfeff', '#cfd6db'],
   },
+  {
+    id: 'dawn',
+    label: '晨曦',
+    swatch: ['#8a8ec4', '#ffffff', '#f7cac9'],
+  },
 ];
 
 // ─── Theme Panel ──────────────────────────────────────────────────

@@ -1,9 +1,11 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { ToastProvider, useToast } from '@/contexts/ToastContext';
 import { ConfirmProvider, useConfirm } from '@/contexts/ConfirmContext';
 import { NavActionsProvider } from '@/contexts/NavActionsContext';
+import { ThemeProvider } from '@/hooks/useTheme';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
@@ -94,15 +96,17 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-        <AuthProvider>
-          <ToastProvider>
-            <ConfirmProvider>
-              <NavActionsProvider>
-                <AppShell />
-              </NavActionsProvider>
-            </ConfirmProvider>
-          </ToastProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <ConfirmProvider>
+                <NavActionsProvider>
+                  <AppShell />
+                </NavActionsProvider>
+              </ConfirmProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );
