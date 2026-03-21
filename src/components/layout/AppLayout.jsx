@@ -4,13 +4,18 @@ import BottomTabBar from './BottomTabBar';
 import ChangelogModal from '@/components/common/ChangelogModal';
 import UnifiedSettingsModal from '@/components/settings/UnifiedSettingsModal';
 import { useNavActions } from '@/contexts/NavActionsContext';
+import { useChangelog } from '@/hooks/useChangelog';
 
 export default function AppLayout({ children }) {
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const navActions = useNavActions();
+  const { hasUnread, markAsRead } = useChangelog();
 
-  const openChangelog = useCallback(() => setChangelogOpen(true), []);
+  const openChangelog = useCallback(() => {
+    setChangelogOpen(true);
+    markAsRead();
+  }, [markAsRead]);
   const closeChangelog = useCallback(() => setChangelogOpen(false), []);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
@@ -32,11 +37,11 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="app-layout">
-      <Sidebar />
+      <Sidebar hasChangelogUnread={hasUnread} />
       <main className="app-layout__main">
         {children}
       </main>
-      <BottomTabBar />
+      <BottomTabBar hasChangelogUnread={hasUnread} />
       <ChangelogModal isOpen={changelogOpen} onClose={closeChangelog} />
       <UnifiedSettingsModal isOpen={settingsOpen} onClose={closeSettings} />
     </div>

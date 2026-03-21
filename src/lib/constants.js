@@ -1,3 +1,6 @@
+// 每次推出新版本時更新此版本號，未讀通知小點會自動出現
+export const CURRENT_VERSION = '1.7.1';
+
 export const LAYOUT = {
   VERTICAL_MAX_WIDTH: 870,
   MOBILE_MAX_WIDTH: 600,
@@ -55,15 +58,15 @@ export const CHART_COLORS_ROSE = [
 ];
 
 export const CHART_COLORS_GRAY = [
-  'hsl(0, 0%, 48%)',
-  'hsl(0, 0%, 62%)',
-  'hsl(210, 10%, 54%)',
-  'hsl(180, 8%, 60%)',
-  'hsl(30, 8%, 58%)',
-  'hsl(0, 0%, 72%)',
-  'hsl(260, 8%, 58%)',
-  'hsl(150, 8%, 54%)',
-  'hsl(0, 0%, 42%)',
+  'hsl(200, 12%, 40%)',
+  'hsl(200, 20%, 67%)',
+  'hsl(210, 10%, 52%)',
+  'hsl(190, 16%, 58%)',
+  'hsl(215, 16%, 45%)',
+  'hsl(200, 24%, 76%)',
+  'hsl(205, 12%, 35%)',
+  'hsl(195, 18%, 62%)',
+  'hsl(210, 8%, 56%)',
 ];
 
 export const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

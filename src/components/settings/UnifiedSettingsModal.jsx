@@ -151,12 +151,25 @@ const IconAccounts = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9m18 0V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3" />
   </svg>
 );
+const IconTheme = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.098 19.902a3.75 3.75 0 0 0 5.304 0l6.401-6.402M6.75 21A3.75 3.75 0 0 1 3 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 0 0 3.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008Z" />
+  </svg>
+);
 
 const TABS = [
   { id: 'options', label: '類別管理', Icon: IconOptions },
   { id: 'accounts', label: '支付工具', Icon: IconAccounts },
   { id: 'reminder', label: '簽到提醒', Icon: IconReminder },
   { id: 'subscription', label: '訂閱管理', Icon: IconSubscription },
+  { id: 'theme', label: '外觀主題', Icon: IconTheme },
+];
+
+const SHUFFLE_INTERVALS = [
+  { id: 'open', label: '每次開啟' },
+  { id: 'daily', label: '每天' },
+  { id: 'weekly', label: '每週' },
+  { id: 'monthly', label: '每月' },
 ];
 
 const THEME_OPTIONS = [
@@ -173,26 +186,25 @@ const THEME_OPTIONS = [
   {
     id: 'gray',
     label: '石墨',
-    swatch: ['#7d8287', '#f7f7f8', '#dddfe2'],
+    swatch: ['#656a6c', '#fdfeff', '#cfd6db'],
   },
 ];
 
-// ─── Options Panel ────────────────────────────────────────────────
-function OptionsPanel({ isOpen, confirm, toast }) {
-  const {
-    expenseCategories, incomeCategories, loading, loadError,
-    loadSettingsData, addCategory, renameCategory, deleteCategory,
-  } = useSettings();
-  const { theme, setTheme } = useTheme();
+// ─── Theme Panel ──────────────────────────────────────────────────
+function ThemePanel() {
+  const { theme, setTheme, shuffleEnabled, setShuffleEnabled, shuffleThemes, setShuffleThemes, shuffleInterval, setShuffleInterval } = useTheme();
 
-  useEffect(() => {
-    if (isOpen) loadSettingsData();
-  }, [isOpen, loadSettingsData]);
+  const toggleShuffleTheme = (id) => {
+    if (shuffleThemes.includes(id)) {
+      if (shuffleThemes.length <= 1) return;
+      setShuffleThemes(shuffleThemes.filter(t => t !== id));
+    } else {
+      setShuffleThemes([...shuffleThemes, id]);
+    }
+  };
 
   return (
     <div className="usm-panel">
-      {loadError && <div className="auth-error" style={{ marginBottom: '1rem' }} role="alert">{loadError}</div>}
-
       <section className="settings-manage__section">
         <h3 className="settings-manage__section-title">外觀主題</h3>
         <div className="theme-picker">
@@ -219,6 +231,85 @@ function OptionsPanel({ isOpen, confirm, toast }) {
           ))}
         </div>
       </section>
+
+      <section className="settings-manage__section">
+        <h3 className="settings-manage__section-title">主題輪換</h3>
+        <div className="theme-shuffle">
+          <label className="theme-shuffle__toggle-row">
+            <span className="theme-shuffle__toggle-label">啟用自動輪換</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={shuffleEnabled}
+              className={`reminder-modal__toggle${shuffleEnabled ? ' is-on' : ''}`}
+              onClick={() => setShuffleEnabled(!shuffleEnabled)}
+            >
+              <span className="reminder-modal__toggle-knob" />
+            </button>
+          </label>
+
+          {shuffleEnabled && (
+            <div className="theme-shuffle__options">
+              <div className="theme-shuffle__field">
+                <span className="theme-shuffle__field-label">參與輪換的主題</span>
+                <div className="theme-shuffle__themes">
+                  {THEME_OPTIONS.map(({ id, label, swatch }) => (
+                    <label key={id} className={`theme-shuffle__theme-item${shuffleThemes.includes(id) ? ' is-checked' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={shuffleThemes.includes(id)}
+                        onChange={() => toggleShuffleTheme(id)}
+                        className="sr-only"
+                      />
+                      <span className="theme-shuffle__theme-swatch">
+                        {swatch.map((color, i) => <span key={i} style={{ background: color }} />)}
+                      </span>
+                      <span className="theme-shuffle__theme-label">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="theme-shuffle__field">
+                <span className="theme-shuffle__field-label">切換頻率</span>
+                <div className="theme-shuffle__intervals">
+                  {SHUFFLE_INTERVALS.map(({ id, label }) => (
+                    <label key={id} className={`theme-shuffle__interval-item${shuffleInterval === id ? ' is-checked' : ''}`}>
+                      <input
+                        type="radio"
+                        name="shuffle-interval"
+                        value={id}
+                        checked={shuffleInterval === id}
+                        onChange={() => setShuffleInterval(id)}
+                        className="sr-only"
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ─── Options Panel ────────────────────────────────────────────────
+function OptionsPanel({ isOpen, confirm, toast }) {
+  const {
+    expenseCategories, incomeCategories, loading, loadError,
+    loadSettingsData, addCategory, renameCategory, deleteCategory,
+  } = useSettings();
+
+  useEffect(() => {
+    if (isOpen) loadSettingsData();
+  }, [isOpen, loadSettingsData]);
+
+  return (
+    <div className="usm-panel">
+      {loadError && <div className="auth-error" style={{ marginBottom: '1rem' }} role="alert">{loadError}</div>}
 
       <section className="settings-manage__section">
         <h3 className="settings-manage__section-title">類別管理</h3>
@@ -581,6 +672,7 @@ export default function UnifiedSettingsModal({ isOpen, onClose }) {
             <div hidden={activeTab !== 'subscription'}>
               <SubscriptionPanel isOpen={isOpen} confirm={confirm} toast={toast} />
             </div>
+            <div hidden={activeTab !== 'theme'}><ThemePanel /></div>
           </div>
         </div>
       </div>

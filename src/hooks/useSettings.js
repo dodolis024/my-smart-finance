@@ -96,13 +96,20 @@ export function useSettings() {
 
   const saveAccount = useCallback(async (accountData, accountId = null) => {
     if (!user) return;
-    const payload = { ...accountData, user_id: user.id };
+    const trimmedName = accountData.name?.trim();
+    // 防重複：同名帳戶已存在（排除自己）
+    const isDuplicate = accounts.some(
+      (a) => a.name === trimmedName && a.id !== accountId
+    );
+    if (isDuplicate) throw new Error(`帳戶名稱「${trimmedName}」已存在，請使用不同名稱。`);
+
+    const payload = { ...accountData, name: trimmedName, user_id: user.id };
     if (accountId) {
       const oldAccount = accounts.find((a) => a.id === accountId);
       const { error } = await supabase.from('accounts').update(payload).eq('id', accountId);
       if (error) throw error;
-      if (oldAccount?.name && oldAccount.name !== accountData.name) {
-        await updateTransactionPaymentMethods(oldAccount.name, accountData.name);
+      if (oldAccount?.name && oldAccount.name !== trimmedName) {
+        await updateTransactionPaymentMethods(oldAccount.name, trimmedName);
       }
     } else {
       const { error } = await supabase.from('accounts').insert(payload);

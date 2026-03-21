@@ -293,3 +293,22 @@ body:has(.app-layout) {
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
   }
 }
+
+/* ── Changelog 未讀小點 ──────────────────────────────────────────────────── */
+.app-sidebar__icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.changelog-unread-dot {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 1.5px solid var(--color-card);
+}

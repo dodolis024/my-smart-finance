@@ -6,6 +6,7 @@ import { formatMoney } from '@/lib/utils';
 export default function AccountManager({ accounts, onSave, onDelete, loading, confirm, onError }) {
   const [editingAccount, setEditingAccount] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const handleEdit = (account) => {
     setEditingAccount(account);
@@ -23,12 +24,16 @@ export default function AccountManager({ accounts, onSave, onDelete, loading, co
   };
 
   const handleSave = async (payload, id) => {
+    if (saving) return;
+    setSaving(true);
     try {
       await onSave(payload, id);
       setShowForm(false);
       setEditingAccount(null);
     } catch (err) {
       onError?.(err.message || '儲存失敗，請稍後再試。');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -51,7 +56,7 @@ export default function AccountManager({ accounts, onSave, onDelete, loading, co
         account={editingAccount}
         onSave={handleSave}
         onCancel={handleCancel}
-        loading={loading}
+        loading={loading || saving}
       />
     );
   }
