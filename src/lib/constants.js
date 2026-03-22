@@ -83,6 +83,19 @@ export const CHART_COLORS_DAWN = [
   'hsl(300, 28%, 70%)',
 ];
 
+// Soda 主題圖表色：青藍色系
+export const CHART_COLORS_SODA = [
+  'hsl(187, 50%, 37%)',
+  'hsl(187, 54%, 71%)',
+  'hsl(193, 45%, 55%)',
+  'hsl(180, 42%, 62%)',
+  'hsl(200, 48%, 45%)',
+  'hsl(185, 40%, 68%)',
+  'hsl(195, 52%, 50%)',
+  'hsl(175, 38%, 58%)',
+  'hsl(205, 44%, 60%)',
+];
+
 export const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const ACCOUNT_TYPE_NAMES = {

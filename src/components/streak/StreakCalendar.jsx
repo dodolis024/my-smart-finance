@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { getTodayYmd } from '@/lib/utils';
+import { useTheme } from '../../hooks/useTheme.js';
 
 const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
 export default function StreakCalendar({ streakState }) {
+  const { theme } = useTheme();
   const [calYear, setCalYear] = useState(() => new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth() + 1);
 
@@ -88,11 +90,15 @@ export default function StreakCalendar({ streakState }) {
           <div className="streak-summary__label">目前連續記帳天數</div>
           <div className="streak-summary__value">
             <span className="streak-summary__value-emoji">
-              {count > 0 && (
+              {count > 0 && (theme === 'dawn' ? (
+                <svg className="icon-diamond" aria-hidden="true" width="18" height="18">
+                  <use href="#icon-diamond" />
+                </svg>
+              ) : (
                 <svg className="icon-fire" aria-hidden="true" width="18" height="18">
                   <use href="#icon-fire" />
                 </svg>
-              )}
+              ))}
             </span>
             <span className="streak-summary__value-number">{count}</span><span>天</span>
           </div>

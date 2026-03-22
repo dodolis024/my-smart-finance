@@ -37,7 +37,7 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="app-layout">
-      <Sidebar hasChangelogUnread={hasUnread} />
+      <Sidebar hasChangelogUnread={hasUnread} changelogOpen={changelogOpen} settingsOpen={settingsOpen} />
       <main className="app-layout__main">
         {children}
       </main>

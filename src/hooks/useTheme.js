@@ -6,7 +6,7 @@ const SHUFFLE_THEMES_KEY = 'theme-shuffle-themes';
 const SHUFFLE_INTERVAL_KEY = 'theme-shuffle-interval';
 const SHUFFLE_LAST_KEY = 'theme-shuffle-last';
 
-export const THEMES = ['default', 'rose', 'gray', 'dawn'];
+export const THEMES = ['default', 'rose', 'gray', 'dawn', 'soda'];
 
 function applyTheme(theme) {
   if (theme === 'default') {
@@ -34,6 +34,14 @@ function pickRandom(themes, current) {
 }
 
 function initTheme() {
+  if (_initThemeDone) {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const theme = THEMES.includes(saved) ? saved : 'default';
+    applyTheme(theme);
+    return theme;
+  }
+  _initThemeDone = true;
+
   const saved = localStorage.getItem(STORAGE_KEY);
   const shuffleEnabled = localStorage.getItem(SHUFFLE_ENABLED_KEY) === 'true';
 
@@ -59,6 +67,8 @@ function initTheme() {
   applyTheme(theme);
   return theme;
 }
+
+let _initThemeDone = false;
 
 const ThemeContext = createContext(null);
 

@@ -6,7 +6,7 @@ import { useNavActions } from '@/contexts/NavActionsContext';
 
 const STORAGE_KEY = 'sidebar-collapsed';
 
-export default function Sidebar({ hasChangelogUnread = false }) {
+export default function Sidebar({ hasChangelogUnread = false, changelogOpen = false, settingsOpen = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { userInfo, signOut } = useAuth();
@@ -22,6 +22,7 @@ export default function Sidebar({ hasChangelogUnread = false }) {
   }, [collapsed]);
 
   const currentPath = location.pathname;
+  const modalOpen = changelogOpen || settingsOpen;
 
   const handleLogout = async () => {
     const confirmed = await confirm('確定要登出嗎？');
@@ -56,7 +57,7 @@ export default function Sidebar({ hasChangelogUnread = false }) {
         {/* Home */}
         <button
           type="button"
-          className={`app-sidebar__item${currentPath === '/' ? ' is-active' : ''}`}
+          className={`app-sidebar__item${!modalOpen && currentPath === '/' ? ' is-active' : ''}`}
           onClick={() => navigate('/')}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="app-sidebar__icon">
@@ -68,7 +69,7 @@ export default function Sidebar({ hasChangelogUnread = false }) {
         {/* Split */}
         <button
           type="button"
-          className={`app-sidebar__item${currentPath.startsWith('/split') ? ' is-active' : ''}`}
+          className={`app-sidebar__item${!modalOpen && currentPath.startsWith('/split') ? ' is-active' : ''}`}
           onClick={() => navigate('/split')}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="app-sidebar__icon">
@@ -82,7 +83,7 @@ export default function Sidebar({ hasChangelogUnread = false }) {
         {/* 更新紀錄 */}
         <button
           type="button"
-          className="app-sidebar__item"
+          className={`app-sidebar__item${changelogOpen ? ' is-active' : ''}`}
           onClick={() => dispatch('openChangelog')}
         >
           <span className="app-sidebar__icon-wrap">
@@ -97,7 +98,7 @@ export default function Sidebar({ hasChangelogUnread = false }) {
         {/* 設定 */}
         <button
           type="button"
-          className="app-sidebar__item"
+          className={`app-sidebar__item${settingsOpen ? ' is-active' : ''}`}
           onClick={() => dispatch('openSettings')}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="app-sidebar__icon">

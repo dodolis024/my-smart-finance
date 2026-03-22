@@ -158,11 +158,11 @@ const IconTheme = () => (
 );
 
 const TABS = [
+  { id: 'theme', label: '外觀主題', Icon: IconTheme },
   { id: 'options', label: '類別管理', Icon: IconOptions },
   { id: 'accounts', label: '支付工具', Icon: IconAccounts },
   { id: 'reminder', label: '簽到提醒', Icon: IconReminder },
   { id: 'subscription', label: '訂閱管理', Icon: IconSubscription },
-  { id: 'theme', label: '外觀主題', Icon: IconTheme },
 ];
 
 const SHUFFLE_INTERVALS = [
@@ -191,7 +191,12 @@ const THEME_OPTIONS = [
   {
     id: 'dawn',
     label: '晨曦',
-    swatch: ['#8a8ec4', '#ffffff', '#f7cac9'],
+    swatch: ['#92a8d1', '#ffffff', '#f7cac9'],
+  },
+  {
+    id: 'soda',
+    label: '汽水',
+    swatch: ['#2e7a89', '#f5fcfe', '#95d7d3'],
   },
 ];
 
@@ -616,14 +621,14 @@ function SubscriptionPanel({ isOpen, confirm, toast }) {
 
 // ─── Main component ───────────────────────────────────────────────
 export default function UnifiedSettingsModal({ isOpen, onClose }) {
-  const [activeTab, setActiveTab] = useState('options');
+  const [activeTab, setActiveTab] = useState('theme');
   const dialogRef = useRef(null);
   useScrollbarOnScroll(dialogRef, isOpen);
   const { confirm } = useConfirm();
   const toast = useToast();
 
   useEffect(() => {
-    if (!isOpen) setActiveTab('options');
+    if (!isOpen) setActiveTab('theme');
   }, [isOpen]);
 
   return (

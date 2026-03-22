@@ -139,9 +139,9 @@
   /* 背景：flat fallback，漸層由下方 body rule 另外處理 */
   --color-bg: #f4f0f8;
   --color-card: #ffffff;
-  --color-text: #38334a;
-  --color-text-secondary: #7a7594;
-  --color-text-muted: #b0abbe;
+  --color-text: #323550;
+  --color-text-secondary: #707c98;
+  --color-text-muted: #a8b5cb;
 
   /* 邊框：帶淡薰衣草感 */
   --color-border: #e0d4ee;
@@ -235,4 +235,49 @@
 
   --color-manual-bg: rgba(101, 106, 108, 0.15);
   --color-manual-border: rgba(101, 106, 108, 1);
+}
+
+/* Soda — #f0fafd × #d8f8fd × #95d7d3 × #2278a0 */
+[data-theme="soda"] {
+  --color-primary: #2e8cb8;
+  --color-primary-hover: #2278a0;
+  --color-primary-dark: #185f80;
+  --color-primary-tint: rgba(130, 210, 225, 0.32);
+  --color-primary-tint-border: rgba(46, 140, 184, 0.42);
+  --color-primary-tint-light: rgba(208, 246, 254, 0.55);
+  --color-primary-tint-hover: rgba(208, 246, 254, 0.35);
+  --color-primary-tint-focus: rgba(130, 210, 225, 0.22);
+
+  --color-bg: #f0fafd;
+  --color-card: #ffffff;
+  --color-text: #1e4a55;
+  --color-text-secondary: #3d6870;
+  --color-text-muted: #82b4bc;
+
+  --color-border: #caeef7;
+  --color-border-light: #d8f4fa;
+  --color-border-input: #bce8f2;
+  --color-border-subtle: rgba(34, 120, 160, 0.07);
+
+  --color-table-header: #d4f4fb;
+  --color-row-hover: #e6faff;
+  --color-row-alt: #f2fdff;
+
+  --color-progress-track: #b8e6f2;
+  --color-progress-safe: #5a9e78;
+  --color-progress-warn: #c4904a;
+  --color-progress-danger: #c45470;
+
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%231e4a55'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(130, 210, 225, 0.42);
+
+  --scrollbar-track: #f0fafd;
+  --scrollbar-thumb: #b8e6f2;
+  --scrollbar-thumb-hover: #95d7d3;
+
+  --color-subscription: #2e8cb8;
+  --icon-checkin-color: #95d7d3;
+  --color-manual-bg: rgba(46, 140, 184, 0.3);
+  --color-manual-border: rgba(46, 140, 184, 0.78);
 }
