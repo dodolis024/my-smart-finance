@@ -109,7 +109,7 @@
   min-width: 0;
 }
 .usm-panel { width: 100%; display: flex; flex-direction: column; gap: 2rem; }
-.usm-panel > .settings-manage__section-title { margin-bottom: 1.5rem; }
+.usm-panel > .settings-manage__section-title { margin-bottom: 0; }
 
 /* ─── Mobile ──────────────────────────────────────────────────── */
 @media (max-width: 600px) {

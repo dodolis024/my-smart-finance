@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useSplitExpenses } from '@/hooks/useSplitExpenses';
+import { useAuth } from '@/hooks/useAuth';
 import SplitExpenseItem from './SplitExpenseItem';
 import SplitSettlement from './SplitSettlement';
 import AddExpenseModal from './AddExpenseModal';
@@ -10,11 +11,17 @@ import ManageMembersModal from './ManageMembersModal';
 export default function SplitGroupDetail({ group, onBack, rates, currencies, onAddMember, onRemoveMember, onUpdateGroup }) {
   const toast = useToast();
   const { confirm } = useConfirm();
+  const { user } = useAuth();
+  const actorMember = group.split_members?.find(m => m.user_id === user?.id);
   const {
     expenses, settlements, loading,
     fetchExpenses, addExpense, updateExpense, deleteExpense,
     addSettlement, deleteSettlement, calcSettlement,
-  } = useSplitExpenses(group.id);
+  } = useSplitExpenses(group.id, {
+    actorName: actorMember?.name ?? '',
+    actorUserId: user?.id ?? '',
+    groupName: group.name ?? '',
+  });
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
@@ -84,6 +91,8 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
         toMember: transaction.toId,
         amount: transaction.amount,
         currency: group.currency || 'TWD',
+        fromName: transaction.from,
+        toName: transaction.to,
       });
       toast.success('已記錄還款！');
     } catch {

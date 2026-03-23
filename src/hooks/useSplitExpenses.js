@@ -1,6 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+function notifySplit(payload) {
+  supabase.functions.invoke('send-split-notification', { body: payload }).catch(() => {});
+}
+
 // Module-level cache keyed by groupId（最多保留 15 個群組）
 const MAX_CACHED_GROUPS = 15;
 const expenseCache = {};   // { [groupId]: expenses[] }
@@ -14,7 +18,7 @@ function evictCacheIfNeeded() {
   }
 }
 
-export function useSplitExpenses(groupId) {
+export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', groupName = '' } = {}) {
   const hasCached = groupId && expenseCache[groupId];
 
   const [expenses, setExpenses] = useState(() =>
@@ -84,8 +88,18 @@ export function useSplitExpenses(groupId) {
     if (sharesError) throw sharesError;
 
     await fetchExpenses();
+    notifySplit({
+      event: 'expense_added',
+      group_id: groupId,
+      group_name: groupName,
+      actor_name: actorName,
+      actor_user_id: actorUserId,
+      expense_title: title,
+      expense_amount: amount,
+      currency: currency || 'TWD',
+    });
     return expense;
-  }, [groupId, fetchExpenses]);
+  }, [groupId, groupName, actorName, actorUserId, fetchExpenses]);
 
   const updateExpense = useCallback(async (expenseId, { title, amount, currency, date, note, paidBy, shares }) => {
     const { error: expenseError } = await supabase
@@ -114,19 +128,36 @@ export function useSplitExpenses(groupId) {
     if (sharesError) throw sharesError;
 
     await fetchExpenses();
-  }, [fetchExpenses]);
+    notifySplit({
+      event: 'expense_updated',
+      group_id: groupId,
+      group_name: groupName,
+      actor_name: actorName,
+      actor_user_id: actorUserId,
+      expense_title: title,
+    });
+  }, [groupId, groupName, actorName, actorUserId, fetchExpenses]);
 
   const deleteExpense = useCallback(async (expenseId) => {
+    const expenseToDelete = expenses.find(e => e.id === expenseId);
     const { error } = await supabase
       .from('split_expenses')
       .delete()
       .eq('id', expenseId);
     if (error) throw error;
     setExpenses(prev => prev.filter(e => e.id !== expenseId));
-  }, []);
+    notifySplit({
+      event: 'expense_deleted',
+      group_id: groupId,
+      group_name: groupName,
+      actor_name: actorName,
+      actor_user_id: actorUserId,
+      expense_title: expenseToDelete?.title ?? '',
+    });
+  }, [expenses, groupId, groupName, actorName, actorUserId]);
 
   // 新增還款紀錄
-  const addSettlement = useCallback(async ({ fromMember, toMember, amount, currency }) => {
+  const addSettlement = useCallback(async ({ fromMember, toMember, amount, currency, fromName = '', toName = '' }) => {
     const { error } = await supabase
       .from('split_settlements')
       .insert({
@@ -138,7 +169,18 @@ export function useSplitExpenses(groupId) {
       });
     if (error) throw error;
     await fetchExpenses();
-  }, [groupId, fetchExpenses]);
+    notifySplit({
+      event: 'settlement_added',
+      group_id: groupId,
+      group_name: groupName,
+      actor_name: actorName,
+      actor_user_id: actorUserId,
+      expense_amount: amount,
+      currency: currency || 'TWD',
+      from_name: fromName,
+      to_name: toName,
+    });
+  }, [groupId, groupName, actorName, actorUserId, fetchExpenses]);
 
   // 刪除還款紀錄
   const deleteSettlement = useCallback(async (settlementId) => {

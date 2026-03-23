@@ -6,7 +6,7 @@ const SHUFFLE_THEMES_KEY = 'theme-shuffle-themes';
 const SHUFFLE_INTERVAL_KEY = 'theme-shuffle-interval';
 const SHUFFLE_LAST_KEY = 'theme-shuffle-last';
 
-export const THEMES = ['default', 'rose', 'graphite', 'dawn', 'soda', 'lavender', 'sorbet', 'peach'];
+export const THEMES = ['default', 'rose', 'graphite', 'dawn', 'soda', 'lavender', 'sorbet', 'peach', 'lime'];
 
 function applyTheme(theme) {
   if (theme === 'default') {

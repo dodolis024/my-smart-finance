@@ -2,6 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 
+function notifySplit(payload) {
+  supabase.functions.invoke('send-split-notification', { body: payload }).catch(() => {});
+}
+
 // Module-level cache — survives component unmount/remount
 let cachedGroups = null;
 let cachedUserId = null;
@@ -127,10 +131,23 @@ export function useSplitGroups() {
         ? { ...g, split_members: [...(g.split_members || []), data] }
         : g
     ));
+    const currentGroup = groups.find(g => g.id === groupId);
+    const actorMember = currentGroup?.split_members?.find(m => m.user_id === user?.id);
+    notifySplit({
+      event: 'member_added',
+      group_id: groupId,
+      group_name: currentGroup?.name ?? '',
+      actor_name: actorMember?.name ?? '',
+      actor_user_id: user?.id,
+      member_name: name.trim(),
+    });
     return data;
-  }, []);
+  }, [groups, user]);
 
   const removeMember = useCallback(async (groupId, memberId) => {
+    const currentGroup = groups.find(g => g.id === groupId);
+    const memberToRemove = currentGroup?.split_members?.find(m => m.id === memberId);
+    const actorMember = currentGroup?.split_members?.find(m => m.user_id === user?.id);
     const { error } = await supabase
       .from('split_members')
       .delete()
@@ -141,7 +158,15 @@ export function useSplitGroups() {
         ? { ...g, split_members: (g.split_members || []).filter(m => m.id !== memberId) }
         : g
     ));
-  }, []);
+    notifySplit({
+      event: 'member_removed',
+      group_id: groupId,
+      group_name: currentGroup?.name ?? '',
+      actor_name: actorMember?.name ?? '',
+      actor_user_id: user?.id,
+      member_name: memberToRemove?.name ?? '',
+    });
+  }, [groups, user]);
 
   // 用邀請代碼查詢群組（RPC，任何登入用戶皆可）
   const getGroupByCode = useCallback(async (code) => {

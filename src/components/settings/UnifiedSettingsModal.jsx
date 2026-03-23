@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useReminderSettings } from '@/hooks/useReminderSettings';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useDashboard } from '@/hooks/useDashboard';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -156,6 +157,11 @@ const IconTheme = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M4.098 19.902a3.75 3.75 0 0 0 5.304 0l6.401-6.402M6.75 21A3.75 3.75 0 0 1 3 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 0 0 3.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008Z" />
   </svg>
 );
+const IconBell = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0M3.75 9a8.25 8.25 0 0 1 16.5 0" />
+  </svg>
+);
 
 const TABS = [
   { id: 'theme', label: '外觀主題', Icon: IconTheme },
@@ -163,6 +169,7 @@ const TABS = [
   { id: 'accounts', label: '支付工具', Icon: IconAccounts },
   { id: 'reminder', label: '簽到提醒', Icon: IconReminder },
   { id: 'subscription', label: '訂閱管理', Icon: IconSubscription },
+  { id: 'push', label: '群組通知', Icon: IconBell },
 ];
 
 const SHUFFLE_INTERVALS = [
@@ -212,6 +219,11 @@ const THEME_OPTIONS = [
     id: 'peach',
     label: '蜜桃',
     swatch: ['#f99584', '#fffdfc', '#f4dbd6'],
+  },
+  {
+    id: 'lime',
+    label: '萊姆',
+    swatch: ['#aec22a', '#fcfdf5', '#e0e6c0'],
   },
 ];
 
@@ -634,6 +646,52 @@ function SubscriptionPanel({ isOpen, confirm, toast }) {
   );
 }
 
+function PushPanel() {
+  const { isSupported, permission, isSubscribed, loading, subscribe, unsubscribe } = usePushNotifications();
+
+  const handleToggle = () => {
+    if (isSubscribed) unsubscribe();
+    else subscribe();
+  };
+
+  return (
+    <div className="usm-panel">
+      <h3 className="settings-manage__section-title">群組通知</h3>
+      <div className="push-panel">
+        <p className="push-panel__desc">
+          開啟後，當分帳群組有成員新增或修改費用、新增或移除成員、記錄還款時，你會收到推播通知。
+        </p>
+        {!isSupported && (
+          <p className="push-panel__warning">您的瀏覽器不支援推播通知。請改用 Chrome 或 Safari（iOS 需先將 App 加入主畫面）。</p>
+        )}
+        {isSupported && permission === 'denied' && (
+          <p className="push-panel__warning">通知權限已被封鎖，請至瀏覽器設定開放此網站的通知權限後再試。</p>
+        )}
+        {isSupported && permission !== 'denied' && (
+          <>
+            <label className="push-panel__toggle-row">
+              <span>啟用推播通知</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isSubscribed}
+                className={`push-panel__toggle${isSubscribed ? ' is-on' : ''}`}
+                onClick={handleToggle}
+                disabled={loading}
+              >
+                <span className="push-panel__toggle-knob" />
+              </button>
+            </label>
+            {isSubscribed && (
+              <p className="push-panel__hint">此裝置已開啟通知，群組有異動時你將收到系統推播。</p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────
 export default function UnifiedSettingsModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('theme');
@@ -698,6 +756,7 @@ export default function UnifiedSettingsModal({ isOpen, onClose }) {
               <SubscriptionPanel isOpen={isOpen} confirm={confirm} toast={toast} />
             </div>
             <div hidden={activeTab !== 'theme'}><ThemePanel /></div>
+            <div hidden={activeTab !== 'push'}><PushPanel /></div>
           </div>
         </div>
       </div>

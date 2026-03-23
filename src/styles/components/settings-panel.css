@@ -156,9 +156,9 @@
 }
 
 .theme-shuffle__themes {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .theme-shuffle__theme-item {
@@ -175,8 +175,8 @@
   min-width: 68px;
 }
 
-.theme-shuffle__theme-item:hover {
-  border-color: var(--color-primary);
+.theme-shuffle__theme-item:hover:not(.is-checked) {
+  background: var(--color-row-hover);
 }
 
 .theme-shuffle__theme-item.is-checked {

@@ -45,7 +45,7 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose }) 
           <div className="transaction-detail-item">
             <div className="transaction-detail-label">金額</div>
             <div className="transaction-detail-value transaction-detail-amount">
-              {formatNumberWithCommas(String(originalAmount))} {currency}
+              {currency} {formatNumberWithCommas(String(originalAmount))}
             </div>
           </div>
           {currency !== 'TWD' && (

@@ -1,0 +1,85 @@
+/* ============================================
+   Modal — Push Notifications Panel
+   ============================================ */
+
+.push-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.25rem 0;
+}
+
+.push-panel__desc {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.push-panel__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.push-panel__toggle {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.push-panel__toggle.is-on {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.push-panel__toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.push-panel__toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.push-panel__toggle.is-on .push-panel__toggle-knob {
+  transform: translateX(22px);
+}
+
+.push-panel__warning {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--color-row-hover);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.push-panel__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}

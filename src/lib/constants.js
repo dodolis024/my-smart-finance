@@ -122,6 +122,19 @@ export const CHART_COLORS_PEACH = [
   'hsl(355, 58%, 72%)',
 ];
 
+// Lime 主題圖表色：黃綠色系
+export const CHART_COLORS_LIME = [
+  'hsl(72, 65%, 48%)',
+  'hsl(80, 55%, 62%)',
+  'hsl(65, 60%, 52%)',
+  'hsl(88, 50%, 58%)',
+  'hsl(58, 58%, 55%)',
+  'hsl(95, 45%, 64%)',
+  'hsl(70, 62%, 50%)',
+  'hsl(82, 48%, 60%)',
+  'hsl(62, 52%, 56%)',
+];
+
 // Lavender 主題圖表色：紫色系
 export const CHART_COLORS_LAVENDER = [
   'hsl(255, 40%, 58%)',
