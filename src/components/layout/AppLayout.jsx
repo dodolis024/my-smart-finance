@@ -5,12 +5,14 @@ import ChangelogModal from '@/components/common/ChangelogModal';
 import UnifiedSettingsModal from '@/components/settings/UnifiedSettingsModal';
 import { useNavActions } from '@/contexts/NavActionsContext';
 import { useChangelog } from '@/hooks/useChangelog';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AppLayout({ children }) {
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const navActions = useNavActions();
-  const { hasUnread, markAsRead } = useChangelog();
+  const { user } = useAuth();
+  const { hasUnread, markAsRead } = useChangelog(user?.id);
 
   const openChangelog = useCallback(() => {
     setChangelogOpen(true);

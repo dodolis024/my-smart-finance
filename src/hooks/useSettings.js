@@ -119,10 +119,21 @@ export function useSettings() {
   }, [user, accounts, loadSettingsData]);
 
   const deleteAccount = useCallback(async (accountId) => {
+    const account = accounts.find(a => a.id === accountId);
+    if (account && user) {
+      const { count, error: countError } = await supabase
+        .from('transactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('payment_method', account.name);
+      if (!countError && count > 0) {
+        throw new Error(`「${account.name}」仍有 ${count} 筆交易記錄，請先將這些交易改為其他帳戶後再刪除。`);
+      }
+    }
     const { error } = await supabase.from('accounts').delete().eq('id', accountId);
     if (error) throw error;
     await loadSettingsData();
-  }, [loadSettingsData]);
+  }, [user, accounts, loadSettingsData]);
 
   const updateTransactionPaymentMethods = useCallback(async (oldName, newName) => {
     if (!user) return;

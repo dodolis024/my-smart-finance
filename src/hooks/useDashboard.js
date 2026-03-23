@@ -17,9 +17,25 @@ export function useDashboard() {
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
   const requestIdRef = useRef(0);
 
-  const fetchDashboardData = useCallback(async (year, month) => {
+  const removeTransactionLocally = useCallback((id) => {
+    setTransactionHistoryFull((prev) => {
+      const removed = prev.find((tx) => tx.id === id);
+      if (!removed) return prev;
+      const next = prev.filter((tx) => tx.id !== id);
+      const amt = typeof removed.twdAmount === 'number' ? removed.twdAmount : 0;
+      setSummary((s) => {
+        if (removed.type === 'income') {
+          return { ...s, totalIncome: s.totalIncome - amt, balance: s.balance - amt };
+        }
+        return { ...s, totalExpense: s.totalExpense - amt, balance: s.balance + amt };
+      });
+      return next;
+    });
+  }, []);
+
+  const fetchDashboardData = useCallback(async (year, month, { silent = false } = {}) => {
     const reqId = ++requestIdRef.current;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const { data, error } = await supabase.rpc('get_dashboard_data', {
         p_client_today: getTodayYmd(),
@@ -118,5 +134,6 @@ export function useDashboard() {
     summary,
     fetchDashboardData,
     fetchCurrencies,
+    removeTransactionLocally,
   };
 }

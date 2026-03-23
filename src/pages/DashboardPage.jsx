@@ -36,6 +36,7 @@ export default function DashboardPage() {
     loading,
     fetchDashboardData,
     fetchCurrencies,
+    removeTransactionLocally,
   } = useDashboard();
   const {
     streakState,
@@ -49,7 +50,7 @@ export default function DashboardPage() {
     getPositiveModalContent,
     getCurrentModalContent,
     getCurrentModalContentFromData,
-  } = useStreak();
+  } = useStreak(user?.id);
   const { submitTransaction, deleteTransaction } = useTransactions();
   const toast = useToast();
   const { confirm } = useConfirm();
@@ -74,11 +75,11 @@ export default function DashboardPage() {
   }, [user, ensureDefaultDataForOAuth]);
 
   useEffect(() => {
-    fetchDashboardData(currentYear, currentMonth).catch(() => {});
+    fetchDashboardData(currentYear, currentMonth).catch(err => console.error('[Dashboard] fetch failed:', err));
   }, [currentYear, currentMonth, fetchDashboardData]);
 
   useEffect(() => {
-    fetchCurrencies().catch(() => {});
+    fetchCurrencies().catch(err => console.error('[Dashboard] fetchCurrencies failed:', err));
   }, [fetchCurrencies]);
 
   useEffect(() => {
@@ -107,9 +108,9 @@ export default function DashboardPage() {
         const [y, m] = result.date
           ? result.date.split('-')
           : [String(currentYear), String(currentMonth)];
-        await fetchDashboardData(parseInt(y, 10), parseInt(m, 10));
         setEditingTransaction(null);
         toast.success(result.isEdit ? '已更新。' : '記帳成功！');
+        fetchDashboardData(parseInt(y, 10), parseInt(m, 10), { silent: true });
 
         if (!result.isEdit && shouldShowPositiveModal(result.date)) {
           const content = getPositiveModalContent();
@@ -143,8 +144,9 @@ export default function DashboardPage() {
       if (!confirmed) return;
       try {
         await deleteTransaction(id);
-        await fetchDashboardData(currentYear, currentMonth);
+        removeTransactionLocally(id);
         toast.success('已刪除。');
+        fetchDashboardData(currentYear, currentMonth, { silent: true });
       } catch (err) {
         toast.error(err.message || '刪除失敗，請稍後再試。');
       }
@@ -155,7 +157,7 @@ export default function DashboardPage() {
   const handleCheckin = useCallback(async () => {
     try {
       await submitDailyCheckin();
-      const data = await fetchDashboardData(currentYear, currentMonth);
+      const data = await fetchDashboardData(currentYear, currentMonth, { silent: true });
       if (data) {
         updateStreakFromServer(data);
         const content = getCurrentModalContentFromData(data);

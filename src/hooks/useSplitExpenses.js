@@ -1,9 +1,18 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
-// Module-level cache keyed by groupId
+// Module-level cache keyed by groupId（最多保留 15 個群組）
+const MAX_CACHED_GROUPS = 15;
 const expenseCache = {};   // { [groupId]: expenses[] }
 const settlementCache = {}; // { [groupId]: settlements[] }
+
+function evictCacheIfNeeded() {
+  const keys = Object.keys(expenseCache);
+  if (keys.length > MAX_CACHED_GROUPS) {
+    const toRemove = keys.slice(0, keys.length - MAX_CACHED_GROUPS);
+    toRemove.forEach(k => { delete expenseCache[k]; delete settlementCache[k]; });
+  }
+}
 
 export function useSplitExpenses(groupId) {
   const hasCached = groupId && expenseCache[groupId];
@@ -21,6 +30,7 @@ export function useSplitExpenses(groupId) {
     if (groupId) {
       expenseCache[groupId] = expenses;
       settlementCache[groupId] = settlements;
+      evictCacheIfNeeded();
     }
   }, [expenses, settlements, groupId]);
 

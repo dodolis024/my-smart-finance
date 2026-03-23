@@ -6,7 +6,7 @@ const SHUFFLE_THEMES_KEY = 'theme-shuffle-themes';
 const SHUFFLE_INTERVAL_KEY = 'theme-shuffle-interval';
 const SHUFFLE_LAST_KEY = 'theme-shuffle-last';
 
-export const THEMES = ['default', 'rose', 'gray', 'dawn', 'soda'];
+export const THEMES = ['default', 'rose', 'graphite', 'dawn', 'soda', 'lavender', 'sorbet', 'peach'];
 
 function applyTheme(theme) {
   if (theme === 'default') {
@@ -33,7 +33,13 @@ function pickRandom(themes, current) {
   return choices[Math.floor(Math.random() * choices.length)];
 }
 
+function migrateGrayToGraphite() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === 'gray') localStorage.setItem(STORAGE_KEY, 'graphite');
+}
+
 function initTheme() {
+  migrateGrayToGraphite();
   if (_initThemeDone) {
     const saved = localStorage.getItem(STORAGE_KEY);
     const theme = THEMES.includes(saved) ? saved : 'default';

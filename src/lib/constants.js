@@ -96,6 +96,45 @@ export const CHART_COLORS_SODA = [
   'hsl(205, 44%, 60%)',
 ];
 
+// Sorbet 主題圖表色：橘黃藍三色系
+export const CHART_COLORS_SORBET = [
+  'hsl(28, 82%, 58%)',
+  'hsl(42, 86%, 58%)',
+  'hsl(198, 58%, 55%)',
+  'hsl(20, 72%, 62%)',
+  'hsl(36, 78%, 56%)',
+  'hsl(195, 50%, 60%)',
+  'hsl(32, 75%, 65%)',
+  'hsl(45, 80%, 62%)',
+  'hsl(200, 55%, 52%)',
+];
+
+// Peach 主題圖表色：暖珊瑚 / 蜜桃色系
+export const CHART_COLORS_PEACH = [
+  'hsl(10, 75%, 68%)',
+  'hsl(18, 62%, 78%)',
+  'hsl(4, 68%, 63%)',
+  'hsl(22, 58%, 74%)',
+  'hsl(350, 62%, 70%)',
+  'hsl(28, 52%, 80%)',
+  'hsl(8, 70%, 65%)',
+  'hsl(15, 55%, 76%)',
+  'hsl(355, 58%, 72%)',
+];
+
+// Lavender 主題圖表色：紫色系
+export const CHART_COLORS_LAVENDER = [
+  'hsl(255, 40%, 58%)',
+  'hsl(270, 36%, 72%)',
+  'hsl(245, 38%, 65%)',
+  'hsl(280, 34%, 68%)',
+  'hsl(260, 42%, 55%)',
+  'hsl(235, 32%, 70%)',
+  'hsl(275, 38%, 62%)',
+  'hsl(250, 30%, 74%)',
+  'hsl(265, 44%, 60%)',
+];
+
 export const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const ACCOUNT_TYPE_NAMES = {

@@ -1,17 +1,19 @@
 import { useState, useCallback } from 'react';
 import { CURRENT_VERSION } from '@/lib/constants';
 
-const STORAGE_KEY = 'changelog-seen-version';
+function storageKey(userId) {
+  return userId ? `changelog-seen-version:${userId}` : 'changelog-seen-version';
+}
 
-export function useChangelog() {
+export function useChangelog(userId) {
   const [hasUnread, setHasUnread] = useState(() =>
-    localStorage.getItem(STORAGE_KEY) !== CURRENT_VERSION
+    localStorage.getItem(storageKey(userId)) !== CURRENT_VERSION
   );
 
   const markAsRead = useCallback(() => {
-    localStorage.setItem(STORAGE_KEY, CURRENT_VERSION);
+    localStorage.setItem(storageKey(userId), CURRENT_VERSION);
     setHasUnread(false);
-  }, []);
+  }, [userId]);
 
   return { hasUnread, markAsRead };
 }

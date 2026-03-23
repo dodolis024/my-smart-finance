@@ -184,7 +184,7 @@ const THEME_OPTIONS = [
     swatch: ['#c06373', '#fcf8f5', '#efd0d9'],
   },
   {
-    id: 'gray',
+    id: 'graphite',
     label: '石墨',
     swatch: ['#656a6c', '#fdfeff', '#cfd6db'],
   },
@@ -196,7 +196,22 @@ const THEME_OPTIONS = [
   {
     id: 'soda',
     label: '汽水',
-    swatch: ['#2e7a89', '#f5fcfe', '#95d7d3'],
+    swatch: ['#2e8cb8', '#f0fafd', '#95d7d3'],
+  },
+  {
+    id: 'lavender',
+    label: '薰衣草',
+    swatch: ['#8a7ebc', '#f9f7fb', '#ad9bd7'],
+  },
+  {
+    id: 'sorbet',
+    label: '橘子汽水',
+    swatch: ['#ee9248', '#f0be3a', '#5ab0d4'],
+  },
+  {
+    id: 'peach',
+    label: '蜜桃',
+    swatch: ['#f99584', '#fffdfc', '#f4dbd6'],
   },
 ];
 

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { getTodayYmd } from '@/lib/utils';
 import { STREAK_MILESTONES } from '@/lib/constants';
 
-export function useStreak() {
+export function useStreak(userId) {
   const [streakState, setStreakState] = useState({
     count: 0,
     broken: false,
@@ -59,15 +59,16 @@ export function useStreak() {
     const broken = brokenFromServer ?? streakState.broken;
     if (!broken) return false;
     const today = getTodayYmd();
+    const key = userId ? `streakBrokenShownDate:${userId}` : 'streakBrokenShownDate';
     try {
-      const shownFor = window.localStorage.getItem('streakBrokenShownDate');
+      const shownFor = window.localStorage.getItem(key);
       if (shownFor === today) return false;
-      window.localStorage.setItem('streakBrokenShownDate', today);
+      window.localStorage.setItem(key, today);
       return true;
     } catch {
       return true;
     }
-  }, [streakState.broken]);
+  }, [streakState.broken, userId]);
 
   const shouldShowPositiveModal = useCallback(
     (submittedDate) => {
@@ -76,16 +77,17 @@ export function useStreak() {
       if (streakState.broken) return false;
       if (!streakState.count || streakState.count <= 0) return false;
 
+      const key = userId ? `streakPositiveShownDate:${userId}` : 'streakPositiveShownDate';
       try {
-        const shownFor = window.localStorage.getItem('streakPositiveShownDate');
+        const shownFor = window.localStorage.getItem(key);
         if (shownFor === today) return false;
-        window.localStorage.setItem('streakPositiveShownDate', today);
+        window.localStorage.setItem(key, today);
         return true;
       } catch {
         return true;
       }
     },
-    [streakState.broken, streakState.count]
+    [streakState.broken, streakState.count, userId]
   );
 
   const getPositiveModalContent = useCallback(() => {
