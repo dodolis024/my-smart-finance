@@ -38,8 +38,8 @@ const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => ({
   label: String(m).padStart(2, '0'),
 }));
 
-const ITEM_H = 44;   // px per item
-const VISIBLE = 5;   // visible rows (odd so selection is centred)
+const ITEM_H = 40;   // px per item
+const VISIBLE = 3;   // visible rows (odd so selection is centred)
 const COPIES = 7;    // repeat copies for infinite illusion
 const PAD = Math.floor(VISIBLE / 2) * ITEM_H; // spacer height = 88 px
 

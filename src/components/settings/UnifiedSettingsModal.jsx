@@ -229,8 +229,23 @@ const THEME_OPTIONS = [
 // ─── Theme Panel ──────────────────────────────────────────────────
 function ThemePanel() {
   const { theme, setTheme, shuffleEnabled, setShuffleEnabled, shuffleThemes, setShuffleThemes, shuffleInterval, setShuffleInterval } = useTheme();
-  const [open, setOpen] = useState({ theme: false, shuffle: false });
-  const toggle = (k) => setOpen((s) => ({ ...s, [k]: !s[k] }));
+  const [open, setOpen] = useState({ shuffle: false });
+  const shuffleRef = useRef(null);
+  const toggle = (k) => setOpen((s) => {
+    const isMobile = window.matchMedia('(max-width: 600px)').matches;
+    if (isMobile) {
+      const allClosed = Object.fromEntries(Object.keys(s).map((key) => [key, false]));
+      return { ...allClosed, [k]: !s[k] };
+    }
+    return { ...s, [k]: !s[k] };
+  });
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 600px)').matches) return;
+    const openKey = Object.keys(open).find((k) => open[k]);
+    const el = openKey ? shuffleRef.current : null;
+    const container = el?.closest('.usm__content');
+    if (el && container) container.scrollTop = el.offsetTop - container.offsetTop;
+  }, [open]);
 
   const toggleShuffleTheme = (id) => {
     if (shuffleThemes.includes(id)) {
@@ -275,7 +290,7 @@ function ThemePanel() {
         ))}
       </div>
 
-      <div className="category-group">
+      <div className="category-group" ref={shuffleRef}>
         <div className="category-group__header" onClick={() => toggle('shuffle')} style={{ cursor: 'pointer', userSelect: 'none' }}>
           <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <ChevronRight isOpen={open.shuffle} />
@@ -558,7 +573,24 @@ function PushSection() {
 
 function NotificationPanel({ isOpen, toast }) {
   const [open, setOpen] = useState({ reminder: false, push: false });
-  const toggle = (k) => setOpen((s) => ({ ...s, [k]: !s[k] }));
+  const reminderRef = useRef(null);
+  const pushRef = useRef(null);
+  const sectionRefs = { reminder: reminderRef, push: pushRef };
+  const toggle = (k) => setOpen((s) => {
+    const isMobile = window.matchMedia('(max-width: 600px)').matches;
+    if (isMobile) {
+      const allClosed = Object.fromEntries(Object.keys(s).map((key) => [key, false]));
+      return { ...allClosed, [k]: !s[k] };
+    }
+    return { ...s, [k]: !s[k] };
+  });
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 600px)').matches) return;
+    const openKey = Object.keys(open).find((k) => open[k]);
+    const el = openKey ? sectionRefs[openKey].current : null;
+    const container = el?.closest('.usm__content');
+    if (el && container) container.scrollTop = el.offsetTop - container.offsetTop;
+  }, [open]);
 
   const SectionHeader = ({ id, label }) => (
     <div
@@ -578,11 +610,11 @@ function NotificationPanel({ isOpen, toast }) {
   return (
     <div className="usm-panel">
       <h3 className="settings-manage__section-title">通知設定</h3>
-      <div className="category-group">
+      <div className="category-group" ref={reminderRef}>
         <SectionHeader id="reminder" label="簽到提醒" />
         {open.reminder && <div className="notification-section__body"><ReminderPanel isOpen={isOpen} toast={toast} /></div>}
       </div>
-      <div className="category-group">
+      <div className="category-group" ref={pushRef}>
         <SectionHeader id="push" label="群組通知" />
         {open.push && <div className="notification-section__body"><PushSection /></div>}
       </div>

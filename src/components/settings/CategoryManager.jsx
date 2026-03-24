@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 function InlineInput({ defaultValue = '', placeholder, onConfirm, onCancel }) {
   const [value, setValue] = useState(defaultValue);
@@ -26,7 +26,24 @@ export default function CategoryManager({ expenseCategories, incomeCategories, o
   const [addingType, setAddingType] = useState(null);
   const [renamingKey, setRenamingKey] = useState(null);
   const [openGroups, setOpenGroups] = useState({ expense: false, income: false });
-  const toggleGroup = (type) => setOpenGroups((s) => ({ ...s, [type]: !s[type] }));
+  const expenseRef = useRef(null);
+  const incomeRef = useRef(null);
+  const groupRefs = { expense: expenseRef, income: incomeRef };
+  const toggleGroup = (type) => setOpenGroups((s) => {
+    const isMobile = window.matchMedia('(max-width: 600px)').matches;
+    if (isMobile) {
+      const allClosed = Object.fromEntries(Object.keys(s).map((key) => [key, false]));
+      return { ...allClosed, [type]: !s[type] };
+    }
+    return { ...s, [type]: !s[type] };
+  });
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 600px)').matches) return;
+    const openKey = Object.keys(openGroups).find((k) => openGroups[k]);
+    const el = openKey ? groupRefs[openKey].current : null;
+    const container = el?.closest('.usm__content');
+    if (el && container) container.scrollTop = el.offsetTop - container.offsetTop;
+  }, [openGroups]);
 
   const handleAdd = async (type, name) => {
     if (!name?.trim()) { setAddingType(null); return; }
@@ -61,7 +78,7 @@ export default function CategoryManager({ expenseCategories, incomeCategories, o
   const renderList = (type, cats) => {
     const isOpen = openGroups[type];
     return (
-    <div className="category-group">
+    <div className="category-group" ref={groupRefs[type]}>
       <div className="category-group__header" onClick={() => toggleGroup(type)} style={{ cursor: 'pointer', userSelect: 'none' }}>
         <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14, flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
