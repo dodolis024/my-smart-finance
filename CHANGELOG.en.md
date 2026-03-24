@@ -2,11 +2,12 @@
 
 This file records version updates for Smart Finance Tracker.
 
-- Improved settings by combining check-in reminder and group notifications under “Notification settings” with collapsible subsections
-- Improved theme picker layout and collapsible theme shuffle section for clearer organization
-- Improved mobile settings accordions to show one section at a time and scroll opened content into view
-- Improved check-in reminder time picker height and layout for smaller screens
-- Improved spacing between sections in settings panels
+## [1.11.1] - Mar-24 2026
+- Improved settings: moved “Check-in Reminder” and “Group Notifications” into “Notification Settings,” with collapsible subsections
+- Improved theme settings: refined the theme picker and theme shuffle layout, with a collapsible shuffle section
+- Improved mobile settings accordion: only one section opens at a time, and it auto-scrolls to the opened content
+- Improved check-in reminder time wheel: reduced height and simplified layout to save space on small screens
+- Improved settings tab layout: adjusted spacing between sections for easier reading
 
 ## [1.11.0] - Mar-23 2026
 - Added new appearance themes and chart color schemes: Lavender, Orange Soda, Peach, Lime
