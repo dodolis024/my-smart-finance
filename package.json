@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "prebuild": "cp CHANGELOG.md public/CHANGELOG.md",
+    "prebuild": "cp CHANGELOG.zh.md public/CHANGELOG.md",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",

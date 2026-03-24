@@ -2,19 +2,24 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { copyFileSync, readFileSync } from 'fs';
 
-// 讓 CHANGELOG.md 在 dev 與 prod 都能以獨立檔案被 fetch，
+// 讓 CHANGELOG 在 dev 與 prod 都能以獨立檔案被 fetch，
 // 避免打包進 JS bundle 後被 iOS PWA 快取住無法更新。
 const changelogPlugin = {
   name: 'serve-changelog',
   configureServer(server) {
-    server.middlewares.use('/CHANGELOG.md', (_req, res) => {
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.end(readFileSync('CHANGELOG.md', 'utf-8'));
-    });
+    for (const lang of ['zh', 'en']) {
+      const file = `CHANGELOG.${lang}.md`;
+      server.middlewares.use(`/${file}`, (_req, res) => {
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.end(readFileSync(file, 'utf-8'));
+      });
+    }
   },
   closeBundle() {
-    copyFileSync('CHANGELOG.md', 'dist/CHANGELOG.md');
+    for (const lang of ['zh', 'en']) {
+      copyFileSync(`CHANGELOG.${lang}.md`, `dist/CHANGELOG.${lang}.md`);
+    }
   },
 };
 

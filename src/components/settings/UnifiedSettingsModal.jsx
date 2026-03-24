@@ -167,9 +167,8 @@ const TABS = [
   { id: 'theme', label: '外觀主題', Icon: IconTheme },
   { id: 'options', label: '類別管理', Icon: IconOptions },
   { id: 'accounts', label: '支付工具', Icon: IconAccounts },
-  { id: 'reminder', label: '簽到提醒', Icon: IconReminder },
+  { id: 'notification', label: '通知設定', Icon: IconBell },
   { id: 'subscription', label: '訂閱管理', Icon: IconSubscription },
-  { id: 'push', label: '群組通知', Icon: IconBell },
 ];
 
 const SHUFFLE_INTERVALS = [
@@ -230,6 +229,8 @@ const THEME_OPTIONS = [
 // ─── Theme Panel ──────────────────────────────────────────────────
 function ThemePanel() {
   const { theme, setTheme, shuffleEnabled, setShuffleEnabled, shuffleThemes, setShuffleThemes, shuffleInterval, setShuffleInterval } = useTheme();
+  const [open, setOpen] = useState({ theme: false, shuffle: false });
+  const toggle = (k) => setOpen((s) => ({ ...s, [k]: !s[k] }));
 
   const toggleShuffleTheme = (id) => {
     if (shuffleThemes.includes(id)) {
@@ -240,38 +241,48 @@ function ThemePanel() {
     }
   };
 
+  const ChevronRight = ({ isOpen }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14, flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
+    </svg>
+  );
+
   return (
     <div className="usm-panel">
-      <section className="settings-manage__section">
-        <h3 className="settings-manage__section-title">外觀主題</h3>
-        <div className="theme-picker">
-          {THEME_OPTIONS.map(({ id, label, swatch }) => (
-            <button
-              key={id}
-              type="button"
-              className={`theme-picker__item${theme === id ? ' is-active' : ''}`}
-              onClick={() => setTheme(id)}
-              aria-pressed={theme === id}
-            >
-              <span className="theme-picker__swatch">
-                {swatch.map((color, i) => (
-                  <span key={i} style={{ background: color }} />
-                ))}
-              </span>
-              <span className="theme-picker__label">{label}</span>
-              {theme === id && (
-                <svg className="theme-picker__check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
-                </svg>
-              )}
-            </button>
-          ))}
-        </div>
-      </section>
+      <h3 className="settings-manage__section-title">外觀主題</h3>
 
-      <section className="settings-manage__section">
-        <h3 className="settings-manage__section-title">主題輪換</h3>
-        <div className="theme-shuffle">
+      <div className="theme-picker">
+        {THEME_OPTIONS.map(({ id, label, swatch }) => (
+          <button
+            key={id}
+            type="button"
+            className={`theme-picker__item${theme === id ? ' is-active' : ''}`}
+            onClick={() => setTheme(id)}
+            aria-pressed={theme === id}
+          >
+            <span className="theme-picker__swatch">
+              {swatch.map((color, i) => (
+                <span key={i} style={{ background: color }} />
+              ))}
+            </span>
+            <span className="theme-picker__label">{label}</span>
+            {theme === id && (
+              <svg className="theme-picker__check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="category-group">
+        <div className="category-group__header" onClick={() => toggle('shuffle')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+          <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <ChevronRight isOpen={open.shuffle} />
+            主題輪換
+          </h4>
+        </div>
+        {open.shuffle && <div className="theme-shuffle">
           <label className="theme-shuffle__toggle-row">
             <span className="theme-shuffle__toggle-label">啟用自動輪換</span>
             <button
@@ -327,8 +338,8 @@ function ThemePanel() {
               </div>
             </div>
           )}
-        </div>
-      </section>
+        </div>}
+      </div>
     </div>
   );
 }
@@ -432,8 +443,7 @@ function ReminderPanel({ isOpen, toast }) {
   const showDetectedHint = !loading && detectedTz && detectedTz !== timezone;
 
   return (
-    <div className="usm-panel">
-      <h3 className="settings-manage__section-title">簽到提醒</h3>
+    <>
       {loading ? <p className="reminder-modal__loading">載入中...</p> : (
         <div className="reminder-modal__content">
           <p className="reminder-modal__desc">
@@ -499,6 +509,83 @@ function ReminderPanel({ isOpen, toast }) {
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+function PushSection() {
+  const { isSupported, permission, isSubscribed, loading, subscribe, unsubscribe } = usePushNotifications();
+
+  const handleToggle = () => {
+    if (isSubscribed) unsubscribe();
+    else subscribe();
+  };
+
+  return (
+    <div className="push-panel">
+      <p className="push-panel__desc">
+        開啟後，當分帳群組有成員新增或修改費用、新增或移除成員、記錄還款時，你會收到推播通知。
+      </p>
+      {!isSupported && (
+        <p className="push-panel__warning">您的瀏覽器不支援推播通知。請改用 Chrome 或 Safari（iOS 需先將 App 加入主畫面）。</p>
+      )}
+      {isSupported && permission === 'denied' && (
+        <p className="push-panel__warning">通知權限已被封鎖，請至瀏覽器設定開放此網站的通知權限後再試。</p>
+      )}
+      {isSupported && permission !== 'denied' && (
+        <>
+          <label className="push-panel__toggle-row">
+            <span>啟用推播通知</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isSubscribed}
+              className={`push-panel__toggle${isSubscribed ? ' is-on' : ''}`}
+              onClick={handleToggle}
+              disabled={loading}
+            >
+              <span className="push-panel__toggle-knob" />
+            </button>
+          </label>
+          {isSubscribed && (
+            <p className="push-panel__hint">此裝置已開啟通知，群組有異動時你將收到系統推播。</p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function NotificationPanel({ isOpen, toast }) {
+  const [open, setOpen] = useState({ reminder: false, push: false });
+  const toggle = (k) => setOpen((s) => ({ ...s, [k]: !s[k] }));
+
+  const SectionHeader = ({ id, label }) => (
+    <div
+      className="category-group__header"
+      onClick={() => toggle(id)}
+      style={{ cursor: 'pointer', userSelect: 'none' }}
+    >
+      <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14, flexShrink: 0, transition: 'transform 0.2s', transform: open[id] ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
+        </svg>
+        {label}
+      </h4>
+    </div>
+  );
+
+  return (
+    <div className="usm-panel">
+      <h3 className="settings-manage__section-title">通知設定</h3>
+      <div className="category-group">
+        <SectionHeader id="reminder" label="簽到提醒" />
+        {open.reminder && <div className="notification-section__body"><ReminderPanel isOpen={isOpen} toast={toast} /></div>}
+      </div>
+      <div className="category-group">
+        <SectionHeader id="push" label="群組通知" />
+        {open.push && <div className="notification-section__body"><PushSection /></div>}
+      </div>
     </div>
   );
 }
@@ -646,52 +733,6 @@ function SubscriptionPanel({ isOpen, confirm, toast }) {
   );
 }
 
-function PushPanel() {
-  const { isSupported, permission, isSubscribed, loading, subscribe, unsubscribe } = usePushNotifications();
-
-  const handleToggle = () => {
-    if (isSubscribed) unsubscribe();
-    else subscribe();
-  };
-
-  return (
-    <div className="usm-panel">
-      <h3 className="settings-manage__section-title">群組通知</h3>
-      <div className="push-panel">
-        <p className="push-panel__desc">
-          開啟後，當分帳群組有成員新增或修改費用、新增或移除成員、記錄還款時，你會收到推播通知。
-        </p>
-        {!isSupported && (
-          <p className="push-panel__warning">您的瀏覽器不支援推播通知。請改用 Chrome 或 Safari（iOS 需先將 App 加入主畫面）。</p>
-        )}
-        {isSupported && permission === 'denied' && (
-          <p className="push-panel__warning">通知權限已被封鎖，請至瀏覽器設定開放此網站的通知權限後再試。</p>
-        )}
-        {isSupported && permission !== 'denied' && (
-          <>
-            <label className="push-panel__toggle-row">
-              <span>啟用推播通知</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isSubscribed}
-                className={`push-panel__toggle${isSubscribed ? ' is-on' : ''}`}
-                onClick={handleToggle}
-                disabled={loading}
-              >
-                <span className="push-panel__toggle-knob" />
-              </button>
-            </label>
-            {isSubscribed && (
-              <p className="push-panel__hint">此裝置已開啟通知，群組有異動時你將收到系統推播。</p>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────
 export default function UnifiedSettingsModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState('theme');
@@ -751,12 +792,11 @@ export default function UnifiedSettingsModal({ isOpen, onClose }) {
           <div className="usm__content scrollbar-on-scroll">
             <div hidden={activeTab !== 'options'}><OptionsPanel isOpen={isOpen} confirm={confirm} toast={toast} /></div>
             <div hidden={activeTab !== 'accounts'}><AccountsPanel isOpen={isOpen} confirm={confirm} toast={toast} /></div>
-            <div hidden={activeTab !== 'reminder'}><ReminderPanel isOpen={isOpen} toast={toast} /></div>
+            <div hidden={activeTab !== 'notification'}><NotificationPanel isOpen={isOpen} toast={toast} /></div>
             <div hidden={activeTab !== 'subscription'}>
               <SubscriptionPanel isOpen={isOpen} confirm={confirm} toast={toast} />
             </div>
             <div hidden={activeTab !== 'theme'}><ThemePanel /></div>
-            <div hidden={activeTab !== 'push'}><PushPanel /></div>
           </div>
         </div>
       </div>

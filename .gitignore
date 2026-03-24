@@ -20,7 +20,7 @@ playwright-report/
 test-results/
 .playwright/
 
-# public/CHANGELOG.md 由 prebuild 從根目錄複製，不需納入版控
+# public/CHANGELOG.md 由 prebuild 從 CHANGELOG.zh.md 複製，不需納入版控
 public/CHANGELOG.md
 
 # 其他不重要的檔案

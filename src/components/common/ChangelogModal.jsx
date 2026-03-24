@@ -3,18 +3,18 @@ import Modal from './Modal';
 import { parseChangelogMarkdown } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 
-export default function ChangelogModal({ isOpen, onClose }) {
+export default function ChangelogModal({ isOpen, onClose, lang = 'zh' }) {
   const contentRef = useRef(null);
   const [entries, setEntries] = useState([]);
   useScrollbarOnScroll(contentRef, isOpen);
 
   useEffect(() => {
     if (!isOpen) return;
-    fetch(`${import.meta.env.BASE_URL}CHANGELOG.md`, { cache: 'no-cache' })
+    fetch(`${import.meta.env.BASE_URL}CHANGELOG.${lang}.md`, { cache: 'no-cache' })
       .then(r => r.text())
       .then(text => setEntries(parseChangelogMarkdown(text)))
       .catch(err => console.error('[Changelog] fetch failed:', err));
-  }, [isOpen]);
+  }, [isOpen, lang]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="changelog-modal" titleId="changelog-modal-title">
