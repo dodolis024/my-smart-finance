@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Fixed login not redirecting back to the intended page (e.g. when opening a split-bill group link)
+
 ## [1.12.0] - Mar-26 2026
 - Added credit card push alerts in Notification settings: payment due reminders and usage threshold warnings (requires push notifications)
 - After recording or deleting a transaction on a credit card account, usage is rechecked and a push is sent when above your threshold

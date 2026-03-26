@@ -29,7 +29,14 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState('login');
 
   if (loading) return <LoadingFallback />;
-  if (session) return <Navigate to="/" replace />;
+  if (session) {
+    const returnUrl = sessionStorage.getItem('returnUrl');
+    if (returnUrl) {
+      sessionStorage.removeItem('returnUrl');
+      return <Navigate to={returnUrl} replace />;
+    }
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="auth-container">

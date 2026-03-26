@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useAuth } from '@/hooks/useAuth';
 import { ToastProvider, useToast } from '@/contexts/ToastContext';
@@ -37,8 +37,16 @@ function LoadingFallback() {
 
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <LoadingFallback />;
-  if (!session) return <Navigate to="/auth" replace />;
+  if (!session) {
+    const currentPath = location.pathname + location.search;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+    if (currentPath !== '/' && currentPath !== base && currentPath !== base + '/') {
+      sessionStorage.setItem('returnUrl', currentPath);
+    }
+    return <Navigate to="/auth" replace />;
+  }
   return children;
 }
 
