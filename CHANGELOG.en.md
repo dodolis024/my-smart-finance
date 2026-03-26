@@ -2,6 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added credit card push alerts in Notification settings: payment due reminders and usage threshold warnings (requires push notifications)
+- After recording or deleting a transaction on a credit card account, usage is rechecked and a push is sent when above your threshold
+
 ## [1.11.1] - Mar-24 2026
 - Improved settings: moved “Check-in Reminder” and “Group Notifications” into “Notification Settings,” with collapsible subsections
 - Improved theme settings: refined the theme picker and theme shuffle layout, with a collapsible shuffle section

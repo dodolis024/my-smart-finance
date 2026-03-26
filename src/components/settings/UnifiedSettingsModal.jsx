@@ -6,6 +6,7 @@ import AccountManager from './AccountManager';
 import { useSettings } from '@/hooks/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useReminderSettings } from '@/hooks/useReminderSettings';
+import { useCreditCardNotificationSettings } from '@/hooks/useCreditCardNotificationSettings';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useDashboard } from '@/hooks/useDashboard';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -571,11 +572,139 @@ function PushSection() {
   );
 }
 
+const DAYS_BEFORE_OPTIONS = [1, 2, 3, 5, 7];
+const THRESHOLD_OPTIONS = [70, 80, 90];
+
+function CreditCardNotifSection({ isOpen, toast }) {
+  const { settings, loading, saving, loadSettings, saveSettings } = useCreditCardNotificationSettings();
+  const [paymentEnabled, setPaymentEnabled] = useState(false);
+  const [daysBefore, setDaysBefore] = useState(3);
+  const [usageEnabled, setUsageEnabled] = useState(false);
+  const [threshold, setThreshold] = useState(80);
+
+  useEffect(() => {
+    if (isOpen) loadSettings();
+  }, [isOpen, loadSettings]);
+
+  useEffect(() => {
+    if (!loading) {
+      setPaymentEnabled(settings.payment_reminder_enabled ?? false);
+      setDaysBefore(settings.payment_days_before ?? 3);
+      setUsageEnabled(settings.usage_alert_enabled ?? false);
+      setThreshold(settings.usage_warn_threshold ?? 80);
+    }
+  }, [loading, settings]);
+
+  const handleSave = async () => {
+    try {
+      await saveSettings({
+        payment_reminder_enabled: paymentEnabled,
+        payment_days_before: daysBefore,
+        usage_alert_enabled: usageEnabled,
+        usage_warn_threshold: threshold,
+      });
+      toast.success('已儲存信用卡通知設定。');
+    } catch {
+      toast.error('儲存失敗，請稍後再試。');
+    }
+  };
+
+  if (loading) return <p className="reminder-modal__loading">載入中...</p>;
+
+  return (
+    <div className="credit-notif-panel">
+      <p className="credit-notif-panel__desc">
+        通知套用至帳號中的所有信用卡帳戶，需先開啟推播通知才可收到提醒。
+      </p>
+
+      {/* 繳款日提醒 */}
+      <div className="credit-notif-panel__row">
+        <label className="credit-notif-panel__toggle-row">
+          <span className="credit-notif-panel__label">繳款日提醒</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={paymentEnabled}
+            className={`push-panel__toggle${paymentEnabled ? ' is-on' : ''}`}
+            onClick={() => setPaymentEnabled((v) => !v)}
+          >
+            <span className="push-panel__toggle-knob" />
+          </button>
+        </label>
+        {paymentEnabled && (
+          <div className="credit-notif-panel__sub">
+            <span className="credit-notif-panel__sub-label">提前幾天提醒</span>
+            <div className="credit-notif-panel__chip-row">
+              {DAYS_BEFORE_OPTIONS.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={`credit-notif-panel__chip${daysBefore === d ? ' is-selected' : ''}`}
+                  onClick={() => setDaysBefore(d)}
+                >
+                  {d} 天
+                </button>
+              ))}
+            </div>
+            <p className="credit-notif-panel__hint">繳款日當天也會有提醒呦！</p>
+          </div>
+        )}
+      </div>
+
+      {/* 使用率警告 */}
+      <div className="credit-notif-panel__row">
+        <label className="credit-notif-panel__toggle-row">
+          <span className="credit-notif-panel__label">額度使用率警告</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={usageEnabled}
+            className={`push-panel__toggle${usageEnabled ? ' is-on' : ''}`}
+            onClick={() => setUsageEnabled((v) => !v)}
+          >
+            <span className="push-panel__toggle-knob" />
+          </button>
+        </label>
+        {usageEnabled && (
+          <div className="credit-notif-panel__sub">
+            <span className="credit-notif-panel__sub-label">偏高警戒閾值</span>
+            <div className="credit-notif-panel__chip-row">
+              {THRESHOLD_OPTIONS.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`credit-notif-panel__chip${threshold === t ? ' is-selected' : ''}`}
+                  onClick={() => setThreshold(t)}
+                >
+                  {t}%
+                </button>
+              ))}
+            </div>
+            <p className="credit-notif-panel__hint">超過 100% 時亦會發送超額通知。</p>
+          </div>
+        )}
+      </div>
+
+      <div className="reminder-modal__actions">
+        <button
+          type="button"
+          className="reminder-modal__save-btn"
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? '儲存中...' : '儲存設定'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function NotificationPanel({ isOpen, toast }) {
-  const [open, setOpen] = useState({ reminder: false, push: false });
+  const [open, setOpen] = useState({ reminder: false, push: false, creditCard: false });
   const reminderRef = useRef(null);
   const pushRef = useRef(null);
-  const sectionRefs = { reminder: reminderRef, push: pushRef };
+  const creditCardRef = useRef(null);
+  const sectionRefs = { reminder: reminderRef, push: pushRef, creditCard: creditCardRef };
   const toggle = (k) => setOpen((s) => {
     const isMobile = window.matchMedia('(max-width: 600px)').matches;
     if (isMobile) {
@@ -617,6 +746,10 @@ function NotificationPanel({ isOpen, toast }) {
       <div className="category-group" ref={pushRef}>
         <SectionHeader id="push" label="群組通知" />
         {open.push && <div className="notification-section__body"><PushSection /></div>}
+      </div>
+      <div className="category-group" ref={creditCardRef}>
+        <SectionHeader id="creditCard" label="信用卡提醒" />
+        {open.creditCard && <div className="notification-section__body"><CreditCardNotifSection isOpen={isOpen} toast={toast} /></div>}
       </div>
     </div>
   );

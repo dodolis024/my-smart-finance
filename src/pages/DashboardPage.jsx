@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useStreak } from '@/hooks/useStreak';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useCreditCardNotifications } from '@/hooks/useCreditCardNotifications';
 import { useModalStates } from '@/hooks/useModalStates';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -52,6 +53,7 @@ export default function DashboardPage() {
     getCurrentModalContentFromData,
   } = useStreak(user?.id);
   const { submitTransaction, deleteTransaction } = useTransactions();
+  const { checkCreditUsageAlert } = useCreditCardNotifications();
   const toast = useToast();
   const { confirm } = useConfirm();
   const modals = useModalStates();
@@ -116,12 +118,16 @@ export default function DashboardPage() {
           const content = getPositiveModalContent();
           modals.openStreakModal(content.title, 'positive');
         }
+
+        // 若此筆交易的付款方式為信用卡，檢查使用率並在需要時推播警告
+        const usedAccount = accounts.find((a) => a.name === formData.paymentMethod);
+        if (usedAccount?.type === 'credit_card') checkCreditUsageAlert(usedAccount);
       } catch (err) {
         toast.error(err.message || '記帳失敗，請稍後再試。');
         throw err;
       }
     },
-    [submitTransaction, fetchDashboardData, currentYear, currentMonth, toast, shouldShowPositiveModal, getPositiveModalContent, modals.openStreakModal]
+    [submitTransaction, fetchDashboardData, currentYear, currentMonth, toast, shouldShowPositiveModal, getPositiveModalContent, modals.openStreakModal, accounts, checkCreditUsageAlert]
   );
 
   const handleCancelEdit = useCallback(() => {
@@ -142,16 +148,23 @@ export default function DashboardPage() {
     async (id) => {
       const confirmed = await confirm('確定要刪除這筆交易嗎？', { danger: true });
       if (!confirmed) return;
+      // 找到要刪除的交易，記錄其付款帳戶（刪除後無法再查）
+      const txToDelete = transactionHistoryFull.find((tx) => tx.id === id);
+      const relatedAccount = txToDelete
+        ? accounts.find((a) => a.name === txToDelete.payment_method)
+        : null;
       try {
         await deleteTransaction(id);
         removeTransactionLocally(id);
         toast.success('已刪除。');
         fetchDashboardData(currentYear, currentMonth, { silent: true });
+        // 刪除後重新計算信用卡使用率
+        if (relatedAccount?.type === 'credit_card') checkCreditUsageAlert(relatedAccount);
       } catch (err) {
         toast.error(err.message || '刪除失敗，請稍後再試。');
       }
     },
-    [confirm, deleteTransaction, fetchDashboardData, currentYear, currentMonth, toast]
+    [confirm, deleteTransaction, fetchDashboardData, currentYear, currentMonth, toast, transactionHistoryFull, accounts, checkCreditUsageAlert]
   );
 
   const handleCheckin = useCallback(async () => {
