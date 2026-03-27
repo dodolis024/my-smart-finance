@@ -141,7 +141,6 @@
   z-index: 1;
   background: var(--color-card);
   padding: 1rem 1.25rem;
-  border-radius: 14px;
 }
 
 .split-group-card__top {

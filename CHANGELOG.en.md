@@ -3,6 +3,8 @@
 This file records version updates for Smart Finance Tracker.
 
 - Fixed login not redirecting back to the intended page (e.g. when opening a split-bill group link)
+- Improved split input UX on mobile: amount and custom share fields now use numeric keypad input
+- Improved split list visuals: removed top-card rounded corners for a more consistent style
 
 ## [1.12.0] - Mar-26 2026
 - Added credit card push alerts in Notification settings: payment due reminders and usage threshold warnings (requires push notifications)

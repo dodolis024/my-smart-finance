@@ -76,7 +76,6 @@
 
 }
 
-
 [data-theme="rose"] {
   --color-primary: #c06373;
   --color-primary-hover: #a8515f;
@@ -499,3 +498,4 @@
   --color-manual-bg: rgba(240, 190, 58, 0.22);
   --color-manual-border: rgba(218, 168, 30, 0.85);
 }
+

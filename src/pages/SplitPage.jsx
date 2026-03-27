@@ -305,5 +305,5 @@ export default function SplitPage() {
     </div>
   );
 }
-
 export { JoinPage };
+

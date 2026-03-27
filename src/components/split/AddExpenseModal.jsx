@@ -172,7 +172,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         <div className="split-modal__field">
           <label className="split-modal__label" htmlFor="expense-amount">金額</label>
           <div className="split-modal__amount-row">
-            <input id="expense-amount" className="split-modal__input" type="number" min="0" step="1" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} />
+            <input id="expense-amount" className="split-modal__input" type="number" inputMode="decimal" pattern="[0-9]*" min="0" step="1" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} />
             <select className="split-modal__select split-modal__currency-select" value={currency} onChange={e => setCurrency(e.target.value)}>
               {currencies.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -231,6 +231,8 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
                   <div className="split-modal__share-input-wrap">
                     <input
                       type="number"
+                      inputMode="decimal"
+                      pattern="[0-9]*"
                       min="0"
                       step="1"
                       className={`split-modal__participant-share${isAutoFilled ? ' is-auto' : ''}`}
