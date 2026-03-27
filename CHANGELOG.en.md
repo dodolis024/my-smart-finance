@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.12.1] - Mar-27 2026
 - Fixed login not redirecting back to the intended page (e.g. when opening a split-bill group link)
 - Improved split input UX on mobile: amount and custom share fields now use numeric keypad input
 - Improved split list visuals: removed top-card rounded corners for a more consistent style
