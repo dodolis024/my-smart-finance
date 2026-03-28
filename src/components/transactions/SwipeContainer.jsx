@@ -14,6 +14,7 @@ export default function SwipeContainer({ onEdit, onDelete, onClick, children }) 
   const didMove = useRef(false);
   const skipNextClick = useRef(false);
   const isSwiped = useRef(false);
+  const directionLocked = useRef(null);
 
   // Keep latest callbacks in refs so the stable useEffect closure can read them
   const onEditRef = useRef(onEdit);
@@ -58,17 +59,33 @@ export default function SwipeContainer({ onEdit, onDelete, onClick, children }) 
       startY.current = touch.clientY;
       didMove.current = false;
       isDragging.current = true;
+      directionLocked.current = null;
       content.style.transition = 'none';
       swipeState.current.prevTranslate = swipeState.current.currentTranslate;
     }
 
     function handleTouchMove(e) {
       if (!isDragging.current) return;
-      e.preventDefault();
 
       const touch = e.touches[0];
       const delta = touch.clientX - startX.current;
       const deltaY = touch.clientY - startY.current;
+
+      // 方向鎖定：首次移動超過 6px 時決定方向
+      if (!directionLocked.current && (Math.abs(delta) > 6 || Math.abs(deltaY) > 6)) {
+        directionLocked.current = Math.abs(deltaY) > Math.abs(delta) ? 'vertical' : 'horizontal';
+      }
+
+      // 垂直滑動 → 放棄水平滑動，讓瀏覽器正常捲頁
+      if (directionLocked.current === 'vertical') {
+        isDragging.current = false;
+        return;
+      }
+
+      // 方向尚未確定時不更新位移
+      if (directionLocked.current !== 'horizontal') return;
+
+      e.preventDefault();
       if (Math.abs(delta) > 4 || Math.abs(deltaY) > 4) {
         didMove.current = true;
       }

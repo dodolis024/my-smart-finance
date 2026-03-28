@@ -63,6 +63,9 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
         return;
       }
 
+      // 方向尚未確定時不更新位移，避免鎖定為垂直後殘留偏移
+      if (directionLocked.current !== 'horizontal') return;
+
       e.preventDefault();
       if (Math.abs(delta) > 4 || Math.abs(deltaY) > 4) didMove.current = true;
       const newTranslate = prevTranslate.current + delta;

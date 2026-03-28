@@ -1,92 +1,101 @@
 # Smart Finance Tracker
 
-A lightweight personal expense tracker with authentication, multi-currency support, and gamified streak goals.
+A React + Supabase personal finance app for transaction tracking, split expenses, streak goals, and customizable themes.
 
 ## Features
 
-- **Transaction tracking** — Log expenses and income with date, category, payment method, and notes
-- **Categories & accounts** — Manage custom expense/income categories and payment methods
-- **Daily check-in** — "Today no spend" button to maintain streak when you have no transactions
-- **Streak calendar** — Visual calendar showing your consecutive days of tracking
-- **Charts** — Pie chart visualization of spending by category
-- **Multi-currency** — Automatic exchange rates via [exchangerate-api.com](https://www.exchangerate-api.com/) (Supabase Edge Function updates daily)
-- **Auth** — Sign up, sign in, sign out (Supabase Auth)
+- **Transaction tracking** - Add, edit, and delete income/expense records with date, category, account, and notes
+- **Split expenses** - Create groups, invite members with join code, track expenses, and view settlement suggestions
+- **Credit card reminders** - Push reminders for payment due dates and usage threshold alerts
+- **Daily streak** - Keep a no-spend streak with check-in support and streak calendar visualization
+- **Customizable UI** - Multiple app themes, responsive layout, and mobile-friendly interactions
+- **Bilingual changelog** - In-app release notes from `CHANGELOG.zh.md` and `CHANGELOG.en.md`
 
 ## Tech Stack
 
-- **Frontend:** HTML, CSS, vanilla JavaScript
-- **Backend:** [Supabase](https://supabase.com) (PostgreSQL, Auth, Edge Functions)
-- **External API:** [ExchangeRate-API](https://www.exchangerate-api.com/) for currency rates
+- **Frontend:** React 18, React Router, Vite
+- **Data/Auth:** [Supabase](https://supabase.com) (PostgreSQL + Auth + Edge Functions)
+- **Charts:** Chart.js + react-chartjs-2
+- **Testing:** Vitest + jsdom
+
+## Requirements
+
+- Node.js 18+ (recommended)
+- npm
+- A Supabase project
 
 ## Quick Start
 
-### 1. Set up Supabase
-
-1. Create a [Supabase](https://supabase.com) project.
-2. Run `database/supabase-migration.sql` and `database/supabase-functions.sql` in the Supabase SQL Editor to create tables and functions.
-3. Add your Supabase URL and anon key in `src/config.js` and `auth.html` (Dashboard → Settings → API). These are safe in the frontend; Supabase RLS protects your data.
-
-### 2. Run locally
+### 1) Install dependencies
 
 ```bash
-npx serve .
-# or
-python -m http.server 8000
+npm install
 ```
 
-Open `auth.html` to sign in or register, then `index.html` for the main app.
+### 2) Configure environment variables
 
-### 3. (Optional) Auto-update exchange rates
+Create `.env.local` in the project root:
 
-See `docs/QUICK_START.md` and `docs/EXCHANGE_RATE_SETUP_GUIDE.md` for deploying the exchange-rate cron job.
+```bash
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+# Optional: needed for web push notifications
+VITE_VAPID_PUBLIC_KEY=your_web_push_vapid_public_key
+```
+
+### 3) Set up database/functions
+
+1. Create a Supabase project.
+2. Run SQL setup scripts in Supabase SQL Editor:
+   - `database/supabase-migration.sql`
+   - `database/supabase-functions.sql`
+3. If you use exchange-rate automation, follow docs in `docs/QUICK_START.md`.
+
+### 4) Run the app
+
+```bash
+npm run dev
+```
+
+Open the local URL shown by Vite (typically `http://localhost:5173`).
+
+## Scripts
+
+- `npm run dev` - Start local development server
+- `npm run build` - Build production bundle
+- `npm run preview` - Preview the production build locally
+- `npm run test` - Run test suite once
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage report
 
 ## Project Structure
 
-```
-├── index.html              # Main app
-├── auth.html               # Login / signup
-├── styles/                 # CSS (main.css + imports)
-│   ├── main.css
-│   ├── variables.css
-│   ├── base.css
-│   ├── layout.css
-│   ├── responsive.css
-│   └── components/         # form, table, modal, badge
-├── src/                    # JavaScript modules
-│   ├── constants.js        # Global constants (layout breakpoints, timing, etc.)
-│   ├── config.js           # Supabase config
-│   ├── utils.js            # Utility functions
-│   ├── state.js            # Global state & DOM references
-│   ├── auth.js             # Authentication logic
-│   ├── streak.js           # Streak tracking & calendar
-│   ├── dashboard.js        # Dashboard rendering & charts
-│   ├── transactions.js     # Transaction CRUD
-│   ├── settings.js         # Settings modal (categories, accounts)
-│   ├── main.js             # App initialization & event listeners
-│   └── ui/                 # UI components
-│       ├── filters.js      # Table filtering & rendering
-│       ├── swipe.js        # Mobile swipe gestures
-│       └── modals.js       # Modal dialogs
-├── database/               # SQL scripts
-│   ├── supabase-migration.sql
-│   └── supabase-functions.sql
-├── config/                 # Build & test config
-│   ├── tsconfig.json
-│   ├── vitest.config.js
-│   └── vitest.setup.js
-├── scripts/                # Exchange rate setup scripts
+```text
+.
+├── src/
+│   ├── App.jsx
+│   ├── main.jsx
+│   ├── components/      # UI components by domain (auth, dashboard, split, settings, etc.)
+│   ├── contexts/        # Global providers (toast, confirm, auth actions)
+│   ├── hooks/           # Reusable hooks and feature hooks
+│   ├── lib/             # Shared business logic and utilities
+│   ├── pages/           # Route-level pages (dashboard, auth, split, join split)
+│   └── styles/          # Global/component styles and themes
+├── public/
 ├── supabase/
-│   └── functions/
-│       └── update-exchange-rates/   # Edge Function for daily rates
-└── docs/                   # Guides and checklists
+│   └── functions/       # Edge Functions (e.g., exchange rates, notifications)
+├── database/            # SQL schema/functions setup
+├── docs/                # Setup and maintenance guides
+└── CHANGELOG.zh.md / CHANGELOG.en.md
 ```
 
 ## Documentation
 
-- `docs/QUICK_START.md` — Exchange rate deployment (3 steps)
-- `docs/EXCHANGE_RATE_SETUP_GUIDE.md` — Full exchange rate setup
-- `docs/CONFIG_TEMPLATE.md` — Config and env var notes
-- `docs/MIGRATION_GUIDE.md` — Supabase migration steps
+- `docs/QUICK_START.md` - Exchange-rate deployment quick start
+- `docs/EXCHANGE_RATE_SETUP_GUIDE.md` - Full exchange-rate setup
+- `docs/REMINDER_SETUP_GUIDE.md` - Reminder/push notification setup
+- `docs/MIGRATION_GUIDE.md` - Supabase migration workflow
+- `docs/TESTING_CHECKLIST.md` - Testing checklist
 
 ## License
 

@@ -2,6 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Improved split input experience: amount and custom share fields now support expression input.
+- Improved mobile gesture interaction: refined direction detection between vertical scrolling and horizontal swipe.
+
 ## [1.13.0] - Mar-28 2026
 - Improved split experience by extracting the join-group page, adding per-member spending summary and expandable records, and reorganizing split-related styles
 

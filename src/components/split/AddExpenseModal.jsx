@@ -1,6 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import Modal from '@/components/common/Modal';
 
+function parseExpression(str) {
+  if (!str) return NaN;
+  const cleaned = String(str).replace(/\s/g, '');
+  if (!/^[\d.+\-*/()]+$/.test(cleaned)) return NaN;
+  try {
+    const result = Function('"use strict"; return (' + cleaned + ')')();
+    if (typeof result !== 'number' || !isFinite(result)) return NaN;
+    return Math.round(result * 100) / 100;
+  } catch {
+    return NaN;
+  }
+}
+
 export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
   const isEditing = !!editingExpense;
   const [title, setTitle] = useState('');
@@ -54,7 +67,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   }, [editingExpense, groupCurrency]);
 
   // 自訂模式：計算已手動輸入的金額總和、剩餘金額、未輸入的成員數
-  const totalAmt = parseFloat(amount) || 0;
+  const totalAmt = parseExpression(amount) || 0;
   const manualTotal = participants.reduce((s, id) => {
     const v = customShares[id];
     // 有值且非空字串才算「已手動輸入」
@@ -109,7 +122,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     participants.forEach(id => {
       const v = customShares[id];
       if (v !== undefined && v !== '') {
-        shares[id] = parseFloat(v) || 0;
+        shares[id] = parseExpression(v) || 0;
       } else {
         shares[id] = autoShare;
       }
@@ -119,7 +132,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
 
   const handleSubmit = async () => {
     if (!title.trim()) { setError('請填寫費用名稱'); return; }
-    const amt = parseFloat(amount);
+    const amt = parseExpression(amount);
     if (!amount || isNaN(amt) || amt <= 0) { setError('請輸入有效金額'); return; }
     if (!paidBy) { setError('請選擇付款人'); return; }
     if (!participants.length) { setError('請選擇至少一位參與成員'); return; }
@@ -172,7 +185,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         <div className="split-modal__field">
           <label className="split-modal__label" htmlFor="expense-amount">金額</label>
           <div className="split-modal__amount-row">
-            <input id="expense-amount" className="split-modal__input" type="number" inputMode="decimal" pattern="[0-9]*" min="0" step="1" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} />
+            <input id="expense-amount" className="split-modal__input" type="text" inputMode="decimal" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} onBlur={() => { const v = parseExpression(amount); if (!isNaN(v) && v > 0) setAmount(String(v)); }} />
             <select className="split-modal__select split-modal__currency-select" value={currency} onChange={e => setCurrency(e.target.value)}>
               {currencies.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -230,15 +243,18 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
                 {shareMode === 'custom' && isParticipant && (
                   <div className="split-modal__share-input-wrap">
                     <input
-                      type="number"
+                      type="text"
                       inputMode="decimal"
-                      pattern="[0-9]*"
-                      min="0"
-                      step="1"
                       className={`split-modal__participant-share${isAutoFilled ? ' is-auto' : ''}`}
                       placeholder={isAutoFilled ? autoShare.toLocaleString() : '0'}
                       value={customShares[m.id] ?? ''}
                       onChange={e => setCustomShares(prev => ({ ...prev, [m.id]: e.target.value }))}
+                      onBlur={() => {
+                        const raw = customShares[m.id];
+                        if (!raw) return;
+                        const v = parseExpression(raw);
+                        if (!isNaN(v) && v >= 0) setCustomShares(prev => ({ ...prev, [m.id]: String(v) }));
+                      }}
                     />
                     {isAutoFilled && <span className="split-modal__auto-tag">自動</span>}
                   </div>
