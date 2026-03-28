@@ -1,0 +1,107 @@
+/* ── 計算機鍵盤 ────────────────────────────────────────────────────────── */
+
+.calc-keypad__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-high);
+  background: transparent;
+}
+
+.calc-keypad {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-modal-high);
+  background: var(--color-card);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+  padding: 0.75rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
+  animation: calcKeypadSlideUp 0.22s ease;
+}
+
+@keyframes calcKeypadSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.calc-keypad__display {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem 0.75rem;
+  min-height: 2.5rem;
+  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: 0.5rem;
+}
+
+.calc-keypad__expr {
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: 0.02em;
+}
+
+.calc-keypad__preview {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+}
+
+.calc-keypad__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.calc-keypad__btn {
+  height: 52px;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 1.2rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.calc-keypad__btn:active {
+  transform: scale(0.93);
+  background: var(--color-border);
+}
+
+.calc-keypad__btn.is-op {
+  background: var(--color-primary-tint-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+.calc-keypad__btn.is-op:active {
+  background: var(--color-primary-tint);
+}
+
+.calc-keypad__btn.is-del {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-size: 1.1rem;
+}
+
+.calc-keypad__btn.is-eq {
+  grid-column: 1 / -1;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 1.3rem;
+  font-weight: 600;
+  height: 48px;
+  border-radius: 10px;
+}
+
+.calc-keypad__btn.is-eq:active {
+  background: var(--color-primary-hover);
+  transform: scale(0.98);
+}

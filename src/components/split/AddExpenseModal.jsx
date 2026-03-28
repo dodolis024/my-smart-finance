@@ -1,18 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Modal from '@/components/common/Modal';
-
-function parseExpression(str) {
-  if (!str) return NaN;
-  const cleaned = String(str).replace(/\s/g, '');
-  if (!/^[\d.+\-*/()]+$/.test(cleaned)) return NaN;
-  try {
-    const result = Function('"use strict"; return (' + cleaned + ')')();
-    if (typeof result !== 'number' || !isFinite(result)) return NaN;
-    return Math.round(result * 100) / 100;
-  } catch {
-    return NaN;
-  }
-}
+import CalcKeypad from './CalcKeypad';
+import { parseExpression } from '@/lib/utils';
 
 export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
   const isEditing = !!editingExpense;
@@ -27,6 +16,8 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   const [customShares, setCustomShares] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // activeField: null | 'amount' | memberId (string)
+  const [activeField, setActiveField] = useState(null);
 
   // 穩定化 members 引用，避免父層 re-render 時不必要地重設表單
   const memberIds = useMemo(() => (members || []).map(m => m.id).join(','), [members]);
@@ -82,12 +73,30 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     setCurrency(groupCurrency);
     setShareMode('equal');
     setCustomShares({});
+    setActiveField(null);
     if (members?.length) {
       setParticipants(members.map(m => m.id));
       setPaidBy(members[0]?.id || '');
       setDate(new Date().toISOString().slice(0, 10));
     }
     onClose();
+  };
+
+  // 計算機鍵盤 — 取得/更新目前作用欄位的值
+  const keypadValue = activeField === 'amount'
+    ? amount
+    : activeField != null
+      ? (customShares[activeField] ?? '')
+      : '';
+
+  const handleKeypadInput = (val) => {
+    if (activeField === 'amount') setAmount(val);
+    else if (activeField != null) setCustomShares(prev => ({ ...prev, [activeField]: val }));
+  };
+
+  const handleKeypadConfirm = (result) => {
+    handleKeypadInput(result);
+    setActiveField(null);
   };
 
   const toggleParticipant = (id) => {
@@ -171,6 +180,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   };
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="add-expense-title">
       <div className="reminder-modal__backdrop" onClick={handleClose} />
       <div className="split-modal__dialog" onClick={e => e.stopPropagation()}>
@@ -185,7 +195,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         <div className="split-modal__field">
           <label className="split-modal__label" htmlFor="expense-amount">金額</label>
           <div className="split-modal__amount-row">
-            <input id="expense-amount" className="split-modal__input" type="text" inputMode="decimal" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} onBlur={() => { const v = parseExpression(amount); if (!isNaN(v) && v > 0) setAmount(String(v)); }} />
+            <input id="expense-amount" className="split-modal__input is-calc" type="text" inputMode="none" placeholder="0" value={amount} readOnly onClick={() => setActiveField('amount')} />
             <select className="split-modal__select split-modal__currency-select" value={currency} onChange={e => setCurrency(e.target.value)}>
               {currencies.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -244,17 +254,12 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
                   <div className="split-modal__share-input-wrap">
                     <input
                       type="text"
-                      inputMode="decimal"
-                      className={`split-modal__participant-share${isAutoFilled ? ' is-auto' : ''}`}
+                      inputMode="none"
+                      className={`split-modal__participant-share is-calc${isAutoFilled ? ' is-auto' : ''}`}
                       placeholder={isAutoFilled ? autoShare.toLocaleString() : '0'}
                       value={customShares[m.id] ?? ''}
-                      onChange={e => setCustomShares(prev => ({ ...prev, [m.id]: e.target.value }))}
-                      onBlur={() => {
-                        const raw = customShares[m.id];
-                        if (!raw) return;
-                        const v = parseExpression(raw);
-                        if (!isNaN(v) && v >= 0) setCustomShares(prev => ({ ...prev, [m.id]: String(v) }));
-                      }}
+                      readOnly
+                      onClick={() => setActiveField(m.id)}
                     />
                     {isAutoFilled && <span className="split-modal__auto-tag">自動</span>}
                   </div>
@@ -278,5 +283,14 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         </div>
       </div>
     </Modal>
+    {activeField != null && (
+      <CalcKeypad
+        value={keypadValue}
+        onInput={handleKeypadInput}
+        onConfirm={handleKeypadConfirm}
+        onClose={() => setActiveField(null)}
+      />
+    )}
+    </>
   );
 }

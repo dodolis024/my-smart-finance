@@ -1,5 +1,18 @@
 /* ── 分帳 Modal 表單元件 ────────────────────────────────────────────────── */
 
+.split-modal__input.is-calc,
+.split-modal__participant-share.is-calc {
+  cursor: pointer;
+}
+
+/* 防止 iOS Safari 因 font-size < 16px 自動 zoom in */
+@media (hover: none) and (pointer: coarse) {
+  .split-modal__input.is-calc,
+  .split-modal__participant-share.is-calc {
+    font-size: 16px;
+  }
+}
+
 .split-modal__dialog {
   background: var(--color-card);
   border-radius: 18px;

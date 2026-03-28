@@ -89,6 +89,19 @@ export function formatDateForDisplay(dateStr, isMobile) {
   return dateStr;
 }
 
+export function parseExpression(str) {
+  if (!str) return NaN;
+  const cleaned = String(str).replace(/\s/g, '');
+  if (!/^[\d.+\-*/()]+$/.test(cleaned)) return NaN;
+  try {
+    const result = Function('"use strict"; return (' + cleaned + ')')();
+    if (typeof result !== 'number' || !isFinite(result)) return NaN;
+    return Math.round(result * 100) / 100;
+  } catch {
+    return NaN;
+  }
+}
+
 export function parseChangelogMarkdown(text) {
   const entries = [];
   const sectionRegex = /^## \[([^\]]+)\]\s*-\s*([^\n]*)\s*$/gm;

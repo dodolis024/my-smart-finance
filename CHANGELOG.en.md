@@ -2,6 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added a split calculator keypad for entering expressions in expense amount and custom share fields.
+- Improved split input UI with calculator field styling and better mobile interaction.
+
 ## [1.13.1] - Mar-28 2026
 - Improved split input experience: amount and custom share fields now support expression input.
 - Improved mobile gesture interaction: refined direction detection between vertical scrolling and horizontal swipe.
