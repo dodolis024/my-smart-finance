@@ -1,0 +1,229 @@
+/* ── 每人花費摘要 ──────────────────────────────────────────────────────── */
+
+.split-member-totals {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+
+.split-member-totals__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.split-member-totals__row:last-child {
+  border-bottom: none;
+}
+
+.split-member-totals__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-tint-light);
+  overflow: hidden;
+}
+
+.split-member-totals__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.split-member-totals__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.split-member-totals__amount {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* ── 結算區塊 ────────────────────────────────────────────────────────────── */
+
+.split-settlement {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-top: 0.6rem;
+}
+
+.split-settlement__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.split-settlement__row:last-child {
+  border-bottom: none;
+}
+
+.split-settlement__info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.split-settlement__from {
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.split-settlement__arrow {
+  color: var(--color-text-muted);
+}
+
+.split-settlement__to {
+  font-weight: 600;
+  color: var(--color-success-alt);
+}
+
+.split-settlement__amount {
+  margin-left: auto;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.split-settlement__settle-btn {
+  flex-shrink: 0;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: none;
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.split-settlement__settle-btn:hover {
+  background: var(--color-primary);
+  color: var(--color-card);
+}
+
+.split-settlement__empty {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.split-settlement__history-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--color-border-light);
+  cursor: pointer;
+}
+
+.split-settlement__history-toggle:hover {
+  color: var(--color-text);
+}
+
+.split-settlement__history-chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s;
+}
+
+.split-settlement__history-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.split-settlement__history {
+  margin-top: 0.4rem;
+}
+
+.split-settlement__history-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--color-border-light);
+  font-size: 0.8rem;
+  color: var(--color-text);
+  opacity: 0.75;
+}
+
+.split-settlement__history-row:last-child {
+  border-bottom: none;
+}
+
+.split-settlement__history-info {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.split-settlement__history-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.split-settlement__history-date {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.split-settlement__history-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: color 0.15s;
+}
+
+.split-settlement__history-delete:hover {
+  color: var(--color-danger);
+}
+
+.split-settlement__history-delete svg {
+  width: 14px;
+  height: 14px;
+}

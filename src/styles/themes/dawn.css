@@ -1,0 +1,69 @@
+/* Rose Quartz #f7cac9 × Serenity #92a8d1 — Pantone 2016 晨曦 */
+[data-theme="dawn"] {
+  /* 主色：忠實 Serenity 藍 */
+  --color-primary: #92a8d1;
+  --color-primary-hover: #7d97c4;
+  --color-primary-dark: #6482b4;
+  /* 記帳圓圈背景 → Rose Quartz 粉（與簽到圓圈 Serenity 藍區分） */
+  --color-primary-tint: rgba(247, 202, 201, 0.45);
+  /* 互動邊框 → Serenity 藍系（避免粉框配藍字的混色） */
+  --color-primary-tint-border: rgba(146, 168, 209, 0.75);
+  --color-primary-tint-light: rgba(146, 168, 209, 0.14);
+  --color-primary-tint-hover: rgba(146, 168, 209, 0.09);
+  --color-primary-tint-focus: rgba(146, 168, 209, 0.15);
+
+  /* 背景：flat fallback，漸層由下方 body rule 另外處理 */
+  --color-bg: #f4f0f8;
+  --color-card: #ffffff;
+  --color-text: #323550;
+  --color-text-secondary: #707c98;
+  --color-text-muted: #a8b5cb;
+
+  /* 邊框：帶淡薰衣草感 */
+  --color-border: #e0d4ee;
+  --color-border-light: #ece6f5;
+  --color-border-input: #d6c8e8;
+  --color-border-subtle: rgba(146, 168, 209, 0.1);
+
+  /* 表格：用 Rose Quartz 暖粉點綴，row-hover 也偏粉以平衡視覺 */
+  --color-table-header: #fce8eb;
+  --color-row-hover: #fdf0f4;
+  --color-row-alt: #fdf8fe;
+
+  --color-progress-track: #e0d4ee;
+  --color-progress-safe: #5a9e78;
+  --color-progress-warn: #c4904a;
+  --color-progress-danger: #c45470;
+
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%2338334a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(146, 168, 209, 0.3);
+
+  --scrollbar-track: #f4f0f8;
+  --scrollbar-thumb: #e0d4ee;
+  --scrollbar-thumb-hover: #c8bade;
+
+  /* 訂閱 icon → 忠實 Serenity 藍 */
+  --color-subscription: #92a8d1;
+  --icon-checkin-color: #92a8d1;
+  /* 簽到圓圈 → Serenity 藍 */
+  --color-manual-bg: rgba(146, 168, 209, 0.3);
+  --color-manual-border: rgba(100, 135, 190, 0.85);
+}
+
+/* 晨曦專屬：粉→藍暈染漸層背景（偏粉權重以平衡藍色為主的互動元素） */
+[data-theme="dawn"] body {
+  background: linear-gradient(150deg, #fceef2 0%, #edf0fb 100%) fixed;
+}
+
+/* 晨曦：記帳圓圈保持 Rose Quartz 粉系邊框（tint-border 已改為 Serenity，此處補回） */
+[data-theme="dawn"] .streak-calendar__day--transaction .streak-calendar__day-inner,
+[data-theme="dawn"] .streak-calendar__legend-item--transaction::before,
+[data-theme="dawn"] .split-member-avatar {
+  border-color: rgba(210, 140, 140, 0.8);
+}
+
+/* 晨曦：成員頭像文字用粉系深色，避免粉圓圈配藍字 */
+[data-theme="dawn"] .split-member-avatar {
+  color: #a06060;
+}

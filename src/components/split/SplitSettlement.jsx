@@ -12,8 +12,6 @@ export default function SplitSettlement({ transactions, currency, onSettle, sett
 
   return (
     <div className="split-settlement">
-      <p className="split-settlement__title">結算</p>
-
       {!transactions?.length ? (
         <p className="split-settlement__empty">目前帳已結清 🎉</p>
       ) : (

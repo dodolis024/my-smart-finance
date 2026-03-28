@@ -1,0 +1,58 @@
+/* Graphite — 石墨灰 */
+[data-theme="graphite"] {
+  --color-primary: #656a6c;
+  --color-primary-hover: #535859;
+  --color-primary-dark: #424647;
+  --color-primary-tint: rgba(101, 106, 108, 0.35);
+  --color-primary-tint-border: rgba(101, 106, 108, 0.8);
+  --color-primary-tint-light: rgba(101, 106, 108, 0.15);
+  --color-primary-tint-hover: rgba(101, 106, 108, 0.1);
+  --color-primary-tint-focus: rgba(101, 106, 108, 0.15);
+
+  --color-bg: #eef1f4;
+  --color-card: #fdfeff;
+  --color-text: #2c3235;
+  --color-text-secondary: #656a6c;
+  --color-text-muted: #aba4a3;
+  --color-border: #cfd6db;
+  --color-border-light: #dde4e8;
+  --color-border-input: #c5cdd2;
+  --color-border-subtle: rgba(101, 106, 108, 0.08);
+
+  --color-table-header: #dae0e4;
+  --color-row-hover: #f0f4f6;
+  --color-row-alt: #f7f9fa;
+
+  --color-progress-track: #cfd6db;
+  --color-progress-safe: #4a9e68;
+  --color-progress-warn: #c49040;
+  --color-progress-danger: #c45454;
+
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%232c3235'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(101, 106, 108, 0.3);
+
+  --scrollbar-track: #eef1f4;
+  --scrollbar-thumb: #cfd6db;
+  --scrollbar-thumb-hover: #b0babe;
+
+  --color-subscription: #8fa7b0;
+
+  --icon-checkin-color: #7a9aa8;
+
+  --color-manual-bg: rgba(130, 160, 178, 0.22);
+  --color-manual-border: rgba(110, 148, 168, 0.88);
+}
+
+/* 石墨：日曆融入 modal，記帳圓圈降低深度 */
+[data-theme="graphite"] .streak-calendar {
+  background: var(--color-card);
+}
+[data-theme="graphite"] .streak-calendar__day--transaction .streak-calendar__day-inner {
+  background: rgba(120, 120, 120, 0.14);
+  border-color: rgba(120, 120, 120, 0.42);
+}
+[data-theme="graphite"] .streak-calendar__legend-item--transaction::before {
+  background: rgba(120, 120, 120, 0.14);
+  border-color: rgba(120, 120, 120, 0.42);
+}

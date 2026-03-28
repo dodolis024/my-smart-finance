@@ -223,7 +223,8 @@ body:has(.app-layout) {
 
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app-layout__main {
@@ -231,6 +232,7 @@ body:has(.app-layout) {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 /* --------------------------------------------

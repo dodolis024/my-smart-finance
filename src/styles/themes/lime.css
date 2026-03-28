@@ -1,0 +1,54 @@
+/* Lime — #aec22a  Chartreuse yellow-green */
+[data-theme="lime"] {
+  /* ─── Primary: Lime ─── */
+  --color-primary: #aec22a;
+  --color-primary-hover: #9aae22;
+  --color-primary-dark: #78881a;
+  --color-primary-tint: rgba(174, 194, 42, 0.35);
+  --color-primary-tint-border: rgba(174, 194, 42, 0.5);
+  --color-primary-tint-light: rgba(174, 194, 42, 0.15);
+  --color-primary-tint-hover: rgba(174, 194, 42, 0.1);
+  --color-primary-tint-focus: rgba(174, 194, 42, 0.15);
+
+  /* ─── Surfaces ─── */
+  --color-bg: #f6f9ea;
+  --color-card: #ffffff;
+  --color-text: #303410;
+  --color-text-secondary: #606438;
+  --color-text-muted: #92946a;
+  --color-border: #e0e6c0;
+  --color-border-light: #eaeed2;
+  --color-border-input: #d6deb4;
+  --color-border-subtle: rgba(174, 194, 42, 0.08);
+
+  /* ─── Table ─── */
+  --color-table-header: #eef0cc;
+  --color-row-hover: #f2f5e0;
+  --color-row-alt: #fafcf2;
+
+  /* ─── Progress ─── */
+  --color-progress-track: #e0e6c0;
+  --color-progress-safe: #5a9e60;
+  --color-progress-warn: #d4903c;
+  --color-progress-danger: #d04848;
+
+  /* ─── On-primary text (dark on bright lime) ─── */
+  --color-on-primary: #3d5016;
+
+  /* ─── Misc UI ─── */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%23303410'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(174, 194, 42, 0.3);
+
+  --scrollbar-track: #f6f9ea;
+  --scrollbar-thumb: #e0e6c0;
+  --scrollbar-thumb-hover: #c8d0a4;
+
+  /* ─── Feature colors ─── */
+  --color-subscription: #8a9e48;
+
+  --icon-checkin-color: #aec22a;
+
+  --color-manual-bg: rgba(174, 194, 42, 0.18);
+  --color-manual-border: rgba(140, 160, 30, 0.85);
+}

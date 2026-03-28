@@ -26,6 +26,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
   const [editingExpense, setEditingExpense] = useState(null);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showAllExpenses, setShowAllExpenses] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(group.name);
   const nameInputRef = useRef(null);
@@ -58,6 +59,25 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
 
   const members = group.split_members || [];
   const settlement = calcSettlement(members, expenses, settlements, rates, group.currency);
+
+  // 每人分攤總額
+  const cur = group.currency || 'TWD';
+  const ZERO_DECIMAL = new Set(['TWD', 'JPY', 'KRW', 'VND']);
+  const fmtAmt = (amt) => {
+    const d = ZERO_DECIMAL.has(cur) ? 0 : 2;
+    const rounded = Number(amt.toFixed(d));
+    return rounded.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+  };
+  const memberTotals = {};
+  members.forEach(m => { memberTotals[m.id] = 0; });
+  const toRate = (rates && group.currency) ? (rates[group.currency] ?? 1) : 1;
+  expenses.forEach(expense => {
+    const fromRate = (rates && expense.currency) ? (rates[expense.currency] ?? 1) : 1;
+    const factor = toRate > 0 ? fromRate / toRate : 1;
+    (expense.split_expense_shares || []).forEach(s => {
+      memberTotals[s.member_id] = (memberTotals[s.member_id] || 0) + Number(s.share) * factor;
+    });
+  });
 
   const handleAddExpense = async (data) => {
     await addExpense(data);
@@ -206,18 +226,57 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
       ) : expenses.length === 0 ? (
         <p className="split-loading">尚無費用，點上方按鈕新增第一筆！</p>
       ) : (
-        expenses.map(e => (
-          <SplitExpenseItem key={e.id} expense={e} members={members} onEdit={(exp) => { setEditingExpense(exp); setAddExpenseOpen(true); }} onDelete={handleDeleteExpense} />
-        ))
+        <>
+          {(showAllExpenses ? expenses : expenses.slice(0, 5)).map(e => (
+            <SplitExpenseItem key={e.id} expense={e} members={members} onEdit={(exp) => { setEditingExpense(exp); setAddExpenseOpen(true); }} onDelete={handleDeleteExpense} />
+          ))}
+          {expenses.length > 5 && (
+            <button
+              type="button"
+              className="split-group-detail__show-more"
+              onClick={() => setShowAllExpenses(prev => !prev)}
+            >
+              {showAllExpenses ? '收合紀錄' : `查看全部紀錄（共 ${expenses.length} 筆）`}
+            </button>
+          )}
+        </>
       )}
 
-      <SplitSettlement
-        transactions={settlement}
-        currency={group.currency}
-        onSettle={handleSettle}
-        settlementHistory={settlementHistory}
-        onDeleteSettlement={handleDeleteSettlement}
-      />
+      {/* 每人花費 */}
+      {expenses.length > 0 && (
+        <>
+          <div className="split-group-detail__section-header split-group-detail__section-header--summary">
+            <p className="split-group-detail__section-title">每人花費</p>
+          </div>
+          <div className="split-member-totals">
+            {members.map(m => (
+              <div key={m.id} className="split-member-totals__row">
+                <span className="split-member-totals__avatar">
+                  {m.avatar_url
+                    ? <img src={m.avatar_url} alt={m.name} />
+                    : m.name.charAt(0)
+                  }
+                </span>
+                <span className="split-member-totals__name">{m.name}</span>
+                <span className="split-member-totals__amount">
+                  {cur} {fmtAmt(memberTotals[m.id] || 0)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="split-group-detail__section-header split-group-detail__section-header--summary">
+            <p className="split-group-detail__section-title">結算</p>
+          </div>
+          <SplitSettlement
+            transactions={settlement}
+            currency={group.currency}
+            onSettle={handleSettle}
+            settlementHistory={settlementHistory}
+            onDeleteSettlement={handleDeleteSettlement}
+          />
+        </>
+      )}
 
       <AddExpenseModal
         isOpen={addExpenseOpen}

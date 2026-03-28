@@ -1,0 +1,197 @@
+/* ── 費用列表項 ──────────────────────────────────────────────────────────── */
+
+.split-expense-item {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+
+.split-expense-item:hover {
+  box-shadow: var(--shadow-card-hover, var(--shadow-card));
+}
+
+.split-expense-item__content {
+  position: relative;
+  z-index: 1;
+  background: var(--color-card);
+  padding: 0.85rem 1rem;
+}
+
+/* 滑動動作按鈕 */
+.split-expense-item__swipe-action {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.split-expense-item__swipe-action--edit {
+  left: 0;
+  background: var(--color-primary);
+}
+
+.split-expense-item__swipe-action--delete {
+  right: 0;
+  background: var(--color-danger);
+}
+
+.split-expense-item__swipe-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.split-expense-item__swipe-btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-on-primary);
+}
+
+.split-expense-item__swipe-btn:active {
+  opacity: 0.8;
+  transform: scale(0.9);
+}
+
+.split-expense-item__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.split-expense-item__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.split-expense-item__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.split-expense-item__meta {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.split-expense-item__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.split-expense-item__amount {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.split-expense-item__actions {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.split-expense-item__action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 0.2rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, background 0.15s;
+}
+
+.split-expense-item__action-btn:hover {
+  color: var(--color-primary);
+}
+
+.split-expense-item__action-btn.split-expense-item__delete:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+.split-expense-item__action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 展開的詳細資訊 */
+.split-expense-item__detail {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--color-border-light);
+}
+
+.split-expense-item__note {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.5rem;
+  font-style: italic;
+}
+
+.split-expense-item__shares-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 0 0 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.split-expense-item__share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 0;
+  font-size: 0.82rem;
+}
+
+.split-expense-item__share-name {
+  color: var(--color-text);
+}
+
+.split-expense-item__share-amount {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* 查看更多 / 收合 */
+.split-group-detail__show-more {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.split-group-detail__show-more:hover {
+  color: var(--color-primary);
+}

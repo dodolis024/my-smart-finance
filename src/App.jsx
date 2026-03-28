@@ -14,7 +14,7 @@ import AppLayout from '@/components/layout/AppLayout';
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const SplitPage = lazy(() => import('@/pages/SplitPage'));
-const JoinPage = lazy(() => import('@/pages/SplitPage').then(m => ({ default: m.JoinPage })));
+const JoinPage = lazy(() => import('@/pages/JoinSplitPage'));
 
 function LoadingFallback() {
   return (

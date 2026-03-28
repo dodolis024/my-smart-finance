@@ -1,0 +1,44 @@
+/* Lavender — #fefcf8 × #dad4e4 × #ad9bd7 × #736aaf */
+[data-theme="lavender"] {
+  --color-primary: #8a7ebc;
+  --color-primary-hover: #7a6eac;
+  --color-primary-dark: #635a96;
+  --color-primary-tint: rgba(173, 155, 215, 0.32);
+  --color-primary-tint-border: rgba(115, 106, 175, 0.45);
+  --color-primary-tint-light: rgba(173, 155, 215, 0.15);
+  --color-primary-tint-hover: rgba(173, 155, 215, 0.1);
+  --color-primary-tint-focus: rgba(173, 155, 215, 0.18);
+
+  --color-bg: #f9f7fb;
+  --color-card: #ffffff;
+  --color-text: #3a3354;
+  --color-text-secondary: #6e6490;
+  --color-text-muted: #a89cb8;
+
+  --color-border: #dad4e4;
+  --color-border-light: #e6e0ee;
+  --color-border-input: #d0c8dc;
+  --color-border-subtle: rgba(115, 106, 175, 0.08);
+
+  --color-table-header: #eae5f2;
+  --color-row-hover: #f5f2f8;
+  --color-row-alt: #faf8fc;
+
+  --color-progress-track: #dad4e4;
+  --color-progress-safe: #5a9e78;
+  --color-progress-warn: #c4904a;
+  --color-progress-danger: #c45470;
+
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233a3354'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(173, 155, 215, 0.35);
+
+  --scrollbar-track: #f9f7fb;
+  --scrollbar-thumb: #dad4e4;
+  --scrollbar-thumb-hover: #ad9bd7;
+
+  --color-subscription: #8a7ebc;
+  --icon-checkin-color: #ad9bd7;
+  --color-manual-bg: rgba(175, 105, 160, 0.25);
+  --color-manual-border: rgba(155, 80, 140, 0.72);
+}

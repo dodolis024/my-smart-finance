@@ -1,0 +1,51 @@
+/* Peach — #f99584  Warm salmon monochrome */
+[data-theme="peach"] {
+  /* ─── Primary: Peach ─── */
+  --color-primary: #f99584;
+  --color-primary-hover: #e58070;
+  --color-primary-dark: #c86a5c;
+  --color-primary-tint: rgba(249, 149, 132, 0.35);
+  --color-primary-tint-border: rgba(249, 149, 132, 0.55);
+  --color-primary-tint-light: rgba(249, 149, 132, 0.15);
+  --color-primary-tint-hover: rgba(249, 149, 132, 0.1);
+  --color-primary-tint-focus: rgba(249, 149, 132, 0.15);
+
+  /* ─── Surfaces ─── */
+  --color-bg: #fef5f3;
+  --color-card: #ffffff;
+  --color-text: #4c2c28;
+  --color-text-secondary: #8a6860;
+  --color-text-muted: #b09088;
+  --color-border: #f4dbd6;
+  --color-border-light: #f9e8e4;
+  --color-border-input: #f0d0ca;
+  --color-border-subtle: rgba(249, 149, 132, 0.08);
+
+  /* ─── Table ─── */
+  --color-table-header: #f4cec7;
+  --color-row-hover: #fdeae5;
+  --color-row-alt: #fdf9f8;
+
+  /* ─── Progress ─── */
+  --color-progress-track: #f4dbd6;
+  --color-progress-safe: #5a9e78;
+  --color-progress-warn: #d4903c;
+  --color-progress-danger: #d04848;
+
+  /* ─── Misc UI ─── */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%234c2c28'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(249, 149, 132, 0.3);
+
+  --scrollbar-track: #fef5f3;
+  --scrollbar-thumb: #f4dbd6;
+  --scrollbar-thumb-hover: #e8c4bc;
+
+  /* ─── Feature colors ─── */
+  --color-subscription: #d4887a;
+
+  --icon-checkin-color: #f99584;
+
+  --color-manual-bg: rgba(249, 149, 132, 0.18);
+  --color-manual-border: rgba(220, 120, 100, 0.85);
+}

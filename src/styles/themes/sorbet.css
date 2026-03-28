@@ -1,0 +1,52 @@
+/* Sorbet — #ee9248 × #f0be3a × #5ab0d4  Orange Honey Blue Soda */
+[data-theme="sorbet"] {
+  /* ─── Primary: Orange ─── */
+  --color-primary: #ee9248;
+  --color-primary-hover: #dc8038;
+  --color-primary-dark: #b8682a;
+  --color-primary-tint: rgba(238, 146, 72, 0.35);
+  --color-primary-tint-border: rgba(238, 146, 72, 0.8);
+  --color-primary-tint-light: rgba(238, 146, 72, 0.15);
+  --color-primary-tint-hover: rgba(238, 146, 72, 0.1);
+  --color-primary-tint-focus: rgba(238, 146, 72, 0.15);
+
+  /* ─── Surfaces ─── */
+  --color-bg: #f4fafe;
+  --color-card: #ffffff;
+  --color-text: #2a3e4c;
+  --color-text-secondary: #6c8c9c;
+  --color-text-muted: #94b0be;
+  --color-border: #d6eaf4;
+  --color-border-light: #e4f0f8;
+  --color-border-input: #c8e0ee;
+  --color-border-subtle: rgba(90, 176, 212, 0.08);
+
+  /* ─── Table ─── */
+  --color-table-header: rgba(240, 190, 58, 0.2);
+  --color-row-hover: #eef6fb;
+  --color-row-alt: #f6fbfe;
+
+  /* ─── Progress ─── */
+  --color-progress-track: #d6eaf4;
+  --color-progress-safe: #5a9e78;
+  --color-progress-warn: #f0be3a;
+  --color-progress-danger: #e05454;
+
+  /* ─── Misc UI ─── */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%232a3e4c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(238, 146, 72, 0.3);
+
+  --scrollbar-track: #f4fafe;
+  --scrollbar-thumb: #d6eaf4;
+  --scrollbar-thumb-hover: #b0d4e6;
+
+  /* ─── Accent: Sky Blue (subscriptions / info) ─── */
+  --color-subscription: #5ab0d4;
+
+  /* ─── Accent: Sunny Honey (check-in / manual) ─── */
+  --icon-checkin-color: #f0be3a;
+
+  --color-manual-bg: rgba(240, 190, 58, 0.22);
+  --color-manual-border: rgba(218, 168, 30, 0.85);
+}

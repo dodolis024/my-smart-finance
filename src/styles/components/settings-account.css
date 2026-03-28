@@ -1,0 +1,174 @@
+/* Account management */
+.account-manager__empty {
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 1rem;
+  margin: 0;
+}
+
+.accounts-header {
+  margin-bottom: 1rem;
+}
+
+.btn-add-account {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-add-account:hover {
+  background: var(--color-primary-hover);
+}
+
+.accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.account-item {
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.account-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.account-item__name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.account-item__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.account-item__btn {
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.account-item__btn:hover {
+  background: var(--color-row-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.account-item__btn--delete:hover {
+  background: var(--color-danger-hover-bg);
+  border-color: var(--color-danger-hover-border);
+  color: var(--color-danger-hover-border);
+}
+
+.account-item__details {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.account-item__detail {
+  margin: 0.1rem 0;
+}
+
+/* Account form */
+.account-form {
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 1.25rem;
+  border: 1px solid var(--color-primary);
+  margin-top: 1rem;
+}
+
+.account-form h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.account-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.account-form .form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.account-form .form-group input,
+.account-form .form-group select {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  background: var(--color-card);
+  color: var(--color-text);
+}
+
+.account-form .form-group input:focus,
+.account-form .form-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.account-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.account-form .btn-cancel {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.account-form .btn-cancel:hover {
+  background: var(--color-row-hover);
+}
+
+.account-form .btn-save {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.account-form .btn-save:hover {
+  background: var(--color-primary-hover);
+}

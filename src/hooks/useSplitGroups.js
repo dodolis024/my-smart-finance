@@ -1,10 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-
-function notifySplit(payload) {
-  supabase.functions.invoke('send-split-notification', { body: payload }).catch(() => {});
-}
+import { notifySplit } from '@/lib/splitNotify';
 
 // Module-level cache — survives component unmount/remount
 let cachedGroups = null;
