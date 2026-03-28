@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.13.0] - Mar-28 2026
 - Improved split experience by extracting the join-group page, adding per-member spending summary and expandable records, and reorganizing split-related styles
 
 ## [1.12.1] - Mar-27 2026
