@@ -16,7 +16,7 @@ let cachedRates = null;
 // ── 分帳主頁（/split）────────────────────────────────────────────────────────
 export default function SplitPage() {
   const navigate = useNavigate();
-  const { groups, loading, fetchGroups, createGroup, updateGroup, deleteGroup, addMember, removeMember } = useSplitGroups();
+  const { groups, loading, fetchGroups, createGroup, updateGroup, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [rates, setRates] = useState(() => cachedRates || { TWD: 1 });
@@ -88,6 +88,14 @@ export default function SplitPage() {
                 toast.success('成員已移除。');
               } catch {
                 toast.error('移除失敗，請稍後再試。');
+              }
+            }}
+            onUpdateMemberName={async (memberId, newName) => {
+              try {
+                await updateMemberName(selectedGroup.id, memberId, newName);
+                toast.success('名稱已更新！');
+              } catch {
+                toast.error('更新失敗，請稍後再試。');
               }
             }}
             onUpdateGroup={updateGroup}

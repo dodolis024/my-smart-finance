@@ -1,22 +1,55 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
 
 let nextId = 1;
 
-export default function ManageMembersModal({ isOpen, onClose, members, onAddMembers, onRemoveMember }) {
+export default function ManageMembersModal({ isOpen, onClose, members, currentUserId, onAddMembers, onRemoveMember, onUpdateMemberName }) {
   const [newMembers, setNewMembers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const editInputRef = useRef(null);
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) editInputRef.current.focus();
+  }, [editingId]);
 
   const handleClose = () => {
     setNewMembers([]);
     setError('');
+    setEditingId(null);
     onClose();
   };
 
   const addRow = () => setNewMembers(prev => [...prev, { id: nextId++, value: '' }]);
   const removeRow = (i) => setNewMembers(prev => prev.filter((_, idx) => idx !== i));
   const updateRow = (i, val) => setNewMembers(prev => prev.map((m, idx) => idx === i ? { ...m, value: val } : m));
+
+  const startEditing = (member) => {
+    setEditingId(member.id);
+    setEditValue(member.name);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditValue('');
+  };
+
+  const confirmEditing = async (member) => {
+    const trimmed = editValue.trim();
+    if (!trimmed || trimmed === member.name) {
+      cancelEditing();
+      return;
+    }
+    try {
+      await onUpdateMemberName(member.id, trimmed);
+      setEditingId(null);
+      setEditValue('');
+    } catch (err) {
+      setError(err.message || '更新失敗，請稍後再試');
+    }
+  };
 
   const handleSubmit = async () => {
     const names = newMembers.map(m => m.value.trim()).filter(Boolean);
@@ -53,7 +86,30 @@ export default function ManageMembersModal({ isOpen, onClose, members, onAddMemb
                     {m.name?.[0]?.toUpperCase() || '?'}
                   </span>
                 )}
-                <span className="split-modal__member-name">{m.name}</span>
+                {editingId === m.id ? (
+                  <input
+                    ref={editInputRef}
+                    className="split-modal__input split-modal__input--inline-edit"
+                    value={editValue}
+                    onChange={e => setEditValue(e.target.value)}
+                    onBlur={() => confirmEditing(m)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') confirmEditing(m);
+                      if (e.key === 'Escape') cancelEditing();
+                    }}
+                  />
+                ) : (() => {
+                  const canEdit = onUpdateMemberName && (!m.user_id || m.user_id === currentUserId);
+                  return (
+                    <span
+                      className={`split-modal__member-name${canEdit ? ' split-modal__member-name--editable' : ''}`}
+                      onClick={canEdit ? () => startEditing(m) : undefined}
+                      title={canEdit ? '點擊編輯名稱' : undefined}
+                    >
+                      {m.name}
+                    </span>
+                  );
+                })()}
                 {m.user_id && <span className="split-modal__member-linked">已連結</span>}
                 {onRemoveMember && !m.user_id && (
                   <button type="button" className="split-modal__member-remove" onClick={() => onRemoveMember(m.id)} aria-label="移除">

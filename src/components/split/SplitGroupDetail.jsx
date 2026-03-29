@@ -9,7 +9,7 @@ import AddExpenseModal from './AddExpenseModal';
 import ManageMembersModal from './ManageMembersModal';
 import GroupSettingsModal from './GroupSettingsModal';
 
-export default function SplitGroupDetail({ group, onBack, rates, currencies, onAddMember, onRemoveMember, onUpdateGroup }) {
+export default function SplitGroupDetail({ group, onBack, rates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onUpdateGroup }) {
   const toast = useToast();
   const { confirm } = useConfirm();
   const { user } = useAuth();
@@ -257,12 +257,14 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
         isOpen={addMembersOpen}
         onClose={() => setAddMembersOpen(false)}
         members={members}
+        currentUserId={user?.id}
         onAddMembers={async (names) => {
           for (const name of names) {
             await onAddMember(group.id, name);
           }
         }}
         onRemoveMember={onRemoveMember}
+        onUpdateMemberName={onUpdateMemberName}
       />
 
       <GroupSettingsModal

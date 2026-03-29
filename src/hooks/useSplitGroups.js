@@ -147,6 +147,21 @@ export function useSplitGroups() {
     return data;
   }, [groups, user]);
 
+  const updateMemberName = useCallback(async (groupId, memberId, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed) throw new Error('名稱不能為空');
+    const { error } = await supabase
+      .from('split_members')
+      .update({ name: trimmed })
+      .eq('id', memberId);
+    if (error) throw error;
+    setGroups(prev => prev.map(g =>
+      g.id === groupId
+        ? { ...g, split_members: (g.split_members || []).map(m => m.id === memberId ? { ...m, name: trimmed } : m) }
+        : g
+    ));
+  }, []);
+
   const removeMember = useCallback(async (groupId, memberId) => {
     const currentGroup = groups.find(g => g.id === groupId);
     const memberToRemove = currentGroup?.split_members?.find(m => m.id === memberId);
@@ -206,6 +221,7 @@ export function useSplitGroups() {
     updateGroup,
     deleteGroup,
     addMember,
+    updateMemberName,
     removeMember,
     getGroupByCode,
     linkSelfToMember,
