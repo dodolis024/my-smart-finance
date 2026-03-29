@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useSplitExpenses } from '@/hooks/useSplitExpenses';
@@ -7,6 +7,7 @@ import SplitExpenseItem from './SplitExpenseItem';
 import SplitSettlement from './SplitSettlement';
 import AddExpenseModal from './AddExpenseModal';
 import ManageMembersModal from './ManageMembersModal';
+import GroupSettingsModal from './GroupSettingsModal';
 
 export default function SplitGroupDetail({ group, onBack, rates, currencies, onAddMember, onRemoveMember, onUpdateGroup }) {
   const toast = useToast();
@@ -27,32 +28,15 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
   const [addMembersOpen, setAddMembersOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAllExpenses, setShowAllExpenses] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState(group.name);
-  const nameInputRef = useRef(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  useEffect(() => { setNameValue(group.name); }, [group.name]);
-
-  const handleNameSave = async () => {
-    const trimmed = nameValue.trim();
-    if (!trimmed || trimmed === group.name) {
-      setNameValue(group.name);
-      setEditingName(false);
-      return;
-    }
-    try {
-      await onUpdateGroup(group.id, { name: trimmed });
-      setEditingName(false);
-    } catch {
-      toast.error('更新名稱失敗，請稍後再試。');
-      setNameValue(group.name);
-      setEditingName(false);
-    }
-  };
-
-  const startEditName = () => {
-    setEditingName(true);
-    setTimeout(() => nameInputRef.current?.focus(), 0);
+  const handleSettingsSave = async ({ name, currency, defaultExpenseCurrency }) => {
+    await onUpdateGroup(group.id, {
+      name,
+      currency,
+      default_expense_currency: defaultExpenseCurrency,
+    });
+    toast.success('群組設定已更新！');
   };
 
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
@@ -157,33 +141,12 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
     <>
       <div className="split-group-detail__header">
         <div className="split-group-detail__name-row">
-          {editingName ? (
-            <>
-              <input
-                ref={nameInputRef}
-                className="split-group-detail__name-input"
-                value={nameValue}
-                onChange={e => setNameValue(e.target.value)}
-                onBlur={() => setTimeout(handleNameSave, 100)}
-                onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setNameValue(group.name); setEditingName(false); } }}
-                maxLength={50}
-              />
-              <button type="button" className="split-group-detail__name-confirm" onMouseDown={e => e.preventDefault()} onClick={handleNameSave} aria-label="確認">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="split-group-detail__name">{group.name}</p>
-              <button type="button" className="split-group-detail__edit-name-btn" onClick={startEditName} aria-label="編輯群組名稱">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                </svg>
-              </button>
-            </>
-          )}
+          <p className="split-group-detail__name">{group.name}</p>
+          <button type="button" className="split-group-detail__edit-name-btn" onClick={() => setSettingsOpen(true)} aria-label="編輯群組設定">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+            </svg>
+          </button>
         </div>
         <div className="split-group-detail__members-row">
           {members.map(m => (
@@ -300,6 +263,14 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
           }
         }}
         onRemoveMember={onRemoveMember}
+      />
+
+      <GroupSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onSave={handleSettingsSave}
+        group={group}
+        currencies={currencies}
       />
     </>
   );

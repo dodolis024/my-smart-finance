@@ -152,9 +152,9 @@ CREATE POLICY "split_groups_member_select" ON split_groups
 CREATE POLICY "split_groups_insert" ON split_groups
   FOR INSERT WITH CHECK (owner_id = auth.uid());
 
--- 只有 owner 可更新/刪除
+-- 群組成員或 owner 可更新，只有 owner 可刪除
 CREATE POLICY "split_groups_update" ON split_groups
-  FOR UPDATE USING (owner_id = auth.uid());
+  FOR UPDATE USING (can_access_split_group(id, auth.uid()));
 
 CREATE POLICY "split_groups_delete" ON split_groups
   FOR DELETE USING (owner_id = auth.uid());

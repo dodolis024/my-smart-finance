@@ -26,7 +26,7 @@
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
-  transition: scrollbar-color 0.3s;
+  transition: scrollbar-color 0.3s, max-height 0.22s ease, margin-top 0.22s ease, padding-bottom 0.22s ease;
 }
 
 /* 計算機鍵盤開啟時，預留底部空間避免遮擋輸入欄位 */
