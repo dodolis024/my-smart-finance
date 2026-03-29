@@ -7,12 +7,13 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
   const [name, setName] = useState('');
   const [myName, setMyName] = useState('');
   const [currency, setCurrency] = useState('TWD');
+  const [defaultExpenseCurrency, setDefaultExpenseCurrency] = useState('');
   const [members, setMembers] = useState(() => [{ id: nextMemberId++, value: '' }, { id: nextMemberId++, value: '' }]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const handleClose = () => {
-    setName(''); setMyName(''); setCurrency('TWD');
+    setName(''); setMyName(''); setCurrency('TWD'); setDefaultExpenseCurrency('');
     setMembers([{ id: nextMemberId++, value: '' }, { id: nextMemberId++, value: '' }]);
     setError('');
     onClose();
@@ -32,6 +33,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
         name: name.trim(),
         myName: myName.trim(),
         currency,
+        defaultExpenseCurrency: defaultExpenseCurrency || null,
         extraMembers: members.map(m => m.value).filter(v => v.trim()),
       });
       handleClose();
@@ -68,6 +70,19 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
             value={currency}
             onChange={e => setCurrency(e.target.value)}
           >
+            {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        <div className="split-modal__field">
+          <label className="split-modal__label" htmlFor="group-expense-currency">預設記錄幣別</label>
+          <select
+            id="group-expense-currency"
+            className="split-modal__select"
+            value={defaultExpenseCurrency}
+            onChange={e => setDefaultExpenseCurrency(e.target.value)}
+          >
+            <option value="">同結算幣別</option>
             {currencies.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>

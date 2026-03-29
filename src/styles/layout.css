@@ -129,23 +129,6 @@
   overflow-y: auto;
   padding-left: 0.5rem;
   padding-right: 0.75rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-}
-.form-column::-webkit-scrollbar {
-  width: 10px;
-}
-.form-column::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
-  border-radius: 10px;
-}
-.form-column::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: 10px;
-  border: 2px solid var(--scrollbar-track);
-}
-.form-column::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
 }
 
 
@@ -271,21 +254,4 @@
   overflow-x: clip;
   padding-right: 1.5rem;
   padding-bottom: 1rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-}
-.dashboard-column::-webkit-scrollbar {
-  width: 10px;
-}
-.dashboard-column::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
-  border-radius: 10px;
-}
-.dashboard-column::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: 10px;
-  border: 2px solid var(--scrollbar-track);
-}
-.dashboard-column::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
 }

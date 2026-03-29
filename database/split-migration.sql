@@ -30,14 +30,18 @@ $$ LANGUAGE plpgsql;
 -- 2. 建立 split_groups 表（分帳群組）
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS split_groups (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  name        TEXT NOT NULL,
-  description TEXT,
-  currency    TEXT NOT NULL DEFAULT 'TWD',
-  invite_code TEXT UNIQUE NOT NULL DEFAULT generate_invite_code(),
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+  id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id                  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name                      TEXT NOT NULL,
+  description               TEXT,
+  currency                  TEXT NOT NULL DEFAULT 'TWD',
+  default_expense_currency  TEXT,
+  invite_code               TEXT UNIQUE NOT NULL DEFAULT generate_invite_code(),
+  created_at                TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 為既有資料庫新增欄位（執行時若欄位已存在不影響）
+ALTER TABLE split_groups ADD COLUMN IF NOT EXISTS default_expense_currency TEXT;
 
 -- =============================================================================
 -- 3. 建立 split_members 表（群組成員）

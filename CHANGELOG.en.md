@@ -2,6 +2,10 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added optional default expense currency when creating a split group (independent of settlement currency)
+- Improved add expense: custom split can auto-sum shares into the total, with physical keyboard support for the calculator
+- Improved mobile scrolling: reliable clearance above the bottom tab bar and scrollbars that show while scrolling
+
 ## [1.14.1] - Mar-29 2026
 - Improved add-expense calculator keypad: opening it scrolls the active field into view and reserves bottom space so inputs stay visible
 - Improved split list on mobile: padding for the bottom tab bar and repositioned sticky tab-bar actions; app shell uses dynamic viewport height

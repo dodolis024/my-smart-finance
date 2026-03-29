@@ -291,9 +291,14 @@ body:has(.app-layout) {
     height: 1.375rem;
   }
 
-  /* Add bottom padding to main content to avoid overlap with tab bar */
-  .app-layout__main {
-    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
+  /* 使用 ::after spacer 確保內容不被 tab bar 蓋住 —
+     padding-bottom 在 flex 滾動容器中有已知的瀏覽器相容問題，
+     改用偽元素可可靠地建立底部捲動空間。 */
+  .app-layout__main::after {
+    content: '';
+    display: block;
+    flex-shrink: 0;
+    height: calc(56px + env(safe-area-inset-bottom, 0));
   }
 }
 

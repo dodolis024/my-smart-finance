@@ -72,9 +72,7 @@
     background: transparent;
     border-bottom: none;
     box-shadow: none;
-    position: sticky;
-    top: 0;
-    z-index: var(--z-topbar);
+    position: relative;
   }
 
   .app-top-bar__left {
@@ -120,6 +118,7 @@
     overflow: visible;
     gap: 1.5rem;
     padding: 1.25rem max(1.25rem, 6vw);
+    flex: 1 0 auto;
   }
 
   .form-column {
@@ -198,9 +197,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: var(--z-topbar);
   }
 
   .app-top-bar__right {

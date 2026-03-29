@@ -3,11 +3,12 @@ import Modal from '@/components/common/Modal';
 import CalcKeypad from './CalcKeypad';
 import { parseExpression } from '@/lib/utils';
 
-export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
+export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', defaultExpenseCurrency, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
   const isEditing = !!editingExpense;
+  const initialCurrency = defaultExpenseCurrency || groupCurrency;
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState(groupCurrency);
+  const [currency, setCurrency] = useState(initialCurrency);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
   const [paidBy, setPaidBy] = useState('');
@@ -21,6 +22,10 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   const dialogRef = useRef(null);
   const amountInputRef = useRef(null);
   const memberInputRefs = useRef({});
+  // 追蹤總金額是否由用戶手動輸入；若否，則在自訂模式下自動加總份額
+  const amountManualRef = useRef(false);
+  // 讓鍵盤監聽器可以讀取當前 keypadValue，而不需要重新掛載 effect
+  const keypadValueRef = useRef('');
 
   // 穩定化 members 引用，避免父層 re-render 時不必要地重設表單
   const memberIds = useMemo(() => (members || []).map(m => m.id).join(','), [members]);
@@ -36,7 +41,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     if (!editingExpense) return;
     setTitle(editingExpense.title || '');
     setAmount(String(editingExpense.amount));
-    setCurrency(editingExpense.currency || groupCurrency);
+    setCurrency(editingExpense.currency || initialCurrency);
     setDate(editingExpense.date || new Date().toISOString().slice(0, 10));
     setNote(editingExpense.note || '');
     setPaidBy(editingExpense.paid_by || '');
@@ -73,10 +78,11 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
 
   const handleClose = () => {
     setTitle(''); setAmount(''); setNote(''); setError('');
-    setCurrency(groupCurrency);
+    setCurrency(initialCurrency);
     setShareMode('equal');
     setCustomShares({});
     setActiveField(null);
+    amountManualRef.current = false;
     if (members?.length) {
       setParticipants(members.map(m => m.id));
       setPaidBy(members[0]?.id || '');
@@ -85,8 +91,19 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     onClose();
   };
 
+  // 自訂模式：若用戶未手動設定總金額，自動從各份額加總
+  useEffect(() => {
+    if (shareMode !== 'custom' || amountManualRef.current || isEditing) return;
+    const sum = participants.reduce((s, id) => {
+      const v = customShares[id];
+      return v !== undefined && v !== '' ? s + (parseFloat(v) || 0) : s;
+    }, 0);
+    setAmount(sum > 0 ? String(sum) : '');
+  }, [customShares, shareMode, participants, isEditing]);
+
   // 當計算機鍵盤開啟時，讓輸入欄位維持在可視範圍內
   const openKeypadFor = (field, targetEl) => {
+    if (field === 'amount') amountManualRef.current = true;
     setActiveField(field);
     window.requestAnimationFrame(() => {
       targetEl?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
@@ -123,6 +140,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     : activeField != null
       ? (customShares[activeField] ?? '')
       : '';
+  keypadValueRef.current = keypadValue;
 
   const handleKeypadInput = (val) => {
     if (activeField === 'amount') setAmount(val);
@@ -130,9 +148,52 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   };
 
   const handleKeypadConfirm = (result) => {
+    // 若用戶清空了總金額，重新允許自動加總
+    if (activeField === 'amount' && (!result || result === '')) {
+      amountManualRef.current = false;
+    }
     handleKeypadInput(result);
     setActiveField(null);
   };
+
+  // 實體鍵盤支援：CalcKeypad 開啟時，攔截鍵盤輸入並路由進計算機
+  useEffect(() => {
+    if (activeField == null) return;
+    const handleKeyDown = (e) => {
+      const { key } = e;
+      const cur = keypadValueRef.current;
+
+      if (/^[0-9.]$/.test(key)) {
+        e.preventDefault();
+        if (activeField === 'amount') { amountManualRef.current = true; setAmount(cur + key); }
+        else setCustomShares(prev => ({ ...prev, [activeField]: cur + key }));
+      } else if (['+', '-', '*', '/'].includes(key)) {
+        e.preventDefault();
+        if (activeField === 'amount') { amountManualRef.current = true; setAmount(cur + key); }
+        else setCustomShares(prev => ({ ...prev, [activeField]: cur + key }));
+      } else if (key === 'Backspace') {
+        e.preventDefault();
+        const next = cur.slice(0, -1);
+        if (activeField === 'amount') { amountManualRef.current = next !== ''; setAmount(next); }
+        else setCustomShares(prev => ({ ...prev, [activeField]: next }));
+      } else if (key === 'Enter' || key === '=') {
+        e.preventDefault();
+        const parsed = parseExpression(cur);
+        const result = !isNaN(parsed) && parsed >= 0 ? String(parsed) : '';
+        if (activeField === 'amount') {
+          if (!result) amountManualRef.current = false;
+          setAmount(result);
+        } else {
+          setCustomShares(prev => ({ ...prev, [activeField]: result }));
+        }
+        setActiveField(null);
+      } else if (key === 'Escape') {
+        setActiveField(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [activeField]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleParticipant = (id) => {
     setParticipants(prev =>

@@ -412,11 +412,11 @@
   }
 }
 
-/* 手機版：避免底部 tab bar 蓋住最後內容與 sticky 操作列 */
+/* 手機版：取消嵌套捲動，讓 app-layout__main 統一處理滾動 */
 @media (max-width: 1200px) {
   .split-page {
+    flex: 1 0 auto;
     overflow-y: visible;
-    padding-bottom: calc(1.5rem + 56px + env(safe-area-inset-bottom, 0));
   }
 
   .split-group-list__actions {

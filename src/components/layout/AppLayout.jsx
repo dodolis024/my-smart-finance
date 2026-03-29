@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import Sidebar from './Sidebar';
 import BottomTabBar from './BottomTabBar';
 import ChangelogModal from '@/components/common/ChangelogModal';
@@ -6,8 +6,11 @@ import UnifiedSettingsModal from '@/components/settings/UnifiedSettingsModal';
 import { useNavActions } from '@/contexts/NavActionsContext';
 import { useChangelog } from '@/hooks/useChangelog';
 import { useAuth } from '@/hooks/useAuth';
+import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 
 export default function AppLayout({ children }) {
+  const mainRef = useRef(null);
+  useScrollbarOnScroll(mainRef);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const navActions = useNavActions();
@@ -40,7 +43,7 @@ export default function AppLayout({ children }) {
   return (
     <div className="app-layout">
       <Sidebar hasChangelogUnread={hasUnread} changelogOpen={changelogOpen} settingsOpen={settingsOpen} />
-      <main className="app-layout__main">
+      <main ref={mainRef} className="app-layout__main scrollbar-on-scroll">
         {children}
       </main>
       <BottomTabBar hasChangelogUnread={hasUnread} />

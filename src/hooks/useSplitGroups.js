@@ -65,13 +65,19 @@ export function useSplitGroups() {
     }
   }, [user]);
 
-  const createGroup = useCallback(async ({ name, description, currency, myName, extraMembers }) => {
+  const createGroup = useCallback(async ({ name, description, currency, defaultExpenseCurrency, myName, extraMembers }) => {
     if (!user) throw new Error('請先登入');
 
     // 建立群組
     const { data: group, error: groupError } = await supabase
       .from('split_groups')
-      .insert({ owner_id: user.id, name, description: description || null, currency: currency || 'TWD' })
+      .insert({
+        owner_id: user.id,
+        name,
+        description: description || null,
+        currency: currency || 'TWD',
+        default_expense_currency: defaultExpenseCurrency || null,
+      })
       .select()
       .single();
     if (groupError) throw groupError;

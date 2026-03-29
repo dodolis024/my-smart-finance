@@ -286,6 +286,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
         editingExpense={editingExpense}
         members={members}
         groupCurrency={group.currency || 'TWD'}
+        defaultExpenseCurrency={group.default_expense_currency || group.currency || 'TWD'}
         currencies={currencies}
       />
 
