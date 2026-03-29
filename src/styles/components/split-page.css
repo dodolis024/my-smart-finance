@@ -412,6 +412,18 @@
   }
 }
 
+/* 手機版：避免底部 tab bar 蓋住最後內容與 sticky 操作列 */
+@media (max-width: 1200px) {
+  .split-page {
+    overflow-y: visible;
+    padding-bottom: calc(1.5rem + 56px + env(safe-area-inset-bottom, 0));
+  }
+
+  .split-group-list__actions {
+    bottom: calc(56px + env(safe-area-inset-bottom, 0));
+  }
+}
+
 /* ── 載入狀態 ────────────────────────────────────────────────────────────── */
 
 .split-loading {

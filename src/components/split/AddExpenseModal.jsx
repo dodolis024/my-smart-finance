@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Modal from '@/components/common/Modal';
 import CalcKeypad from './CalcKeypad';
 import { parseExpression } from '@/lib/utils';
@@ -18,6 +18,9 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   const [error, setError] = useState('');
   // activeField: null | 'amount' | memberId (string)
   const [activeField, setActiveField] = useState(null);
+  const dialogRef = useRef(null);
+  const amountInputRef = useRef(null);
+  const memberInputRefs = useRef({});
 
   // 穩定化 members 引用，避免父層 re-render 時不必要地重設表單
   const memberIds = useMemo(() => (members || []).map(m => m.id).join(','), [members]);
@@ -81,6 +84,38 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     }
     onClose();
   };
+
+  // 當計算機鍵盤開啟時，讓輸入欄位維持在可視範圍內
+  const openKeypadFor = (field, targetEl) => {
+    setActiveField(field);
+    window.requestAnimationFrame(() => {
+      targetEl?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    });
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      document.body.classList.remove('calc-keypad-open');
+      return;
+    }
+    if (activeField == null) {
+      document.body.classList.remove('calc-keypad-open');
+      return;
+    }
+    document.body.classList.add('calc-keypad-open');
+    return () => document.body.classList.remove('calc-keypad-open');
+  }, [isOpen, activeField]);
+
+  useEffect(() => {
+    if (!isOpen || activeField == null) return;
+    const target = activeField === 'amount'
+      ? amountInputRef.current
+      : memberInputRefs.current[activeField];
+    if (!target) return;
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    });
+  }, [activeField, isOpen]);
 
   // 計算機鍵盤 — 取得/更新目前作用欄位的值
   const keypadValue = activeField === 'amount'
@@ -183,7 +218,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     <>
     <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="add-expense-title">
       <div className="reminder-modal__backdrop" onClick={handleClose} />
-      <div className="split-modal__dialog" onClick={e => e.stopPropagation()}>
+      <div ref={dialogRef} className="split-modal__dialog" onClick={e => e.stopPropagation()}>
         <button type="button" className="reminder-modal__close" aria-label="關閉" onClick={handleClose}>×</button>
         <h2 id="add-expense-title" className="split-modal__title">{isEditing ? '編輯費用' : '新增費用'}</h2>
 
@@ -195,7 +230,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         <div className="split-modal__field">
           <label className="split-modal__label" htmlFor="expense-amount">金額</label>
           <div className="split-modal__amount-row">
-            <input id="expense-amount" className="split-modal__input is-calc" type="text" inputMode="none" placeholder="0" value={amount} readOnly onClick={() => setActiveField('amount')} />
+            <input id="expense-amount" ref={amountInputRef} className="split-modal__input is-calc" type="text" inputMode="none" placeholder="0" value={amount} readOnly onClick={(e) => openKeypadFor('amount', e.currentTarget)} />
             <select className="split-modal__select split-modal__currency-select" value={currency} onChange={e => setCurrency(e.target.value)}>
               {currencies.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -259,7 +294,11 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
                       placeholder={isAutoFilled ? autoShare.toLocaleString() : '0'}
                       value={customShares[m.id] ?? ''}
                       readOnly
-                      onClick={() => setActiveField(m.id)}
+                      ref={(el) => {
+                        if (el) memberInputRefs.current[m.id] = el;
+                        else delete memberInputRefs.current[m.id];
+                      }}
+                      onClick={(e) => openKeypadFor(m.id, e.currentTarget)}
                     />
                     {isAutoFilled && <span className="split-modal__auto-tag">自動</span>}
                   </div>

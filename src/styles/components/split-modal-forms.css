@@ -29,6 +29,13 @@
   transition: scrollbar-color 0.3s;
 }
 
+/* 計算機鍵盤開啟時，預留底部空間避免遮擋輸入欄位 */
+body.calc-keypad-open .split-modal__dialog {
+  max-height: calc(100dvh - 3vh);
+  margin: 2vh auto;
+  padding-bottom: calc(1.75rem + 23rem);
+}
+
 .split-modal__dialog:hover,
 .split-modal__dialog:active {
   scrollbar-color: var(--color-border) transparent;

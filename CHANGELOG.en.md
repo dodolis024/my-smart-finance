@@ -2,6 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Improved add-expense calculator keypad: opening it scrolls the active field into view and reserves bottom space so inputs stay visible
+- Improved split list on mobile: padding for the bottom tab bar and repositioned sticky tab-bar actions; app shell uses dynamic viewport height
+
 ## [1.14.0] - Mar-28 2026
 - Added a split calculator keypad for entering expressions in expense amount and custom share fields.
 
