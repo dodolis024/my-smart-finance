@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.15.1] - Mar-29 2026
 - Added group settings modal: edit group name, settlement currency and default recording currency, and allow linked members to update group settings
 
 ## [1.15.0] - Mar-29 2026
