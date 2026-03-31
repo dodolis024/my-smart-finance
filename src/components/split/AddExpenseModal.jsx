@@ -101,13 +101,31 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     setAmount(sum > 0 ? String(sum) : '');
   }, [customShares, shareMode, participants, isEditing]);
 
+  // 手動捲動 dialog，確保目標欄位在鍵盤上方的可見區域內
+  const scrollFieldAboveKeypad = (targetEl) => {
+    const dialog = dialogRef.current;
+    if (!targetEl || !dialog) return;
+    const keypadHeight = parseFloat(getComputedStyle(document.documentElement).fontSize) * 23;
+    const visibleBottom = window.innerHeight - keypadHeight;
+    const targetRect = targetEl.getBoundingClientRect();
+    const dialogRect = dialog.getBoundingClientRect();
+    // 若欄位底部超出可見區域，往上捲動
+    if (targetRect.bottom > visibleBottom - 16) {
+      const offset = targetRect.bottom - visibleBottom + 48;
+      dialog.scrollBy({ top: offset, behavior: 'smooth' });
+    // 若欄位頂部在 dialog 可見頂部之上，往下捲動
+    } else if (targetRect.top < dialogRect.top) {
+      const offset = targetRect.top - dialogRect.top - 16;
+      dialog.scrollBy({ top: offset, behavior: 'smooth' });
+    }
+  };
+
   // 當計算機鍵盤開啟時，讓輸入欄位維持在可視範圍內
   const openKeypadFor = (field, targetEl) => {
     if (field === 'amount') amountManualRef.current = true;
     setActiveField(field);
-    window.requestAnimationFrame(() => {
-      targetEl?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
-    });
+    // 等 body class + padding-bottom 生效後再捲動
+    setTimeout(() => scrollFieldAboveKeypad(targetEl), 50);
   };
 
   useEffect(() => {
@@ -129,9 +147,9 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
       ? amountInputRef.current
       : memberInputRefs.current[activeField];
     if (!target) return;
-    window.requestAnimationFrame(() => {
-      target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
-    });
+    // 等 body class + padding-bottom 生效後再捲動
+    const timer = setTimeout(() => scrollFieldAboveKeypad(target), 50);
+    return () => clearTimeout(timer);
   }, [activeField, isOpen]);
 
   // 計算機鍵盤 — 取得/更新目前作用欄位的值
@@ -279,7 +297,13 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     <>
     <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="add-expense-title">
       <div className="reminder-modal__backdrop" onClick={handleClose} />
-      <div ref={dialogRef} className="split-modal__dialog" onClick={e => e.stopPropagation()}>
+      <div ref={dialogRef} className="split-modal__dialog" onClick={e => {
+          e.stopPropagation();
+          // 點擊 dialog 內非計算機輸入區域時，關閉鍵盤
+          if (activeField != null && !e.target.closest('.is-calc')) {
+            setActiveField(null);
+          }
+        }}>
         <button type="button" className="reminder-modal__close" aria-label="關閉" onClick={handleClose}>×</button>
         <h2 id="add-expense-title" className="split-modal__title">{isEditing ? '編輯費用' : '新增費用'}</h2>
 

@@ -3,7 +3,7 @@
 .calc-keypad__backdrop {
   position: fixed;
   inset: 0;
-  z-index: var(--z-modal-high);
+  z-index: calc(var(--z-modal) - 1);
   background: transparent;
 }
 
