@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useSplitExpenses } from '@/hooks/useSplitExpenses';
+import { useSplitSync } from '@/hooks/useSplitSync';
 import { useAuth } from '@/hooks/useAuth';
 import SplitExpenseItem from './SplitExpenseItem';
 import SplitSettlement from './SplitSettlement';
+import SplitShareDetailModal from './SplitShareDetailModal';
 import AddExpenseModal from './AddExpenseModal';
 import ManageMembersModal from './ManageMembersModal';
 import GroupSettingsModal from './GroupSettingsModal';
@@ -23,12 +25,14 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
     actorUserId: user?.id ?? '',
     groupName: group.name ?? '',
   });
+  const { syncStatus, syncing, fetchSyncStatus, syncToLedger } = useSplitSync(group.id);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAllExpenses, setShowAllExpenses] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shareDetailOpen, setShareDetailOpen] = useState(false);
 
   const handleSettingsSave = async ({ name, currency, defaultExpenseCurrency }) => {
     await onUpdateGroup(group.id, {
@@ -40,6 +44,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
   };
 
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
+  useEffect(() => { if (actorMember) fetchSyncStatus(); }, [fetchSyncStatus, actorMember]);
 
   const members = group.split_members || [];
   const settlement = calcSettlement(members, expenses, settlements, rates, group.currency);
@@ -66,11 +71,13 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
   const handleAddExpense = async (data) => {
     await addExpense(data);
     toast.success('費用已新增！');
+    if (actorMember) fetchSyncStatus();
   };
 
   const handleUpdateExpense = async (expenseId, data) => {
     await updateExpense(expenseId, data);
     toast.success('費用已更新！');
+    if (actorMember) fetchSyncStatus();
   };
 
   const handleDeleteExpense = async (id) => {
@@ -79,6 +86,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
     try {
       await deleteExpense(id);
       toast.success('已刪除。');
+      if (actorMember) fetchSyncStatus();
     } catch {
       toast.error('刪除失敗，請稍後再試。');
     }
@@ -127,6 +135,19 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
     navigator.clipboard.writeText(group.invite_code).then(() => {
       toast.success('代碼已複製！');
     });
+  };
+
+  const handleSyncToLedger = async () => {
+    try {
+      const result = await syncToLedger();
+      if (result?.is_update) {
+        toast.success('帳本已更新！');
+      } else {
+        toast.success('已同步至個人帳本！');
+      }
+    } catch (err) {
+      toast.error(err?.message || '同步失敗，請稍後再試。');
+    }
   };
 
   // 為還款紀錄帶入成員名稱
@@ -240,6 +261,96 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
           />
         </>
       )}
+
+      {/* 同步至個人帳本 */}
+      {actorMember && (
+        <>
+          <div className="split-group-detail__section-header split-group-detail__section-header--summary">
+            <p className="split-group-detail__section-title">同步至帳本</p>
+          </div>
+          <div className="split-sync-box">
+            {!syncStatus || !syncStatus.synced ? (
+              <div className="split-sync-box__unsync">
+                <p className="split-sync-box__desc">
+                  將你在此群組的分攤支出（共 <strong>{syncStatus?.currency || group.currency || 'TWD'} {fmtAmt(syncStatus?.current_total ?? memberTotals[actorMember.id] ?? 0)}</strong>）新增至個人帳本。
+                </p>
+                <button
+                  type="button"
+                  className="split-sync-box__btn split-sync-box__btn--primary"
+                  onClick={handleSyncToLedger}
+                  disabled={syncing}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                  {syncing ? '同步中...' : '同步至帳本'}
+                </button>
+              </div>
+            ) : syncStatus.needs_update ? (
+              <div className="split-sync-box__needs-update">
+                <div className="split-sync-box__update-info">
+                  <span className="split-sync-box__dot" />
+                  <span className="split-sync-box__update-text">有新費用，帳本尚未更新</span>
+                </div>
+                <p className="split-sync-box__desc">
+                  帳本記錄：{syncStatus.currency} {fmtAmt(syncStatus.synced_amount)}　→　最新：{syncStatus.currency} {fmtAmt(syncStatus.current_total)}
+                </p>
+                <div className="split-sync-box__actions">
+                  <button
+                    type="button"
+                    className="split-sync-box__btn split-sync-box__btn--primary"
+                    onClick={handleSyncToLedger}
+                    disabled={syncing}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                    {syncing ? '更新中...' : '更新同步'}
+                  </button>
+                  <button type="button" className="split-sync-box__btn split-sync-box__btn--secondary" onClick={() => setShareDetailOpen(true)}>
+                    查看明細
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="split-sync-box__synced">
+                <div className="split-sync-box__synced-info">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="split-sync-box__check-icon" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                  <span className="split-sync-box__synced-label">已同步至帳本</span>
+                  <span className="split-sync-box__synced-amount">{syncStatus.currency} {fmtAmt(syncStatus.synced_amount)}</span>
+                </div>
+                <div className="split-sync-box__actions">
+                  <button
+                    type="button"
+                    className="split-sync-box__btn split-sync-box__btn--secondary"
+                    onClick={handleSyncToLedger}
+                    disabled={syncing}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                    {syncing ? '更新中...' : '重新同步'}
+                  </button>
+                  <button type="button" className="split-sync-box__btn split-sync-box__btn--secondary" onClick={() => setShareDetailOpen(true)}>
+                    查看明細
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      <SplitShareDetailModal
+        isOpen={shareDetailOpen}
+        onClose={() => setShareDetailOpen(false)}
+        snapshot={syncStatus?.expense_snapshot || []}
+        groupName={group.name}
+        currency={syncStatus?.currency || group.currency || 'TWD'}
+        totalAmount={syncStatus?.synced_amount || 0}
+      />
 
       <AddExpenseModal
         isOpen={addExpenseOpen}

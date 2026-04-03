@@ -34,3 +34,6 @@ to-do.md
 # AI assistant workspace (local only)
 .claude/
 .claude/worktrees
+
+# Personal files
+.cursor/

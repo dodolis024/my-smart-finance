@@ -4,6 +4,9 @@ This file records version updates for Smart Finance Tracker.
 
 - Added split member renaming: tap to edit your own or unlinked members' display names in Manage members
 - Improved add-expense calculator: better scroll to keep the field above the keypad; tap outside inputs to dismiss
+- Added split-to-ledger sync: one-tap sync with unsynced/status/update flows
+- Added split share detail view: inspect synced snapshots from both split page and transaction detail
+- Improved split check-in integration: auto-upsert check-in when adding today's split expense
 
 ## [1.15.1] - Mar-29 2026
 - Added group settings modal: edit group name, settlement currency and default recording currency, and allow linked members to update group settings

@@ -1,0 +1,220 @@
+/* ── 同步至帳本區塊 ────────────────────────────────────────────────────────── */
+
+.split-sync-box {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-top: 0.6rem;
+}
+
+.split-sync-box__desc {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.75rem;
+  line-height: 1.5;
+}
+
+.split-sync-box__desc strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* ── 操作按鈕 ─────────────────────────────────────────────────────────────── */
+
+.split-sync-box__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.split-sync-box__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+  border: none;
+}
+
+.split-sync-box__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.split-sync-box__btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.split-sync-box__btn--primary {
+  background: var(--color-primary);
+  color: var(--color-card);
+}
+
+.split-sync-box__btn--primary:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.split-sync-box__btn--secondary {
+  background: none;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.split-sync-box__btn--secondary:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: var(--color-card);
+}
+
+/* ── 已同步狀態 ───────────────────────────────────────────────────────────── */
+
+.split-sync-box__synced-info {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.split-sync-box__check-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-success-alt);
+  flex-shrink: 0;
+}
+
+.split-sync-box__synced-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-success-alt);
+}
+
+.split-sync-box__synced-amount {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-left: auto;
+}
+
+/* ── 需要更新狀態 ─────────────────────────────────────────────────────────── */
+
+.split-sync-box__update-info {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.split-sync-box__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-warning, #f59e0b);
+  flex-shrink: 0;
+}
+
+.split-sync-box__update-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-warning, #f59e0b);
+}
+
+/* ── 分攤明細表格 ─────────────────────────────────────────────────────────── */
+
+.split-share-detail__group-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.split-share-detail__empty {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 1rem 0;
+  margin: 0;
+}
+
+.split-share-detail__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.split-share-detail__th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 0 0 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.split-share-detail__th--amount,
+.split-share-detail__td--amount {
+  text-align: right;
+}
+
+.split-share-detail__row {
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.split-share-detail__row:last-child {
+  border-bottom: none;
+}
+
+.split-share-detail__td {
+  padding: 0.6rem 0;
+  color: var(--color-text);
+  vertical-align: middle;
+}
+
+.split-share-detail__td--date {
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  padding-right: 0.75rem;
+  min-width: 80px;
+}
+
+.split-share-detail__td--title {
+  word-break: break-word;
+}
+
+.split-share-detail__td--amount {
+  white-space: nowrap;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding-left: 0.75rem;
+}
+
+.split-share-detail__total-row {
+  border-top: 2px solid var(--color-border);
+}
+
+.split-share-detail__total-label {
+  padding-top: 0.65rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.split-share-detail__total-amount {
+  padding-top: 0.65rem;
+  text-align: right;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

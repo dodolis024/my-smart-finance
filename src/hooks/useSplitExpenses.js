@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { notifySplit } from '@/lib/splitNotify';
 import { calcSettlement } from '@/lib/splitSettlement';
 import { getCachedExpenses, getCachedSettlements, updateCache } from '@/lib/splitCache';
+import { getTodayYmd } from '@/lib/utils';
 
 export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', groupName = '' } = {}) {
   const hasCached = groupId && getCachedExpenses(groupId);
@@ -72,6 +73,15 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
     if (sharesError) throw sharesError;
 
     await fetchExpenses();
+
+    // 若新增的費用日期是今天，且用戶是已連結成員，則同步簽到記錄
+    if (actorUserId && date === getTodayYmd()) {
+      await supabase.from('checkins').upsert(
+        { user_id: actorUserId, date, source: 'onTimeTransaction' },
+        { onConflict: 'user_id,date' }
+      );
+    }
+
     notifySplit({
       event: 'expense_added',
       group_id: groupId,
