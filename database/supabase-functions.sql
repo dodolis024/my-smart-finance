@@ -86,25 +86,29 @@ BEGIN
         AND EXTRACT(MONTH FROM date) = p_month;
 
     -- 取得交易紀錄（該年月的所有交易）
+    -- isSplitSynced：是否存在 split_ledger_syncs 關聯（分帳同步至個人帳本），不依賴類別文字
     SELECT json_agg(
         json_build_object(
-            'id', id,
-            'date', date,
-            'itemName', item_name,
-            'category', category,
-            'paymentMethod', payment_method,
-            'currency', currency,
-            'originalAmount', amount,
-            'exchangeRate', exchange_rate,
-            'twdAmount', twd_amount,
-            'note', note,
-            'type', type
-        ) ORDER BY date DESC, created_at DESC
+            'id', t.id,
+            'date', t.date,
+            'itemName', t.item_name,
+            'category', t.category,
+            'paymentMethod', t.payment_method,
+            'currency', t.currency,
+            'originalAmount', t.amount,
+            'exchangeRate', t.exchange_rate,
+            'twdAmount', t.twd_amount,
+            'note', t.note,
+            'type', t.type,
+            'isSplitSynced', EXISTS (
+                SELECT 1 FROM split_ledger_syncs s WHERE s.transaction_id = t.id
+            )
+        ) ORDER BY t.date DESC, t.created_at DESC
     ) INTO v_history
-    FROM transactions
-    WHERE user_id = v_user_id
-        AND EXTRACT(YEAR FROM date) = p_year
-        AND EXTRACT(MONTH FROM date) = p_month;
+    FROM transactions t
+    WHERE t.user_id = v_user_id
+        AND EXTRACT(YEAR FROM t.date) = p_year
+        AND EXTRACT(MONTH FROM t.date) = p_month;
 
     -- 取得帳戶列表
     SELECT json_agg(

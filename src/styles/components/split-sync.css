@@ -158,11 +158,21 @@
   color: var(--color-text-secondary);
   padding: 0 0 0.5rem;
   border-bottom: 1px solid var(--color-border);
+  background: transparent;
 }
 
 .split-share-detail__th--amount,
 .split-share-detail__td--amount {
   text-align: right;
+}
+
+.split-share-detail__th--date {
+  padding-right: 0.75rem;
+}
+
+.split-share-detail__th--amount,
+.split-share-detail__total-amount {
+  padding-left: 0.75rem;
 }
 
 .split-share-detail__row {

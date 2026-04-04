@@ -2,6 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Fixed transaction history table header and column alignment
+- Fixed category and payment handling when editing split-bill transactions synced to the ledger
+
 ## [1.16.0] - Apr-03 2026
 - Added split member renaming: tap to edit your own or unlinked members' display names in Manage members
 - Improved add-expense calculator: better scroll to keep the field above the keypad; tap outside inputs to dismiss

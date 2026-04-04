@@ -18,6 +18,8 @@ export default function TransactionForm({
   accounts = [],
   currencies = ['TWD'],
   editingTransaction = null,
+  /** 分帳同步進帳本的交易：可不填支付方式 */
+  paymentOptional = false,
   onSubmit,
   onCancelEdit,
   onCheckin,
@@ -180,10 +182,15 @@ export default function TransactionForm({
             value={form.paymentMethod}
             onChange={handleChange}
             disabled={isFormDisabled}
+            required={!paymentOptional}
           >
-            <option value="" disabled>
-              選擇支付方式
-            </option>
+            {paymentOptional ? (
+              <option value="">不指定（分帳同步）</option>
+            ) : (
+              <option value="" disabled>
+                選擇支付方式
+              </option>
+            )}
             {needsExtraPayment && (
               <option value={form.paymentMethod}>{form.paymentMethod}</option>
             )}

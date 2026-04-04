@@ -25,44 +25,44 @@
   }
 
   /* 隱藏支付方式、操作表頭 */
-  .transaction-history-section thead th:nth-child(4),
-  .transaction-history-section thead th:nth-child(6) {
+  .transaction-history-section .table-wrapper thead th:nth-child(4),
+  .transaction-history-section .table-wrapper thead th:nth-child(6) {
     display: none !important;
   }
 
   /* 手機版 table 改為 block + flex，表頭與 slider 對齊 */
-  .transaction-history-section table {
+  .transaction-history-section .table-wrapper table {
     display: block;
   }
 
-  .transaction-history-section colgroup {
+  .transaction-history-section .table-wrapper colgroup {
     display: none;
   }
 
-  .transaction-history-section thead,
-  .transaction-history-section tbody {
+  .transaction-history-section .table-wrapper thead,
+  .transaction-history-section .table-wrapper tbody {
     display: block;
   }
 
-  .transaction-history-section thead tr,
-  .transaction-history-section tbody tr {
+  .transaction-history-section .table-wrapper thead tr,
+  .transaction-history-section .table-wrapper tbody tr {
     display: flex;
     width: 100%;
     box-sizing: border-box;
   }
 
-  .transaction-history-section thead th,
-  .transaction-history-section td {
+  .transaction-history-section .table-wrapper thead th,
+  .transaction-history-section .table-wrapper td {
     box-sizing: border-box;
   }
 
   /* 表頭 4 欄 flex（與 slider-cell 一致） */
-  .transaction-history-section thead tr {
+  .transaction-history-section .table-wrapper thead tr {
     align-items: center;
     padding: 0 0.5rem;
   }
 
-  .transaction-history-section thead th {
+  .transaction-history-section .table-wrapper thead th {
     padding: 0.625rem 0.375rem;
     display: flex;
     font-size: 0.885rem;
@@ -70,14 +70,14 @@
     justify-content: flex-start;
   }
 
-  .transaction-history-section thead th:nth-child(5) {
+  .transaction-history-section .table-wrapper thead th:nth-child(5) {
     justify-content: flex-end;
   }
 
-  .transaction-history-section thead th:nth-child(1) { flex: 0 0 74px; min-width: 74px; }
-  .transaction-history-section thead th:nth-child(2) { flex: 0 0 78px; min-width: 78px; }
-  .transaction-history-section thead th:nth-child(3) { flex: 1; min-width: 0; }
-  .transaction-history-section thead th:nth-child(5) { flex: 0 0 85px; min-width: 85px; text-align: right; }
+  .transaction-history-section .table-wrapper thead th:nth-child(1) { flex: 0 0 74px; min-width: 74px; }
+  .transaction-history-section .table-wrapper thead th:nth-child(2) { flex: 0 0 78px; min-width: 78px; }
+  .transaction-history-section .table-wrapper thead th:nth-child(3) { flex: 1; min-width: 0; }
+  .transaction-history-section .table-wrapper thead th:nth-child(5) { flex: 0 0 85px; min-width: 85px; text-align: right; }
 
   /* Slider 結構 */
   .cell-slider-wrap {
@@ -187,7 +187,7 @@
   }
 
   /* 空資料列 */
-  .transaction-history-section tbody tr:not(.transaction-row--semantic) td {
+  .transaction-history-section .table-wrapper tbody tr:not(.transaction-row--semantic) td {
     flex: 1;
   }
 }
@@ -199,9 +199,9 @@
   .transaction-row--semantic td.cell-item { flex: 1; min-width: 0; }
   .transaction-row--semantic td.cell-amount { flex: 0 0 85px; }
 
-  .transaction-history-section thead th:nth-child(1) { flex: 0 0 68px; min-width: 68px; }
-  .transaction-history-section thead th:nth-child(2) { flex: 0 0 72px; min-width: 72px; }
-  .transaction-history-section thead th:nth-child(5) { flex: 0 0 85px; min-width: 85px; }
+  .transaction-history-section .table-wrapper thead th:nth-child(1) { flex: 0 0 68px; min-width: 68px; }
+  .transaction-history-section .table-wrapper thead th:nth-child(2) { flex: 0 0 72px; min-width: 72px; }
+  .transaction-history-section .table-wrapper thead th:nth-child(5) { flex: 0 0 85px; min-width: 85px; }
 
   .row-slider .slider-cell.cell-date { flex: 0 0 68px; min-width: 68px; }
   .row-slider .slider-cell.cell-category { flex: 0 0 72px; min-width: 72px; }
@@ -215,9 +215,9 @@
   .transaction-row--semantic td.cell-item { flex: 1; min-width: 0; font-size: 0.8125rem; }
   .transaction-row--semantic td.cell-amount { flex: 0 0 85px; font-size: 0.8125rem; }
 
-  .transaction-history-section thead th:nth-child(1) { flex: 0 0 62px; min-width: 62px; }
-  .transaction-history-section thead th:nth-child(2) { flex: 0 0 66px; min-width: 66px; }
-  .transaction-history-section thead th:nth-child(5) { flex: 0 0 85px; min-width: 85px; }
+  .transaction-history-section .table-wrapper thead th:nth-child(1) { flex: 0 0 62px; min-width: 62px; }
+  .transaction-history-section .table-wrapper thead th:nth-child(2) { flex: 0 0 66px; min-width: 66px; }
+  .transaction-history-section .table-wrapper thead th:nth-child(5) { flex: 0 0 85px; min-width: 85px; }
 
   .row-slider .slider-cell.cell-date { flex: 0 0 62px; min-width: 62px; font-size: 0.75rem; }
   .row-slider .slider-cell.cell-category { flex: 0 0 66px; min-width: 66px; }

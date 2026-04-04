@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Modal from '@/components/common/Modal';
 import { formatMoney, formatNumberWithCommas } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
@@ -11,6 +11,7 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose }) 
   const [shareDetailOpen, setShareDetailOpen] = useState(false);
   const [shareSnapshot, setShareSnapshot] = useState([]);
   const [shareLoading, setShareLoading] = useState(false);
+  const [resolvedIsSplitSynced, setResolvedIsSplitSynced] = useState(null);
 
   if (!tx) return null;
 
@@ -19,7 +20,42 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose }) 
   const exchangeRate = tx.exchangeRate || tx.exchange_rate || 1.0;
   const twdAmount = tx.twdAmount || tx.twd_amount || 0;
   const note = tx.note || '無';
-  const isSplitSync = tx.category === '分帳';
+  const fallbackSplitGuess = tx.note === '從分帳群組同步' || tx.category === '分帳';
+  const isSplitSynced =
+    typeof tx.isSplitSynced === 'boolean'
+      ? tx.isSplitSynced
+      : (resolvedIsSplitSynced ?? fallbackSplitGuess);
+  const showPaymentMethod = !isSplitSynced && Boolean(String(tx.paymentMethod || '').trim());
+
+  useEffect(() => {
+    if (!isOpen || !tx?.id) return;
+
+    if (typeof tx.isSplitSynced === 'boolean') {
+      setResolvedIsSplitSynced(tx.isSplitSynced);
+      return;
+    }
+
+    let cancelled = false;
+    setResolvedIsSplitSynced(fallbackSplitGuess);
+
+    supabase
+      .from('split_ledger_syncs')
+      .select('id')
+      .eq('transaction_id', tx.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setResolvedIsSplitSynced(fallbackSplitGuess);
+          return;
+        }
+        setResolvedIsSplitSynced(!!data);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, tx, fallbackSplitGuess]);
 
   const handleViewSplitDetail = async () => {
     setShareLoading(true);
@@ -84,15 +120,17 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose }) 
                 </div>
               </>
             )}
-            <div className="transaction-detail-item">
-              <div className="transaction-detail-label">支付方式</div>
-              <div className="transaction-detail-value">{tx.paymentMethod}</div>
-            </div>
+            {showPaymentMethod && (
+              <div className="transaction-detail-item">
+                <div className="transaction-detail-label">支付方式</div>
+                <div className="transaction-detail-value">{tx.paymentMethod}</div>
+              </div>
+            )}
             <div className="transaction-detail-item transaction-detail-item--note">
               <div className="transaction-detail-label">備註</div>
               <div className="transaction-detail-value transaction-detail-note">{note}</div>
             </div>
-            {isSplitSync && (
+            {isSplitSynced && (
               <div className="transaction-detail-item">
                 <div className="transaction-detail-label">分攤來源</div>
                 <div className="transaction-detail-value">

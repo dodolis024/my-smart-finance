@@ -9,23 +9,23 @@
   box-shadow: var(--shadow-card);
 }
 
-.transaction-history-section table {
+.transaction-history-section .table-wrapper table {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   background: var(--color-card);
 }
 
-.transaction-history-section thead {
+.transaction-history-section .table-wrapper thead {
   background: var(--color-table-header);
 }
 
-.transaction-history-section thead tr {
+.transaction-history-section .table-wrapper thead tr {
   background: var(--color-table-header);
   padding: 0 0.45rem;
 }
 
-.transaction-history-section th {
+.transaction-history-section .table-wrapper th {
   background: var(--color-table-header);
   padding: 0.75rem 0.5rem;
   text-align: left;
@@ -37,14 +37,14 @@
   min-width: 0;
 }
 
-.transaction-history-section th:nth-child(1) { text-align: left; }
-.transaction-history-section th:nth-child(2) { text-align: left; }
-.transaction-history-section th:nth-child(3) { text-align: left; }
-.transaction-history-section th:nth-child(4) { text-align: left; }
-.transaction-history-section th:nth-child(5) { text-align: right; }
-.transaction-history-section th:nth-child(6) { text-align: center; }
+.transaction-history-section .table-wrapper th:nth-child(1) { text-align: left; }
+.transaction-history-section .table-wrapper th:nth-child(2) { text-align: left; }
+.transaction-history-section .table-wrapper th:nth-child(3) { text-align: left; }
+.transaction-history-section .table-wrapper th:nth-child(4) { text-align: left; }
+.transaction-history-section .table-wrapper th:nth-child(5) { text-align: right; }
+.transaction-history-section .table-wrapper th:nth-child(6) { text-align: center; }
 
-.transaction-history-section th .th-filter-btn {
+.transaction-history-section .table-wrapper th .th-filter-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -57,11 +57,11 @@
   border-radius: 4px;
   vertical-align: middle;
 }
-.transaction-history-section th .th-filter-btn:hover {
+.transaction-history-section .table-wrapper th .th-filter-btn:hover {
   color: var(--color-primary);
   background: var(--color-primary-tint-light);
 }
-.transaction-history-section th .th-filter-btn:focus {
+.transaction-history-section .table-wrapper th .th-filter-btn:focus {
   outline: none;
   box-shadow: var(--shadow-focus);
 }
@@ -129,27 +129,27 @@
   margin: 0;
 }
 
-.transaction-history-section td {
+.transaction-history-section .table-wrapper td {
   padding: 0.75rem;
   font-size: 0.9375rem;
 }
 
-.transaction-history-section tbody tr:nth-child(even) .swipe-content,
-.transaction-history-section tbody tr:nth-child(even).transaction-row--semantic td {
+.transaction-history-section .table-wrapper tbody tr:nth-child(even) .swipe-content,
+.transaction-history-section .table-wrapper tbody tr:nth-child(even).transaction-row--semantic td {
   background: var(--color-row-alt);
 }
 
-.transaction-history-section tbody tr:hover .swipe-content,
-.transaction-history-section tbody tr:hover.transaction-row--semantic td {
+.transaction-history-section .table-wrapper tbody tr:hover .swipe-content,
+.transaction-history-section .table-wrapper tbody tr:hover.transaction-row--semantic td {
   background: var(--color-row-hover);
 }
 
-.transaction-history-section tbody tr:last-child .swipe-content,
-.transaction-history-section tbody tr:last-child.transaction-row--semantic td {
+.transaction-history-section .table-wrapper tbody tr:last-child .swipe-content,
+.transaction-history-section .table-wrapper tbody tr:last-child.transaction-row--semantic td {
   border-bottom: none;
 }
 
-.transaction-history-section tbody tr:last-child .row-slider-container {
+.transaction-history-section .table-wrapper tbody tr:last-child .row-slider-container {
   border-bottom: none;
 }
 

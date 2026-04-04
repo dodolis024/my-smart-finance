@@ -6,6 +6,7 @@ import { useStreak } from '@/hooks/useStreak';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useCreditCardNotifications } from '@/hooks/useCreditCardNotifications';
 import { useModalStates } from '@/hooks/useModalStates';
+import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import TopBar from '@/components/layout/TopBar';
@@ -103,10 +104,29 @@ export default function DashboardPage() {
     setCurrentMonth(month);
   }, []);
 
+  const resolveSplitSynced = useCallback(async (transaction) => {
+    if (!transaction?.id) return false;
+    if (typeof transaction.isSplitSynced === 'boolean') return transaction.isSplitSynced;
+
+    const heuristicGuess =
+      transaction.note === '從分帳群組同步' || transaction.category === '分帳';
+
+    const { data, error } = await supabase
+      .from('split_ledger_syncs')
+      .select('id')
+      .eq('transaction_id', transaction.id)
+      .maybeSingle();
+
+    if (error) return heuristicGuess;
+    return !!data;
+  }, []);
+
   const handleTransactionSubmit = useCallback(
     async (formData, editId) => {
       try {
-        const result = await submitTransaction(formData, editId);
+        const result = await submitTransaction(formData, editId, {
+          isSplitSynced: !!editingTransaction?.isSplitSynced,
+        });
         const [y, m] = result.date
           ? result.date.split('-')
           : [String(currentYear), String(currentMonth)];
@@ -127,7 +147,19 @@ export default function DashboardPage() {
         throw err;
       }
     },
-    [submitTransaction, fetchDashboardData, currentYear, currentMonth, toast, shouldShowPositiveModal, getPositiveModalContent, modals.openStreakModal, accounts, checkCreditUsageAlert]
+    [
+      submitTransaction,
+      fetchDashboardData,
+      currentYear,
+      currentMonth,
+      toast,
+      shouldShowPositiveModal,
+      getPositiveModalContent,
+      modals.openStreakModal,
+      accounts,
+      checkCreditUsageAlert,
+      editingTransaction,
+    ]
   );
 
   const handleCancelEdit = useCallback(() => {
@@ -137,12 +169,13 @@ export default function DashboardPage() {
     }, 50);
   }, []);
 
-  const handleStartEdit = useCallback((transaction) => {
-    setEditingTransaction(transaction);
+  const handleStartEdit = useCallback(async (transaction) => {
+    const isSplitSynced = await resolveSplitSynced(transaction);
+    setEditingTransaction({ ...transaction, isSplitSynced });
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
-  }, []);
+  }, [resolveSplitSynced]);
 
   const handleDeleteTransaction = useCallback(
     async (id) => {
@@ -212,6 +245,7 @@ export default function DashboardPage() {
             accounts={accounts}
             currencies={currencies}
             editingTransaction={editingTransaction}
+            paymentOptional={!!editingTransaction?.isSplitSynced}
             onSubmit={handleTransactionSubmit}
             onCancelEdit={handleCancelEdit}
             onCheckin={handleCheckin}

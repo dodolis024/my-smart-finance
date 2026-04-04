@@ -6,7 +6,8 @@ import { getTodayYmd, parseFormattedNumber } from '@/lib/utils';
 export function useTransactions() {
   const { user } = useAuth();
 
-  const submitTransaction = useCallback(async (formData, editId = null) => {
+  const submitTransaction = useCallback(async (formData, editId = null, options = {}) => {
+    const { isSplitSynced = false } = options;
     const {
       date,
       itemName,
@@ -17,8 +18,11 @@ export function useTransactions() {
       note,
     } = formData;
 
+    const paymentTrimmed = String(paymentMethod || '').trim();
+    const allowEmptyPayment = Boolean(editId && isSplitSynced && !paymentTrimmed);
+
     if (!itemName || !rawAmount) throw new Error('請填寫項目名稱與金額！');
-    if (!paymentMethod) throw new Error('請選擇支付方式！');
+    if (!allowEmptyPayment && !paymentTrimmed) throw new Error('請選擇支付方式！');
     if (!date) throw new Error('請選擇日期！');
 
     const amountValue = parseFormattedNumber(String(rawAmount));
@@ -45,10 +49,15 @@ export function useTransactions() {
 
     if (!user) throw new Error('請先登入');
 
-    const [{ data: exchangeRateVal, error: rateErr }, { data: account }] = await Promise.all([
-      supabase.rpc('get_exchange_rate', { p_currency: currency.trim().toUpperCase() }),
-      supabase.from('accounts').select('id').eq('name', paymentMethod).single(),
-    ]);
+    const { data: exchangeRateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
+      p_currency: currency.trim().toUpperCase(),
+    });
+
+    let account = null;
+    if (paymentTrimmed) {
+      const { data: acc } = await supabase.from('accounts').select('id').eq('name', paymentTrimmed).maybeSingle();
+      account = acc;
+    }
 
     const exchangeRate =
       rateErr === null && exchangeRateVal != null && exchangeRateVal > 0
@@ -62,7 +71,7 @@ export function useTransactions() {
       type,
       item_name: itemName,
       category,
-      payment_method: paymentMethod,
+      payment_method: paymentTrimmed || null,
       account_id: account?.id || null,
       currency: currency.toUpperCase(),
       amount,

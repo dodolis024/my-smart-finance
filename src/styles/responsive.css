@@ -53,8 +53,8 @@
 
   :root { --chart-max-width: 240px; }
 
-  .transaction-history-section th,
-  .transaction-history-section td {
+  .transaction-history-section .table-wrapper th,
+  .transaction-history-section .table-wrapper td {
     padding: 0.625rem;
     font-size: 0.875rem;
   }
@@ -349,13 +349,13 @@
 
   :root { --chart-max-width: 200px; }
 
-  .transaction-history-section th,
-  .transaction-history-section td {
+  .transaction-history-section .table-wrapper th,
+  .transaction-history-section .table-wrapper td {
     padding: 0.5rem 0.375rem;
     font-size: 0.8125rem;
   }
 
-  .transaction-history-section th {
+  .transaction-history-section .table-wrapper th {
     font-size: 0.75rem;
     white-space: nowrap;
   }
@@ -589,13 +589,13 @@
 
   :root { --chart-max-width: 180px; }
 
-  .transaction-history-section th,
-  .transaction-history-section td {
+  .transaction-history-section .table-wrapper th,
+  .transaction-history-section .table-wrapper td {
     padding: 0.4rem 0.25rem;
     font-size: 0.75rem;
   }
 
-  .transaction-history-section th {
+  .transaction-history-section .table-wrapper th {
     font-size: 0.7rem;
   }
 
