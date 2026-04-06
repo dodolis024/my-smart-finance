@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.16.1] - Apr-04 2026
 - Fixed transaction history table header and column alignment
 - Fixed category and payment handling when editing split-bill transactions synced to the ledger
 
