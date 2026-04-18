@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.17.0] - Apr-19 2026
 - Added zh/en language switching with app-wide localized strings and early html lang/data-lang from storage
 - Fixed transaction detail modal crashing due to incorrect React hook ordering
 - Fixed UserAvatar dropdown inert handling to clear React development DOM warnings
