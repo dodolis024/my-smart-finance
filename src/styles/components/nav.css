@@ -129,6 +129,36 @@
   margin: 0.5rem 0;
 }
 
+/* Language toggle button */
+.app-sidebar__lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+  white-space: nowrap;
+  margin-bottom: 0.25rem;
+}
+
+.app-sidebar__lang-toggle:hover {
+  background: var(--color-primary-tint-hover);
+  color: var(--color-primary);
+}
+
+.app-sidebar.is-collapsed .app-sidebar__lang-toggle {
+  justify-content: center;
+  padding: 0.5rem;
+}
+
 /* Footer / user section */
 .app-sidebar__footer {
   margin-top: auto;

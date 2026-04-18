@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ACCOUNT_TYPE_NAMES } from '@/lib/constants';
+import { useLanguage } from '@/contexts/LanguageContext';
 
+const ACCOUNT_TYPE_KEYS = ['cash', 'credit_card', 'debit_card', 'digital_wallet', 'bank'];
 const EMPTY_FORM = { name: '', type: '', creditLimit: '', billingDay: '', paymentDueDay: '', error: '' };
 
 export default function AccountForm({ account, onSave, onCancel, loading }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState(EMPTY_FORM);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.type) {
-      setForm((f) => ({ ...f, error: '請填寫必填欄位！' }));
+      setForm((f) => ({ ...f, error: t('settings.account.requiredFieldError') }));
       return;
     }
     setForm((f) => ({ ...f, error: '' }));
@@ -41,33 +43,33 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
 
   return (
     <div className="account-form">
-      <h4 className="account-form__title">{account ? '編輯帳戶' : '新增帳戶'}</h4>
+      <h4 className="account-form__title">{account ? t('settings.account.editTitle') : t('settings.account.addTitle')}</h4>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label className="form-group__label">帳戶名稱 *</label>
+          <label className="form-group__label">{t('settings.account.nameLabel')}</label>
           <input className="form-group__input" type="text" value={form.name} onChange={set('name')} required disabled={loading} />
         </div>
         <div className="form-group">
-          <label className="form-group__label">帳戶類型 *</label>
+          <label className="form-group__label">{t('settings.account.typeLabel')}</label>
           <select className="form-group__input" value={form.type} onChange={set('type')} required disabled={loading}>
-            <option value="" disabled>選擇類型</option>
-            {Object.entries(ACCOUNT_TYPE_NAMES).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
+            <option value="" disabled>{t('settings.account.selectType')}</option>
+            {ACCOUNT_TYPE_KEYS.map((key) => (
+              <option key={key} value={key}>{t(`settings.account.typeNames.${key}`)}</option>
             ))}
           </select>
         </div>
         {form.type === 'credit_card' && (
           <>
             <div className="form-group">
-              <label className="form-group__label">信用額度</label>
+              <label className="form-group__label">{t('settings.account.creditLimitLabel')}</label>
               <input className="form-group__input" type="number" min="0" value={form.creditLimit} onChange={set('creditLimit')} disabled={loading} />
             </div>
             <div className="form-group">
-              <label className="form-group__label">帳單日（每月幾日）</label>
+              <label className="form-group__label">{t('settings.account.billingDayLabel')}</label>
               <input className="form-group__input" type="number" min="1" max="31" value={form.billingDay} onChange={set('billingDay')} disabled={loading} />
             </div>
             <div className="form-group">
-              <label className="form-group__label">繳款日（每月幾日）</label>
+              <label className="form-group__label">{t('settings.account.paymentDueDayLabel')}</label>
               <input className="form-group__input" type="number" min="1" max="31" value={form.paymentDueDay} onChange={set('paymentDueDay')} disabled={loading} />
             </div>
           </>
@@ -76,8 +78,8 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
           <p style={{ color: 'var(--color-danger)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{form.error}</p>
         )}
         <div className="form-actions">
-          <button type="button" className="btn-cancel" onClick={onCancel} disabled={loading}>取消</button>
-          <button type="submit" className="btn-save" disabled={loading}>{loading ? '儲存中...' : '儲存'}</button>
+          <button type="button" className="btn-cancel" onClick={onCancel} disabled={loading}>{t('common.cancel')}</button>
+          <button type="submit" className="btn-save" disabled={loading}>{loading ? t('common.saving') : t('common.save')}</button>
         </div>
       </form>
     </div>

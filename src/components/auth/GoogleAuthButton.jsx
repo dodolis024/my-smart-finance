@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function GoogleAuthButton({ label }) {
   const { signInWithGoogle } = useAuth();
+  const { t } = useLanguage();
   const [error, setError] = useState('');
 
   const handleClick = async (e) => {
@@ -10,7 +12,7 @@ export default function GoogleAuthButton({ label }) {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(err.message || 'Google 登入失敗，請稍後再試');
+      setError(err.message || t('auth.googleFailed'));
     }
   };
 

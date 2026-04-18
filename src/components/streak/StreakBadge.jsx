@@ -1,7 +1,9 @@
 import { useTheme } from '../../hooks/useTheme.js';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function StreakBadge({ streakState, onClick }) {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const count = streakState?.count || 0;
   const totalDays = streakState?.totalDays ?? 0;
   const isNewUser = totalDays === 0;
@@ -30,12 +32,12 @@ export default function StreakBadge({ streakState, onClick }) {
     <button
       type="button"
       className="streak-badge"
-      aria-label="查看連續記錄狀態"
+      aria-label={t('streak.badgeAria')}
       onClick={onClick}
     >
       {icon}
       <span className="streak-badge__count">{count}</span>
-      <span className="streak-badge__unit">天</span>
+      <span className="streak-badge__unit">{t('streak.unit')}</span>
     </button>
   );
 }

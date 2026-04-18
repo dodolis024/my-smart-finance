@@ -3,6 +3,7 @@ import Modal from './Modal';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { formatMoney, getDaysUntilDay } from '@/lib/utils';
 import { calculateCreditUsage } from '@/lib/creditCard';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CreditCardModal({ isOpen, onClose, account, history = [] }) {
   const data = useMemo(() => {
@@ -37,24 +38,25 @@ export default function CreditCardModal({ isOpen, onClose, account, history = []
     };
   }, [account, history]);
 
+  const { t } = useLanguage();
   const dialogRef = useRef(null);
   useScrollbarOnScroll(dialogRef, isOpen && !!account);
 
   if (!account || !data) return null;
-  const accountName = account.name || account.accountName || '信用卡';
+  const accountName = account.name || account.accountName || t('creditCard.defaultName');
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="credit-card-modal" titleId="credit-card-modal-title">
       <div className="credit-card-modal__backdrop" onClick={onClose} />
       <div ref={dialogRef} className="credit-card-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="credit-card-modal__close" aria-label="關閉" onClick={onClose}>×</button>
+        <button type="button" className="credit-card-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
         <h2 id="credit-card-modal-title" className="credit-card-modal__title">{accountName}</h2>
         <div className="credit-card-info">
           <div className="credit-limit-section">
             <div className="credit-limit-header">
-              <span className="credit-limit-label">可用額度</span>
+              <span className="credit-limit-label">{t('creditCard.availableCredit')}</span>
               <span className="credit-limit-amount">
-                {data.available !== null ? formatMoney(data.available) : '未設定'}
+                {data.available !== null ? formatMoney(data.available) : t('creditCard.notSet')}
               </span>
             </div>
             {data.creditLimit ? (
@@ -69,32 +71,32 @@ export default function CreditCardModal({ isOpen, onClose, account, history = []
                   <span className="credit-limit-percent" style={{ color: data.barColor }}>{data.percentText}</span>
                 </div>
                 <div className="credit-limit-detail">
-                  <span>已使用：{formatMoney(data.usedAmount)}</span>
-                  <span>總額度：{formatMoney(data.creditLimit)}</span>
+                  <span>{t('creditCard.used')}{formatMoney(data.usedAmount)}</span>
+                  <span>{t('creditCard.total')}{formatMoney(data.creditLimit)}</span>
                 </div>
               </>
             ) : (
               <div className="credit-limit-detail">
-                <span style={{ color: 'var(--color-text-secondary)' }}>未設定信用額度</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>{t('creditCard.limitNotSet')}</span>
               </div>
             )}
           </div>
           <div className="credit-dates">
             <div className="credit-date-item">
-              <span className="credit-date-label">帳單日</span>
-              <span className="credit-date-value">{data.billingDay ? `每月 ${data.billingDay} 日` : '未設定'}</span>
+              <span className="credit-date-label">{t('creditCard.billingDay')}</span>
+              <span className="credit-date-value">{data.billingDay ? t('creditCard.dayOfMonth', { day: data.billingDay }) : t('creditCard.notSet')}</span>
               {data.billingDays !== null && (
                 <span className="credit-billing-countdown">
-                  還有 <span className={`credit-countdown-num${data.isBillingUrgent ? ' credit-countdown-urgent' : ''}`}>{data.billingDays}</span> 天
+                  <span className={`credit-countdown-num${data.isBillingUrgent ? ' credit-countdown-urgent' : ''}`}>{t('creditCard.daysLeft', { days: data.billingDays })}</span>
                 </span>
               )}
             </div>
             <div className="credit-date-item">
-              <span className="credit-date-label">繳款日</span>
-              <span className="credit-date-value">{data.paymentDueDay ? `每月 ${data.paymentDueDay} 日` : '未設定'}</span>
+              <span className="credit-date-label">{t('creditCard.paymentDueDay')}</span>
+              <span className="credit-date-value">{data.paymentDueDay ? t('creditCard.dayOfMonth', { day: data.paymentDueDay }) : t('creditCard.notSet')}</span>
               {data.paymentDays !== null && (
                 <span className="credit-payment-countdown">
-                  還有 <span className={`credit-countdown-num${data.isPaymentUrgent ? ' credit-countdown-urgent' : ''}`}>{data.paymentDays}</span> 天
+                  <span className={`credit-countdown-num${data.isPaymentUrgent ? ' credit-countdown-urgent' : ''}`}>{t('creditCard.daysLeft', { days: data.paymentDays })}</span>
                 </span>
               )}
             </div>

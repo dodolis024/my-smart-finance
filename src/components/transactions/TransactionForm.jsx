@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getTodayYmd, formatNumberWithCommas } from '@/lib/utils';
 import { useAmountInput } from '@/hooks/useAmountInput';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const makeInitialForm = () => ({
   date: getTodayYmd(),
@@ -26,6 +27,7 @@ export default function TransactionForm({
   hasCheckinToday = false,
   disabled = false,
 }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState(makeInitialForm);
   const [submitting, setSubmitting] = useState(false);
   const amountRef = useRef(null);
@@ -95,26 +97,26 @@ export default function TransactionForm({
   return (
     <section className="transaction-form-section">
       <div className="transaction-form-header">
-        <h2 id="formSectionTitle">{isEditing ? '編輯交易' : '新增交易'}</h2>
+        <h2 id="formSectionTitle">{isEditing ? t('transaction.editTitle') : t('transaction.addTitle')}</h2>
         <button
           type="button"
           className={`btn-checkin${hasCheckinToday ? ' btn-checkin-disabled' : ''}`}
           onClick={onCheckin}
           disabled={hasCheckinToday || isFormDisabled}
-          aria-label="今日簽到（當天無消費時使用）"
+          aria-label={t('transaction.checkinAriaLabel')}
         >
           <span className="btn-checkin-icon" aria-hidden="true">
             <svg className="icon-checkin" aria-hidden="true">
               <use href="#icon-checkin" />
             </svg>
           </span>
-          <span className="btn-checkin-text">今天沒花錢</span>
+          <span className="btn-checkin-text">{t('transaction.checkinBtn')}</span>
         </button>
       </div>
 
       <form id="transactionForm" onSubmit={handleSubmit} noValidate>
         <div className="form-group">
-          <label htmlFor="date">日期</label>
+          <label htmlFor="date">{t('transaction.date')}</label>
           <input
             type="date"
             id="date"
@@ -126,7 +128,7 @@ export default function TransactionForm({
         </div>
 
         <div className="form-group">
-          <label htmlFor="item">項目名稱</label>
+          <label htmlFor="item">{t('transaction.itemName')}</label>
           <input
             type="text"
             id="item"
@@ -139,7 +141,7 @@ export default function TransactionForm({
         </div>
 
         <div className="form-group">
-          <label htmlFor="category">分類</label>
+          <label htmlFor="category">{t('transaction.category')}</label>
           <select
             id="category"
             name="categoryValue"
@@ -148,13 +150,13 @@ export default function TransactionForm({
             disabled={isFormDisabled}
           >
             <option value="" disabled>
-              選擇類別
+              {t('transaction.selectCategory')}
             </option>
             {needsExtraCategory && (
               <option value={form.categoryValue}>{form.categoryValue.split(':').pop()}</option>
             )}
             {categoriesExpense.length > 0 && (
-              <optgroup label="支出">
+              <optgroup label={t('transaction.expenseGroup')}>
                 {categoriesExpense.map((c) => (
                   <option key={`expense:${c}`} value={`expense:${c}`}>
                     {c}
@@ -163,7 +165,7 @@ export default function TransactionForm({
               </optgroup>
             )}
             {categoriesIncome.length > 0 && (
-              <optgroup label="收入">
+              <optgroup label={t('transaction.incomeGroup')}>
                 {categoriesIncome.map((c) => (
                   <option key={`income:${c}`} value={`income:${c}`}>
                     {c}
@@ -175,7 +177,7 @@ export default function TransactionForm({
         </div>
 
         <div className="form-group">
-          <label htmlFor="method">支付方式</label>
+          <label htmlFor="method">{t('transaction.paymentMethod')}</label>
           <select
             id="method"
             name="paymentMethod"
@@ -185,10 +187,10 @@ export default function TransactionForm({
             required={!paymentOptional}
           >
             {paymentOptional ? (
-              <option value="">不指定（分帳同步）</option>
+              <option value="">{t('transaction.noPaymentSplitSync')}</option>
             ) : (
               <option value="" disabled>
-                選擇支付方式
+                {t('transaction.selectPaymentMethod')}
               </option>
             )}
             {needsExtraPayment && (
@@ -208,7 +210,7 @@ export default function TransactionForm({
 
         <div className="form-group form-group--currency-amount">
           <label htmlFor="amount" className="form-group__amount-label">
-            金額
+            {t('transaction.amount')}
           </label>
           <div className="form-group__currency-amount-row">
             <div className="form-group__currency">
@@ -248,14 +250,14 @@ export default function TransactionForm({
         </div>
 
         <div className="form-group">
-          <label htmlFor="note">備註</label>
+          <label htmlFor="note">{t('transaction.note')}</label>
           <textarea
             id="note"
             name="note"
             value={form.note}
             onChange={handleChange}
             rows={3}
-            placeholder="選填"
+            placeholder={t('transaction.noteOptional')}
             disabled={isFormDisabled}
           />
         </div>
@@ -268,11 +270,11 @@ export default function TransactionForm({
               onClick={onCancelEdit}
               disabled={submitting}
             >
-              取消
+              {t('common.cancel')}
             </button>
           )}
           <button type="submit" disabled={isFormDisabled}>
-            {submitting ? '儲存中...' : isEditing ? '更新交易' : '新增交易'}
+            {submitting ? t('common.saving') : isEditing ? t('transaction.updateBtn') : t('transaction.addBtn')}
           </button>
         </div>
       </form>

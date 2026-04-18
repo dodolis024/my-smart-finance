@@ -3,8 +3,10 @@ import { formatMoney, formatMoneyInteger, formatDateForDisplay } from '@/lib/uti
 import { LAYOUT } from '@/lib/constants';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { useSwipe } from '@/hooks/useSwipe';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function TransactionRow({ transaction: tx, onEdit, onDelete, onShowDetail }) {
+  const { t } = useLanguage();
   const rowRef = useRef(null);
   const { width } = useWindowSize();
   const isMobile = width <= LAYOUT.MOBILE_MAX_WIDTH;
@@ -75,7 +77,7 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
               <button
                 type="button"
                 className="swipe-action-btn"
-                aria-label="編輯"
+                aria-label={t('common.edit')}
                 onClick={(e) => { e.stopPropagation(); handleSwipeEdit(); }}
               >
                 <svg className="icon-edit" aria-hidden="true">
@@ -87,7 +89,7 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
               <button
                 type="button"
                 className="swipe-action-btn"
-                aria-label="刪除"
+                aria-label={t('common.delete')}
                 onClick={(e) => { e.stopPropagation(); handleSwipeDelete(); }}
               >
                 <svg className="icon-delete" aria-hidden="true">
@@ -134,7 +136,7 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
             <button
               type="button"
               className="btn-edit"
-              aria-label="編輯"
+              aria-label={t('common.edit')}
               onClick={(e) => { e.stopPropagation(); onEdit(tx); }}
             >
               <svg className="icon-edit" aria-hidden="true">
@@ -144,7 +146,7 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
             <button
               type="button"
               className="btn-delete"
-              aria-label="刪除"
+              aria-label={t('common.delete')}
               onClick={(e) => { e.stopPropagation(); onDelete(tx.id); }}
             >
               <svg className="icon-delete" aria-hidden="true">

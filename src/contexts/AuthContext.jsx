@@ -58,11 +58,15 @@ export function AuthProvider({ children }) {
     return data;
   }, [extractUserInfo]);
 
+  const getStoredLang = () => {
+    try { return localStorage.getItem('app-lang') === 'en' ? 'en' : 'zh'; } catch { return 'zh'; }
+  };
+
   const signUp = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
     if (data.user) {
-      await createDefaultData(data.user.id);
+      await createDefaultData(data.user.id, getStoredLang());
     }
     return data;
   }, []);
@@ -87,7 +91,7 @@ export function AuthProvider({ children }) {
       .eq('user_id', userId)
       .limit(1);
     if (!accounts || accounts.length === 0) {
-      await createDefaultData(userId);
+      await createDefaultData(userId, getStoredLang());
     }
   }, []);
 

@@ -1,11 +1,13 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd } from '@/lib/utils';
 
 // Module-level cache for currencies (rarely changes)
 let cachedCurrencies = null;
 
 export function useDashboard() {
+  const { t } = useLanguage();
   const [dashboardData, setDashboardData] = useState(null);
   const [transactionHistoryFull, setTransactionHistoryFull] = useState([]);
   const [creditHistory, setCreditHistory] = useState([]);
@@ -45,8 +47,8 @@ export function useDashboard() {
 
       if (reqId !== requestIdRef.current) return null;
 
-      if (error) throw new Error(error.message || '無法取得資料');
-      if (!data || !data.success) throw new Error(data?.error || '無法取得資料');
+      if (error) throw new Error(error.message || t('dashboard.loadFailed'));
+      if (!data || !data.success) throw new Error(data?.error || t('dashboard.loadFailed'));
 
       setDashboardData(data);
       setSummary(data.summary || { totalIncome: 0, totalExpense: 0, balance: 0 });

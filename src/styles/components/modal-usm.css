@@ -36,9 +36,9 @@
   top: 0.6rem;
   right: 0.6rem;
   z-index: 1;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   border: 1px solid var(--color-border);
   background: var(--color-card);
   color: var(--color-text);

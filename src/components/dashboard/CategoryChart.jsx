@@ -4,6 +4,7 @@ import { Chart as ChartJS, ArcElement, Tooltip } from 'chart.js';
 import { CHART_COLORS, CHART_COLORS_ROSE, CHART_COLORS_GRAY, CHART_COLORS_DAWN, CHART_COLORS_SODA, CHART_COLORS_LAVENDER, CHART_COLORS_SORBET, CHART_COLORS_PEACH, CHART_COLORS_LIME } from '@/lib/constants';
 import { useTheme } from '@/hooks/useTheme';
 import { formatMoney } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 ChartJS.register(ArcElement, Tooltip);
 
@@ -11,13 +12,14 @@ const THEME_PALETTES = { rose: CHART_COLORS_ROSE, graphite: CHART_COLORS_GRAY, d
 
 export default function CategoryChart({ history = [], incomeCategories = [] }) {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const palette = THEME_PALETTES[theme] || CHART_COLORS;
 
   const pairs = useMemo(() => {
     const incomeSet = new Set(incomeCategories);
     const byCat = {};
     (history || []).forEach((tx) => {
-      const cat = (tx.category && String(tx.category).trim()) ? tx.category : '未分類';
+      const cat = (tx.category && String(tx.category).trim()) ? tx.category : t('transaction.uncategorized');
       if (incomeSet.has(cat)) return;
       const amt = typeof tx.twdAmount === 'number' ? tx.twdAmount : 0;
       byCat[cat] = (byCat[cat] || 0) + amt;
@@ -25,7 +27,7 @@ export default function CategoryChart({ history = [], incomeCategories = [] }) {
     return Object.entries(byCat)
       .map(([label, value]) => ({ label, value }))
       .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-  }, [history, incomeCategories]);
+  }, [history, incomeCategories, t]);
 
   const chartData = useMemo(() => ({
     labels: pairs.map((p) => p.label),
@@ -60,7 +62,7 @@ export default function CategoryChart({ history = [], incomeCategories = [] }) {
   }), []);
 
   if (pairs.length === 0) {
-    return <p className="category-stats-empty">本月尚無消費資料</p>;
+    return <p className="category-stats-empty">{t('dashboard.noExpenseData')}</p>;
   }
 
   const colors = pairs.map((_, i) => palette[i % palette.length]);

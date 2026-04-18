@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useSplitGroups } from '@/hooks/useSplitGroups';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import SplitGroupCard from '@/components/split/SplitGroupCard';
 import SplitGroupDetail from '@/components/split/SplitGroupDetail';
@@ -16,6 +17,7 @@ let cachedRates = null;
 // ── 分帳主頁（/split）────────────────────────────────────────────────────────
 export default function SplitPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { groups, loading, fetchGroups, createGroup, updateGroup, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -25,7 +27,6 @@ export default function SplitPage() {
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
-  // 當 groups 更新時，同步 selectedGroup 的資料（避免快照過期）
   useEffect(() => {
     if (selectedGroup) {
       const updated = groups.find(g => g.id === selectedGroup.id);
@@ -33,7 +34,6 @@ export default function SplitPage() {
     }
   }, [groups, selectedGroup]);
 
-  // 載入匯率（有 cache 就跳過）
   useEffect(() => {
     if (cachedRates) return;
     supabase
@@ -51,10 +51,9 @@ export default function SplitPage() {
 
   const handleCreate = async (data) => {
     const group = await createGroup(data);
-    toast.success('群組已建立！');
+    toast.success(t('split.groupCreated'));
     return group;
   };
-
 
   return (
     <div className="split-page">
@@ -65,7 +64,7 @@ export default function SplitPage() {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
               </svg>
-              返回
+              {t('split.back')}
             </button>
             <h1 className="split-page__title">Split</h1>
           </div>
@@ -77,25 +76,25 @@ export default function SplitPage() {
             onAddMember={async (groupId, name) => {
               try {
                 await addMember(groupId, name);
-                toast.success('成員已新增！');
+                toast.success(t('split.memberAdded'));
               } catch {
-                toast.error('新增失敗，請稍後再試。');
+                toast.error(t('split.addMemberFailed'));
               }
             }}
             onRemoveMember={async (memberId) => {
               try {
                 await removeMember(selectedGroup.id, memberId);
-                toast.success('成員已移除。');
+                toast.success(t('split.memberRemoved'));
               } catch {
-                toast.error('移除失敗，請稍後再試。');
+                toast.error(t('split.removeMemberFailed'));
               }
             }}
             onUpdateMemberName={async (memberId, newName) => {
               try {
                 await updateMemberName(selectedGroup.id, memberId, newName);
-                toast.success('名稱已更新！');
+                toast.success(t('split.memberNameUpdated'));
               } catch {
-                toast.error('更新失敗，請稍後再試。');
+                toast.error(t('split.updateNameFailed'));
               }
             }}
             onUpdateGroup={updateGroup}
@@ -108,17 +107,17 @@ export default function SplitPage() {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
               </svg>
-              返回
+              {t('split.back')}
             </button>
             <h1 className="split-page__title">Split</h1>
           </div>
 
           {loading ? (
-            <p className="split-loading">載入中...</p>
+            <p className="split-loading">{t('split.loading')}</p>
           ) : (
             <>
               {groups.length === 0 ? (
-                <p className="split-group-list__empty">還沒有分帳群組，建立第一個吧！</p>
+                <p className="split-group-list__empty">{t('split.noGroups')}</p>
               ) : (
                 <div className="split-group-list">
                   {groups.map(g => (
@@ -127,13 +126,13 @@ export default function SplitPage() {
                       group={g}
                       onClick={() => setSelectedGroup(g)}
                       onDelete={async (groupId) => {
-                        const ok = await confirm('確定要刪除這個群組嗎？所有費用都會一併刪除。', { danger: true });
+                        const ok = await confirm(t('split.deleteGroupConfirm'), { danger: true });
                         if (!ok) return;
                         try {
                           await deleteGroup(groupId);
-                          toast.success('群組已刪除。');
+                          toast.success(t('split.groupDeleted'));
                         } catch {
-                          toast.error('刪除失敗，請稍後再試。');
+                          toast.error(t('split.deleteGroupFailed'));
                         }
                       }}
                     />
@@ -142,10 +141,10 @@ export default function SplitPage() {
               )}
               <div className="split-group-list__actions">
                 <button type="button" className="split-btn-primary" onClick={() => setCreateOpen(true)}>
-                  ＋ 新增群組
+                  {t('split.addGroup')}
                 </button>
                 <button type="button" className="split-btn-secondary" onClick={() => navigate('/split/join/')}>
-                  加入群組
+                  {t('split.joinGroup')}
                 </button>
               </div>
             </>
@@ -162,4 +161,3 @@ export default function SplitPage() {
     </div>
   );
 }
-

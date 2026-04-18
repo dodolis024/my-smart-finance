@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 let nextId = 1;
 
 export default function ManageMembersModal({ isOpen, onClose, members, currentUserId, onAddMembers, onRemoveMember, onUpdateMemberName }) {
+  const { t } = useLanguage();
   const [newMembers, setNewMembers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -47,7 +49,7 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
       setEditingId(null);
       setEditValue('');
     } catch (err) {
-      setError(err.message || '更新失敗，請稍後再試');
+      setError(err.message || t('split.updateNameFailed'));
     }
   };
 
@@ -60,7 +62,7 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
       await onAddMembers(names);
       setNewMembers([]);
     } catch (err) {
-      setError(err.message || '新增失敗，請稍後再試');
+      setError(err.message || t('split.addMemberFailed'));
     } finally {
       setSaving(false);
     }
@@ -70,12 +72,12 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
     <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="manage-members-title">
       <div className="reminder-modal__backdrop" onClick={handleClose} />
       <div className="split-modal__dialog" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-        <button type="button" className="reminder-modal__close" aria-label="關閉" onClick={handleClose}>×</button>
-        <h2 id="manage-members-title" className="split-modal__title">管理成員</h2>
+        <button type="button" className="reminder-modal__close" aria-label={t('common.close')} onClick={handleClose}>×</button>
+        <h2 id="manage-members-title" className="split-modal__title">{t('split.manageMembers')}</h2>
 
-        {/* 現有成員 */}
+        {/* Current members */}
         <div className="split-modal__field">
-          <label className="split-modal__label">目前成員</label>
+          <label className="split-modal__label">{t('split.currentMembers')}</label>
           <div className="split-modal__members-list">
             {members?.map(m => (
               <div key={m.id} className="split-modal__member-row split-modal__member-row--existing">
@@ -104,15 +106,14 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
                     <span
                       className={`split-modal__member-name${canEdit ? ' split-modal__member-name--editable' : ''}`}
                       onClick={canEdit ? () => startEditing(m) : undefined}
-                      title={canEdit ? '點擊編輯名稱' : undefined}
                     >
                       {m.name}
                     </span>
                   );
                 })()}
-                {m.user_id && <span className="split-modal__member-linked">已連結</span>}
+                {m.user_id && <span className="split-modal__member-linked">{t('split.memberLinked')}</span>}
                 {onRemoveMember && !m.user_id && (
-                  <button type="button" className="split-modal__member-remove" onClick={() => onRemoveMember(m.id)} aria-label="移除">
+                  <button type="button" className="split-modal__member-remove" onClick={() => onRemoveMember(m.id)} aria-label={t('common.delete')}>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
@@ -123,21 +124,21 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
           </div>
         </div>
 
-        {/* 新增成員 */}
+        {/* Add new members */}
         <div className="split-modal__field">
-          <label className="split-modal__label">新增成員</label>
+          <label className="split-modal__label">{t('split.addNewMemberLabel')}</label>
           {newMembers.length > 0 && (
             <div className="split-modal__members-list">
               {newMembers.map((m, i) => (
                 <div key={m.id} className="split-modal__member-row">
                   <input
                     className="split-modal__input"
-                    placeholder={`成員名稱`}
+                    placeholder={t('split.memberNameShortPlaceholder')}
                     value={m.value}
                     onChange={e => updateRow(i, e.target.value)}
                     autoFocus={i === newMembers.length - 1}
                   />
-                  <button type="button" className="split-modal__member-remove" onClick={() => removeRow(i)} aria-label="移除">
+                  <button type="button" className="split-modal__member-remove" onClick={() => removeRow(i)} aria-label={t('common.delete')}>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
@@ -151,7 +152,7 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" style={{ width: 15, height: 15 }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              新增成員
+              {t('split.addMemberBtn')}
             </button>
           )}
         </div>
@@ -161,7 +162,7 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
         {newMembers.length > 0 && (
           <div className="split-modal__actions">
             <button type="button" className="split-btn-primary" onClick={handleSubmit} disabled={saving}>
-              {saving ? '新增中...' : '確認新增'}
+              {saving ? t('split.adding') : t('split.confirmAdd')}
             </button>
           </div>
         )}

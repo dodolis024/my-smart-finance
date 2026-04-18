@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { notifySplit } from '@/lib/splitNotify';
 
 // Module-level cache — survives component unmount/remount
@@ -9,6 +10,7 @@ let cachedUserId = null;
 
 export function useSplitGroups() {
   const { user, userInfo } = useAuth();
+  const { t } = useLanguage();
   // Initialise from cache if same user
   const [groups, setGroups] = useState(() =>
     (cachedGroups && cachedUserId === user?.id) ? cachedGroups : []
@@ -66,7 +68,7 @@ export function useSplitGroups() {
   }, [user]);
 
   const createGroup = useCallback(async ({ name, description, currency, defaultExpenseCurrency, myName, extraMembers }) => {
-    if (!user) throw new Error('請先登入');
+    if (!user) throw new Error(t('auth.loginRequired'));
 
     // 建立群組
     const { data: group, error: groupError } = await supabase
@@ -149,7 +151,7 @@ export function useSplitGroups() {
 
   const updateMemberName = useCallback(async (groupId, memberId, newName) => {
     const trimmed = newName.trim();
-    if (!trimmed) throw new Error('名稱不能為空');
+    if (!trimmed) throw new Error(t('split.nameEmpty'));
     const { error } = await supabase
       .from('split_members')
       .update({ name: trimmed })
@@ -195,7 +197,7 @@ export function useSplitGroups() {
 
   // 連結自己的帳號到某個成員位置（透過 RPC 繞過 RLS）
   const linkSelfToMember = useCallback(async (memberId) => {
-    if (!user) throw new Error('請先登入');
+    if (!user) throw new Error(t('auth.loginRequired'));
     const { error } = await supabase.rpc('link_self_to_split_member', { p_member_id: memberId });
     if (error) throw error;
     await fetchGroups();
@@ -203,7 +205,7 @@ export function useSplitGroups() {
 
   // 新增自己為群組新成員並連結帳號（透過 RPC 繞過 RLS，傳邀請碼而非 group_id）
   const joinGroupAsNewMember = useCallback(async (inviteCode, name) => {
-    if (!user) throw new Error('請先登入');
+    if (!user) throw new Error(t('auth.loginRequired'));
     const { data, error } = await supabase.rpc('join_split_group_as_new_member', {
       p_invite_code: inviteCode,
       p_name: name.trim(),

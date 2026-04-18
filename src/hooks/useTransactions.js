@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd, parseFormattedNumber } from '@/lib/utils';
 
 export function useTransactions() {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const submitTransaction = useCallback(async (formData, editId = null, options = {}) => {
     const { isSplitSynced = false } = options;
@@ -21,13 +23,13 @@ export function useTransactions() {
     const paymentTrimmed = String(paymentMethod || '').trim();
     const allowEmptyPayment = Boolean(editId && isSplitSynced && !paymentTrimmed);
 
-    if (!itemName || !rawAmount) throw new Error('請填寫項目名稱與金額！');
-    if (!allowEmptyPayment && !paymentTrimmed) throw new Error('請選擇支付方式！');
-    if (!date) throw new Error('請選擇日期！');
+    if (!itemName || !rawAmount) throw new Error(t('transaction.requiredFields'));
+    if (!allowEmptyPayment && !paymentTrimmed) throw new Error(t('transaction.selectPayment'));
+    if (!date) throw new Error(t('transaction.selectDate'));
 
     const amountValue = parseFormattedNumber(String(rawAmount));
     const amount = parseFloat(amountValue);
-    if (isNaN(amount) || amount <= 0) throw new Error('請輸入有效的金額！');
+    if (isNaN(amount) || amount <= 0) throw new Error(t('transaction.invalidAmount'));
 
     let type, category;
     if (categoryValue.startsWith('expense:')) {
@@ -42,12 +44,12 @@ export function useTransactions() {
         .select('value')
         .eq('key', 'income_categories')
         .single();
-      const incomeCats = incomeCategories?.value || ['薪水', '投資'];
+      const incomeCats = incomeCategories?.value || ['薪水', '投資', 'Salary', 'Investment'];
       type = Array.isArray(incomeCats) && incomeCats.includes(categoryValue) ? 'income' : 'expense';
       category = categoryValue;
     }
 
-    if (!user) throw new Error('請先登入');
+    if (!user) throw new Error(t('auth.loginRequired'));
 
     const { data: exchangeRateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
       p_currency: currency.trim().toUpperCase(),
@@ -98,7 +100,7 @@ export function useTransactions() {
     }
 
     return { date, isEdit: !!editId };
-  }, [user]);
+  }, [user, t]);
 
   const deleteTransaction = useCallback(async (id) => {
     const { error } = await supabase.from('transactions').delete().eq('id', id);

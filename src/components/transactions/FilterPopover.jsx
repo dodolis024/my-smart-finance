@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { TIMING, DEBOUNCE } from '@/lib/constants';
 import { debounce } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function FilterPopover({
   isOpen,
@@ -14,6 +15,7 @@ export default function FilterPopover({
   onClearAll,
   onClose,
 }) {
+  const { t } = useLanguage();
   const popoverRef = useRef(null);
   useScrollbarOnScroll(popoverRef, isOpen);
 
@@ -84,14 +86,14 @@ export default function FilterPopover({
       ref={popoverRef}
       className="filter-popover scrollbar-on-scroll is-open"
       role="dialog"
-      aria-label="篩選選項"
+      aria-label={t('transaction.filterOptionsAria')}
     >
       <div className="filter-popover__actions">
         <button type="button" className="filter-popover__action" onClick={onSelectAll}>
-          全選
+          {t('transaction.selectAll')}
         </button>
         <button type="button" className="filter-popover__action" onClick={onClearAll}>
-          取消篩選
+          {t('transaction.clearFilter')}
         </button>
       </div>
       <div className="filter-popover__list">

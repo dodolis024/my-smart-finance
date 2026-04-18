@@ -1,10 +1,12 @@
 import { useRef, useEffect } from 'react';
 import { SWIPE, TIMING } from '@/lib/constants';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Module-level singleton: holds reset fn of whichever row is currently swiped open
 let currentResetFn = null;
 
 export default function SwipeContainer({ onEdit, onDelete, onClick, children }) {
+  const { t } = useLanguage();
   const containerRef = useRef(null);
   const contentRef = useRef(null);
   const swipeState = useRef({ currentTranslate: 0, prevTranslate: 0 });
@@ -175,7 +177,7 @@ export default function SwipeContainer({ onEdit, onDelete, onClick, children }) 
         <button
           type="button"
           className="swipe-action-btn swipe-action-btn--edit"
-          aria-label="編輯"
+          aria-label={t('common.edit')}
           onClick={handleSwipeEdit}
         >
           <svg className="icon-edit" aria-hidden="true">
@@ -192,7 +194,7 @@ export default function SwipeContainer({ onEdit, onDelete, onClick, children }) 
         <button
           type="button"
           className="swipe-action-btn swipe-action-btn--delete"
-          aria-label="刪除"
+          aria-label={t('common.delete')}
           onClick={handleSwipeDelete}
         >
           <svg className="icon-delete" aria-hidden="true">

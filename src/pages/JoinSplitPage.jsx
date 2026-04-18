@@ -3,23 +3,24 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
 import { useSplitGroups } from '@/hooks/useSplitGroups';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function JoinPage() {
   const { code } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useLanguage();
   const { user } = useAuth();
   const { getGroupByCode, linkSelfToMember, joinGroupAsNewMember, fetchGroups } = useSplitGroups();
 
   const [inputCode, setInputCode] = useState(code || '');
   const [groupInfo, setGroupInfo] = useState(null);
   const [searching, setSearching] = useState(false);
-  const [selected, setSelected] = useState(null); // member id or 'new'
+  const [selected, setSelected] = useState(null);
   const [newName, setNewName] = useState('');
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState('');
 
-  // URL 帶代碼時自動搜尋
   useEffect(() => {
     if (!code) return;
     const trimmed = code.trim().toUpperCase();
@@ -30,12 +31,12 @@ export default function JoinPage() {
     setSelected(null);
     getGroupByCode(trimmed)
       .then(data => {
-        if (!data) { setError('找不到此代碼，請確認是否正確。'); return; }
+        if (!data) { setError(t('split.joinPage.notFound')); return; }
         setGroupInfo(data);
       })
-      .catch(() => setError('查詢失敗，請稍後再試。'))
+      .catch(() => setError(t('split.joinPage.searchFailed')))
       .finally(() => setSearching(false));
-  }, [code, getGroupByCode]);
+  }, [code, getGroupByCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = async (c) => {
     const trimmed = (c || inputCode).trim().toUpperCase();
@@ -46,18 +47,18 @@ export default function JoinPage() {
     setSelected(null);
     try {
       const data = await getGroupByCode(trimmed);
-      if (!data) { setError('找不到此代碼，請確認是否正確。'); return; }
+      if (!data) { setError(t('split.joinPage.notFound')); return; }
       setGroupInfo(data);
     } catch {
-      setError('查詢失敗，請稍後再試。');
+      setError(t('split.joinPage.searchFailed'));
     } finally {
       setSearching(false);
     }
   };
 
   const handleJoin = async () => {
-    if (!selected) { setError('請選擇你是哪位成員'); return; }
-    if (selected === 'new' && !newName.trim()) { setError('請填寫你的名稱'); return; }
+    if (!selected) { setError(t('split.joinPage.noMemberSelected')); return; }
+    if (selected === 'new' && !newName.trim()) { setError(t('split.joinPage.noNameEntered')); return; }
     setJoining(true);
     setError('');
     try {
@@ -66,16 +67,15 @@ export default function JoinPage() {
       } else {
         await linkSelfToMember(selected);
       }
-      toast.success('已成功加入群組！');
+      toast.success(t('split.joinPage.joinSuccess'));
       navigate('/split');
     } catch (err) {
-      setError(err.message || '加入失敗，請稍後再試。');
+      setError(err.message || t('split.joinPage.joinFailed'));
     } finally {
       setJoining(false);
     }
   };
 
-  // 用 is_self 布林欄位取代直接暴露 user_id UUID
   const alreadyLinked = groupInfo?.members?.find(m => m.is_self);
   useEffect(() => {
     if (alreadyLinked) navigate('/split');
@@ -86,26 +86,26 @@ export default function JoinPage() {
   return (
     <div className="split-join-page">
       <div className="split-join-page__card">
-        <p className="split-join-page__title">加入群組</p>
-        <p className="split-join-page__subtitle">輸入邀請代碼或點擊邀請連結加入</p>
+        <p className="split-join-page__title">{t('split.joinPage.title')}</p>
+        <p className="split-join-page__subtitle">{t('split.joinPage.subtitle')}</p>
 
         <div className="split-modal__field">
           <input
-            className={`split-modal__input split-join-page__code-input`}
-            placeholder="輸入代碼"
+            className="split-modal__input split-join-page__code-input"
+            placeholder={t('split.joinPage.codeInputPlaceholder')}
             value={inputCode}
             onChange={e => setInputCode(e.target.value.toUpperCase())}
             maxLength={6}
           />
         </div>
         <button type="button" className="split-btn-primary" onClick={() => handleSearch()} disabled={searching || !inputCode.trim()} style={{ marginBottom: '0.75rem' }}>
-          {searching ? '搜尋中...' : '搜尋群組'}
+          {searching ? t('split.joinPage.searching') : t('split.joinPage.searchBtn')}
         </button>
 
         {groupInfo && (
           <div className="split-join-page__group-info">
             <p className="split-join-page__group-name">{groupInfo.name}</p>
-            <p className="split-join-page__members-label">請選擇你是哪位成員：</p>
+            <p className="split-join-page__members-label">{t('split.joinPage.selectMemberLabel')}</p>
             {groupInfo.members?.map(m => {
               const isTaken = m.is_linked && !m.is_self;
               return (
@@ -115,7 +115,7 @@ export default function JoinPage() {
                   onClick={() => !isTaken && setSelected(m.id)}
                 >
                   {m.name}
-                  {isTaken && <span style={{ fontSize: '0.75rem', marginLeft: 'auto', opacity: 0.6 }}>已連結</span>}
+                  {isTaken && <span style={{ fontSize: '0.75rem', marginLeft: 'auto', opacity: 0.6 }}>{t('split.joinPage.alreadyLinked')}</span>}
                 </div>
               );
             })}
@@ -123,12 +123,12 @@ export default function JoinPage() {
               className={`split-join-page__member-option${selected === 'new' ? ' is-selected' : ''}`}
               onClick={() => setSelected('new')}
             >
-              ＋ 我不在名單上，新增自己
+              {t('split.joinPage.addSelf')}
             </div>
             {selected === 'new' && (
               <input
                 className="split-modal__input"
-                placeholder="你的名稱"
+                placeholder={t('split.joinPage.yourNamePlaceholder')}
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 style={{ marginTop: '0.5rem' }}
@@ -141,12 +141,12 @@ export default function JoinPage() {
 
         {groupInfo && (
           <button type="button" className="split-btn-primary" onClick={handleJoin} disabled={joining} style={{ marginTop: '0.75rem' }}>
-            {joining ? '加入中...' : '加入群組'}
+            {joining ? t('split.joinPage.joining') : t('split.joinPage.joinBtn')}
           </button>
         )}
 
         <button type="button" className="split-btn-secondary" onClick={() => navigate('/split')} style={{ marginTop: '0.5rem' }}>
-          返回
+          {t('split.joinPage.back')}
         </button>
       </div>
     </div>

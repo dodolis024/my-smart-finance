@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MONTH_ABBREVS } from '@/lib/constants';
 import { formatMonthLabel } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function MonthPicker({ year, month, onChange, disabled }) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [displayYear, setDisplayYear] = useState(year);
   const triggerRef = useRef(null);
@@ -98,7 +100,7 @@ export default function MonthPicker({ year, month, onChange, disabled }) {
             <button
               type="button"
               className="month-picker-year-btn"
-              aria-label="上一年"
+              aria-label={t('monthPicker.prevYear')}
               onClick={() => setDisplayYear((y) => y - 1)}
             >
               ←
@@ -107,7 +109,7 @@ export default function MonthPicker({ year, month, onChange, disabled }) {
             <button
               type="button"
               className="month-picker-year-btn"
-              aria-label="下一年"
+              aria-label={t('monthPicker.nextYear')}
               onClick={() => setDisplayYear((y) => y + 1)}
             >
               →

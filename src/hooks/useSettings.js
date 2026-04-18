@@ -1,6 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+const DEFAULT_EXPENSE_CATEGORIES = {
+  zh: ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他'],
+  en: ['Food', 'Drinks', 'Transport', 'Travel', 'Entertainment', 'Shopping', 'Other'],
+};
+const DEFAULT_INCOME_CATEGORIES = {
+  zh: ['薪水', '投資', '其他'],
+  en: ['Salary', 'Investment', 'Other'],
+};
 
 // Module-level cache
 let cachedExpenseCats = null;
@@ -10,6 +20,7 @@ let cachedUserId = null;
 
 export function useSettings() {
   const { user } = useAuth();
+  const { lang, t } = useLanguage();
   const hasCached = cachedUserId === user?.id && cachedExpenseCats;
 
   const [expenseCategories, setExpenseCategories] = useState(() =>
@@ -43,11 +54,11 @@ export function useSettings() {
         supabase.from('accounts').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
       ]);
 
-      setExpenseCategories(expenseData?.value || ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他']);
-      setIncomeCategories(incomeData?.value || ['薪水', '投資', '其他']);
+      setExpenseCategories(expenseData?.value || DEFAULT_EXPENSE_CATEGORIES[lang] || DEFAULT_EXPENSE_CATEGORIES.zh);
+      setIncomeCategories(incomeData?.value || DEFAULT_INCOME_CATEGORIES[lang] || DEFAULT_INCOME_CATEGORIES.zh);
       setAccounts(accountsData || []);
     } catch (err) {
-      setLoadError(err?.message || '載入設定失敗，請稍後再試');
+      setLoadError(err?.message || t('settings.loadError'));
     } finally {
       setLoading(false);
     }
@@ -67,21 +78,21 @@ export function useSettings() {
 
   const addCategory = useCallback(async (type, name) => {
     const categories = type === 'expense' ? [...expenseCategories] : [...incomeCategories];
-    if (categories.includes(name.trim())) throw new Error('此類別已存在！');
+    if (categories.includes(name.trim())) throw new Error(t('settings.category.alreadyExists'));
     categories.push(name.trim());
     await saveCategoriesType(type, categories);
-  }, [expenseCategories, incomeCategories, saveCategoriesType]);
+  }, [expenseCategories, incomeCategories, saveCategoriesType, t]);
 
   const renameCategory = useCallback(async (type, oldName, newName) => {
     const categories = type === 'expense' ? [...expenseCategories] : [...incomeCategories];
     const trimmed = newName.trim();
-    if (categories.includes(trimmed)) throw new Error('此類別名稱已存在！');
+    if (categories.includes(trimmed)) throw new Error(t('settings.category.nameAlreadyExists'));
     const idx = categories.indexOf(oldName);
     if (idx === -1) return;
     categories[idx] = trimmed;
     await saveCategoriesType(type, categories);
     await updateTransactionCategories(oldName, trimmed);
-  }, [expenseCategories, incomeCategories, saveCategoriesType]);
+  }, [expenseCategories, incomeCategories, saveCategoriesType, t]);
 
   const deleteCategory = useCallback(async (type, name) => {
     const categories = (type === 'expense' ? [...expenseCategories] : [...incomeCategories]).filter((c) => c !== name);
@@ -101,7 +112,7 @@ export function useSettings() {
     const isDuplicate = accounts.some(
       (a) => a.name === trimmedName && a.id !== accountId
     );
-    if (isDuplicate) throw new Error(`帳戶名稱「${trimmedName}」已存在，請使用不同名稱。`);
+    if (isDuplicate) throw new Error(t('settings.account.nameAlreadyExists', { name: trimmedName }));
 
     const payload = { ...accountData, name: trimmedName, user_id: user.id };
     if (accountId) {
@@ -127,7 +138,7 @@ export function useSettings() {
         .eq('user_id', user.id)
         .eq('payment_method', account.name);
       if (!countError && count > 0) {
-        throw new Error(`「${account.name}」仍有 ${count} 筆交易記錄，請先將這些交易改為其他帳戶後再刪除。`);
+        throw new Error(t('settings.account.hasTransactions', { name: account.name, count }));
       }
     }
     const { error } = await supabase.from('accounts').delete().eq('id', accountId);

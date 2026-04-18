@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import Modal from '@/components/common/Modal';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 let nextMemberId = 1;
 
 export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [myName, setMyName] = useState('');
   const [currency, setCurrency] = useState('');
@@ -24,8 +26,8 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
   const updateMember = (i, val) => setMembers(prev => prev.map((m, idx) => idx === i ? { ...m, value: val } : m));
 
   const handleSubmit = async () => {
-    if (!name.trim()) { setError('請填寫群組名稱'); return; }
-    if (!myName.trim()) { setError('請填寫你的名稱'); return; }
+    if (!name.trim()) { setError(t('split.groupNameRequired')); return; }
+    if (!myName.trim()) { setError(t('split.myNameRequired')); return; }
     setError('');
     setSaving(true);
     try {
@@ -38,7 +40,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
       });
       handleClose();
     } catch (err) {
-      setError(err.message || '建立失敗，請稍後再試');
+      setError(err.message || t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -48,22 +50,22 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
     <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="create-group-title">
       <div className="reminder-modal__backdrop" onClick={handleClose} />
       <div className="split-modal__dialog" onClick={e => e.stopPropagation()}>
-        <button type="button" className="reminder-modal__close" aria-label="關閉" onClick={handleClose}>×</button>
-        <h2 id="create-group-title" className="split-modal__title">新增群組</h2>
+        <button type="button" className="reminder-modal__close" aria-label={t('common.close')} onClick={handleClose}>×</button>
+        <h2 id="create-group-title" className="split-modal__title">{t('split.createGroupTitle')}</h2>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="group-name">群組名稱</label>
+          <label className="split-modal__label" htmlFor="group-name">{t('split.groupNameLabel')}</label>
           <input
             id="group-name"
             className="split-modal__input"
-            placeholder="例：墾丁旅遊"
+            placeholder="e.g. Kenting Trip"
             value={name}
             onChange={e => setName(e.target.value)}
           />
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="group-expense-currency">預設記錄幣別</label>
+          <label className="split-modal__label" htmlFor="group-expense-currency">{t('split.defaultCurrencyLabel')}</label>
           <select
             id="group-expense-currency"
             className="split-modal__select"
@@ -75,41 +77,41 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="group-currency">結算幣別</label>
+          <label className="split-modal__label" htmlFor="group-currency">{t('split.settlementCurrencyLabel')}</label>
           <select
             id="group-currency"
             className="split-modal__select"
             value={currency}
             onChange={e => setCurrency(e.target.value)}
           >
-            <option value="">同記錄幣別</option>
+            <option value="">{t('split.sameCurrency')}</option>
             {currencies.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="my-name">你在群組中的名稱</label>
+          <label className="split-modal__label" htmlFor="my-name">{t('split.yourNameInGroup')}</label>
           <input
             id="my-name"
             className="split-modal__input"
-            placeholder="例：Doris"
+            placeholder="e.g. Doris"
             value={myName}
             onChange={e => setMyName(e.target.value)}
           />
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label">其他成員</label>
+          <label className="split-modal__label">{t('split.otherMembers')}</label>
           <div className="split-modal__members-list">
             {members.map((m, i) => (
               <div key={m.id} className="split-modal__member-row">
                 <input
                   className="split-modal__input"
-                  placeholder={`成員 ${i + 1} 名稱`}
+                  placeholder={t('split.memberNamePlaceholder', { n: i + 1 })}
                   value={m.value}
                   onChange={e => updateMember(i, e.target.value)}
                 />
-                <button type="button" className="split-modal__member-remove" onClick={() => removeMember(i)} aria-label="移除">
+                <button type="button" className="split-modal__member-remove" onClick={() => removeMember(i)} aria-label={t('common.delete')}>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                   </svg>
@@ -121,7 +123,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" style={{ width: 15, height: 15 }}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            新增成員
+            {t('split.addMemberBtn')}
           </button>
         </div>
 
@@ -129,7 +131,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
 
         <div className="split-modal__actions">
           <button type="button" className="split-btn-primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? '建立中...' : '建立群組'}
+            {saving ? t('split.creating') : t('split.createGroup')}
           </button>
         </div>
       </div>

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function GroupSettingsModal({ isOpen, onClose, onSave, group, currencies = [] }) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('');
   const [defaultExpenseCurrency, setDefaultExpenseCurrency] = useState('TWD');
@@ -27,7 +29,7 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
   };
 
   const handleSubmit = async () => {
-    if (!name.trim()) { setError('請填寫群組名稱'); return; }
+    if (!name.trim()) { setError(t('split.groupNameRequired')); return; }
     setError('');
     setSaving(true);
     try {
@@ -38,7 +40,7 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
       });
       onClose();
     } catch (err) {
-      setError(err.message || '儲存失敗，請稍後再試');
+      setError(err.message || t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -48,22 +50,22 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
     <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="group-settings-title">
       <div className="reminder-modal__backdrop" onClick={handleClose} />
       <div className="split-modal__dialog" onClick={e => e.stopPropagation()}>
-        <button type="button" className="reminder-modal__close" aria-label="關閉" onClick={handleClose}>×</button>
-        <h2 id="group-settings-title" className="split-modal__title">群組設定</h2>
+        <button type="button" className="reminder-modal__close" aria-label={t('common.close')} onClick={handleClose}>×</button>
+        <h2 id="group-settings-title" className="split-modal__title">{t('split.groupSettings')}</h2>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="settings-group-name">群組名稱</label>
+          <label className="split-modal__label" htmlFor="settings-group-name">{t('split.groupNameLabel')}</label>
           <input
             id="settings-group-name"
             className="split-modal__input"
-            placeholder="例：墾丁旅遊"
+            placeholder="e.g. Kenting Trip"
             value={name}
             onChange={e => setName(e.target.value)}
           />
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="settings-expense-currency">預設記錄幣別</label>
+          <label className="split-modal__label" htmlFor="settings-expense-currency">{t('split.defaultCurrencyLabel')}</label>
           <select
             id="settings-expense-currency"
             className="split-modal__select"
@@ -75,14 +77,14 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="settings-group-currency">結算幣別</label>
+          <label className="split-modal__label" htmlFor="settings-group-currency">{t('split.settlementCurrencyLabel')}</label>
           <select
             id="settings-group-currency"
             className="split-modal__select"
             value={currency}
             onChange={e => setCurrency(e.target.value)}
           >
-            <option value="">同記錄幣別</option>
+            <option value="">{t('split.sameCurrency')}</option>
             {currencies.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
@@ -91,7 +93,7 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
 
         <div className="split-modal__actions">
           <button type="button" className="split-btn-primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? '儲存中...' : '儲存設定'}
+            {saving ? t('common.saving') : t('common.saveSettings')}
           </button>
         </div>
       </div>

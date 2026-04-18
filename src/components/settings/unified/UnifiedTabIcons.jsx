@@ -30,11 +30,11 @@ const IconBell = () => (
 );
 
 const TABS = [
-  { id: 'theme', label: '外觀主題', Icon: IconTheme },
-  { id: 'options', label: '類別管理', Icon: IconOptions },
-  { id: 'accounts', label: '支付工具', Icon: IconAccounts },
-  { id: 'notification', label: '通知設定', Icon: IconBell },
-  { id: 'subscription', label: '訂閱管理', Icon: IconSubscription },
+  { id: 'theme', labelKey: 'settings.tabs.theme', Icon: IconTheme },
+  { id: 'options', labelKey: 'settings.tabs.options', Icon: IconOptions },
+  { id: 'accounts', labelKey: 'settings.tabs.accounts', Icon: IconAccounts },
+  { id: 'notification', labelKey: 'settings.tabs.notification', Icon: IconBell },
+  { id: 'subscription', labelKey: 'settings.tabs.subscription', Icon: IconSubscription },
 ];
 
 export { IconOptions, IconReminder, IconSubscription, IconAccounts, IconTheme, IconBell, TABS };

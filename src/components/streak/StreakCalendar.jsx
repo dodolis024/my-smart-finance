@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { getTodayYmd } from '@/lib/utils';
 import { useTheme } from '../../hooks/useTheme.js';
-
-const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
+import { useLanguage } from '@/contexts/LanguageContext';
+import zhLocale from '@/locales/zh';
+import enLocale from '@/locales/en';
 
 export default function StreakCalendar({ streakState }) {
   const { theme } = useTheme();
+  const { t, lang } = useLanguage();
   const [calYear, setCalYear] = useState(() => new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth() + 1);
 
@@ -50,18 +52,19 @@ export default function StreakCalendar({ streakState }) {
   const count = streakState?.count || 0;
   const total = streakState?.totalDays || 0;
   const longest = streakState?.longestStreak || 0;
+  const weekLabels = (lang === 'en' ? enLocale : zhLocale).streak.weekLabels;
 
   return (
     <div className="streak-calendar-root">
       <div className="streak-calendar">
         <div className="streak-calendar__header">
-          <button type="button" className="streak-calendar__nav-btn" aria-label="上一個月" onClick={(e) => { navigate(-1); e.currentTarget.blur(); }}>‹</button>
-          <div className="streak-calendar__month">{calYear} 年 {calMonth} 月</div>
-          <button type="button" className="streak-calendar__nav-btn" aria-label="下一個月" onClick={(e) => { navigate(1); e.currentTarget.blur(); }}>›</button>
+          <button type="button" className="streak-calendar__nav-btn" aria-label={t('streak.prevMonth')} onClick={(e) => { navigate(-1); e.currentTarget.blur(); }}>‹</button>
+          <div className="streak-calendar__month">{t('streak.calendarMonthLabel', { year: calYear, month: calMonth, monthName: new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'zh-TW', { month: 'long' }).format(new Date(calYear, calMonth - 1, 1)) })}</div>
+          <button type="button" className="streak-calendar__nav-btn" aria-label={t('streak.nextMonth')} onClick={(e) => { navigate(1); e.currentTarget.blur(); }}>›</button>
         </div>
         <div className="streak-calendar__weekdays">
-          {WEEK_LABELS.map((w) => (
-            <div key={w} className="streak-calendar__weekday">{w}</div>
+          {weekLabels.map((w, i) => (
+            <div key={i} className="streak-calendar__weekday">{w}</div>
           ))}
         </div>
         <div className="streak-calendar__grid">
@@ -81,13 +84,13 @@ export default function StreakCalendar({ streakState }) {
           })}
         </div>
         <div className="streak-calendar__legend">
-          <span className="streak-calendar__legend-item streak-calendar__legend-item--transaction">記帳</span>
-          <span className="streak-calendar__legend-item streak-calendar__legend-item--manual">簽到</span>
+          <span className="streak-calendar__legend-item streak-calendar__legend-item--transaction">{t('streak.legendTransaction')}</span>
+          <span className="streak-calendar__legend-item streak-calendar__legend-item--manual">{t('streak.legendCheckin')}</span>
         </div>
       </div>
       <div className="streak-summary">
         <div className="streak-summary__card">
-          <div className="streak-summary__label">目前連續記帳天數</div>
+          <div className="streak-summary__label">{t('streak.currentStreak')}</div>
           <div className="streak-summary__value">
             <span className="streak-summary__value-emoji">
               {count > 0 && (theme === 'dawn' ? (
@@ -100,19 +103,19 @@ export default function StreakCalendar({ streakState }) {
                 </svg>
               ))}
             </span>
-            <span className="streak-summary__value-number">{count}</span><span>天</span>
+            <span className="streak-summary__value-number">{count}</span><span>{t('streak.unit')}</span>
           </div>
         </div>
         <div className="streak-summary__card">
-          <div className="streak-summary__label">總共記帳天數</div>
+          <div className="streak-summary__label">{t('streak.totalDays')}</div>
           <div className="streak-summary__value">
-            <span className="streak-summary__value-number">{total}</span><span>天</span>
+            <span className="streak-summary__value-number">{total}</span><span>{t('streak.unit')}</span>
           </div>
         </div>
         <div className="streak-summary__card">
-          <div className="streak-summary__label">最長連續記帳</div>
+          <div className="streak-summary__label">{t('streak.longestStreak')}</div>
           <div className="streak-summary__value">
-            <span className="streak-summary__value-number">{longest}</span><span>天</span>
+            <span className="streak-summary__value-number">{longest}</span><span>{t('streak.unit')}</span>
           </div>
         </div>
       </div>

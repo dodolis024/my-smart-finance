@@ -2,8 +2,10 @@ import { useRef, useState, useEffect } from 'react';
 import Modal from './Modal';
 import { parseChangelogMarkdown } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function ChangelogModal({ isOpen, onClose, lang = 'zh' }) {
+export default function ChangelogModal({ isOpen, onClose }) {
+  const { t, lang } = useLanguage();
   const contentRef = useRef(null);
   const [entries, setEntries] = useState([]);
   useScrollbarOnScroll(contentRef, isOpen);
@@ -21,13 +23,13 @@ export default function ChangelogModal({ isOpen, onClose, lang = 'zh' }) {
       <div className="changelog-modal__backdrop" onClick={onClose} />
       <div className="changelog-modal__dialog" onClick={(e) => e.stopPropagation()}>
         <div className="changelog-modal__header">
-          <h2 id="changelog-modal-title" className="changelog-modal__title">更新紀錄</h2>
-          <button type="button" className="changelog-modal__close" aria-label="關閉" onClick={onClose}>×</button>
+          <h2 id="changelog-modal-title" className="changelog-modal__title">{t('changelog.title')}</h2>
+          <button type="button" className="changelog-modal__close" aria-label={t('changelog.close')} onClick={onClose}>×</button>
         </div>
         <div ref={contentRef} className="changelog-modal__body scrollbar-on-scroll">
           <div className="changelog-content">
             {entries.length === 0 ? (
-              <p className="changelog-empty">載入中...</p>
+              <p className="changelog-empty">{t('changelog.loading')}</p>
             ) : (
               entries.map(({ version, date, changes }) => (
                 <div key={version} className="changelog-entry">

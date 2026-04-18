@@ -1,5 +1,27 @@
 import { Component } from 'react';
 
+const ERROR_STRINGS = {
+  zh: {
+    title: '發生錯誤',
+    message: '頁面載入時發生問題，請重新整理後再試。',
+    refresh: '重新整理',
+  },
+  en: {
+    title: 'An Error Occurred',
+    message: 'Something went wrong while loading the page. Please refresh and try again.',
+    refresh: 'Refresh',
+  },
+};
+
+function getLang() {
+  try {
+    const stored = localStorage.getItem('app-lang');
+    return stored === 'en' ? 'en' : 'zh';
+  } catch {
+    return 'zh';
+  }
+}
+
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -19,6 +41,7 @@ export default class ErrorBoundary extends Component {
       if (this.props.fallback) {
         return this.props.fallback;
       }
+      const s = ERROR_STRINGS[getLang()];
       return (
         <div
           className="error-boundary-fallback"
@@ -31,9 +54,9 @@ export default class ErrorBoundary extends Component {
             margin: '2rem auto',
           }}
         >
-          <h2 style={{ marginBottom: '1rem' }}>發生錯誤</h2>
+          <h2 style={{ marginBottom: '1rem' }}>{s.title}</h2>
           <p style={{ marginBottom: '1rem', color: 'var(--color-text-secondary, #666)' }}>
-            頁面載入時發生問題，請重新整理後再試。
+            {s.message}
           </p>
           <button
             type="button"
@@ -46,7 +69,7 @@ export default class ErrorBoundary extends Component {
               cursor: 'pointer',
             }}
           >
-            重新整理
+            {s.refresh}
           </button>
         </div>
       );

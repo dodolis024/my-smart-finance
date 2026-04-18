@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import Modal from '@/components/common/Modal';
 import CalcKeypad from './CalcKeypad';
 import { parseExpression } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', defaultExpenseCurrency, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
+  const { t } = useLanguage();
   const isEditing = !!editingExpense;
   const initialCurrency = defaultExpenseCurrency || groupCurrency;
   const [title, setTitle] = useState('');
@@ -254,11 +256,11 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   };
 
   const handleSubmit = async () => {
-    if (!title.trim()) { setError('請填寫費用名稱'); return; }
+    if (!title.trim()) { setError(t('split.addExpenseModal.nameRequired')); return; }
     const amt = parseExpression(amount);
-    if (!amount || isNaN(amt) || amt <= 0) { setError('請輸入有效金額'); return; }
-    if (!paidBy) { setError('請選擇付款人'); return; }
-    if (!participants.length) { setError('請選擇至少一位參與成員'); return; }
+    if (!amount || isNaN(amt) || amt <= 0) { setError(t('split.addExpenseModal.invalidAmount')); return; }
+    if (!paidBy) { setError(t('split.addExpenseModal.noPayerSelected')); return; }
+    if (!participants.length) { setError(t('split.addExpenseModal.noParticipants')); return; }
 
     let shares;
     if (shareMode === 'equal') {
@@ -267,7 +269,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
       shares = buildCustomShares();
       const total = Object.values(shares).reduce((s, v) => s + v, 0);
       if (Math.abs(total - amt) > 0.02) {
-        setError(`自訂金額總和（${total.toFixed(2)}）必須等於費用金額（${amt.toFixed(2)}）`);
+        setError(t('split.addExpenseModal.customMismatch', { total: total.toFixed(2), amount: amt.toFixed(2) }));
         return;
       }
     }
@@ -287,7 +289,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
       }
       handleClose();
     } catch (err) {
-      setError(err.message || (isEditing ? '更新失敗，請稍後再試' : '新增失敗，請稍後再試'));
+      setError(err.message || (isEditing ? t('split.addExpenseModal.updateFailed') : t('split.addExpenseModal.addFailed')));
     } finally {
       setSaving(false);
     }
@@ -304,16 +306,16 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
             setActiveField(null);
           }
         }}>
-        <button type="button" className="reminder-modal__close" aria-label="關閉" onClick={handleClose}>×</button>
-        <h2 id="add-expense-title" className="split-modal__title">{isEditing ? '編輯費用' : '新增費用'}</h2>
+        <button type="button" className="reminder-modal__close" aria-label={t('split.addExpenseModal.close')} onClick={handleClose}>×</button>
+        <h2 id="add-expense-title" className="split-modal__title">{isEditing ? t('split.addExpenseModal.editTitle') : t('split.addExpenseModal.addTitle')}</h2>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="expense-title">費用名稱</label>
-          <input id="expense-title" className="split-modal__input" placeholder="例：民宿" value={title} onChange={e => setTitle(e.target.value)} />
+          <label className="split-modal__label" htmlFor="expense-title">{t('split.addExpenseModal.nameLabel')}</label>
+          <input id="expense-title" className="split-modal__input" placeholder={t('split.addExpenseModal.namePlaceholder')} value={title} onChange={e => setTitle(e.target.value)} />
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="expense-amount">金額</label>
+          <label className="split-modal__label" htmlFor="expense-amount">{t('split.addExpenseModal.amountLabel')}</label>
           <div className="split-modal__amount-row">
             <input id="expense-amount" ref={amountInputRef} className="split-modal__input is-calc" type="text" inputMode="none" placeholder="0" value={amount} readOnly onClick={(e) => openKeypadFor('amount', e.currentTarget)} />
             <select className="split-modal__select split-modal__currency-select" value={currency} onChange={e => setCurrency(e.target.value)}>
@@ -323,12 +325,12 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="expense-date">日期</label>
+          <label className="split-modal__label" htmlFor="expense-date">{t('split.addExpenseModal.dateLabel')}</label>
           <input id="expense-date" className="split-modal__input" type="date" value={date} onChange={e => setDate(e.target.value)} />
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="expense-paidby">誰付款</label>
+          <label className="split-modal__label" htmlFor="expense-paidby">{t('split.addExpenseModal.paidByLabel')}</label>
           <select id="expense-paidby" className="split-modal__select" value={paidBy} onChange={e => setPaidBy(e.target.value)}>
             {members?.map(m => (
               <option key={m.id} value={m.id}>{m.name}</option>
@@ -337,22 +339,22 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label">分攤方式</label>
+          <label className="split-modal__label">{t('split.addExpenseModal.splitMethodLabel')}</label>
           <div className="split-modal__share-modes">
-            <button type="button" className={`split-modal__share-mode-btn${shareMode === 'equal' ? ' is-active' : ''}`} onClick={() => setShareMode('equal')}>平均分攤</button>
-            <button type="button" className={`split-modal__share-mode-btn${shareMode === 'custom' ? ' is-active' : ''}`} onClick={() => setShareMode('custom')}>自訂金額</button>
+            <button type="button" className={`split-modal__share-mode-btn${shareMode === 'equal' ? ' is-active' : ''}`} onClick={() => setShareMode('equal')}>{t('split.addExpenseModal.equalSplit')}</button>
+            <button type="button" className={`split-modal__share-mode-btn${shareMode === 'custom' ? ' is-active' : ''}`} onClick={() => setShareMode('custom')}>{t('split.addExpenseModal.customSplit')}</button>
           </div>
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label">參與成員</label>
+          <label className="split-modal__label">{t('split.addExpenseModal.participantsLabel')}</label>
           {shareMode === 'custom' && totalAmt > 0 && participants.length > 0 && (
             <div className={`split-modal__share-status${Math.abs(remaining) < 0.01 && unfilledIds.length === 0 ? ' is-balanced' : remaining < -0.01 ? ' is-over' : ''}`}>
               {Math.abs(remaining) < 0.01 && unfilledIds.length === 0
-                ? `已分配 ${totalAmt.toLocaleString()} / ${totalAmt.toLocaleString()} ✓`
+                ? t('split.addExpenseModal.shareBalanced', { amount: totalAmt.toLocaleString(), total: totalAmt.toLocaleString() })
                 : remaining < -0.01
-                  ? `已超出 ${manualTotal.toLocaleString()} / ${totalAmt.toLocaleString()}（超出 ${Math.abs(remaining).toLocaleString()}）`
-                  : `已分配 ${manualTotal.toLocaleString()} / ${totalAmt.toLocaleString()}（剩餘 ${remaining.toLocaleString()}）`
+                  ? t('split.addExpenseModal.shareOver', { amount: manualTotal.toLocaleString(), total: totalAmt.toLocaleString(), diff: Math.abs(remaining).toLocaleString() })
+                  : t('split.addExpenseModal.shareRemaining', { amount: manualTotal.toLocaleString(), total: totalAmt.toLocaleString(), diff: remaining.toLocaleString() })
               }
             </div>
           )}
@@ -385,7 +387,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
                       }}
                       onClick={(e) => openKeypadFor(m.id, e.currentTarget)}
                     />
-                    {isAutoFilled && <span className="split-modal__auto-tag">自動</span>}
+                    {isAutoFilled && <span className="split-modal__auto-tag">{t('split.addExpenseModal.autoTag')}</span>}
                   </div>
                 )}
               </div>
@@ -394,15 +396,17 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         </div>
 
         <div className="split-modal__field">
-          <label className="split-modal__label" htmlFor="expense-note">備註（選填）</label>
-          <input id="expense-note" className="split-modal__input" placeholder="備註" value={note} onChange={e => setNote(e.target.value)} />
+          <label className="split-modal__label" htmlFor="expense-note">{t('split.addExpenseModal.noteLabel')}</label>
+          <input id="expense-note" className="split-modal__input" placeholder={t('split.addExpenseModal.notePlaceholder')} value={note} onChange={e => setNote(e.target.value)} />
         </div>
 
         {error && <p className="split-modal__error">{error}</p>}
 
         <div className="split-modal__actions">
           <button type="button" className="split-btn-primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? (isEditing ? '更新中...' : '新增中...') : (isEditing ? '儲存變更' : '新增費用')}
+            {saving
+              ? (isEditing ? t('split.addExpenseModal.updating') : t('split.addExpenseModal.adding'))
+              : (isEditing ? t('split.addExpenseModal.editBtn') : t('split.addExpenseModal.addBtn'))}
           </button>
         </div>
       </div>

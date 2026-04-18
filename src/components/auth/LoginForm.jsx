@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import GoogleAuthButton from './GoogleAuthButton';
 
 export default function LoginForm() {
   const { signInWithPassword } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,10 +25,10 @@ export default function LoginForm() {
       const msg = (typeof err === 'string' ? err : err?.message ?? err?.error?.message ?? '').toString();
       const lower = msg.toLowerCase();
       const friendly =
-        (lower.includes('invalid') && lower.includes('credential')) ? '帳號或密碼錯誤，請再試一次' :
-        lower.includes('email not confirmed') ? '請先到信箱收取驗證信並完成驗證' :
-        (lower.includes('rate') || lower.includes('too many')) ? '嘗試次數過多，請稍後再試' :
-        msg || '登入失敗，請檢查帳號密碼';
+        (lower.includes('invalid') && lower.includes('credential')) ? t('auth.invalidCredential') :
+        lower.includes('email not confirmed') ? t('auth.emailNotConfirmed') :
+        (lower.includes('rate') || lower.includes('too many')) ? t('auth.tooManyAttempts') :
+        msg || t('auth.loginFailed');
       setError(friendly);
     } finally {
       setSubmitting(false);
@@ -35,30 +37,30 @@ export default function LoginForm() {
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
-      <label htmlFor="login-email" className="sr-only">電子郵件</label>
+      <label htmlFor="login-email" className="sr-only">{t('auth.email')}</label>
       <input
         id="login-email"
         type="email"
-        placeholder="電子郵件"
+        placeholder={t('auth.email')}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
       />
-      <label htmlFor="login-password" className="sr-only">密碼</label>
+      <label htmlFor="login-password" className="sr-only">{t('auth.password')}</label>
       <input
         id="login-password"
         type="password"
-        placeholder="密碼"
+        placeholder={t('auth.password')}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
       />
       <button type="submit" disabled={submitting}>
-        {submitting ? '登入中...' : '登入'}
+        {submitting ? t('auth.loggingIn') : t('auth.login')}
       </button>
       {error && <div className="auth-error">{error}</div>}
-      <div className="auth-divider"><span>或</span></div>
-      <GoogleAuthButton label="使用 Google 登入" />
+      <div className="auth-divider"><span>{t('common.or')}</span></div>
+      <GoogleAuthButton label={t('auth.googleSignIn')} />
     </form>
   );
 }

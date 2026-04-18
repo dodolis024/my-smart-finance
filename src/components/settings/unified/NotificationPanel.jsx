@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { WheelPicker, HOURS, MINUTES } from '../wheelPicker/WheelPicker';
-import { COMMON_TIMEZONES } from '../data/commonTimezones';
+import { getCommonTimezones } from '../data/commonTimezones';
 import { useReminderSettings } from '@/hooks/useReminderSettings';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useCreditCardNotificationSettings } from '@/hooks/useCreditCardNotificationSettings';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 function ReminderPanel({ isOpen, toast }) {
+  const { t, lang } = useLanguage();
   const { reminderSettings, loading, saving, loadReminderSettings, saveReminderSettings } = useReminderSettings();
   const [enabled, setEnabled] = useState(false);
   const [timezone, setTimezone] = useState('Asia/Taipei');
@@ -28,25 +30,26 @@ function ReminderPanel({ isOpen, toast }) {
     const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
     try {
       await saveReminderSettings({ enabled, timezone, time: timeStr });
-      toast.success('提醒設定已儲存！');
+      toast.success(t('settings.notification.reminderSaved'));
     } catch (err) {
-      toast.error(err.message || '儲存失敗，請稍後再試。');
+      toast.error(err.message || t('common.saveFailed'));
     }
   };
 
   const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const showDetectedHint = !loading && detectedTz && detectedTz !== timezone;
+  const timezones = getCommonTimezones(lang);
 
   return (
     <>
-      {loading ? <p className="reminder-modal__loading">載入中...</p> : (
+      {loading ? <p className="reminder-modal__loading">{t('common.loadingDots')}</p> : (
         <div className="reminder-modal__content">
           <p className="reminder-modal__desc">
-            開啟後，系統會在你設定的時間以 email 提醒你記帳或簽到，避免連續記帳天數中斷。
+            {t('settings.notification.reminderDesc')}
           </p>
           <div className="reminder-modal__field">
             <label className="reminder-modal__toggle-label">
-              <span>啟用 Email 提醒</span>
+              <span>{t('settings.notification.enableEmail')}</span>
               <button
                 type="button"
                 role="switch"
@@ -60,7 +63,7 @@ function ReminderPanel({ isOpen, toast }) {
           </div>
           <div className={`reminder-modal__settings ${!enabled ? 'is-disabled' : ''}`}>
             <div className="reminder-modal__field">
-              <label className="reminder-modal__label" htmlFor="reminder-timezone">時區</label>
+              <label className="reminder-modal__label" htmlFor="reminder-timezone">{t('settings.notification.timezone')}</label>
               <select
                 id="reminder-timezone"
                 className="reminder-modal__select"
@@ -68,7 +71,7 @@ function ReminderPanel({ isOpen, toast }) {
                 onChange={(e) => setTimezone(e.target.value)}
                 disabled={!enabled}
               >
-                {COMMON_TIMEZONES.map((tz) => (
+                {timezones.map((tz) => (
                   <option key={tz.value} value={tz.value}>{tz.label}</option>
                 ))}
               </select>
@@ -79,12 +82,12 @@ function ReminderPanel({ isOpen, toast }) {
                   onClick={() => setTimezone(detectedTz)}
                   disabled={!enabled}
                 >
-                  偵測到你目前的時區是 {detectedTz}，點此使用
+                  {t('settings.notification.detectedTimezone', { tz: detectedTz })}
                 </button>
               )}
             </div>
             <div className="reminder-modal__field">
-              <label className="reminder-modal__label">提醒時間</label>
+              <label className="reminder-modal__label">{t('settings.notification.reminderTime')}</label>
               <div className="reminder-modal__time-wheels">
                 <WheelPicker items={HOURS} value={hour} onChange={setHour} disabled={!enabled} />
                 <span className="reminder-modal__time-sep" aria-hidden="true">:</span>
@@ -99,7 +102,7 @@ function ReminderPanel({ isOpen, toast }) {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? '儲存中...' : '儲存設定'}
+              {saving ? t('common.saving') : t('common.saveSettings')}
             </button>
           </div>
         </div>
@@ -109,6 +112,7 @@ function ReminderPanel({ isOpen, toast }) {
 }
 
 function PushSection() {
+  const { t } = useLanguage();
   const { isSupported, permission, isSubscribed, loading, subscribe, unsubscribe } = usePushNotifications();
 
   const handleToggle = () => {
@@ -119,18 +123,18 @@ function PushSection() {
   return (
     <div className="push-panel">
       <p className="push-panel__desc">
-        開啟後，當分帳群組有成員新增或修改費用、新增或移除成員、記錄還款時，你會收到推播通知。
+        {t('settings.notification.pushDesc')}
       </p>
       {!isSupported && (
-        <p className="push-panel__warning">您的瀏覽器不支援推播通知。請改用 Chrome 或 Safari（iOS 需先將 App 加入主畫面）。</p>
+        <p className="push-panel__warning">{t('settings.notification.browserNotSupported')}</p>
       )}
       {isSupported && permission === 'denied' && (
-        <p className="push-panel__warning">通知權限已被封鎖，請至瀏覽器設定開放此網站的通知權限後再試。</p>
+        <p className="push-panel__warning">{t('settings.notification.notificationBlocked')}</p>
       )}
       {isSupported && permission !== 'denied' && (
         <>
           <label className="push-panel__toggle-row">
-            <span>啟用推播通知</span>
+            <span>{t('settings.notification.enablePush')}</span>
             <button
               type="button"
               role="switch"
@@ -143,7 +147,7 @@ function PushSection() {
             </button>
           </label>
           {isSubscribed && (
-            <p className="push-panel__hint">此裝置已開啟通知，群組有異動時你將收到系統推播。</p>
+            <p className="push-panel__hint">{t('settings.notification.deviceSubscribed')}</p>
           )}
         </>
       )}
@@ -155,6 +159,7 @@ const DAYS_BEFORE_OPTIONS = [1, 2, 3, 5, 7];
 const THRESHOLD_OPTIONS = [70, 80, 90];
 
 function CreditCardNotifSection({ isOpen, toast }) {
+  const { t } = useLanguage();
   const { settings, loading, saving, loadSettings, saveSettings } = useCreditCardNotificationSettings();
   const [paymentEnabled, setPaymentEnabled] = useState(false);
   const [daysBefore, setDaysBefore] = useState(3);
@@ -182,24 +187,23 @@ function CreditCardNotifSection({ isOpen, toast }) {
         usage_alert_enabled: usageEnabled,
         usage_warn_threshold: threshold,
       });
-      toast.success('已儲存信用卡通知設定。');
+      toast.success(t('settings.notification.creditNotifSaved'));
     } catch {
-      toast.error('儲存失敗，請稍後再試。');
+      toast.error(t('common.saveFailed'));
     }
   };
 
-  if (loading) return <p className="reminder-modal__loading">載入中...</p>;
+  if (loading) return <p className="reminder-modal__loading">{t('common.loadingDots')}</p>;
 
   return (
     <div className="credit-notif-panel">
       <p className="credit-notif-panel__desc">
-        通知套用至帳號中的所有信用卡帳戶，需先開啟推播通知才可收到提醒。
+        {t('settings.notification.creditNotifDesc')}
       </p>
 
-      {/* 繳款日提醒 */}
       <div className="credit-notif-panel__row">
         <label className="credit-notif-panel__toggle-row">
-          <span className="credit-notif-panel__label">繳款日提醒</span>
+          <span className="credit-notif-panel__label">{t('settings.notification.paymentReminder')}</span>
           <button
             type="button"
             role="switch"
@@ -212,7 +216,7 @@ function CreditCardNotifSection({ isOpen, toast }) {
         </label>
         {paymentEnabled && (
           <div className="credit-notif-panel__sub">
-            <span className="credit-notif-panel__sub-label">提前幾天提醒</span>
+            <span className="credit-notif-panel__sub-label">{t('settings.notification.daysBefore')}</span>
             <div className="credit-notif-panel__chip-row">
               {DAYS_BEFORE_OPTIONS.map((d) => (
                 <button
@@ -221,19 +225,18 @@ function CreditCardNotifSection({ isOpen, toast }) {
                   className={`credit-notif-panel__chip${daysBefore === d ? ' is-selected' : ''}`}
                   onClick={() => setDaysBefore(d)}
                 >
-                  {d} 天
+                  {d}{t('settings.notification.dayUnit')}
                 </button>
               ))}
             </div>
-            <p className="credit-notif-panel__hint">繳款日當天也會有提醒呦！</p>
+            <p className="credit-notif-panel__hint">{t('settings.notification.daysBeforeHint')}</p>
           </div>
         )}
       </div>
 
-      {/* 使用率警告 */}
       <div className="credit-notif-panel__row">
         <label className="credit-notif-panel__toggle-row">
-          <span className="credit-notif-panel__label">額度使用率警告</span>
+          <span className="credit-notif-panel__label">{t('settings.notification.usageAlert')}</span>
           <button
             type="button"
             role="switch"
@@ -246,20 +249,20 @@ function CreditCardNotifSection({ isOpen, toast }) {
         </label>
         {usageEnabled && (
           <div className="credit-notif-panel__sub">
-            <span className="credit-notif-panel__sub-label">偏高警戒閾值</span>
+            <span className="credit-notif-panel__sub-label">{t('settings.notification.usageThreshold')}</span>
             <div className="credit-notif-panel__chip-row">
-              {THRESHOLD_OPTIONS.map((t) => (
+              {THRESHOLD_OPTIONS.map((val) => (
                 <button
-                  key={t}
+                  key={val}
                   type="button"
-                  className={`credit-notif-panel__chip${threshold === t ? ' is-selected' : ''}`}
-                  onClick={() => setThreshold(t)}
+                  className={`credit-notif-panel__chip${threshold === val ? ' is-selected' : ''}`}
+                  onClick={() => setThreshold(val)}
                 >
-                  {t}%
+                  {val}%
                 </button>
               ))}
             </div>
-            <p className="credit-notif-panel__hint">超過 100% 時亦會發送超額通知。</p>
+            <p className="credit-notif-panel__hint">{t('settings.notification.usageOverHint')}</p>
           </div>
         )}
       </div>
@@ -271,7 +274,7 @@ function CreditCardNotifSection({ isOpen, toast }) {
           onClick={handleSave}
           disabled={saving}
         >
-          {saving ? '儲存中...' : '儲存設定'}
+          {saving ? t('common.saving') : t('common.saveSettings')}
         </button>
       </div>
     </div>
@@ -279,6 +282,7 @@ function CreditCardNotifSection({ isOpen, toast }) {
 }
 
 export default function NotificationPanel({ isOpen, toast }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState({ reminder: false, push: false, creditCard: false });
   const reminderRef = useRef(null);
   const pushRef = useRef(null);
@@ -317,17 +321,17 @@ export default function NotificationPanel({ isOpen, toast }) {
 
   return (
     <div className="usm-panel">
-      <h3 className="settings-manage__section-title">通知設定</h3>
+      <h3 className="settings-manage__section-title">{t('settings.notification.sectionTitle')}</h3>
       <div className="category-group" ref={reminderRef}>
-        <SectionHeader id="reminder" label="簽到提醒" />
+        <SectionHeader id="reminder" label={t('settings.notification.checkinReminder')} />
         {open.reminder && <div className="notification-section__body"><ReminderPanel isOpen={isOpen} toast={toast} /></div>}
       </div>
       <div className="category-group" ref={pushRef}>
-        <SectionHeader id="push" label="群組通知" />
+        <SectionHeader id="push" label={t('settings.notification.groupNotification')} />
         {open.push && <div className="notification-section__body"><PushSection /></div>}
       </div>
       <div className="category-group" ref={creditCardRef}>
-        <SectionHeader id="creditCard" label="信用卡提醒" />
+        <SectionHeader id="creditCard" label={t('settings.notification.creditCardReminder')} />
         {open.creditCard && <div className="notification-section__body"><CreditCardNotifSection isOpen={isOpen} toast={toast} /></div>}
       </div>
     </div>

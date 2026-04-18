@@ -5,17 +5,24 @@
     (function() {
       var t = localStorage.getItem('app-theme');
       if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t);
+      var l = localStorage.getItem('app-lang');
+      if (l === 'en') {
+        document.documentElement.lang = 'en';
+        document.documentElement.setAttribute('data-lang', 'en');
+      } else {
+        document.documentElement.setAttribute('data-lang', 'zh');
+      }
     })();
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="My Smart Finance — 個人記帳與財務追蹤工具，支援多幣別、圖表分析、簽到與記帳日曆。" />
-  <meta property="og:title" content="Smart Finance Tracker" />
-  <meta property="og:description" content="My Smart Finance — 個人記帳與財務追蹤工具，支援多幣別、圖表分析、簽到與記帳日曆。" />
+  <meta name="description" content="My Smart Finance — Personal finance tracker with multi-currency support, analytics, and streak calendar. / 個人記帳與財務追蹤工具，支援多幣別、圖表分析、簽到與記帳日曆。" />
+  <meta property="og:title" content="My Smart Finance" />
+  <meta property="og:description" content="Personal finance tracker with multi-currency support, analytics, and streak calendar." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Smart Finance Tracker" />
-  <meta name="twitter:description" content="My Smart Finance — 個人記帳與財務追蹤工具，支援多幣別、圖表分析、簽到與記帳日曆。" />
+  <meta name="twitter:title" content="My Smart Finance" />
+  <meta name="twitter:description" content="Personal finance tracker with multi-currency support, analytics, and streak calendar." />
   <title>Smart Finance Tracker</title>
   <link rel="icon" type="image/svg+xml" href="/favicons/favicon.svg" />
   <link rel="icon" type="image/png" sizes="96x96" href="/favicons/favicon-96x96.png" />

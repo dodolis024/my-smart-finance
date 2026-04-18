@@ -1,59 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/hooks/useTheme';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-const SHUFFLE_INTERVALS = [
-  { id: 'open', label: '每次開啟' },
-  { id: 'daily', label: '每天' },
-  { id: 'weekly', label: '每週' },
-  { id: 'monthly', label: '每月' },
-];
+const SHUFFLE_INTERVAL_IDS = ['open', 'daily', 'weekly', 'monthly'];
 
 const THEME_OPTIONS = [
-  {
-    id: 'default',
-    label: '奶茶',
-    swatch: ['#b59c80', '#FAF9F6', '#dfdad3'],
-  },
-  {
-    id: 'rose',
-    label: '玫瑰',
-    swatch: ['#c06373', '#fcf8f5', '#efd0d9'],
-  },
-  {
-    id: 'graphite',
-    label: '石墨',
-    swatch: ['#656a6c', '#fdfeff', '#cfd6db'],
-  },
-  {
-    id: 'dawn',
-    label: '晨曦',
-    swatch: ['#92a8d1', '#ffffff', '#f7cac9'],
-  },
-  {
-    id: 'soda',
-    label: '汽水',
-    swatch: ['#2e8cb8', '#f0fafd', '#95d7d3'],
-  },
-  {
-    id: 'lavender',
-    label: '薰衣草',
-    swatch: ['#8a7ebc', '#f9f7fb', '#ad9bd7'],
-  },
-  {
-    id: 'sorbet',
-    label: '橘子汽水',
-    swatch: ['#ee9248', '#f0be3a', '#5ab0d4'],
-  },
-  {
-    id: 'peach',
-    label: '蜜桃',
-    swatch: ['#f99584', '#fffdfc', '#f4dbd6'],
-  },
-  {
-    id: 'lime',
-    label: '萊姆',
-    swatch: ['#aec22a', '#fcfdf5', '#e0e6c0'],
-  },
+  { id: 'default', swatch: ['#b59c80', '#FAF9F6', '#dfdad3'] },
+  { id: 'rose', swatch: ['#c06373', '#fcf8f5', '#efd0d9'] },
+  { id: 'graphite', swatch: ['#656a6c', '#fdfeff', '#cfd6db'] },
+  { id: 'dawn', swatch: ['#92a8d1', '#ffffff', '#f7cac9'] },
+  { id: 'soda', swatch: ['#2e8cb8', '#f0fafd', '#95d7d3'] },
+  { id: 'lavender', swatch: ['#8a7ebc', '#f9f7fb', '#ad9bd7'] },
+  { id: 'sorbet', swatch: ['#ee9248', '#f0be3a', '#5ab0d4'] },
+  { id: 'peach', swatch: ['#f99584', '#fffdfc', '#f4dbd6'] },
+  { id: 'lime', swatch: ['#aec22a', '#fcfdf5', '#e0e6c0'] },
 ];
 
 const ChevronRight = ({ isOpen }) => (
@@ -64,6 +24,7 @@ const ChevronRight = ({ isOpen }) => (
 
 export default function ThemePanel() {
   const { theme, setTheme, shuffleEnabled, setShuffleEnabled, shuffleThemes, setShuffleThemes, shuffleInterval, setShuffleInterval } = useTheme();
+  const { t } = useLanguage();
   const [open, setOpen] = useState({ shuffle: false });
   const shuffleRef = useRef(null);
   const toggle = (k) => setOpen((s) => {
@@ -85,7 +46,7 @@ export default function ThemePanel() {
   const toggleShuffleTheme = (id) => {
     if (shuffleThemes.includes(id)) {
       if (shuffleThemes.length <= 1) return;
-      setShuffleThemes(shuffleThemes.filter(t => t !== id));
+      setShuffleThemes(shuffleThemes.filter(tid => tid !== id));
     } else {
       setShuffleThemes([...shuffleThemes, id]);
     }
@@ -93,10 +54,10 @@ export default function ThemePanel() {
 
   return (
     <div className="usm-panel">
-      <h3 className="settings-manage__section-title">外觀主題</h3>
+      <h3 className="settings-manage__section-title">{t('settings.theme.title')}</h3>
 
       <div className="theme-picker">
-        {THEME_OPTIONS.map(({ id, label, swatch }) => (
+        {THEME_OPTIONS.map(({ id, swatch }) => (
           <button
             key={id}
             type="button"
@@ -109,7 +70,7 @@ export default function ThemePanel() {
                 <span key={i} style={{ background: color }} />
               ))}
             </span>
-            <span className="theme-picker__label">{label}</span>
+            <span className="theme-picker__label">{t(`settings.theme.names.${id}`)}</span>
             {theme === id && (
               <svg className="theme-picker__check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
@@ -123,12 +84,12 @@ export default function ThemePanel() {
         <div className="category-group__header" onClick={() => toggle('shuffle')} style={{ cursor: 'pointer', userSelect: 'none' }}>
           <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <ChevronRight isOpen={open.shuffle} />
-            主題輪換
+            {t('settings.theme.shuffleSection')}
           </h4>
         </div>
         {open.shuffle && <div className="theme-shuffle">
           <label className="theme-shuffle__toggle-row">
-            <span className="theme-shuffle__toggle-label">啟用自動輪換</span>
+            <span className="theme-shuffle__toggle-label">{t('settings.theme.enableShuffle')}</span>
             <button
               type="button"
               role="switch"
@@ -143,9 +104,9 @@ export default function ThemePanel() {
           {shuffleEnabled && (
             <div className="theme-shuffle__options">
               <div className="theme-shuffle__field">
-                <span className="theme-shuffle__field-label">參與輪換的主題</span>
+                <span className="theme-shuffle__field-label">{t('settings.theme.shuffleThemes')}</span>
                 <div className="theme-shuffle__themes">
-                  {THEME_OPTIONS.map(({ id, label, swatch }) => (
+                  {THEME_OPTIONS.map(({ id, swatch }) => (
                     <label key={id} className={`theme-shuffle__theme-item${shuffleThemes.includes(id) ? ' is-checked' : ''}`}>
                       <input
                         type="checkbox"
@@ -156,16 +117,16 @@ export default function ThemePanel() {
                       <span className="theme-shuffle__theme-swatch">
                         {swatch.map((color, i) => <span key={i} style={{ background: color }} />)}
                       </span>
-                      <span className="theme-shuffle__theme-label">{label}</span>
+                      <span className="theme-shuffle__theme-label">{t(`settings.theme.names.${id}`)}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
               <div className="theme-shuffle__field">
-                <span className="theme-shuffle__field-label">切換頻率</span>
+                <span className="theme-shuffle__field-label">{t('settings.theme.shuffleInterval')}</span>
                 <div className="theme-shuffle__intervals">
-                  {SHUFFLE_INTERVALS.map(({ id, label }) => (
+                  {SHUFFLE_INTERVAL_IDS.map((id) => (
                     <label key={id} className={`theme-shuffle__interval-item${shuffleInterval === id ? ' is-checked' : ''}`}>
                       <input
                         type="radio"
@@ -175,7 +136,7 @@ export default function ThemePanel() {
                         onChange={() => setShuffleInterval(id)}
                         className="sr-only"
                       />
-                      <span>{label}</span>
+                      <span>{t(`settings.theme.intervals.${id}`)}</span>
                     </label>
                   ))}
                 </div>

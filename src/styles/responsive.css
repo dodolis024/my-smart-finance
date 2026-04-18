@@ -645,3 +645,46 @@
     font-size: 0.75rem;
   }
 }
+
+/* ============================================================
+   English text-width adjustments  [data-lang="en"]
+   Applied globally; media-query overrides follow below.
+   ============================================================ */
+
+/* Bottom tab bar — "Settings" label is wider in English */
+[data-lang="en"] .app-tab-bar__item {
+  font-size: 0.58rem;
+  letter-spacing: -0.01em;
+}
+
+/* Theme picker — "Orange Sorbet" wraps without size reduction */
+[data-lang="en"] .theme-picker__label,
+[data-lang="en"] .theme-shuffle__theme-label {
+  font-size: 0.6rem;
+}
+
+@media (max-width: 600px) {
+  [data-lang="en"] .theme-picker__label,
+  [data-lang="en"] .theme-shuffle__theme-label {
+    font-size: 0.52rem;
+    letter-spacing: -0.02em;
+  }
+
+  /* Stat card labels in English are slightly longer */
+  [data-lang="en"] .stat-label {
+    font-size: 0.72rem;
+    letter-spacing: -0.01em;
+  }
+
+  /* Settings USM tabs — "Notifications" / "Subscriptions" */
+  [data-lang="en"] .usm__tab {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Transaction table header — "Category" / "Payment" are wider */
+  [data-lang="en"] .transaction-history-section .table-wrapper th {
+    font-size: 0.62rem;
+    white-space: nowrap;
+  }
+}

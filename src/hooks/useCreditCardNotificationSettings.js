@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const DEFAULT_SETTINGS = {
   payment_reminder_enabled: false,
@@ -14,6 +15,7 @@ const SETTINGS_KEY = 'credit_card_notification_settings';
 let cachedSettings = null;
 
 export function useCreditCardNotificationSettings() {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState(() => cachedSettings || DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(() => !cachedSettings);
   const [saving, setSaving] = useState(false);
@@ -51,7 +53,7 @@ export function useCreditCardNotificationSettings() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('請先登入');
+      if (!user) throw new Error(t('auth.loginRequired'));
 
       const { error } = await supabase.from('settings').upsert(
         { user_id: user.id, key: SETTINGS_KEY, value: newSettings },

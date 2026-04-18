@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const DEFAULT_SETTINGS = {
   enabled: false,
@@ -13,6 +14,7 @@ const SETTINGS_KEY = 'reminder_settings';
 let cachedSettings = null;
 
 export function useReminderSettings() {
+  const { t } = useLanguage();
   const [reminderSettings, setReminderSettings] = useState(() =>
     cachedSettings || DEFAULT_SETTINGS
   );
@@ -55,7 +57,7 @@ export function useReminderSettings() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('請先登入');
+      if (!user) throw new Error(t('auth.loginRequired'));
 
       const { error } = await supabase.from('settings').upsert(
         { user_id: user.id, key: SETTINGS_KEY, value: settings },

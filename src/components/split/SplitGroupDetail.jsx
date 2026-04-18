@@ -4,6 +4,7 @@ import { useConfirm } from '@/contexts/ConfirmContext';
 import { useSplitExpenses } from '@/hooks/useSplitExpenses';
 import { useSplitSync } from '@/hooks/useSplitSync';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import SplitExpenseItem from './SplitExpenseItem';
 import SplitSettlement from './SplitSettlement';
 import SplitShareDetailModal from './SplitShareDetailModal';
@@ -14,6 +15,7 @@ import GroupSettingsModal from './GroupSettingsModal';
 export default function SplitGroupDetail({ group, onBack, rates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onUpdateGroup }) {
   const toast = useToast();
   const { confirm } = useConfirm();
+  const { t } = useLanguage();
   const { user } = useAuth();
   const actorMember = group.split_members?.find(m => m.user_id === user?.id);
   const {
@@ -40,7 +42,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
       currency,
       default_expense_currency: defaultExpenseCurrency,
     });
-    toast.success('群組設定已更新！');
+    toast.success(t('split.settingsUpdated'));
   };
 
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
@@ -49,7 +51,6 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
   const members = group.split_members || [];
   const settlement = calcSettlement(members, expenses, settlements, rates, group.currency);
 
-  // 每人分攤總額
   const cur = group.currency || 'TWD';
   const ZERO_DECIMAL = new Set(['TWD', 'JPY', 'KRW', 'VND']);
   const fmtAmt = (amt) => {
@@ -70,31 +71,39 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
 
   const handleAddExpense = async (data) => {
     await addExpense(data);
-    toast.success('費用已新增！');
+    toast.success(t('split.expenseAdded'));
     if (actorMember) fetchSyncStatus();
   };
 
   const handleUpdateExpense = async (expenseId, data) => {
     await updateExpense(expenseId, data);
-    toast.success('費用已更新！');
+    toast.success(t('split.expenseUpdated'));
     if (actorMember) fetchSyncStatus();
   };
 
   const handleDeleteExpense = async (id) => {
-    const ok = await confirm('確定要刪除這筆費用嗎？', { danger: true });
+    const ok = await confirm(t('split.deleteExpenseConfirm'), { danger: true });
     if (!ok) return;
     try {
       await deleteExpense(id);
-      toast.success('已刪除。');
+      toast.success(t('split.expenseDeleted'));
       if (actorMember) fetchSyncStatus();
     } catch {
-      toast.error('刪除失敗，請稍後再試。');
+      toast.error(t('split.deleteExpenseFailed'));
     }
   };
 
   const handleSettle = async (transaction) => {
+    const amtStr = transaction.amount % 1 === 0
+      ? transaction.amount.toLocaleString()
+      : transaction.amount.toFixed(2);
     const ok = await confirm(
-      `確認 ${transaction.from} 已還 ${group.currency || 'TWD'} ${transaction.amount % 1 === 0 ? transaction.amount.toLocaleString() : transaction.amount.toFixed(2)} 給 ${transaction.to}？`,
+      t('split.settleConfirm', {
+        from: transaction.from,
+        currency: group.currency || 'TWD',
+        amount: amtStr,
+        to: transaction.to,
+      })
     );
     if (!ok) return;
     try {
@@ -106,20 +115,20 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
         fromName: transaction.from,
         toName: transaction.to,
       });
-      toast.success('已記錄還款！');
+      toast.success(t('split.settlementRecorded'));
     } catch {
-      toast.error('記錄失敗，請稍後再試。');
+      toast.error(t('split.settlementFailed'));
     }
   };
 
   const handleDeleteSettlement = async (id) => {
-    const ok = await confirm('確定要撤銷這筆還款紀錄嗎？', { danger: true });
+    const ok = await confirm(t('split.deleteSettlementConfirm'), { danger: true });
     if (!ok) return;
     try {
       await deleteSettlement(id);
-      toast.success('已撤銷。');
+      toast.success(t('split.settlementDeleted'));
     } catch {
-      toast.error('撤銷失敗，請稍後再試。');
+      toast.error(t('split.deleteSettlementFailed'));
     }
   };
 
@@ -133,7 +142,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(group.invite_code).then(() => {
-      toast.success('代碼已複製！');
+      toast.success(t('split.codeCopied'));
     });
   };
 
@@ -141,16 +150,15 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
     try {
       const result = await syncToLedger();
       if (result?.is_update) {
-        toast.success('帳本已更新！');
+        toast.success(t('split.ledgerUpdated'));
       } else {
-        toast.success('已同步至個人帳本！');
+        toast.success(t('split.syncSuccess'));
       }
     } catch (err) {
-      toast.error(err?.message || '同步失敗，請稍後再試。');
+      toast.error(err?.message || t('split.syncFailed'));
     }
   };
 
-  // 為還款紀錄帶入成員名稱
   const memberMap = Object.fromEntries(members.map(m => [m.id, m.name]));
   const settlementHistory = settlements.map(s => ({
     ...s,
@@ -163,7 +171,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
       <div className="split-group-detail__header">
         <div className="split-group-detail__name-row">
           <p className="split-group-detail__name">{group.name}</p>
-          <button type="button" className="split-group-detail__edit-name-btn" onClick={() => setSettingsOpen(true)} aria-label="編輯群組設定">
+          <button type="button" className="split-group-detail__edit-name-btn" onClick={() => setSettingsOpen(true)} aria-label={t('split.editGroupSettings')}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
             </svg>
@@ -177,7 +185,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
             type="button"
             className="split-group-detail__member-chip split-group-detail__member-add-btn"
             onClick={() => setAddMembersOpen(true)}
-            aria-label="管理成員"
+            aria-label={t('split.manageMembers')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" style={{ width: 14, height: 14 }}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
@@ -186,29 +194,29 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
         </div>
       </div>
 
-      {/* 邀請資訊 */}
+      {/* Invite info */}
       <div className="split-group-detail__invite">
-        <span className="split-group-detail__invite-label">邀請代碼</span>
-        <span className="split-group-detail__invite-code" onClick={handleCopyCode} style={{ cursor: 'pointer' }} title="點擊複製代碼">
+        <span className="split-group-detail__invite-label">{t('split.inviteCode')}</span>
+        <span className="split-group-detail__invite-code" onClick={handleCopyCode} style={{ cursor: 'pointer' }} title={t('split.clickToCopyCode')}>
           {group.invite_code}
         </span>
         <button type="button" className="split-group-detail__invite-copy" onClick={handleCopyLink}>
-          {copied ? '已複製 ✓' : '複製連結'}
+          {copied ? t('split.copied') : t('split.copyLink')}
         </button>
       </div>
 
-      {/* 費用列表 */}
+      {/* Expense list */}
       <div className="split-group-detail__section-header">
-        <p className="split-group-detail__section-title">費用紀錄</p>
+        <p className="split-group-detail__section-title">{t('split.expenseList')}</p>
         <button type="button" className="split-btn-secondary" style={{ width: 'auto', padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={() => setAddExpenseOpen(true)}>
-          ＋ 新增費用
+          {t('split.addExpense')}
         </button>
       </div>
 
       {loading ? (
-        <p className="split-loading">載入中...</p>
+        <p className="split-loading">{t('split.loading')}</p>
       ) : expenses.length === 0 ? (
-        <p className="split-loading">尚無費用，點上方按鈕新增第一筆！</p>
+        <p className="split-loading">{t('split.noExpenses')}</p>
       ) : (
         <>
           {(showAllExpenses ? expenses : expenses.slice(0, 5)).map(e => (
@@ -220,17 +228,17 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
               className="split-group-detail__show-more"
               onClick={() => setShowAllExpenses(prev => !prev)}
             >
-              {showAllExpenses ? '收合紀錄' : `查看全部紀錄（共 ${expenses.length} 筆）`}
+              {showAllExpenses ? t('split.collapseRecords') : t('split.viewAllRecords', { n: expenses.length })}
             </button>
           )}
         </>
       )}
 
-      {/* 每人花費 */}
+      {/* Per person spend */}
       {expenses.length > 0 && (
         <>
           <div className="split-group-detail__section-header split-group-detail__section-header--summary">
-            <p className="split-group-detail__section-title">每人花費</p>
+            <p className="split-group-detail__section-title">{t('split.perPersonSpend')}</p>
           </div>
           <div className="split-member-totals">
             {members.map(m => (
@@ -250,7 +258,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
           </div>
 
           <div className="split-group-detail__section-header split-group-detail__section-header--summary">
-            <p className="split-group-detail__section-title">結算</p>
+            <p className="split-group-detail__section-title">{t('split.settlement')}</p>
           </div>
           <SplitSettlement
             transactions={settlement}
@@ -262,17 +270,20 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
         </>
       )}
 
-      {/* 同步至個人帳本 */}
+      {/* Sync to ledger */}
       {actorMember && (
         <>
           <div className="split-group-detail__section-header split-group-detail__section-header--summary">
-            <p className="split-group-detail__section-title">同步至帳本</p>
+            <p className="split-group-detail__section-title">{t('split.syncSection')}</p>
           </div>
           <div className="split-sync-box">
             {!syncStatus || !syncStatus.synced ? (
               <div className="split-sync-box__unsync">
                 <p className="split-sync-box__desc">
-                  將你在此群組的分攤支出（共 <strong>{syncStatus?.currency || group.currency || 'TWD'} {fmtAmt(syncStatus?.current_total ?? memberTotals[actorMember.id] ?? 0)}</strong>）新增至個人帳本。
+                  {t('split.syncDesc', {
+                    currency: syncStatus?.currency || group.currency || 'TWD',
+                    amount: fmtAmt(syncStatus?.current_total ?? memberTotals[actorMember.id] ?? 0),
+                  })}
                 </p>
                 <button
                   type="button"
@@ -283,17 +294,17 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                   </svg>
-                  {syncing ? '同步中...' : '同步至帳本'}
+                  {syncing ? t('split.syncing') : t('split.syncBtn')}
                 </button>
               </div>
             ) : syncStatus.needs_update ? (
               <div className="split-sync-box__needs-update">
                 <div className="split-sync-box__update-info">
                   <span className="split-sync-box__dot" />
-                  <span className="split-sync-box__update-text">有新費用，帳本尚未更新</span>
+                  <span className="split-sync-box__update-text">{t('split.hasNewExpenses')}</span>
                 </div>
                 <p className="split-sync-box__desc">
-                  帳本記錄：{syncStatus.currency} {fmtAmt(syncStatus.synced_amount)}　→　最新：{syncStatus.currency} {fmtAmt(syncStatus.current_total)}
+                  {t('split.ledgerRecord')}{syncStatus.currency} {fmtAmt(syncStatus.synced_amount)}　→　{t('split.latest')}{syncStatus.currency} {fmtAmt(syncStatus.current_total)}
                 </p>
                 <div className="split-sync-box__actions">
                   <button
@@ -305,10 +316,10 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
-                    {syncing ? '更新中...' : '更新同步'}
+                    {syncing ? t('split.updating') : t('split.updateSync')}
                   </button>
                   <button type="button" className="split-sync-box__btn split-sync-box__btn--secondary" onClick={() => setShareDetailOpen(true)}>
-                    查看明細
+                    {t('split.viewDetail')}
                   </button>
                 </div>
               </div>
@@ -318,7 +329,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="split-sync-box__check-icon" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
-                  <span className="split-sync-box__synced-label">已同步至帳本</span>
+                  <span className="split-sync-box__synced-label">{t('split.synced')}</span>
                   <span className="split-sync-box__synced-amount">{syncStatus.currency} {fmtAmt(syncStatus.synced_amount)}</span>
                 </div>
                 <div className="split-sync-box__actions">
@@ -331,10 +342,10 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
-                    {syncing ? '更新中...' : '重新同步'}
+                    {syncing ? t('split.updating') : t('split.resync')}
                   </button>
                   <button type="button" className="split-sync-box__btn split-sync-box__btn--secondary" onClick={() => setShareDetailOpen(true)}>
-                    查看明細
+                    {t('split.viewDetail')}
                   </button>
                 </div>
               </div>

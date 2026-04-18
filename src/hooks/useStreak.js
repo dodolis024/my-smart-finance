@@ -2,8 +2,10 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getTodayYmd } from '@/lib/utils';
 import { STREAK_MILESTONES } from '@/lib/constants';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export function useStreak(userId) {
+  const { t } = useLanguage();
   const [streakState, setStreakState] = useState({
     count: 0,
     broken: false,
@@ -42,7 +44,7 @@ export function useStreak(userId) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) throw new Error('請先登入');
+    if (!user) throw new Error(t('auth.loginRequired'));
 
     const { error } = await supabase.from('checkins').upsert(
       { user_id: user.id, date: today, source: 'manual' },
@@ -50,10 +52,10 @@ export function useStreak(userId) {
     );
 
     if (error) throw error;
-  }, []);
+  }, [t]);
 
   /**
-   * @param {boolean} [brokenFromServer] - 若傳入，優先使用此值（來自 dashboardData），避免 React 狀態尚未更新時的競態問題
+   * @param {boolean} [brokenFromServer]
    */
   const shouldShowBrokenModal = useCallback((brokenFromServer) => {
     const broken = brokenFromServer ?? streakState.broken;
@@ -94,69 +96,69 @@ export function useStreak(userId) {
     const count = streakState.count || 0;
     if (STREAK_MILESTONES.includes(count)) {
       return {
-        title: '里程碑達成！',
-        text: `你已經連續記帳 ${count} 天了！真棒真棒🥹`,
+        title: t('streak.milestoneTitle'),
+        text: t('streak.milestoneText', { count }),
       };
     }
     return {
-      title: '怎麼這麼乖呀！',
-      text: `今天是記帳的第 ${count} 天，明天也要繼續保持呦☺️`,
+      title: t('streak.regularTitle'),
+      text: t('streak.regularText', { count }),
     };
-  }, [streakState.count]);
+  }, [streakState.count, t]);
 
   const getCurrentModalContent = useCallback(() => {
     const count = streakState.count || 0;
     if (streakState.broken) {
       return {
-        title: '目前連續記帳：0 天',
-        text: '目前沒有連續紀錄，今天要重新開始咪～～',
-        buttonLabel: '好鴨',
+        title: t('streak.neutralBrokenTitle'),
+        text: t('streak.neutralBrokenText'),
+        buttonLabel: t('streak.neutralBrokenBtn'),
         variant: 'neutral',
       };
     }
     if (count > 0) {
       return {
-        title: `目前連續記帳：${count} 天`,
-        text: `太厲害了！已經連續記錄 ${count} 天，繼續往下一個里程碑前進吧！🔥`,
-        buttonLabel: '好的',
+        title: t('streak.neutralActiveTitle', { count }),
+        text: t('streak.neutralActiveText', { count }),
+        buttonLabel: t('streak.neutralActiveBtn'),
         variant: 'neutral',
       };
     }
     return {
-      title: '還沒有連續紀錄',
-      text: '從今天開始記第一筆，就會開始累積你的連續紀錄！',
+      title: t('streak.neutralNoneTitle'),
+      text: t('streak.neutralNoneText'),
       buttonLabel: 'Go Go!',
       variant: 'neutral',
     };
-  }, [streakState.broken, streakState.count]);
+  }, [streakState.broken, streakState.count, t]);
 
-  /** 從 API 回傳的原始資料計算 modal 內容，避免 React 狀態尚未更新時的競態問題 */
+  /** Compute modal content from raw server data to avoid React state race conditions */
   const getCurrentModalContentFromData = useCallback((data) => {
     const count = data?.streakCount ?? 0;
     const broken = !!data?.streakBroken;
     if (broken) {
       return {
-        title: '目前連續記帳：0 天',
-        text: '目前沒有連續紀錄，今天要重新開始咪～～',
-        buttonLabel: '好鴨',
+        title: t('streak.neutralBrokenTitle'),
+        text: t('streak.neutralBrokenText'),
+        buttonLabel: t('streak.neutralBrokenBtn'),
         variant: 'neutral',
       };
     }
     if (count > 0) {
       return {
-        title: `目前連續記帳：${count} 天`,
-        text: `太厲害了！已經連續記錄 ${count} 天，繼續往下一個里程碑前進吧！🔥`,
-        buttonLabel: '好的',
+        title: t('streak.neutralActiveTitle', { count }),
+        text: t('streak.neutralActiveText', { count }),
+        buttonLabel: t('streak.neutralActiveBtn'),
         variant: 'neutral',
       };
     }
     return {
-      title: '還沒有連續紀錄',
-      text: '從今天開始記第一筆，就會開始累積你的連續紀錄！',
+      title: t('streak.neutralNoneTitle'),
+      text: t('streak.neutralNoneText'),
       buttonLabel: 'Go Go!',
       variant: 'neutral',
     };
-  }, []);
+  }, [t]);
 
   return {
     streakState,

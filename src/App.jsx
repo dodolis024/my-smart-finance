@@ -6,6 +6,7 @@ import { ToastProvider, useToast } from '@/contexts/ToastContext';
 import { ConfirmProvider, useConfirm } from '@/contexts/ConfirmContext';
 import { NavActionsProvider } from '@/contexts/NavActionsContext';
 import { ThemeProvider } from '@/hooks/useTheme';
+import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
@@ -17,6 +18,7 @@ const SplitPage = lazy(() => import('@/pages/SplitPage'));
 const JoinPage = lazy(() => import('@/pages/JoinSplitPage'));
 
 function LoadingFallback() {
+  const { t } = useLanguage();
   return (
     <div
       style={{
@@ -30,7 +32,7 @@ function LoadingFallback() {
       role="status"
       aria-live="polite"
     >
-      載入中…
+      {t('common.loading')}
     </div>
   );
 }
@@ -104,17 +106,19 @@ export default function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-        <ThemeProvider>
-          <AuthProvider>
-            <ToastProvider>
-              <ConfirmProvider>
-                <NavActionsProvider>
-                  <AppShell />
-                </NavActionsProvider>
-              </ConfirmProvider>
-            </ToastProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <ConfirmProvider>
+                  <NavActionsProvider>
+                    <AppShell />
+                  </NavActionsProvider>
+                </ConfirmProvider>
+              </ToastProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </LanguageProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

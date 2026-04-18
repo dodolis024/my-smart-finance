@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function UserAvatar({ variant = 'desktop', isOpen: controlledOpen, onOpenChange }) {
   const { userInfo, signOut } = useAuth();
   const { confirm } = useConfirm();
+  const { t } = useLanguage();
   const [internalOpen, setInternalOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
   const wrapperRef = useRef(null);
@@ -32,7 +34,7 @@ export default function UserAvatar({ variant = 'desktop', isOpen: controlledOpen
   const initial = userInfo.email ? userInfo.email[0].toUpperCase() : '?';
 
   const handleLogout = async () => {
-    const confirmed = await confirm('確定要登出嗎？');
+    const confirmed = await confirm(t('auth.logoutConfirm'));
     if (!confirmed) return;
     await signOut();
   };
@@ -58,14 +60,14 @@ export default function UserAvatar({ variant = 'desktop', isOpen: controlledOpen
       </button>
       <div
         className={`user-avatar-dropdown user-avatar-dropdown--${variant}${isOpen ? ' is-open' : ''}`}
-        {...(!isOpen && { inert: 'true' })}
+        inert={isOpen ? undefined : 'true'}
       >
         <div className="user-avatar-dropdown__email">{userInfo.email || '—'}</div>
         <button className="more-menu-item" onClick={handleLogout}>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="more-menu-item-icon">
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
           </svg>
-          <span>登出</span>
+          <span>{t('auth.logout')}</span>
         </button>
       </div>
     </div>

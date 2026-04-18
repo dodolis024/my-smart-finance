@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Module-level cache
 let cachedSubscriptions = null;
@@ -8,6 +9,7 @@ let cachedUserId = null;
 
 export function useSubscriptions() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [subscriptions, setSubscriptions] = useState(() =>
     (cachedSubscriptions && cachedUserId === user?.id) ? cachedSubscriptions : []
   );
@@ -88,7 +90,7 @@ export function useSubscriptions() {
           date: dateStr,
           type: 'expense',
           item_name: formData.name,
-          category: formData.category || '其他',
+          category: formData.category || t('transaction.other'),
           payment_method: formData.payment_method || null,
           account_id: accountId,
           currency: formData.currency || 'TWD',

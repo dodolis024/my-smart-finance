@@ -1,21 +1,23 @@
 import { useMemo } from 'react';
 import { formatMoney } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function PaymentStats({ history = [], accounts = [], onOpenCreditCard }) {
+  const { t } = useLanguage();
   const pairs = useMemo(() => {
     const byMethod = {};
     (history || []).forEach((tx) => {
-      const m = (tx.paymentMethod && String(tx.paymentMethod).trim()) ? tx.paymentMethod : '其他';
+      const m = (tx.paymentMethod && String(tx.paymentMethod).trim()) ? tx.paymentMethod : t('transaction.other');
       const amt = typeof tx.twdAmount === 'number' ? tx.twdAmount : 0;
       byMethod[m] = (byMethod[m] || 0) + amt;
     });
     return Object.entries(byMethod)
       .map(([label, value]) => ({ label, value }))
       .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-  }, [history]);
+  }, [history, t]);
 
   if (pairs.length === 0) {
-    return <p className="payment-stats-empty">本月尚無消費紀錄</p>;
+    return <p className="payment-stats-empty">{t('dashboard.noPaymentData')}</p>;
   }
 
   return (
