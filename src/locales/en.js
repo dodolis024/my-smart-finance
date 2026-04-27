@@ -107,7 +107,7 @@ const en = {
     amount: 'Amount',
     note: 'Note',
     noteOptional: 'Optional',
-    checkinBtn: 'No spending today',
+    checkinBtn: 'Check in',
     checkinAriaLabel: 'Check in (use when no spending today)',
     detailTitle: 'Transaction Details',
     exchangeRate: 'Exchange Rate',
