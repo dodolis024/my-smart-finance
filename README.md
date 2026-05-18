@@ -8,7 +8,9 @@ A React + Supabase personal finance app for transaction tracking, split expenses
 - **Split expenses** - Create groups, invite members with join code, track expenses, and view settlement suggestions
 - **Credit card reminders** - Push reminders for payment due dates and usage threshold alerts
 - **Daily streak** - Keep a no-spend streak with check-in support and streak calendar visualization
-- **Customizable UI** - Multiple app themes, responsive layout, and mobile-friendly interactions
+- **Subscription management** - Define recurring transactions that auto-generate on schedule, with edit and disable support
+- **Bilingual UI** - Switch between Traditional Chinese and English in-app; all UI text, labels, and messages are fully translated
+- **Customizable UI** - 8 app themes (dawn, graphite, rose, soda, sorbet, peach, lime, lavender), responsive layout, and mobile-friendly interactions
 - **Bilingual changelog** - In-app release notes from `CHANGELOG.zh.md` and `CHANGELOG.en.md`
 
 ## Tech Stack
@@ -76,9 +78,10 @@ Open the local URL shown by Vite (typically `http://localhost:5173`).
 │   ├── App.jsx
 │   ├── main.jsx
 │   ├── components/      # UI components by domain (auth, dashboard, split, settings, etc.)
-│   ├── contexts/        # Global providers (toast, confirm, auth actions)
+│   ├── contexts/        # Global providers (auth, language, toast, confirm, nav actions)
 │   ├── hooks/           # Reusable hooks and feature hooks
 │   ├── lib/             # Shared business logic and utilities
+│   ├── locales/         # i18n translation files (zh.js, en.js)
 │   ├── pages/           # Route-level pages (dashboard, auth, split, join split)
 │   └── styles/          # Global/component styles and themes
 ├── public/
