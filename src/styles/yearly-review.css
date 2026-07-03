@@ -1,0 +1,614 @@
+/* ===== Yearly Review — Story Card Style ===== */
+
+.yearly-review {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-top);
+  background: var(--color-bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+/* ---- Header (progress bar + close) ---- */
+.yearly-review__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 8px;
+}
+
+/* ---- Instagram-style progress bar ---- */
+.story-progress-bar {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.story-progress-bar__segment {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.story-progress-bar__segment--passed {
+  background: var(--color-primary);
+}
+
+.story-progress-bar__segment--active {
+  background: var(--color-border);
+}
+
+.story-progress-bar__segment--active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary);
+  animation: segment-fill 0.3s ease forwards;
+}
+
+@keyframes segment-fill {
+  from { transform: scaleX(0); transform-origin: left; }
+  to   { transform: scaleX(1); transform-origin: left; }
+}
+
+/* ---- Close button ---- */
+.yearly-review__close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--color-primary-tint-light);
+  color: var(--color-text);
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.yearly-review__close:hover {
+  background: var(--color-primary-tint);
+}
+
+/* ---- Viewport & sliding track ---- */
+.yearly-review__viewport {
+  flex: 1;
+  overflow: hidden;
+}
+
+.yearly-review__track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- Card slot (direct flex child of track) ---- */
+.yearly-review__card-slot {
+  flex-shrink: 0;
+  width: 100vw;
+  height: 100%;
+}
+
+/* ---- Individual card ---- */
+.review-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 32px 48px;
+  text-align: center;
+  overflow-y: auto;
+}
+
+/* Card backgrounds — subtle theme-tinted glow, varies by primary color */
+.review-card--cover {
+  background: radial-gradient(circle at 20% 15%, var(--color-primary-tint-light), var(--color-bg) 60%);
+}
+
+.review-card--membership {
+  background: radial-gradient(circle at 30% 50%, var(--color-primary-tint-light), var(--color-bg) 60%);
+}
+
+.review-card--totals {
+  background: radial-gradient(circle at 80% 15%, var(--color-primary-tint-light), var(--color-bg) 60%);
+}
+
+.review-card--chart {
+  background: radial-gradient(circle at 15% 85%, var(--color-primary-tint-light), var(--color-bg) 60%);
+}
+
+.review-card--top-category {
+  background: radial-gradient(circle at 85% 85%, var(--color-primary-tint-light), var(--color-bg) 60%);
+}
+
+.review-card--month-highlights {
+  background: radial-gradient(circle at 50% 5%, var(--color-primary-tint-light), var(--color-bg) 60%);
+}
+
+.review-card--checkin {
+  background: radial-gradient(circle at 50% 95%, var(--color-primary-tint-light), var(--color-bg) 60%);
+}
+
+.review-card--closing {
+  background: var(--color-bg);
+}
+
+/* ---- Left/right nav arrows ---- */
+.yearly-review__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 44px;
+  height: 80px;
+  border: none;
+  background: var(--color-primary-tint-light);
+  color: var(--color-text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.yearly-review__nav:hover {
+  background: var(--color-primary-tint);
+  color: var(--color-text);
+}
+
+.yearly-review__nav--prev {
+  left: 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.yearly-review__nav--next {
+  right: 0;
+  border-radius: 8px 0 0 8px;
+}
+
+/* ---- Typography inside cards ---- */
+.review-card__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+}
+
+.review-card__title {
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.review-card__subtitle {
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  color: var(--color-text-secondary);
+  margin-bottom: 40px;
+}
+
+.review-card__hint {
+  margin-top: auto;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ---- Big number ---- */
+.review-big-number {
+  font-size: clamp(2.5rem, 10vw, 4.5rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.review-big-number--positive { color: var(--color-progress-safe); }
+.review-big-number--negative { color: var(--color-progress-danger); }
+
+/* ---- Stat grid (for totals card) ---- */
+.review-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  width: 100%;
+  max-width: 680px;
+  margin: 32px 0;
+}
+
+.review-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-stat-item__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.review-stat-item__value {
+  font-size: clamp(1.2rem, 4vw, 2rem);
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.review-stat-item__value--income  { color: var(--color-progress-safe); }
+.review-stat-item__value--expense { color: var(--color-progress-danger); }
+.review-stat-item__value--positive { color: var(--color-progress-safe); }
+.review-stat-item__value--negative { color: var(--color-progress-danger); }
+
+.review-result-tag {
+  margin-top: 24px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--color-primary-tint-light);
+  color: var(--color-text);
+  border: 1px solid var(--color-primary-tint-border);
+}
+
+/* ---- Bar chart card ---- */
+.review-chart-wrap {
+  width: 100%;
+  max-width: 640px;
+  height: clamp(180px, 35vh, 280px);
+  margin: 24px 0;
+}
+
+/* ---- Top category card ---- */
+.review-category-badge {
+  display: inline-block;
+  padding: 6px 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+  color: var(--color-on-primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.review-category-ring-wrap {
+  position: relative;
+  width: clamp(220px, 58vw, 280px);
+  height: clamp(220px, 58vw, 280px);
+  margin: 8px auto;
+}
+
+.review-category-ring-legend {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-content: center;
+  justify-content: center;
+  row-gap: 10px;
+  column-gap: 8px;
+  padding: 0 12%;
+}
+
+/* Each row's dot/name/pct become direct grid items of the legend grid,
+   so every row shares the same column widths (label column left-aligned,
+   percentage column right-aligned) regardless of text length per row. */
+.review-category-legend-row {
+  display: contents;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.review-category-legend-row__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  align-self: center;
+}
+
+.review-category-legend-row__name {
+  min-width: 0;
+  max-width: 30vw;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-category-legend-row__pct {
+  text-align: right;
+  color: var(--color-text-secondary);
+}
+
+.review-category-summary {
+  max-width: 400px;
+  margin-top: 24px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* ---- Month highlights card ---- */
+.review-highlight-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+  max-width: 480px;
+  margin: 32px 0;
+}
+
+.review-highlight-box {
+  padding: 20px 16px;
+  border-radius: 16px;
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-highlight-box__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-secondary);
+}
+
+.review-highlight-box__month {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--color-text);
+}
+
+.review-highlight-box__amount {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.review-highlight-box--high .review-highlight-box__month { color: var(--color-progress-danger); }
+.review-highlight-box--low  .review-highlight-box__month { color: var(--color-progress-safe); }
+
+/* ---- Membership days card ---- */
+.review-membership-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 32px 0;
+}
+
+.review-membership-stat__unit {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.04em;
+}
+
+/* ---- Checkin card ---- */
+.review-checkin-circle {
+  width: clamp(140px, 30vw, 200px);
+  height: clamp(140px, 30vw, 200px);
+  border-radius: 50%;
+  background: var(--color-card);
+  border: 3px solid var(--color-primary-tint);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 32px auto;
+}
+
+.review-checkin-circle__number {
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  font-weight: 900;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.review-checkin-circle__unit {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.review-encourage {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-top: 8px;
+}
+
+/* ---- Closing card ---- */
+.review-closing-back {
+  margin-top: 48px;
+  padding: 14px 36px;
+  border-radius: 999px;
+  border: 2px solid var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.review-closing-back:hover {
+  background: var(--color-primary-tint-light);
+  border-color: var(--color-primary-hover);
+}
+
+/* ---- Year selector (cover card) ---- */
+.review-year-selector {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.review-year-selector__btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text-secondary);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.review-year-selector__btn:hover {
+  background: var(--color-primary-tint-light);
+}
+
+.review-year-selector__year {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* ---- Loading / empty states ---- */
+.review-card__loading,
+.review-card__empty {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin-top: 32px;
+}
+
+/* ---- Count-up animation ---- */
+@keyframes count-up-fade {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.review-count-up {
+  animation: count-up-fade 0.5s ease forwards;
+}
+
+/* ---- Banner (on Dashboard) ---- */
+.yearly-review-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-tint) 0%,
+    var(--color-primary-tint-light) 100%
+  );
+  border: 1px solid var(--color-primary-tint-border);
+  cursor: pointer;
+  transition: opacity 0.2s;
+  text-decoration: none;
+}
+
+.yearly-review-banner:hover {
+  opacity: 0.85;
+}
+
+.yearly-review-banner__icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.yearly-review-banner__text {
+  flex: 1;
+}
+
+.yearly-review-banner__title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.yearly-review-banner__sub {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-top: 1px;
+}
+
+.yearly-review-banner__cta {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ---- TopBar icon button (mobile) ---- */
+.topbar-yearly-review-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: 10px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.topbar-yearly-review-btn:hover {
+  background: var(--color-primary-tint-hover);
+  color: var(--color-primary);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  .review-card {
+    padding: 72px 20px 40px;
+  }
+
+  .review-stat-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .review-highlight-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .yearly-review__nav {
+    display: none;
+  }
+}

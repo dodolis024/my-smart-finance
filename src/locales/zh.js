@@ -493,6 +493,74 @@ const zh = {
     prevYear: '上一年',
     nextYear: '下一年',
   },
+
+  yearlyReview: {
+    bannerTitle: '年度回顧出爐了',
+    bannerSubtitle: '看看你的 {year} 年財務總結',
+    bannerCta: '查看回顧',
+    close: '關閉',
+    prevYear: '上一年',
+    nextYear: '下一年',
+    noData: '這一年還沒有記帳資料',
+    loading: '載入中…',
+    loadError: '年度回顧載入失敗',
+
+    cover: {
+      title: '{year} 年度回顧',
+      subtitle: '讓我們來看看你的一整年',
+      tapHint: '點擊箭頭或滑動翻頁',
+    },
+
+    membership: {
+      title: '與我們相伴的日子',
+      daysLabel: '天',
+      subtitle: '你從 {date} 起來到這裡',
+    },
+
+    totals: {
+      title: '這一年，你的財務長這樣',
+      income: '總收入',
+      expense: '總支出',
+      balance: '淨結餘',
+      surplus: '結餘正向，表現優秀！',
+      deficit: '支出略高，下一年繼續加油！',
+    },
+
+    monthlyChart: {
+      title: '每月收支趨勢',
+      income: '收入',
+      expense: '支出',
+      months: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+    },
+
+    topCategory: {
+      title: '你花最多的地方',
+      noData: '這一年沒有支出記錄',
+      summary: '這一年共記了 {count} 筆支出，累積消費總額 {amount}',
+    },
+
+    monthHighlights: {
+      title: '最狂與最省的月份',
+      highest: '花最多的月份',
+      lowest: '最省的月份',
+      noData: '資料不足，無法計算',
+    },
+
+    checkin: {
+      title: '記帳里程碑',
+      days: '{days} 天',
+      daysLabel: '今年記帳天數',
+      encourageHigh: '你真的很認真！',
+      encourageMid: '持續記帳，習慣就養成了！',
+      encourageLow: '每一筆都算數，繼續加油！',
+    },
+
+    closing: {
+      title: '感謝你認真記帳的每一天',
+      subtitle: '{year} 年的故事，已經寫進你的帳本裡',
+      backBtn: '回到主畫面',
+    },
+  },
 };
 
 export default zh;

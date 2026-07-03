@@ -1,4 +1,4 @@
-import { MONTH_ABBREVS } from './constants';
+import { MONTH_ABBREVS, ZERO_DECIMAL_CURRENCIES } from './constants';
 
 export function debounce(func, wait) {
   let timeout;
@@ -16,11 +16,14 @@ export function getTodayYmd() {
   return `${year}-${month}-${day}`;
 }
 
+// TWD is zero-decimal by this app's convention (see ZERO_DECIMAL_CURRENCIES) —
+// storage keeps the raw computed value, only the display is rounded.
 export function formatMoney(num) {
   return new Intl.NumberFormat('zh-TW', {
     style: 'currency',
     currency: 'TWD',
     minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(num);
 }
 
@@ -33,6 +36,22 @@ export function formatMoneyInteger(num) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(isNaN(n) ? 0 : Math.round(n));
+}
+
+/**
+ * Formats an amount for display in its own (non-TWD) transaction currency —
+ * rounds to whole units for zero-decimal currencies (see ZERO_DECIMAL_CURRENCIES),
+ * otherwise keeps 2 decimals. Display-only; never mutates the stored value.
+ */
+export function formatCurrencyAmount(amount, currencyCode) {
+  const n = typeof amount === 'number' ? amount : parseFloat(amount);
+  if (isNaN(n)) return '';
+  const code = String(currencyCode || 'TWD').toUpperCase();
+  const fractionDigits = ZERO_DECIMAL_CURRENCIES.has(code) ? 0 : 2;
+  return new Intl.NumberFormat('zh-TW', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(n);
 }
 
 export function escapeHtml(s) {

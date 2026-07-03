@@ -22,6 +22,7 @@ import TransactionTable from '@/components/transactions/TransactionTable';
 import CreditCardModal from '@/components/common/CreditCardModal';
 import StreakBadge from '@/components/streak/StreakBadge';
 import StreakModal from '@/components/streak/StreakModal';
+import YearlyReviewBanner from '@/components/dashboard/YearlyReviewBanner';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -258,6 +259,8 @@ export default function DashboardPage() {
       </FormColumn>
 
       <DashboardColumn>
+        <YearlyReviewBanner />
+
         <section className="stats-section">
           <div className="stats-section-header">
             <div className="stats-section-header__title-group">

@@ -17,6 +17,7 @@ const AuthPage = lazy(() => import('@/pages/AuthPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const SplitPage = lazy(() => import('@/pages/SplitPage'));
 const JoinPage = lazy(() => import('@/pages/JoinSplitPage'));
+const YearlyReviewPage = lazy(() => import('@/pages/YearlyReviewPage'));
 
 function LoadingFallback() {
   const { t } = useLanguage();
@@ -90,6 +91,14 @@ function AppShell() {
             element={
               <ProtectedRoute>
                 <JoinPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/yearly-review"
+            element={
+              <ProtectedRoute>
+                <YearlyReviewPage />
               </ProtectedRoute>
             }
           />

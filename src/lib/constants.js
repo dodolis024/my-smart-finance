@@ -33,6 +33,15 @@ export const DEFAULT_ACCOUNT = {
   PAYMENT_DUE_DAY: 25,
 };
 
+// Currencies with no minor unit — displayed as whole numbers, no decimal point.
+// Based on the standard ISO 4217 zero-decimal list, plus TWD by this app's own
+// convention (Taiwan practice treats NT$ as whole dollars despite ISO allowing 2).
+export const ZERO_DECIMAL_CURRENCIES = new Set([
+  'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW',
+  'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+  'TWD',
+]);
+
 export const CHART_COLORS = [
   'hsl(11, 36%, 60%)',
   'hsl(26, 36%, 60%)',

@@ -493,6 +493,74 @@ const en = {
     prevYear: 'Previous year',
     nextYear: 'Next year',
   },
+
+  yearlyReview: {
+    bannerTitle: 'Your Year in Review is Ready',
+    bannerSubtitle: 'See your {year} financial recap',
+    bannerCta: 'View Review',
+    close: 'Close',
+    prevYear: 'Previous year',
+    nextYear: 'Next year',
+    noData: 'No records found for this year',
+    loading: 'Loading…',
+    loadError: 'Could not load your year in review',
+
+    cover: {
+      title: '{year} Year in Review',
+      subtitle: "Let's look back at your whole year",
+      tapHint: 'Tap the arrows or swipe to navigate',
+    },
+
+    membership: {
+      title: 'Days With Us',
+      daysLabel: 'days',
+      subtitle: 'You joined Smart Finance on {date}',
+    },
+
+    totals: {
+      title: 'Your Year at a Glance',
+      income: 'Total Income',
+      expense: 'Total Expense',
+      balance: 'Net Balance',
+      surplus: 'Positive balance — great job!',
+      deficit: 'Spending was higher — keep it up next year!',
+    },
+
+    monthlyChart: {
+      title: 'Monthly Income & Expense',
+      income: 'Income',
+      expense: 'Expense',
+      months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+    },
+
+    topCategory: {
+      title: 'Where You Spent the Most',
+      noData: 'No expense records this year',
+      summary: 'You logged {count} expenses this year, totaling {amount}',
+    },
+
+    monthHighlights: {
+      title: 'Your Peaks & Valleys',
+      highest: 'Highest Spending Month',
+      lowest: 'Most Frugal Month',
+      noData: 'Not enough data to compare',
+    },
+
+    checkin: {
+      title: 'Tracking Milestones',
+      days: '{days} days',
+      daysLabel: 'Days tracked this year',
+      encourageHigh: 'You are incredibly consistent!',
+      encourageMid: 'Keep it up — habits take time!',
+      encourageLow: 'Every entry counts. Keep going!',
+    },
+
+    closing: {
+      title: 'Thank you for tracking every day',
+      subtitle: 'The story of {year} is written in your records',
+      backBtn: 'Back to Dashboard',
+    },
+  },
 };
 
 export default en;

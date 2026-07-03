@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Modal from '@/components/common/Modal';
-import { formatMoney, formatNumberWithCommas } from '@/lib/utils';
+import { formatMoney, formatCurrencyAmount } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { supabase } from '@/lib/supabase';
 import SplitShareDetailModal from '@/components/split/SplitShareDetailModal';
@@ -107,7 +107,7 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose }) 
             <div className="transaction-detail-item">
               <div className="transaction-detail-label">{t('transaction.amount')}</div>
               <div className="transaction-detail-value transaction-detail-amount">
-                {currency} {formatNumberWithCommas(String(originalAmount))}
+                {currency} {formatCurrencyAmount(originalAmount, currency)}
               </div>
             </div>
             {currency !== 'TWD' && (

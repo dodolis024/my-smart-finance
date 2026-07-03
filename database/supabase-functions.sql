@@ -367,5 +367,130 @@ END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 -- =============================================================================
+-- 5. 年度回顧（Yearly Review）
+-- =============================================================================
+-- 功能：回傳指定年份的年度彙總、月份明細、支出類別排行、亮點數據
+-- 參數：p_year INTEGER
+-- 回傳：JSON 物件
+DROP FUNCTION IF EXISTS get_yearly_review(INTEGER);
+
+CREATE OR REPLACE FUNCTION get_yearly_review(p_year INTEGER)
+RETURNS JSON AS $$
+DECLARE
+    v_user_id UUID;
+    v_annual_totals JSON;
+    v_monthly_breakdown JSON;
+    v_top_categories JSON;
+    v_highest_month JSON;
+    v_lowest_month JSON;
+    v_checkin_days INTEGER;
+    v_result JSON;
+BEGIN
+    v_user_id := auth.uid();
+    IF v_user_id IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'User not authenticated');
+    END IF;
+
+    -- 年度總計
+    SELECT json_build_object(
+        'totalIncome',       COALESCE(SUM(CASE WHEN type = 'income'  THEN twd_amount ELSE 0 END), 0),
+        'totalExpense',      COALESCE(SUM(CASE WHEN type = 'expense' THEN twd_amount ELSE 0 END), 0),
+        'balance',           COALESCE(SUM(CASE WHEN type = 'income'  THEN twd_amount ELSE -twd_amount END), 0),
+        'transactionCount',  COUNT(*),
+        'expenseCount',      COUNT(*) FILTER (WHERE type = 'expense')
+    ) INTO v_annual_totals
+    FROM transactions
+    WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year;
+
+    -- 12 個月明細（無資料的月份補 0）
+    SELECT json_agg(
+        json_build_object(
+            'month',   m.month,
+            'income',  COALESCE(t.income,  0),
+            'expense', COALESCE(t.expense, 0),
+            'balance', COALESCE(t.income, 0) - COALESCE(t.expense, 0)
+        ) ORDER BY m.month
+    )
+    INTO v_monthly_breakdown
+    FROM generate_series(1, 12) AS m(month)
+    LEFT JOIN (
+        SELECT
+            EXTRACT(MONTH FROM date)::INT AS month,
+            SUM(CASE WHEN type = 'income'  THEN twd_amount ELSE 0 END) AS income,
+            SUM(CASE WHEN type = 'expense' THEN twd_amount ELSE 0 END) AS expense
+        FROM transactions
+        WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year
+        GROUP BY EXTRACT(MONTH FROM date)
+    ) t ON m.month = t.month;
+
+    -- 支出類別排行（Top 5）
+    SELECT json_agg(
+        json_build_object(
+            'category',   category,
+            'amount',     total,
+            'percentage', ROUND((total / NULLIF(grand_total, 0)) * 100, 1)
+        )
+    )
+    INTO v_top_categories
+    FROM (
+        SELECT
+            category,
+            SUM(twd_amount)              AS total,
+            SUM(SUM(twd_amount)) OVER () AS grand_total
+        FROM transactions
+        WHERE user_id = v_user_id
+            AND EXTRACT(YEAR FROM date) = p_year
+            AND type = 'expense'
+        GROUP BY category
+        ORDER BY SUM(twd_amount) DESC
+        LIMIT 5
+    ) ranked;
+
+    -- 支出最高的月份
+    SELECT json_build_object('month', month, 'expense', expense)
+    INTO v_highest_month
+    FROM (
+        SELECT EXTRACT(MONTH FROM date)::INT AS month, SUM(twd_amount) AS expense
+        FROM transactions
+        WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year AND type = 'expense'
+        GROUP BY EXTRACT(MONTH FROM date)
+        ORDER BY SUM(twd_amount) DESC
+        LIMIT 1
+    ) h;
+
+    -- 支出最低的月份（只計算有支出記錄的月份）
+    SELECT json_build_object('month', month, 'expense', expense)
+    INTO v_lowest_month
+    FROM (
+        SELECT EXTRACT(MONTH FROM date)::INT AS month, SUM(twd_amount) AS expense
+        FROM transactions
+        WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year AND type = 'expense'
+        GROUP BY EXTRACT(MONTH FROM date)
+        ORDER BY SUM(twd_amount) ASC
+        LIMIT 1
+    ) l;
+
+    -- 該年簽到天數
+    SELECT COUNT(DISTINCT date)::INT
+    INTO v_checkin_days
+    FROM checkins
+    WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year;
+
+    RETURN json_build_object(
+        'success',          true,
+        'annualTotals',     COALESCE(v_annual_totals, json_build_object(
+                                'totalIncome', 0, 'totalExpense', 0, 'balance', 0, 'transactionCount', 0, 'expenseCount', 0)),
+        'monthlyBreakdown', COALESCE(v_monthly_breakdown, '[]'::json),
+        'topCategories',    COALESCE(v_top_categories, '[]'::json),
+        'highlights',       json_build_object(
+                                'highestMonth', v_highest_month,
+                                'lowestMonth',  v_lowest_month,
+                                'checkinDays',  COALESCE(v_checkin_days, 0)
+                            )
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================================================
 -- 完成！
 -- =============================================================================

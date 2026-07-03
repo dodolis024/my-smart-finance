@@ -52,6 +52,7 @@ serve(async (req) => {
       JPY: 0.2,
       EUR: 32.0,
       GBP: 38.0,
+      KRW: 0.022,
     }
 
     // 以 TWD 為基準貨幣取得匯率，使用指數退避重試機制
@@ -116,6 +117,7 @@ serve(async (req) => {
       JPY: rates.JPY ? (1 / rates.JPY) : (lastKnownGood.JPY || defaultRates.JPY),
       EUR: rates.EUR ? (1 / rates.EUR) : (lastKnownGood.EUR || defaultRates.EUR),
       GBP: rates.GBP ? (1 / rates.GBP) : (lastKnownGood.GBP || defaultRates.GBP),
+      KRW: rates.KRW ? (1 / rates.KRW) : (lastKnownGood.KRW || defaultRates.KRW),
     }
 
     console.log('Fetched new exchange rates:', newRates)
