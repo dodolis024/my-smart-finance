@@ -57,6 +57,7 @@ serve(async (req) => {
     const userMap = new Map<string, {
       config?: { enabled: boolean; timezone: string; time: string }
       lastSentDate?: string
+      lastSentAt?: string
     }>()
 
     for (const row of allSettings) {
@@ -66,7 +67,9 @@ serve(async (req) => {
         entry.config = row.value as { enabled: boolean; timezone: string; time: string }
       }
       if (row.key === 'reminder_last_sent') {
-        entry.lastSentDate = (row.value as { date?: string })?.date
+        const v = row.value as { date?: string; sentAt?: string }
+        entry.lastSentDate = v?.date
+        entry.lastSentAt = v?.sentAt
       }
     }
 
@@ -77,7 +80,7 @@ serve(async (req) => {
     // 收集需要發信的用戶（含 userToday，供寄信後更新用）
     const usersToNotify: { userId: string; email: string; userToday: string }[] = []
 
-    for (const [userId, { config, lastSentDate }] of userMap) {
+    for (const [userId, { config, lastSentDate, lastSentAt }] of userMap) {
       // 跳過沒設定或未啟用的用戶
       if (!config?.enabled) continue
 
@@ -94,9 +97,22 @@ serve(async (req) => {
       // 4. 取得該用戶時區的「今天」日期
       const userToday = getUserToday(now, userTimezone)
 
-      // 5. 防重複：如果今天已經寄過，跳過
-      if (lastSentDate === userToday) {
-        console.log(`User ${userId} already received reminder for ${userToday}, skipping duplicate`)
+      // 5. 防重複：距上次寄信不到 4 小時就跳過
+      //    改用「時間戳」而非「日期字串」比對，避免跨時區旅行時新時區的提醒被錯誤壓下。
+      //    例：台北 23:00 寄出後飛抵洛杉磯，當地 23:00 仍屬同一日曆日，但實際相隔 15 小時，
+      //    此時應該要再提醒一次。若沿用日期比對，這封提醒會被誤判為重複而漏寄，
+      //    使用者便可能整整超過一天沒收到提醒、錯過簽到而中斷 streak。
+      //    4 小時門檻：同時區每日相隔 24h 會正常寄出；洲際旅行時差 ≥ 5h 也會寄出；
+      //    僅短途旅行（時差 < 4h、剛提醒過）會被壓下。
+      if (lastSentAt) {
+        const hoursSinceLastSent = (now.getTime() - new Date(lastSentAt).getTime()) / 3_600_000
+        if (hoursSinceLastSent < 4) {
+          console.log(`User ${userId} received reminder ${hoursSinceLastSent.toFixed(1)}h ago, skipping duplicate`)
+          continue
+        }
+      } else if (lastSentDate === userToday) {
+        // 向後相容：舊紀錄沒有 sentAt，退回原本的日期比對
+        console.log(`User ${userId} already received reminder for ${userToday} (legacy), skipping duplicate`)
         continue
       }
 
@@ -148,11 +164,11 @@ serve(async (req) => {
           throw new Error(`Brevo API error ${res.status}: ${errBody}`)
         }
 
-        // 寄信成功 → 寫入 reminder_last_sent 防止重複
+        // 寄信成功 → 寫入 reminder_last_sent 防止重複（含 UTC 時間戳供跨時區判斷）
         await supabase
           .from('settings')
           .upsert(
-            { user_id: userId, key: 'reminder_last_sent', value: { date: userToday } },
+            { user_id: userId, key: 'reminder_last_sent', value: { date: userToday, sentAt: now.toISOString() } },
             { onConflict: 'user_id,key' }
           )
 

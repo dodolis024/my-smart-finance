@@ -6,6 +6,7 @@ import { ToastProvider, useToast } from '@/contexts/ToastContext';
 import { ConfirmProvider, useConfirm } from '@/contexts/ConfirmContext';
 import { NavActionsProvider } from '@/contexts/NavActionsContext';
 import { ThemeProvider } from '@/hooks/useTheme';
+import { useTimezoneSync } from '@/hooks/useTimezoneSync';
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
@@ -55,6 +56,9 @@ function ProtectedRoute({ children }) {
 function AppShell() {
   const toast = useToast();
   const { confirmState, handleConfirm, handleCancel } = useConfirm();
+
+  // 靜默同步簽到提醒時區，讓跨時區旅行的用戶提醒仍在正確時間送達
+  useTimezoneSync();
 
   return (
     <>

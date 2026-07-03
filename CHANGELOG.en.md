@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Improved cross-timezone streak reminders: auto-sync device timezone, full IANA timezone picker, and fixed missed reminders when traveling due to date-only dedup
+
 ## [1.17.1] - Apr-27 2026
 - Improved desktop English transaction form title and check-in button layout to prevent wrapping and overflow
 
