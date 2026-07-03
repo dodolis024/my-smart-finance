@@ -142,7 +142,11 @@
   background: radial-gradient(circle at 50% 5%, var(--color-primary-tint-light), var(--color-bg) 60%);
 }
 
-.review-card--checkin {
+.review-card--top-expenses {
+  background: radial-gradient(circle at 85% 40%, var(--color-primary-tint-light), var(--color-bg) 60%);
+}
+
+.review-card--habit {
   background: radial-gradient(circle at 50% 95%, var(--color-primary-tint-light), var(--color-bg) 60%);
 }
 
@@ -444,6 +448,103 @@
   font-weight: 600;
   color: var(--color-text-secondary);
   margin-top: 8px;
+}
+
+/* ---- Top expenses card ---- */
+.review-top-expenses {
+  list-style: none;
+  width: 100%;
+  max-width: 480px;
+  margin: 28px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-expense-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+}
+
+.review-expense-row__rank {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  background: var(--color-primary-tint);
+  color: var(--color-primary-dark);
+}
+
+.review-expense-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.review-expense-row__name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-expense-row__meta {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.review-expense-row__amount {
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-progress-danger);
+  letter-spacing: -0.02em;
+}
+
+/* ---- Habit journey card (checkin + membership + entries) ---- */
+.review-habit-stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 8px;
+}
+
+.review-habit-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.review-habit-stat__value {
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  font-weight: 900;
+  color: var(--color-text);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.review-habit-stat__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
 }
 
 /* ---- Closing card ---- */

@@ -1,19 +1,21 @@
 import { useMemo } from 'react';
 import {
   Chart as ChartJS,
-  BarElement,
+  LineElement,
+  PointElement,
   CategoryScale,
   LinearScale,
+  Filler,
   Tooltip,
   Legend,
 } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/hooks/useTheme';
 import zh from '@/locales/zh';
 import en from '@/locales/en';
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Filler, Tooltip, Legend);
 
 function cssVar(name, fallback) {
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -48,16 +50,31 @@ export default function MonthlyBarChart({ data = [], loading }) {
       {
         label: t('yearlyReview.monthlyChart.income'),
         data: data.map((d) => d?.income ?? 0),
-        backgroundColor: withAlpha(colors.income, 0.75),
-        borderRadius: 4,
-        borderSkipped: false,
+        borderColor: colors.income,
+        backgroundColor: colors.income,
+        pointBackgroundColor: colors.income,
+        pointRadius: 2.5,
+        pointHoverRadius: 4,
+        borderWidth: 2,
+        tension: 0.3,
+        // 收入線往支出線填色：收入在上填淡綠（有結餘），反超到下方填淡紅（透支）
+        fill: {
+          target: 1,
+          above: withAlpha(colors.income, 0.16),
+          below: withAlpha(colors.expense, 0.16),
+        },
       },
       {
         label: t('yearlyReview.monthlyChart.expense'),
         data: data.map((d) => d?.expense ?? 0),
-        backgroundColor: withAlpha(colors.expense, 0.75),
-        borderRadius: 4,
-        borderSkipped: false,
+        borderColor: colors.expense,
+        backgroundColor: colors.expense,
+        pointBackgroundColor: colors.expense,
+        pointRadius: 2.5,
+        pointHoverRadius: 4,
+        borderWidth: 2,
+        tension: 0.3,
+        fill: false,
       },
     ],
   }), [data, monthLabels, t, colors]);
@@ -65,13 +82,17 @@ export default function MonthlyBarChart({ data = [], loading }) {
   const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: {
         position: 'top',
         labels: {
           color: colors.text,
           font: { size: 11 },
-          boxWidth: 12,
+          usePointStyle: true,
+          pointStyle: 'circle',
+          boxWidth: 6,
+          boxHeight: 6,
           padding: 12,
         },
       },
@@ -109,7 +130,7 @@ export default function MonthlyBarChart({ data = [], loading }) {
     <div className="review-card review-card--chart">
       <p className="review-card__eyebrow">{t('yearlyReview.monthlyChart.title')}</p>
       <div className="review-chart-wrap">
-        <Bar data={chartData} options={options} />
+        <Line data={chartData} options={options} />
       </div>
     </div>
   );

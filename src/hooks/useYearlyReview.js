@@ -32,6 +32,7 @@ export function useYearlyReview(year) {
     annualTotals: data?.annualTotals ?? null,
     monthlyBreakdown: data?.monthlyBreakdown ?? [],
     topCategories: data?.topCategories ?? [],
+    topExpenses: data?.topExpenses ?? [],
     highlights: data?.highlights ?? null,
   };
 }

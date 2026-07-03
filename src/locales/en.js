@@ -517,12 +517,6 @@ const en = {
       tapHint: 'Tap the arrows or swipe to navigate',
     },
 
-    membership: {
-      title: 'Days With Us',
-      daysLabel: 'days',
-      subtitle: 'You joined Smart Finance on {date}',
-    },
-
     totals: {
       title: 'Your Year at a Glance',
       income: 'Total Income',
@@ -545,17 +539,26 @@ const en = {
       summary: 'You logged {count} expenses this year, totaling {amount}',
     },
 
+    topExpenses: {
+      title: 'Your 3 Biggest Purchases',
+      noData: 'No expense records this year',
+      untitled: 'Untitled item',
+      dateLabel: '{month} {day}',
+    },
+
     monthHighlights: {
-      title: 'Your Peaks & Valleys',
-      highest: 'Highest Spending Month',
-      lowest: 'Most Frugal Month',
+      title: 'Best & Tightest Months',
+      bestSaving: 'Best Saving Month',
+      mostOverspent: 'Most Overspent Month',
+      netLabel: 'Net {amount}',
       noData: 'Not enough data to compare',
     },
 
-    checkin: {
-      title: 'Tracking Milestones',
-      days: '{days} days',
-      daysLabel: 'Days tracked this year',
+    habit: {
+      title: 'Your Consistency',
+      checkinLabel: 'Days tracked this year',
+      memberLabel: 'Days with us',
+      entriesLabel: 'Entries logged',
       encourageHigh: 'You are incredibly consistent!',
       encourageMid: 'Keep it up — habits take time!',
       encourageLow: 'Every entry counts. Keep going!',

@@ -4,12 +4,12 @@ import { useYearlyReview } from '@/hooks/useYearlyReview';
 import { useLanguage } from '@/contexts/LanguageContext';
 import StoryProgressBar from '@/components/yearly-review/StoryProgressBar';
 import ReviewCover from '@/components/yearly-review/ReviewCover';
-import MembershipDays from '@/components/yearly-review/MembershipDays';
 import AnnualTotals from '@/components/yearly-review/AnnualTotals';
 import MonthlyBarChart from '@/components/yearly-review/MonthlyBarChart';
 import TopCategory from '@/components/yearly-review/TopCategory';
+import TopExpenses from '@/components/yearly-review/TopExpenses';
 import MonthHighlights from '@/components/yearly-review/MonthHighlights';
-import CheckinMilestone from '@/components/yearly-review/CheckinMilestone';
+import HabitJourney from '@/components/yearly-review/HabitJourney';
 import ReviewClosing from '@/components/yearly-review/ReviewClosing';
 import '@/styles/yearly-review.css';
 
@@ -28,28 +28,50 @@ export default function YearlyReviewPage() {
     return Number.isFinite(fromUrl) ? fromUrl : defaultYear();
   });
 
-  const { loading, error, annualTotals, monthlyBreakdown, topCategories, highlights } = useYearlyReview(year);
+  const { loading, error, annualTotals, monthlyBreakdown, topCategories, topExpenses, highlights } = useYearlyReview(year);
 
   const handleClose = useCallback(() => navigate('/'), [navigate]);
 
-  const cards = [
-    <ReviewCover key="cover" year={year} onYearChange={(y) => { setYear(y); setCurrentIndex(0); }} />,
-    <MembershipDays key="membership" loading={loading} />,
-    <AnnualTotals key="totals" data={annualTotals} loading={loading} active={currentIndex === 2} />,
-    <MonthlyBarChart key="chart" data={monthlyBreakdown} loading={loading} />,
-    <TopCategory
-      key="category"
-      data={topCategories}
-      loading={loading}
-      expenseCount={annualTotals?.expenseCount}
-      totalExpense={annualTotals?.totalExpense}
-    />,
-    <MonthHighlights key="months" highlights={highlights} loading={loading} />,
-    <CheckinMilestone key="checkin" highlights={highlights} loading={loading} />,
-    <ReviewClosing key="closing" year={year} onClose={handleClose} />,
+  // Each card renders from its own index, so `active`-driven animations stay
+  // correct no matter how the order changes.
+  const cardDefs = [
+    { key: 'cover', render: () => (
+      <ReviewCover year={year} onYearChange={(y) => { setYear(y); setCurrentIndex(0); }} />
+    ) },
+    { key: 'totals', render: (active) => (
+      <AnnualTotals data={annualTotals} loading={loading} active={active} />
+    ) },
+    { key: 'chart', render: () => (
+      <MonthlyBarChart data={monthlyBreakdown} loading={loading} />
+    ) },
+    { key: 'category', render: () => (
+      <TopCategory
+        data={topCategories}
+        loading={loading}
+        expenseCount={annualTotals?.expenseCount}
+        totalExpense={annualTotals?.totalExpense}
+      />
+    ) },
+    { key: 'expenses', render: () => (
+      <TopExpenses data={topExpenses} loading={loading} />
+    ) },
+    { key: 'months', render: () => (
+      <MonthHighlights data={monthlyBreakdown} loading={loading} />
+    ) },
+    { key: 'habit', render: () => (
+      <HabitJourney
+        year={year}
+        checkinDays={highlights?.checkinDays ?? 0}
+        transactionCount={annualTotals?.transactionCount ?? 0}
+        loading={loading}
+      />
+    ) },
+    { key: 'closing', render: () => (
+      <ReviewClosing year={year} onClose={handleClose} />
+    ) },
   ];
 
-  const total = cards.length;
+  const total = cardDefs.length;
   const goTo = useCallback((i) => setCurrentIndex(Math.max(0, Math.min(i, total - 1))), [total]);
   const prev = useCallback(() => goTo(currentIndex - 1), [currentIndex, goTo]);
   const next = useCallback(() => goTo(currentIndex + 1), [currentIndex, goTo]);
@@ -109,9 +131,9 @@ export default function YearlyReviewPage() {
           className="yearly-review__track"
           style={{ transform: `translateX(-${currentIndex * 100}vw)` }}
         >
-          {cards.map((card, i) => (
-            <div key={i} className="yearly-review__card-slot">
-              {card}
+          {cardDefs.map((card, i) => (
+            <div key={card.key} className="yearly-review__card-slot">
+              {card.render(i === currentIndex)}
             </div>
           ))}
         </div>

@@ -384,6 +384,7 @@ DECLARE
     v_highest_month JSON;
     v_lowest_month JSON;
     v_checkin_days INTEGER;
+    v_top_expenses JSON;
     v_result JSON;
 BEGIN
     v_user_id := auth.uid();
@@ -476,12 +477,31 @@ BEGIN
     FROM checkins
     WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year;
 
+    -- 金額最高的三筆支出
+    SELECT json_agg(
+        json_build_object(
+            'itemName', item_name,
+            'category', category,
+            'amount',   twd_amount,
+            'date',     date
+        ) ORDER BY twd_amount DESC
+    )
+    INTO v_top_expenses
+    FROM (
+        SELECT item_name, category, twd_amount, date
+        FROM transactions
+        WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year AND type = 'expense'
+        ORDER BY twd_amount DESC
+        LIMIT 3
+    ) top3;
+
     RETURN json_build_object(
         'success',          true,
         'annualTotals',     COALESCE(v_annual_totals, json_build_object(
                                 'totalIncome', 0, 'totalExpense', 0, 'balance', 0, 'transactionCount', 0, 'expenseCount', 0)),
         'monthlyBreakdown', COALESCE(v_monthly_breakdown, '[]'::json),
         'topCategories',    COALESCE(v_top_categories, '[]'::json),
+        'topExpenses',      COALESCE(v_top_expenses, '[]'::json),
         'highlights',       json_build_object(
                                 'highestMonth', v_highest_month,
                                 'lowestMonth',  v_lowest_month,

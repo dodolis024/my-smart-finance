@@ -517,12 +517,6 @@ const zh = {
       tapHint: '點擊箭頭或滑動翻頁',
     },
 
-    membership: {
-      title: '與我們相伴的日子',
-      daysLabel: '天',
-      subtitle: '你從 {date} 起來到這裡',
-    },
-
     totals: {
       title: '這一年，你的財務長這樣',
       income: '總收入',
@@ -545,17 +539,26 @@ const zh = {
       summary: '這一年共記了 {count} 筆支出，累積消費總額 {amount}',
     },
 
+    topExpenses: {
+      title: '最大的三筆消費',
+      noData: '這一年沒有支出記錄',
+      untitled: '未命名項目',
+      dateLabel: '{month}{day}日',
+    },
+
     monthHighlights: {
-      title: '最狂與最省的月份',
-      highest: '花最多的月份',
-      lowest: '最省的月份',
+      title: '最會存與最透支的月份',
+      bestSaving: '最會存錢的月份',
+      mostOverspent: '最透支的月份',
+      netLabel: '淨結餘 {amount}',
       noData: '資料不足，無法計算',
     },
 
-    checkin: {
-      title: '記帳里程碑',
-      days: '{days} 天',
-      daysLabel: '今年記帳天數',
+    habit: {
+      title: '你的堅持',
+      checkinLabel: '今年記帳天數',
+      memberLabel: '陪伴天數',
+      entriesLabel: '記錄筆數',
       encourageHigh: '你真的很認真！',
       encourageMid: '持續記帳，習慣就養成了！',
       encourageLow: '每一筆都算數，繼續加油！',
