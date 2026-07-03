@@ -182,6 +182,12 @@ const en = {
       en: 'English',
     },
 
+    currency: {
+      title: 'Default Currency',
+      label: 'Currency used by default when recording',
+      saveError: 'Failed to save default currency',
+    },
+
     tabs: {
       theme: 'Appearance',
       options: 'Categories',

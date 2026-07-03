@@ -4,6 +4,7 @@ import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import CategoryManager from './CategoryManager';
 import AccountManager from './AccountManager';
 import { useSettings } from '@/hooks/useSettings';
+import { useDashboard } from '@/hooks/useDashboard';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -19,10 +20,23 @@ function OptionsPanel({ isOpen, confirm, toast }) {
     expenseCategories, incomeCategories, loading, loadError,
     loadSettingsData, addCategory, renameCategory, deleteCategory,
   } = useSettings();
+  const { currencies, defaultCurrency, fetchCurrencies, saveDefaultCurrency } = useDashboard();
 
   useEffect(() => {
-    if (isOpen) loadSettingsData();
-  }, [isOpen, loadSettingsData]);
+    if (isOpen) {
+      loadSettingsData();
+      fetchCurrencies().catch(() => {});
+    }
+  }, [isOpen, loadSettingsData, fetchCurrencies]);
+
+  const handleDefaultCurrencyChange = async (e) => {
+    const code = e.target.value;
+    try {
+      await saveDefaultCurrency(code);
+    } catch (err) {
+      toast.error(err?.message || t('settings.currency.saveError'));
+    }
+  };
 
   return (
     <div className="usm-panel">
@@ -47,6 +61,25 @@ function OptionsPanel({ isOpen, confirm, toast }) {
               {t('settings.language.en')}
             </button>
           </div>
+        </div>
+      </section>
+
+      <section className="settings-manage__section">
+        <h3 className="settings-manage__section-title">{t('settings.currency.title')}</h3>
+        <div className="settings-currency">
+          <label className="settings-currency__label" htmlFor="default-currency">
+            {t('settings.currency.label')}
+          </label>
+          <select
+            id="default-currency"
+            className="settings-currency__select"
+            value={defaultCurrency}
+            onChange={handleDefaultCurrencyChange}
+          >
+            {(currencies.includes(defaultCurrency) ? currencies : [defaultCurrency, ...currencies]).map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </div>
       </section>
 

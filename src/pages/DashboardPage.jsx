@@ -37,6 +37,7 @@ export default function DashboardPage() {
     categoriesExpense,
     categoriesIncome,
     currencies,
+    defaultCurrency,
     loading,
     fetchDashboardData,
     fetchCurrencies,
@@ -247,6 +248,7 @@ export default function DashboardPage() {
             categoriesIncome={categoriesIncome}
             accounts={accounts}
             currencies={currencies}
+            defaultCurrency={defaultCurrency}
             editingTransaction={editingTransaction}
             paymentOptional={!!editingTransaction?.isSplitSynced}
             onSubmit={handleTransactionSubmit}

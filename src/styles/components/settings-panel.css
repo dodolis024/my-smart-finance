@@ -45,6 +45,38 @@
   color: var(--color-text-secondary);
 }
 
+/* Default currency selector */
+.settings-currency {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-currency__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.settings-currency__select {
+  flex: 0 0 auto;
+  min-width: 120px;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-input);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  transition: var(--transition);
+  box-sizing: border-box;
+}
+
+.settings-currency__select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
 @media (max-width: 860px) {
   .settings-manage-grid {
     grid-template-columns: 1fr;

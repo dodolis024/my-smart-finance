@@ -9,7 +9,7 @@ import SplitGroupCard from '@/components/split/SplitGroupCard';
 import SplitGroupDetail from '@/components/split/SplitGroupDetail';
 import CreateGroupModal from '@/components/split/CreateGroupModal';
 
-const SPLIT_CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'GBP', 'KRW'];
+const SPLIT_CURRENCIES = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP'];
 
 // Module-level cache for exchange rates
 let cachedRates = null;

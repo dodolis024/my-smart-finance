@@ -182,6 +182,12 @@ const zh = {
       en: 'English',
     },
 
+    currency: {
+      title: '預設幣別',
+      label: '記帳時預設使用的幣別',
+      saveError: '預設幣別儲存失敗',
+    },
+
     tabs: {
       theme: '外觀主題',
       options: '類別管理',

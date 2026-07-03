@@ -1,12 +1,23 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd } from '@/lib/utils';
 
 // Module-level cache for currencies (rarely changes)
 let cachedCurrencies = null;
+// 預設幣別為「每位使用者」的設定，需以 userId 綁定快取，避免切換帳號時沿用他人的值
+let cachedDefaultCurrency = null;
+let cachedDefaultCurrencyUserId = null;
+
+// 預設幣別的跨實例訂閱：任一 useDashboard 更新後，通知所有實例同步重繪
+const defaultCurrencyListeners = new Set();
+function notifyDefaultCurrency() {
+  defaultCurrencyListeners.forEach((l) => l());
+}
 
 export function useDashboard() {
+  const { user } = useAuth();
   const { t } = useLanguage();
   const [dashboardData, setDashboardData] = useState(null);
   const [transactionHistoryFull, setTransactionHistoryFull] = useState([]);
@@ -15,9 +26,23 @@ export function useDashboard() {
   const [categoriesExpense, setCategoriesExpense] = useState([]);
   const [categoriesIncome, setCategoriesIncome] = useState([]);
   const [currencies, setCurrencies] = useState(() => cachedCurrencies || ['TWD']);
+  const [defaultCurrency, setDefaultCurrency] = useState(() =>
+    (cachedDefaultCurrency && cachedDefaultCurrencyUserId === user?.id) ? cachedDefaultCurrency : 'TWD'
+  );
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
   const requestIdRef = useRef(0);
+
+  // 訂閱預設幣別變更，讓其他實例（例如已開啟的記帳表單）即時同步
+  useEffect(() => {
+    const sync = () => {
+      setDefaultCurrency(
+        (cachedDefaultCurrency && cachedDefaultCurrencyUserId === user?.id) ? cachedDefaultCurrency : 'TWD'
+      );
+    };
+    defaultCurrencyListeners.add(sync);
+    return () => defaultCurrencyListeners.delete(sync);
+  }, [user?.id]);
 
   const removeTransactionLocally = useCallback((id) => {
     setTransactionHistoryFull((prev) => {
@@ -109,19 +134,64 @@ export function useDashboard() {
   }, []);
 
   const fetchCurrencies = useCallback(async () => {
-    if (cachedCurrencies) return;
-    try {
-      const { data: codes, error } = await supabase.rpc('get_available_currencies');
-      const list = Array.isArray(codes) ? codes : codes ? [codes] : [];
-      if (error || list.length === 0) return;
-      const upper = list.map((c) => String(c).toUpperCase());
-      if (!upper.includes('TWD')) upper.unshift('TWD');
-      cachedCurrencies = upper;
-      setCurrencies(upper);
-    } catch {
-      // Keep default ['TWD']
+    // 載入幣別清單
+    if (!cachedCurrencies) {
+      try {
+        const { data: codes, error } = await supabase.rpc('get_available_currencies');
+        const list = Array.isArray(codes) ? codes : codes ? [codes] : [];
+        if (!error && list.length > 0) {
+          const PREFERRED_ORDER = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP'];
+          const upper = list.map((c) => String(c).toUpperCase());
+          upper.sort((a, b) => {
+            const ai = PREFERRED_ORDER.indexOf(a);
+            const bi = PREFERRED_ORDER.indexOf(b);
+            if (ai !== -1 && bi !== -1) return ai - bi;
+            if (ai !== -1) return -1;
+            if (bi !== -1) return 1;
+            return a.localeCompare(b);
+          });
+          if (!upper.includes('TWD')) upper.unshift('TWD');
+          cachedCurrencies = upper;
+          setCurrencies(upper);
+        }
+      } catch {
+        // Keep default ['TWD']
+      }
     }
-  }, []);
+
+    // 載入使用者的預設幣別（帳號切換時重新載入）
+    if (user && (cachedDefaultCurrency === null || cachedDefaultCurrencyUserId !== user.id)) {
+      try {
+        const { data } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('user_id', user.id)
+          .eq('key', 'default_currency')
+          .single();
+        const code = data?.value ? String(data.value).toUpperCase() : 'TWD';
+        cachedDefaultCurrency = code;
+        cachedDefaultCurrencyUserId = user.id;
+        setDefaultCurrency(code);
+        notifyDefaultCurrency();
+      } catch {
+        // Keep default 'TWD'
+      }
+    }
+  }, [user]);
+
+  const saveDefaultCurrency = useCallback(async (code) => {
+    if (!user) return;
+    const normalized = String(code).toUpperCase();
+    const { error } = await supabase.from('settings').upsert(
+      { user_id: user.id, key: 'default_currency', value: normalized },
+      { onConflict: 'user_id,key' }
+    );
+    if (error) throw error;
+    cachedDefaultCurrency = normalized;
+    cachedDefaultCurrencyUserId = user.id;
+    setDefaultCurrency(normalized);
+    notifyDefaultCurrency();
+  }, [user]);
 
   return {
     dashboardData,
@@ -132,10 +202,12 @@ export function useDashboard() {
     categoriesExpense,
     categoriesIncome,
     currencies,
+    defaultCurrency,
     loading,
     summary,
     fetchDashboardData,
     fetchCurrencies,
+    saveDefaultCurrency,
     removeTransactionLocally,
   };
 }

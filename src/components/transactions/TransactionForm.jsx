@@ -3,12 +3,12 @@ import { getTodayYmd, formatNumberWithCommas } from '@/lib/utils';
 import { useAmountInput } from '@/hooks/useAmountInput';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const makeInitialForm = () => ({
+const makeInitialForm = (defaultCurrency = 'TWD') => ({
   date: getTodayYmd(),
   itemName: '',
   categoryValue: '',
   paymentMethod: '',
-  currency: 'TWD',
+  currency: defaultCurrency,
   amount: '',
   note: '',
 });
@@ -18,6 +18,7 @@ export default function TransactionForm({
   categoriesIncome = [],
   accounts = [],
   currencies = ['TWD'],
+  defaultCurrency = 'TWD',
   editingTransaction = null,
   /** 分帳同步進帳本的交易：可不填支付方式 */
   paymentOptional = false,
@@ -28,9 +29,11 @@ export default function TransactionForm({
   disabled = false,
 }) {
   const { t } = useLanguage();
-  const [form, setForm] = useState(makeInitialForm);
+  const [form, setForm] = useState(() => makeInitialForm(defaultCurrency));
   const [submitting, setSubmitting] = useState(false);
   const amountRef = useRef(null);
+  // 記錄使用者是否手動選過幣別：手動選過就不再被預設幣別覆蓋
+  const currencyTouchedRef = useRef(false);
   const { handleAmountChange, handleAmountBlur, handleAmountPaste } = useAmountInput(amountRef, setForm);
 
   useEffect(() => {
@@ -56,12 +59,21 @@ export default function TransactionForm({
         note: editingTransaction.note || '',
       });
     } else {
-      setForm(makeInitialForm());
+      currencyTouchedRef.current = false;
+      setForm(makeInitialForm(defaultCurrency));
     }
   }, [editingTransaction]);
 
+  // 預設幣別可能較晚載入（冷啟動）或於設定頁被變更：
+  // 只要使用者尚未手動選過幣別，就同步為使用者預設值
+  useEffect(() => {
+    if (editingTransaction || currencyTouchedRef.current) return;
+    setForm((prev) => (prev.currency === defaultCurrency ? prev : { ...prev, currency: defaultCurrency }));
+  }, [defaultCurrency, editingTransaction]);
+
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
+    if (name === 'currency') currencyTouchedRef.current = true;
     setForm((prev) => ({ ...prev, [name]: value }));
   }, []);
 
@@ -71,7 +83,8 @@ export default function TransactionForm({
     setSubmitting(true);
     try {
       await onSubmit(form, editingTransaction?.id ?? null);
-      setForm(makeInitialForm());
+      currencyTouchedRef.current = false;
+      setForm(makeInitialForm(defaultCurrency));
     } catch {
       // Error is handled and displayed by the parent
     } finally {

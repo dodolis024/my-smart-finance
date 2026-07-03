@@ -4,16 +4,16 @@ import { useDashboard } from '@/hooks/useDashboard';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const EMPTY_FORM = { name: '', amount: '', currency: 'TWD', category: '', payment_method: '', renewal_day: 1 };
+const makeEmptyForm = (defaultCurrency = 'TWD') => ({ name: '', amount: '', currency: defaultCurrency, category: '', payment_method: '', renewal_day: 1 });
 
 export default function SubscriptionPanel({ isOpen, confirm, toast }) {
   const { t } = useLanguage();
   const { categoriesExpense, accounts } = useSettings();
-  const { currencies } = useDashboard();
+  const { currencies, defaultCurrency } = useDashboard();
   const { subscriptions, loading, loadSubscriptions, saveSubscription, deleteSubscription, toggleSubscription } = useSubscriptions();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => makeEmptyForm(defaultCurrency));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
 
   const setField = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
-  const handleOpenAdd = () => { setForm(EMPTY_FORM); setEditingId(null); setShowForm(true); };
+  const handleOpenAdd = () => { setForm(makeEmptyForm(defaultCurrency)); setEditingId(null); setShowForm(true); };
   const handleOpenEdit = (sub) => {
     setForm({ name: sub.name, amount: String(sub.amount), currency: sub.currency || 'TWD', category: sub.category || '', payment_method: sub.payment_method || '', renewal_day: sub.renewal_day });
     setEditingId(sub.id);
