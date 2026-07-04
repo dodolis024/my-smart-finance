@@ -385,6 +385,7 @@ DECLARE
     v_lowest_month JSON;
     v_checkin_days INTEGER;
     v_top_expenses JSON;
+    v_prev_totals JSON;
     v_result JSON;
 BEGIN
     v_user_id := auth.uid();
@@ -495,10 +496,22 @@ BEGIN
         LIMIT 3
     ) top3;
 
+    -- 去年同期彙總（年度對比用；transactionCount = 0 代表去年無資料，前端據此隱藏對比）
+    SELECT json_build_object(
+        'totalIncome',      COALESCE(SUM(CASE WHEN type = 'income'  THEN twd_amount ELSE 0 END), 0),
+        'totalExpense',     COALESCE(SUM(CASE WHEN type = 'expense' THEN twd_amount ELSE 0 END), 0),
+        'balance',          COALESCE(SUM(CASE WHEN type = 'income'  THEN twd_amount ELSE -twd_amount END), 0),
+        'transactionCount', COUNT(*)
+    ) INTO v_prev_totals
+    FROM transactions
+    WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year - 1;
+
     RETURN json_build_object(
         'success',          true,
         'annualTotals',     COALESCE(v_annual_totals, json_build_object(
                                 'totalIncome', 0, 'totalExpense', 0, 'balance', 0, 'transactionCount', 0, 'expenseCount', 0)),
+        'previousTotals',   COALESCE(v_prev_totals, json_build_object(
+                                'totalIncome', 0, 'totalExpense', 0, 'balance', 0, 'transactionCount', 0)),
         'monthlyBreakdown', COALESCE(v_monthly_breakdown, '[]'::json),
         'topCategories',    COALESCE(v_top_categories, '[]'::json),
         'topExpenses',      COALESCE(v_top_expenses, '[]'::json),

@@ -15,12 +15,16 @@ function membershipDaysAsOf(createdAt, year) {
   return Math.round((asOf - created) / 86400000) + 1;
 }
 
-export default function HabitJourney({ year, checkinDays = 0, transactionCount = 0, loading }) {
+export default function HabitJourney({ year, checkinDays = 0, transactionCount = 0, previousCount = 0, loading }) {
   const { user } = useAuth();
   const { t, lang } = useLanguage();
   const locale = lang === 'en' ? 'en-US' : 'zh-TW';
 
   const memberDays = membershipDaysAsOf(user?.created_at, year);
+
+  // Only celebrate an increase — if last year had no data or fewer entries,
+  // we simply omit the line rather than framing it as a shortfall.
+  const entriesGain = previousCount > 0 ? transactionCount - previousCount : 0;
 
   const encouragement = checkinDays >= 200
     ? t('yearlyReview.habit.encourageHigh')
@@ -55,6 +59,11 @@ export default function HabitJourney({ year, checkinDays = 0, transactionCount =
         <div className="review-habit-stat">
           <span className="review-habit-stat__value">{transactionCount.toLocaleString(locale)}</span>
           <span className="review-habit-stat__label">{t('yearlyReview.habit.entriesLabel')}</span>
+          {entriesGain > 0 && (
+            <span className="review-delta review-delta--good">
+              {t('yearlyReview.compare.entriesMore', { count: entriesGain.toLocaleString(locale) })}
+            </span>
+          )}
         </div>
       </div>
 

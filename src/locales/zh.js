@@ -554,6 +554,11 @@ const zh = {
       noData: '資料不足，無法計算',
     },
 
+    compare: {
+      vsYear: 'vs {year}',
+      entriesMore: '比去年多記 {count} 筆',
+    },
+
     habit: {
       title: '你的堅持',
       checkinLabel: '今年記帳天數',

@@ -30,6 +30,7 @@ export function useYearlyReview(year) {
     loading,
     error,
     annualTotals: data?.annualTotals ?? null,
+    previousTotals: data?.previousTotals ?? null,
     monthlyBreakdown: data?.monthlyBreakdown ?? [],
     topCategories: data?.topCategories ?? [],
     topExpenses: data?.topExpenses ?? [],

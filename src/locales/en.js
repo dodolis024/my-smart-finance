@@ -554,6 +554,11 @@ const en = {
       noData: 'Not enough data to compare',
     },
 
+    compare: {
+      vsYear: 'vs {year}',
+      entriesMore: '{count} more than last year',
+    },
+
     habit: {
       title: 'Your Consistency',
       checkinLabel: 'Days tracked this year',

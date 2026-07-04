@@ -6,6 +6,7 @@ This file records version updates for Smart Finance Tracker.
 - Added KRW support for split-bill currencies and exchange rate updates
 - Improved foreign currency display: zero-decimal currencies (e.g. JPY, KRW, TWD) no longer show unnecessary decimals
 - Added default currency setting in categories options for transactions and subscriptions
+- Improved Year in Review: added year-over-year income and expense comparison
 
 ## [1.17.2] - Jul-03 2026
 - Improved cross-timezone streak reminders: auto-sync device timezone, full IANA timezone picker, and fixed missed reminders when traveling due to date-only dedup

@@ -28,18 +28,26 @@ export default function YearlyReviewPage() {
     return Number.isFinite(fromUrl) ? fromUrl : defaultYear();
   });
 
-  const { loading, error, annualTotals, monthlyBreakdown, topCategories, topExpenses, highlights } = useYearlyReview(year);
+  const { loading, error, annualTotals, previousTotals, monthlyBreakdown, topCategories, topExpenses, highlights } = useYearlyReview(year);
 
   const handleClose = useCallback(() => navigate('/'), [navigate]);
 
   // Each card renders from its own index, so `active`-driven animations stay
   // correct no matter how the order changes.
+  // Narrative arc — build to the climax: warm up with habits, walk through the
+  // spending details, then land the annual verdict + YoY as the payoff.
   const cardDefs = [
     { key: 'cover', render: () => (
       <ReviewCover year={year} onYearChange={(y) => { setYear(y); setCurrentIndex(0); }} />
     ) },
-    { key: 'totals', render: (active) => (
-      <AnnualTotals data={annualTotals} loading={loading} active={active} />
+    { key: 'habit', render: () => (
+      <HabitJourney
+        year={year}
+        checkinDays={highlights?.checkinDays ?? 0}
+        transactionCount={annualTotals?.transactionCount ?? 0}
+        previousCount={previousTotals?.transactionCount ?? 0}
+        loading={loading}
+      />
     ) },
     { key: 'chart', render: () => (
       <MonthlyBarChart data={monthlyBreakdown} loading={loading} />
@@ -58,13 +66,8 @@ export default function YearlyReviewPage() {
     { key: 'months', render: () => (
       <MonthHighlights data={monthlyBreakdown} loading={loading} />
     ) },
-    { key: 'habit', render: () => (
-      <HabitJourney
-        year={year}
-        checkinDays={highlights?.checkinDays ?? 0}
-        transactionCount={annualTotals?.transactionCount ?? 0}
-        loading={loading}
-      />
+    { key: 'totals', render: (active) => (
+      <AnnualTotals data={annualTotals} previous={previousTotals} year={year} loading={loading} active={active} />
     ) },
     { key: 'closing', render: () => (
       <ReviewClosing year={year} onClose={handleClose} />

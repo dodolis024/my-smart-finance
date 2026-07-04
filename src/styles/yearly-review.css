@@ -547,6 +547,17 @@
   color: var(--color-text-secondary);
 }
 
+/* ---- Year-over-year delta chip ---- */
+.review-delta {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+}
+
+.review-delta--good { color: var(--color-progress-safe); }
+.review-delta--bad  { color: var(--color-progress-danger); }
+
 /* ---- Closing card ---- */
 .review-closing-back {
   margin-top: 48px;
