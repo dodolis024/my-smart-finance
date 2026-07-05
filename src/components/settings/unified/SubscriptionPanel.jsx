@@ -4,7 +4,7 @@ import { useDashboard } from '@/hooks/useDashboard';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const makeEmptyForm = (defaultCurrency = 'TWD') => ({ name: '', amount: '', currency: defaultCurrency, category: '', payment_method: '', renewal_day: 1 });
+const makeEmptyForm = (defaultCurrency = 'TWD') => ({ name: '', amount: '', currency: defaultCurrency, category: '', payment_method: '', billing_cycle: 'monthly', renewal_month: 1, renewal_day: 1 });
 
 export default function SubscriptionPanel({ isOpen, confirm, toast }) {
   const { t } = useLanguage();
@@ -24,7 +24,7 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
 
   const handleOpenAdd = () => { setForm(makeEmptyForm(defaultCurrency)); setEditingId(null); setShowForm(true); };
   const handleOpenEdit = (sub) => {
-    setForm({ name: sub.name, amount: String(sub.amount), currency: sub.currency || 'TWD', category: sub.category || '', payment_method: sub.payment_method || '', renewal_day: sub.renewal_day });
+    setForm({ name: sub.name, amount: String(sub.amount), currency: sub.currency || 'TWD', category: sub.category || '', payment_method: sub.payment_method || '', billing_cycle: sub.billing_cycle || 'monthly', renewal_month: sub.renewal_month || 1, renewal_day: sub.renewal_day });
     setEditingId(sub.id);
     setShowForm(true);
   };
@@ -36,9 +36,11 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
     if (isNaN(amount) || amount <= 0) { toast.error(t('settings.subscription.invalidAmount')); return; }
     const renewal_day = parseInt(form.renewal_day, 10);
     if (renewal_day < 1 || renewal_day > 31) { toast.error(t('settings.subscription.invalidRenewalDay')); return; }
+    const renewal_month = parseInt(form.renewal_month, 10);
+    if (form.billing_cycle === 'yearly' && (isNaN(renewal_month) || renewal_month < 1 || renewal_month > 12)) { toast.error(t('settings.subscription.invalidRenewalMonth')); return; }
     setSaving(true);
     try {
-      const result = await saveSubscription({ name: form.name.trim(), amount, currency: form.currency, category: form.category || null, payment_method: form.payment_method || null, renewal_day, is_active: true }, editingId);
+      const result = await saveSubscription({ name: form.name.trim(), amount, currency: form.currency, category: form.category || null, payment_method: form.payment_method || null, billing_cycle: form.billing_cycle, renewal_month: form.billing_cycle === 'yearly' ? renewal_month : null, renewal_day, is_active: true }, editingId);
       if (editingId) { toast.success(t('settings.subscription.subscriptionUpdated')); }
       else if (result?.transactionCreated) { toast.success(t('settings.subscription.subscriptionAddedWithTx')); }
       else { toast.success(t('settings.subscription.subscriptionAdded')); }
@@ -98,8 +100,25 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
                 </select>
               </div>
             </div>
+            <div className="subscription-form__row">
+              <div className="subscription-form__field subscription-form__field--fixed">
+                <label className="subscription-form__label" htmlFor="sub-cycle">{t('settings.subscription.cycleLabel')}</label>
+                <select id="sub-cycle" className="subscription-form__select" value={form.billing_cycle} onChange={(e) => setField('billing_cycle', e.target.value)}>
+                  <option value="monthly">{t('settings.subscription.cycleMonthly')}</option>
+                  <option value="yearly">{t('settings.subscription.cycleYearly')}</option>
+                </select>
+              </div>
+              {form.billing_cycle === 'yearly' && (
+                <div className="subscription-form__field subscription-form__field--grow">
+                  <label className="subscription-form__label" htmlFor="sub-month">{t('settings.subscription.renewalMonthLabel')}</label>
+                  <select id="sub-month" className="subscription-form__select" value={form.renewal_month} onChange={(e) => setField('renewal_month', e.target.value)}>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
             <div className="subscription-form__field">
-              <label className="subscription-form__label" htmlFor="sub-day">{t('settings.subscription.renewalDayLabel')}</label>
+              <label className="subscription-form__label" htmlFor="sub-day">{form.billing_cycle === 'yearly' ? t('settings.subscription.renewalDayYearlyLabel') : t('settings.subscription.renewalDayLabel')}</label>
               <div className="subscription-form__day-row">
                 <input id="sub-day" type="number" className="subscription-form__input subscription-form__input--day" value={form.renewal_day} onChange={(e) => setField('renewal_day', e.target.value)} min="1" max="31" />
                 <span className="subscription-form__day-hint">{t('settings.subscription.renewalDayHint')}</span>
@@ -120,7 +139,7 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
                   <li key={sub.id} className={`subscription-item${!sub.is_active ? ' subscription-item--inactive' : ''}`}>
                     <div className="subscription-item__main">
                       <span className="subscription-item__name">{sub.name}</span>
-                      <span className="subscription-item__meta">{sub.currency} {Number(sub.amount).toLocaleString()} · {t('settings.subscription.monthlyOn', { day: sub.renewal_day })}</span>
+                      <span className="subscription-item__meta">{sub.currency} {Number(sub.amount).toLocaleString()} · {sub.billing_cycle === 'yearly' ? t('settings.subscription.yearlyOn', { month: sub.renewal_month, day: sub.renewal_day }) : t('settings.subscription.monthlyOn', { day: sub.renewal_day })}</span>
                       {sub.payment_method && <span className="subscription-item__payment">{sub.payment_method}</span>}
                     </div>
                     <div className="subscription-item__actions">

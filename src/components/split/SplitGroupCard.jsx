@@ -21,7 +21,7 @@ function MemberAvatar({ member }) {
   );
 }
 
-export default function SplitGroupCard({ group, onClick, onDelete }) {
+export default function SplitGroupCard({ group, onClick, onDelete, archived = false }) {
   const { t } = useLanguage();
   const cardRef = useRef(null);
   const { width } = useWindowSize();
@@ -55,7 +55,7 @@ export default function SplitGroupCard({ group, onClick, onDelete }) {
   return (
     <div
       ref={cardRef}
-      className={`split-group-card${swipedLeft ? ' swiped-left' : ''}`}
+      className={`split-group-card${swipedLeft ? ' swiped-left' : ''}${archived ? ' split-group-card--archived' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onClick={handleRowClick}
@@ -84,7 +84,10 @@ export default function SplitGroupCard({ group, onClick, onDelete }) {
         style={isMobile ? { transform: `translateX(${translateX}px)`, transition } : undefined}
       >
         <div className="split-group-card__top">
-          <p className="split-group-card__name">{group.name}</p>
+          <p className="split-group-card__name">
+            {group.name}
+            {archived && <span className="split-group-card__archived-badge">{t('split.archivedBadge')}</span>}
+          </p>
           {/* 桌面版刪除按鈕 */}
           {!isMobile && onDelete && (
             <button

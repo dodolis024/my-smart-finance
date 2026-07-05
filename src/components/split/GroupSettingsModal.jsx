@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function GroupSettingsModal({ isOpen, onClose, onSave, group, currencies = [] }) {
+export default function GroupSettingsModal({ isOpen, onClose, onSave, group, currencies = [], canArchive = false, onArchive }) {
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('');
@@ -96,6 +96,18 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
             {saving ? t('common.saving') : t('common.saveSettings')}
           </button>
         </div>
+
+        {canArchive && (
+          <div className="split-modal__archive-zone">
+            <button
+              type="button"
+              className="split-modal__archive-btn"
+              onClick={() => { onClose(); onArchive(); }}
+            >
+              {t('split.archiveGroup')}
+            </button>
+          </div>
+        )}
       </div>
     </Modal>
   );

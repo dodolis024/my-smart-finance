@@ -18,9 +18,10 @@ let cachedRates = null;
 export default function SplitPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { groups, loading, fetchGroups, createGroup, updateGroup, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
+  const { groups, loading, fetchGroups, createGroup, updateGroup, archiveGroup, unarchiveGroup, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [rates, setRates] = useState(() => cachedRates || { TWD: 1 });
   const toast = useToast();
   const { confirm } = useConfirm();
@@ -54,6 +55,20 @@ export default function SplitPage() {
     toast.success(t('split.groupCreated'));
     return group;
   };
+
+  const handleDeleteGroup = async (groupId) => {
+    const ok = await confirm(t('split.deleteGroupConfirm'), { danger: true });
+    if (!ok) return;
+    try {
+      await deleteGroup(groupId);
+      toast.success(t('split.groupDeleted'));
+    } catch {
+      toast.error(t('split.deleteGroupFailed'));
+    }
+  };
+
+  const activeGroups = groups.filter(g => !g.archived_at);
+  const archivedGroups = groups.filter(g => g.archived_at);
 
   return (
     <div className="split-page">
@@ -98,6 +113,8 @@ export default function SplitPage() {
               }
             }}
             onUpdateGroup={updateGroup}
+            onArchiveGroup={() => archiveGroup(selectedGroup.id)}
+            onUnarchiveGroup={() => unarchiveGroup(selectedGroup.id)}
           />
         </>
       ) : (
@@ -118,23 +135,14 @@ export default function SplitPage() {
             <>
               {groups.length === 0 ? (
                 <p className="split-group-list__empty">{t('split.noGroups')}</p>
-              ) : (
+              ) : activeGroups.length > 0 && (
                 <div className="split-group-list">
-                  {groups.map(g => (
+                  {activeGroups.map(g => (
                     <SplitGroupCard
                       key={g.id}
                       group={g}
                       onClick={() => setSelectedGroup(g)}
-                      onDelete={async (groupId) => {
-                        const ok = await confirm(t('split.deleteGroupConfirm'), { danger: true });
-                        if (!ok) return;
-                        try {
-                          await deleteGroup(groupId);
-                          toast.success(t('split.groupDeleted'));
-                        } catch {
-                          toast.error(t('split.deleteGroupFailed'));
-                        }
-                      }}
+                      onDelete={handleDeleteGroup}
                     />
                   ))}
                 </div>
@@ -147,6 +155,34 @@ export default function SplitPage() {
                   {t('split.joinGroup')}
                 </button>
               </div>
+
+              {archivedGroups.length > 0 && (
+                <div className="split-archived">
+                  <button
+                    type="button"
+                    className={`split-archived-toggle${showArchived ? ' is-open' : ''}`}
+                    onClick={() => setShowArchived(prev => !prev)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="split-archived-toggle__chevron">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                    {t('split.archivedSection', { n: archivedGroups.length })}
+                  </button>
+                  {showArchived && (
+                    <div className="split-group-list">
+                      {archivedGroups.map(g => (
+                        <SplitGroupCard
+                          key={g.id}
+                          group={g}
+                          archived
+                          onClick={() => setSelectedGroup(g)}
+                          onDelete={handleDeleteGroup}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
 

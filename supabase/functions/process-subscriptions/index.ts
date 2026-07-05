@@ -1,7 +1,9 @@
 // @ts-nocheck
 // Supabase Edge Function: 訂閱自動建立交易
 // 此函數每天由 pg_cron 觸發，檢查哪些訂閱今天到期，並自動建立交易紀錄
-// 防重複機制：新增前先確認當月是否已有來自同一 subscription_id 的交易
+// 防重複機制：新增前先確認是否已有來自同一 subscription_id 的交易
+//   - 月繳（billing_cycle = 'monthly'）：檢查當月範圍
+//   - 年繳（billing_cycle = 'yearly'）：檢查當年範圍
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
@@ -60,6 +62,17 @@ serve(async (req) => {
 
     for (const sub of subscriptions) {
       try {
+        const cycle = sub.billing_cycle || 'monthly'
+
+        // 年繳：僅在指定月份扣款
+        if (cycle === 'yearly') {
+          if (!sub.renewal_month) {
+            errors.push({ subscriptionId: sub.id, error: 'yearly subscription missing renewal_month' })
+            continue
+          }
+          if (month !== sub.renewal_month) continue
+        }
+
         const actualDay = getActualDay(sub.renewal_day, year, month)
 
         // 不是今天到期的跳過
@@ -67,17 +80,19 @@ serve(async (req) => {
 
         const dateStr = `${year}-${monthStr}-${String(actualDay).padStart(2, '0')}`
 
-        // 防重複：確認本月是否已建立過此訂閱的交易
+        // 防重複：月繳查本月、年繳查本年是否已建立過此訂閱的交易
+        const rangeStart = cycle === 'yearly' ? `${year}-01-01` : monthStart
+        const rangeEnd = cycle === 'yearly' ? `${year}-12-31` : monthEnd
         const { data: existing } = await supabase
           .from('transactions')
           .select('id')
           .eq('subscription_id', sub.id)
-          .gte('date', monthStart)
-          .lte('date', monthEnd)
+          .gte('date', rangeStart)
+          .lte('date', rangeEnd)
           .limit(1)
 
         if (existing && existing.length > 0) {
-          console.log(`Subscription ${sub.id} already has transaction for ${year}-${monthStr}, skipping`)
+          console.log(`Subscription ${sub.id} already has transaction for ${cycle === 'yearly' ? year : `${year}-${monthStr}`}, skipping`)
           continue
         }
 

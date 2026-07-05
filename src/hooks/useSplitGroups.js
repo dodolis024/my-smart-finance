@@ -115,6 +115,16 @@ export function useSplitGroups() {
     return data;
   }, []);
 
+  const archiveGroup = useCallback(
+    (groupId) => updateGroup(groupId, { archived_at: new Date().toISOString() }),
+    [updateGroup]
+  );
+
+  const unarchiveGroup = useCallback(
+    (groupId) => updateGroup(groupId, { archived_at: null }),
+    [updateGroup]
+  );
+
   const deleteGroup = useCallback(async (groupId) => {
     const { error } = await supabase
       .from('split_groups')
@@ -221,6 +231,8 @@ export function useSplitGroups() {
     fetchGroups,
     createGroup,
     updateGroup,
+    archiveGroup,
+    unarchiveGroup,
     deleteGroup,
     addMember,
     updateMemberName,

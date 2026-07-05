@@ -4,7 +4,7 @@ import { useWindowSize } from '@/hooks/useWindowSize';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function SplitExpenseItem({ expense, members, onEdit, onDelete }) {
+export default function SplitExpenseItem({ expense, members, onEdit, onDelete, readOnly = false }) {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const rowRef = useRef(null);
@@ -27,7 +27,7 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete })
     onEdit: () => onEdit(expense),
     onDelete: () => onDelete(expense.id),
     onClick: () => setExpanded(prev => !prev),
-    isMobile,
+    isMobile: isMobile && !readOnly,
   });
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete })
       onKeyDown={e => e.key === 'Enter' && setExpanded(prev => !prev)}
     >
       {/* 手機版滑動動作按鈕 */}
-      {isMobile && (
+      {isMobile && !readOnly && (
         <>
           <div className="split-expense-item__swipe-action split-expense-item__swipe-action--edit">
             <button type="button" className="split-expense-item__swipe-btn" onClick={e => { e.stopPropagation(); handleSwipeEdit(); }} aria-label={t('common.edit')}>
@@ -88,7 +88,7 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete })
               {expense.currency} {Number(expense.amount).toLocaleString()}
             </span>
             {/* 桌面版按鈕 */}
-            {!isMobile && (
+            {!isMobile && !readOnly && (
               <div className="split-expense-item__actions">
                 <button
                   type="button"

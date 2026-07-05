@@ -12,6 +12,8 @@ This file records version updates for Smart Finance Tracker.
 - Fixed credit card billing cycle calculation for billing days 29-31 in short months
 - Fixed editing a transaction sometimes overwriting the original TWD amount with today's exchange rate
 - Improved Year in Review copy
+- Added split group archiving: archive inactive groups to hide them from the list and make them read-only
+- Added yearly billing cycle for subscriptions with configurable renewal month
 
 ## [1.17.2] - Jul-03 2026
 - Improved cross-timezone streak reminders: auto-sync device timezone, full IANA timezone picker, and fixed missed reminders when traveling due to date-only dedup

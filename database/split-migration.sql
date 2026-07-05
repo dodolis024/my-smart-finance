@@ -37,11 +37,13 @@ CREATE TABLE IF NOT EXISTS split_groups (
   currency                  TEXT NOT NULL DEFAULT 'TWD',
   default_expense_currency  TEXT,
   invite_code               TEXT UNIQUE NOT NULL DEFAULT generate_invite_code(),
+  archived_at               TIMESTAMPTZ,
   created_at                TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 為既有資料庫新增欄位（執行時若欄位已存在不影響）
 ALTER TABLE split_groups ADD COLUMN IF NOT EXISTS default_expense_currency TEXT;
+ALTER TABLE split_groups ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 
 -- =============================================================================
 -- 3. 建立 split_members 表（群組成員）
@@ -343,6 +345,11 @@ BEGIN
 
   IF NOT FOUND THEN
     RAISE EXCEPTION '邀請碼無效';
+  END IF;
+
+  -- 已封存的群組不允許加入
+  IF EXISTS (SELECT 1 FROM split_groups WHERE id = v_group_id AND archived_at IS NOT NULL) THEN
+    RAISE EXCEPTION '此群組已封存';
   END IF;
 
   -- 確保用戶未重複加入同一群組

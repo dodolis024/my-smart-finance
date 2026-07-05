@@ -12,12 +12,14 @@ import AddExpenseModal from './AddExpenseModal';
 import ManageMembersModal from './ManageMembersModal';
 import GroupSettingsModal from './GroupSettingsModal';
 
-export default function SplitGroupDetail({ group, onBack, rates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onUpdateGroup }) {
+export default function SplitGroupDetail({ group, onBack, rates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onUpdateGroup, onArchiveGroup, onUnarchiveGroup }) {
   const toast = useToast();
   const { confirm } = useConfirm();
   const { t } = useLanguage();
   const { user } = useAuth();
   const actorMember = group.split_members?.find(m => m.user_id === user?.id);
+  const isArchived = !!group.archived_at;
+  const isOwner = group.owner_id === user?.id;
   const {
     expenses, settlements, loading,
     fetchExpenses, addExpense, updateExpense, deleteExpense,
@@ -43,6 +45,26 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
       default_expense_currency: defaultExpenseCurrency,
     });
     toast.success(t('split.settingsUpdated'));
+  };
+
+  const handleArchive = async () => {
+    const ok = await confirm(t('split.archiveConfirm'));
+    if (!ok) return;
+    try {
+      await onArchiveGroup();
+      toast.success(t('split.groupArchived'));
+    } catch {
+      toast.error(t('split.archiveFailed'));
+    }
+  };
+
+  const handleUnarchive = async () => {
+    try {
+      await onUnarchiveGroup();
+      toast.success(t('split.groupUnarchived'));
+    } catch {
+      toast.error(t('split.unarchiveFailed'));
+    }
   };
 
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
@@ -171,46 +193,66 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
       <div className="split-group-detail__header">
         <div className="split-group-detail__name-row">
           <p className="split-group-detail__name">{group.name}</p>
-          <button type="button" className="split-group-detail__edit-name-btn" onClick={() => setSettingsOpen(true)} aria-label={t('split.editGroupSettings')}>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-            </svg>
-          </button>
+          {!isArchived && (
+            <button type="button" className="split-group-detail__edit-name-btn" onClick={() => setSettingsOpen(true)} aria-label={t('split.editGroupSettings')}>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+              </svg>
+            </button>
+          )}
         </div>
         <div className="split-group-detail__members-row">
           {members.map(m => (
             <span key={m.id} className="split-group-detail__member-chip">{m.name}</span>
           ))}
-          <button
-            type="button"
-            className="split-group-detail__member-chip split-group-detail__member-add-btn"
-            onClick={() => setAddMembersOpen(true)}
-            aria-label={t('split.manageMembers')}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" style={{ width: 14, height: 14 }}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
-            </svg>
-          </button>
+          {!isArchived && (
+            <button
+              type="button"
+              className="split-group-detail__member-chip split-group-detail__member-add-btn"
+              onClick={() => setAddMembersOpen(true)}
+              aria-label={t('split.manageMembers')}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" style={{ width: 14, height: 14 }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Archived banner */}
+      {isArchived && (
+        <div className="split-archived-banner">
+          <span className="split-archived-banner__text">{t('split.archivedBanner')}</span>
+          {isOwner && (
+            <button type="button" className="split-archived-banner__btn" onClick={handleUnarchive}>
+              {t('split.unarchive')}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Invite info */}
-      <div className="split-group-detail__invite">
-        <span className="split-group-detail__invite-label">{t('split.inviteCode')}</span>
-        <span className="split-group-detail__invite-code" onClick={handleCopyCode} style={{ cursor: 'pointer' }} title={t('split.clickToCopyCode')}>
-          {group.invite_code}
-        </span>
-        <button type="button" className="split-group-detail__invite-copy" onClick={handleCopyLink}>
-          {copied ? t('split.copied') : t('split.copyLink')}
-        </button>
-      </div>
+      {!isArchived && (
+        <div className="split-group-detail__invite">
+          <span className="split-group-detail__invite-label">{t('split.inviteCode')}</span>
+          <span className="split-group-detail__invite-code" onClick={handleCopyCode} style={{ cursor: 'pointer' }} title={t('split.clickToCopyCode')}>
+            {group.invite_code}
+          </span>
+          <button type="button" className="split-group-detail__invite-copy" onClick={handleCopyLink}>
+            {copied ? t('split.copied') : t('split.copyLink')}
+          </button>
+        </div>
+      )}
 
       {/* Expense list */}
       <div className="split-group-detail__section-header">
         <p className="split-group-detail__section-title">{t('split.expenseList')}</p>
-        <button type="button" className="split-btn-secondary" style={{ width: 'auto', padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={() => setAddExpenseOpen(true)}>
-          {t('split.addExpense')}
-        </button>
+        {!isArchived && (
+          <button type="button" className="split-btn-secondary" style={{ width: 'auto', padding: '0.4rem 0.85rem', fontSize: '0.82rem' }} onClick={() => setAddExpenseOpen(true)}>
+            {t('split.addExpense')}
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -220,7 +262,7 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
       ) : (
         <>
           {(showAllExpenses ? expenses : expenses.slice(0, 5)).map(e => (
-            <SplitExpenseItem key={e.id} expense={e} members={members} onEdit={(exp) => { setEditingExpense(exp); setAddExpenseOpen(true); }} onDelete={handleDeleteExpense} />
+            <SplitExpenseItem key={e.id} expense={e} members={members} readOnly={isArchived} onEdit={(exp) => { setEditingExpense(exp); setAddExpenseOpen(true); }} onDelete={handleDeleteExpense} />
           ))}
           {expenses.length > 5 && (
             <button
@@ -263,15 +305,15 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
           <SplitSettlement
             transactions={settlement}
             currency={group.currency}
-            onSettle={handleSettle}
+            onSettle={isArchived ? null : handleSettle}
             settlementHistory={settlementHistory}
-            onDeleteSettlement={handleDeleteSettlement}
+            onDeleteSettlement={isArchived ? null : handleDeleteSettlement}
           />
         </>
       )}
 
       {/* Sync to ledger */}
-      {actorMember && (
+      {actorMember && !isArchived && (
         <>
           <div className="split-group-detail__section-header split-group-detail__section-header--summary">
             <p className="split-group-detail__section-title">{t('split.syncSection')}</p>
@@ -395,6 +437,8 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
         onSave={handleSettingsSave}
         group={group}
         currencies={currencies}
+        canArchive={isOwner && !isArchived}
+        onArchive={handleArchive}
       />
     </>
   );

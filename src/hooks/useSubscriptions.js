@@ -40,7 +40,12 @@ export function useSubscriptions() {
 
   const saveSubscription = useCallback(async (formData, id = null) => {
     if (!user) return;
-    const payload = { ...formData, user_id: user.id };
+    // 月繳時清空 renewal_month，避免切換週期後殘留舊值
+    const payload = {
+      ...formData,
+      renewal_month: formData.billing_cycle === 'yearly' ? formData.renewal_month : null,
+      user_id: user.id,
+    };
     let transactionCreated = false;
 
     if (id) {
@@ -60,9 +65,21 @@ export function useSubscriptions() {
       const year = today.getFullYear();
       const month = today.getMonth() + 1;
       const todayDay = today.getDate();
-      const actualDay = Math.min(formData.renewal_day, new Date(year, month, 0).getDate());
 
-      if (todayDay === actualDay) {
+      const cycle = formData.billing_cycle || 'monthly';
+      let isDueToday = false;
+      if (cycle === 'yearly') {
+        // 年繳：需月份相符且日相符（月底自動調整）
+        if (month === formData.renewal_month) {
+          const actualDay = Math.min(formData.renewal_day, new Date(year, month, 0).getDate());
+          isDueToday = todayDay === actualDay;
+        }
+      } else {
+        const actualDay = Math.min(formData.renewal_day, new Date(year, month, 0).getDate());
+        isDueToday = todayDay === actualDay;
+      }
+
+      if (isDueToday) {
         const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
 
         let exchangeRate = 1;
