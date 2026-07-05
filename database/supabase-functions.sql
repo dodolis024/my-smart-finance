@@ -381,8 +381,6 @@ DECLARE
     v_annual_totals JSON;
     v_monthly_breakdown JSON;
     v_top_categories JSON;
-    v_highest_month JSON;
-    v_lowest_month JSON;
     v_checkin_days INTEGER;
     v_top_expenses JSON;
     v_prev_totals JSON;
@@ -448,30 +446,6 @@ BEGIN
         LIMIT 5
     ) ranked;
 
-    -- 支出最高的月份
-    SELECT json_build_object('month', month, 'expense', expense)
-    INTO v_highest_month
-    FROM (
-        SELECT EXTRACT(MONTH FROM date)::INT AS month, SUM(twd_amount) AS expense
-        FROM transactions
-        WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year AND type = 'expense'
-        GROUP BY EXTRACT(MONTH FROM date)
-        ORDER BY SUM(twd_amount) DESC
-        LIMIT 1
-    ) h;
-
-    -- 支出最低的月份（只計算有支出記錄的月份）
-    SELECT json_build_object('month', month, 'expense', expense)
-    INTO v_lowest_month
-    FROM (
-        SELECT EXTRACT(MONTH FROM date)::INT AS month, SUM(twd_amount) AS expense
-        FROM transactions
-        WHERE user_id = v_user_id AND EXTRACT(YEAR FROM date) = p_year AND type = 'expense'
-        GROUP BY EXTRACT(MONTH FROM date)
-        ORDER BY SUM(twd_amount) ASC
-        LIMIT 1
-    ) l;
-
     -- 該年簽到天數
     SELECT COUNT(DISTINCT date)::INT
     INTO v_checkin_days
@@ -516,8 +490,6 @@ BEGIN
         'topCategories',    COALESCE(v_top_categories, '[]'::json),
         'topExpenses',      COALESCE(v_top_expenses, '[]'::json),
         'highlights',       json_build_object(
-                                'highestMonth', v_highest_month,
-                                'lowestMonth',  v_lowest_month,
                                 'checkinDays',  COALESCE(v_checkin_days, 0)
                             )
     );

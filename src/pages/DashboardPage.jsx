@@ -144,7 +144,8 @@ export default function DashboardPage() {
         }
 
         // 若此筆交易的付款方式為信用卡，檢查使用率並在需要時推播警告
-        const usedAccount = accounts.find((a) => a.name === formData.paymentMethod);
+        // （accounts 來自 RPC，欄位為駝峰 accountName）
+        const usedAccount = accounts.find((a) => (a.accountName || a.name) === formData.paymentMethod);
         if (usedAccount?.type === 'credit_card') checkCreditUsageAlert(usedAccount);
       } catch (err) {
         toast.error(err.message || t('dashboard.addTransactionFailed'));
@@ -186,9 +187,10 @@ export default function DashboardPage() {
       const confirmed = await confirm(t('dashboard.deleteTransactionConfirm'), { danger: true });
       if (!confirmed) return;
       // 找到要刪除的交易，記錄其付款帳戶（刪除後無法再查）
+      // （history 與 accounts 皆來自 RPC，欄位為駝峰 paymentMethod / accountName）
       const txToDelete = transactionHistoryFull.find((tx) => tx.id === id);
       const relatedAccount = txToDelete
-        ? accounts.find((a) => a.name === txToDelete.payment_method)
+        ? accounts.find((a) => (a.accountName || a.name) === txToDelete.paymentMethod)
         : null;
       try {
         await deleteTransaction(id);

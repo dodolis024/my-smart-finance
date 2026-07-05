@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import StoryProgressBar from '@/components/yearly-review/StoryProgressBar';
 import ReviewCover from '@/components/yearly-review/ReviewCover';
 import AnnualTotals from '@/components/yearly-review/AnnualTotals';
-import MonthlyBarChart from '@/components/yearly-review/MonthlyBarChart';
+import MonthlyTrendChart from '@/components/yearly-review/MonthlyTrendChart';
 import TopCategory from '@/components/yearly-review/TopCategory';
 import TopExpenses from '@/components/yearly-review/TopExpenses';
 import MonthHighlights from '@/components/yearly-review/MonthHighlights';
@@ -50,7 +50,7 @@ export default function YearlyReviewPage() {
       />
     ) },
     { key: 'chart', render: () => (
-      <MonthlyBarChart data={monthlyBreakdown} loading={loading} />
+      <MonthlyTrendChart data={monthlyBreakdown} loading={loading} />
     ) },
     { key: 'category', render: () => (
       <TopCategory
@@ -146,7 +146,7 @@ export default function YearlyReviewPage() {
         <button
           className="yearly-review__nav yearly-review__nav--prev"
           onClick={prev}
-          aria-label="上一張"
+          aria-label={t('yearlyReview.prevCard')}
         >
           ‹
         </button>
@@ -155,7 +155,7 @@ export default function YearlyReviewPage() {
         <button
           className="yearly-review__nav yearly-review__nav--next"
           onClick={next}
-          aria-label="下一張"
+          aria-label={t('yearlyReview.nextCard')}
         >
           ›
         </button>

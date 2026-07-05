@@ -24,12 +24,14 @@ export default function TopExpenses({ data = [], loading }) {
     );
   }
 
+  // Parse the plain YYYY-MM-DD directly — `new Date(str)` treats it as UTC and
+  // can shift the day by one in some timezones.
   const formatDate = (dateStr) => {
-    const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) return '';
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr || '');
+    if (!m) return '';
     return t('yearlyReview.topExpenses.dateLabel', {
-      month: monthNames[d.getMonth()],
-      day: d.getDate(),
+      month: monthNames[parseInt(m[2], 10) - 1],
+      day: parseInt(m[3], 10),
     });
   };
 

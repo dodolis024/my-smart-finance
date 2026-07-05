@@ -49,23 +49,20 @@ export default function HabitJourney({ year, checkinDays = 0, transactionCount =
         <span className="review-checkin-circle__unit">{t('yearlyReview.habit.checkinLabel')}</span>
       </div>
 
-      <div className="review-habit-stats">
-        {memberDays != null && (
-          <div className="review-habit-stat">
-            <span className="review-habit-stat__value">{memberDays.toLocaleString(locale)}</span>
-            <span className="review-habit-stat__label">{t('yearlyReview.habit.memberLabel')}</span>
-          </div>
+      <p className="review-habit-summary">
+        {t(
+          memberDays != null ? 'yearlyReview.habit.summaryFull' : 'yearlyReview.habit.summaryEntriesOnly',
+          {
+            entries: transactionCount.toLocaleString(locale),
+            days: memberDays != null ? memberDays.toLocaleString(locale) : 0,
+          },
         )}
-        <div className="review-habit-stat">
-          <span className="review-habit-stat__value">{transactionCount.toLocaleString(locale)}</span>
-          <span className="review-habit-stat__label">{t('yearlyReview.habit.entriesLabel')}</span>
-          {entriesGain > 0 && (
-            <span className="review-delta review-delta--good">
-              {t('yearlyReview.compare.entriesMore', { count: entriesGain.toLocaleString(locale) })}
-            </span>
-          )}
-        </div>
-      </div>
+      </p>
+      {entriesGain > 0 && (
+        <p className="review-delta review-delta--good review-habit-gain">
+          {t('yearlyReview.compare.entriesMore', { count: entriesGain.toLocaleString(locale) })}
+        </p>
+      )}
 
       <p className="review-encourage">{encouragement}</p>
     </div>

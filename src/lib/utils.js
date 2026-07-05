@@ -87,13 +87,14 @@ export function getDaysUntilDay(day) {
   if (!day || day < 1 || day > 31) return null;
   const today = new Date();
   const currentDay = today.getDate();
-  const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
+  let targetMonthIndex = today.getMonth();
 
-  let nextDate = new Date(currentYear, currentMonth, day);
-  if (currentDay > day) {
-    nextDate.setMonth(currentMonth + 1);
-  }
+  // 目標日已過就看下個月；日期夾在該月實際天數內（處理 29–31 遇小月的溢位）
+  if (currentDay > day) targetMonthIndex += 1;
+  const daysInTargetMonth = new Date(currentYear, targetMonthIndex + 1, 0).getDate();
+  const nextDate = new Date(currentYear, targetMonthIndex, Math.min(day, daysInTargetMonth));
+
   const diffTime = nextDate - today;
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }

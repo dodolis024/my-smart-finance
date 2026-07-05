@@ -32,7 +32,7 @@ function withAlpha(color, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function MonthlyBarChart({ data = [], loading }) {
+export default function MonthlyTrendChart({ data = [], loading }) {
   const { t, lang } = useLanguage();
   const { theme } = useTheme();
   const monthLabels = (lang === 'en' ? en : zh).yearlyReview.monthlyChart.months;

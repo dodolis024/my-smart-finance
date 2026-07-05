@@ -51,9 +51,34 @@ export function useTransactions() {
 
     if (!user) throw new Error(t('auth.loginRequired'));
 
-    const { data: exchangeRateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
-      p_currency: currency.trim().toUpperCase(),
-    });
+    const normalizedCurrency = currency.trim().toUpperCase();
+
+    // 編輯時沿用原本的匯率，避免用今日匯率改寫歷史台幣金額；只有幣別變更才重新取匯率
+    let exchangeRate = null;
+    if (editId) {
+      const { data: existingTx } = await supabase
+        .from('transactions')
+        .select('currency, exchange_rate')
+        .eq('id', editId)
+        .maybeSingle();
+      if (
+        existingTx &&
+        String(existingTx.currency).toUpperCase() === normalizedCurrency &&
+        Number(existingTx.exchange_rate) > 0
+      ) {
+        exchangeRate = Number(existingTx.exchange_rate);
+      }
+    }
+
+    if (exchangeRate == null) {
+      const { data: exchangeRateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
+        p_currency: normalizedCurrency,
+      });
+      exchangeRate =
+        rateErr === null && exchangeRateVal != null && exchangeRateVal > 0
+          ? Number(exchangeRateVal)
+          : 1.0;
+    }
 
     let account = null;
     if (paymentTrimmed) {
@@ -61,10 +86,6 @@ export function useTransactions() {
       account = acc;
     }
 
-    const exchangeRate =
-      rateErr === null && exchangeRateVal != null && exchangeRateVal > 0
-        ? Number(exchangeRateVal)
-        : 1.0;
     const twdAmount = Math.round(amount * exchangeRate * 100) / 100;
 
     const transactionData = {
@@ -75,7 +96,7 @@ export function useTransactions() {
       category,
       payment_method: paymentTrimmed || null,
       account_id: account?.id || null,
-      currency: currency.toUpperCase(),
+      currency: normalizedCurrency,
       amount,
       exchange_rate: exchangeRate,
       twd_amount: twdAmount,

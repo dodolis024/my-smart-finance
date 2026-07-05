@@ -122,10 +122,6 @@
   background: radial-gradient(circle at 20% 15%, var(--color-primary-tint-light), var(--color-bg) 60%);
 }
 
-.review-card--membership {
-  background: radial-gradient(circle at 30% 50%, var(--color-primary-tint-light), var(--color-bg) 60%);
-}
-
 .review-card--totals {
   background: radial-gradient(circle at 80% 15%, var(--color-primary-tint-light), var(--color-bg) 60%);
 }
@@ -218,18 +214,6 @@
   color: var(--color-text-muted);
   letter-spacing: 0.04em;
 }
-
-/* ---- Big number ---- */
-.review-big-number {
-  font-size: clamp(2.5rem, 10vw, 4.5rem);
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-  line-height: 1;
-}
-
-.review-big-number--positive { color: var(--color-progress-safe); }
-.review-big-number--negative { color: var(--color-progress-danger); }
 
 /* ---- Stat grid (for totals card) ---- */
 .review-stat-grid {
@@ -399,23 +383,7 @@
 .review-highlight-box--high .review-highlight-box__month { color: var(--color-progress-danger); }
 .review-highlight-box--low  .review-highlight-box__month { color: var(--color-progress-safe); }
 
-/* ---- Membership days card ---- */
-.review-membership-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  margin: 32px 0;
-}
-
-.review-membership-stat__unit {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  letter-spacing: 0.04em;
-}
-
-/* ---- Checkin card ---- */
+/* ---- Habit journey card — check-in circle ---- */
 .review-checkin-circle {
   width: clamp(140px, 30vw, 200px);
   height: clamp(140px, 30vw, 200px);
@@ -517,34 +485,16 @@
   letter-spacing: -0.02em;
 }
 
-/* ---- Habit journey card (checkin + membership + entries) ---- */
-.review-habit-stats {
-  display: flex;
-  justify-content: center;
-  gap: 40px;
-  margin-top: 8px;
-}
-
-.review-habit-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.review-habit-stat__value {
-  font-size: clamp(1.4rem, 5vw, 2rem);
-  font-weight: 900;
-  color: var(--color-text);
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-
-.review-habit-stat__label {
-  font-size: 0.72rem;
+/* ---- Habit journey card (checkin hero + narrative summary) ---- */
+.review-habit-summary {
+  font-size: 0.95rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
+  margin-top: 4px;
+}
+
+.review-habit-gain {
+  margin-top: 6px;
 }
 
 /* ---- Year-over-year delta chip ---- */

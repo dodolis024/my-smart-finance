@@ -44,29 +44,30 @@ export default function MonthHighlights({ data = [], loading }) {
   // duplicated pair.
   const sameMonth = best && worst && best.month === worst.month;
 
+  // Label and color follow the actual sign, so a month that still saved money
+  // is never called "most overspent" (and vice-versa).
+  const box = (m, positiveKey, negativeKey) => {
+    const positive = m.balance >= 0;
+    return (
+      <div className={`review-highlight-box ${positive ? 'review-highlight-box--low' : 'review-highlight-box--high'}`}>
+        <span className="review-highlight-box__label">
+          {t(`yearlyReview.monthHighlights.${positive ? positiveKey : negativeKey}`)}
+        </span>
+        <span className="review-highlight-box__month">{monthLabel(m.month)}</span>
+        <span className="review-highlight-box__amount">
+          {t('yearlyReview.monthHighlights.netLabel', { amount: formatMoneyInteger(m.balance) })}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="review-card review-card--month-highlights">
       <p className="review-card__eyebrow">{t('yearlyReview.monthHighlights.title')}</p>
 
       <div className="review-highlight-pair">
-        {best && (
-          <div className="review-highlight-box review-highlight-box--low">
-            <span className="review-highlight-box__label">{t('yearlyReview.monthHighlights.bestSaving')}</span>
-            <span className="review-highlight-box__month">{monthLabel(best.month)}</span>
-            <span className="review-highlight-box__amount">
-              {t('yearlyReview.monthHighlights.netLabel', { amount: formatMoneyInteger(best.balance) })}
-            </span>
-          </div>
-        )}
-        {worst && !sameMonth && (
-          <div className="review-highlight-box review-highlight-box--high">
-            <span className="review-highlight-box__label">{t('yearlyReview.monthHighlights.mostOverspent')}</span>
-            <span className="review-highlight-box__month">{monthLabel(worst.month)}</span>
-            <span className="review-highlight-box__amount">
-              {t('yearlyReview.monthHighlights.netLabel', { amount: formatMoneyInteger(worst.balance) })}
-            </span>
-          </div>
-        )}
+        {best && box(best, 'bestSaving', 'highestNet')}
+        {worst && !sameMonth && box(worst, 'lowestNet', 'mostOverspent')}
       </div>
     </div>
   );

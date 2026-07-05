@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Modal from '@/components/common/Modal';
 import CalcKeypad from './CalcKeypad';
-import { parseExpression } from '@/lib/utils';
+import { parseExpression, getTodayYmd } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', defaultExpenseCurrency, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
@@ -11,7 +11,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState(initialCurrency);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => getTodayYmd());
   const [note, setNote] = useState('');
   const [paidBy, setPaidBy] = useState('');
   const [shareMode, setShareMode] = useState('equal'); // 'equal' | 'custom'
@@ -44,7 +44,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     setTitle(editingExpense.title || '');
     setAmount(String(editingExpense.amount));
     setCurrency(editingExpense.currency || initialCurrency);
-    setDate(editingExpense.date || new Date().toISOString().slice(0, 10));
+    setDate(editingExpense.date || getTodayYmd());
     setNote(editingExpense.note || '');
     setPaidBy(editingExpense.paid_by || '');
     const shares = editingExpense.split_expense_shares || [];
@@ -88,7 +88,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     if (members?.length) {
       setParticipants(members.map(m => m.id));
       setPaidBy(members[0]?.id || '');
-      setDate(new Date().toISOString().slice(0, 10));
+      setDate(getTodayYmd());
     }
     onClose();
   };

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd } from '@/lib/utils';
+import { getBillingCycleRange } from '@/lib/creditCard';
 
 // Module-level cache for currencies (rarely changes)
 let cachedCurrencies = null;
@@ -94,33 +95,14 @@ export function useDashboard() {
   }, []);
 
   const fetchCreditHistory = useCallback(async (account) => {
-    const billingDay = account.billing_day || account.billingDay;
-    if (!billingDay) return;
-
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth() + 1;
-    const currentDay = today.getDate();
-
-    let lastBillingYear = currentYear;
-    let lastBillingMonth = currentMonth;
-    if (currentDay < billingDay) {
-      lastBillingMonth -= 1;
-      if (lastBillingMonth < 1) { lastBillingMonth = 12; lastBillingYear -= 1; }
-    }
-    let prevBillingYear = lastBillingYear;
-    let prevBillingMonth = lastBillingMonth - 1;
-    if (prevBillingMonth < 1) { prevBillingMonth = 12; prevBillingYear -= 1; }
-
-    const pad = (n) => String(n).padStart(2, '0');
-    const fromDate = `${prevBillingYear}-${pad(prevBillingMonth)}-${pad(billingDay)}`;
-    const toDate = `${currentYear}-${pad(currentMonth)}-${pad(currentDay)}`;
+    const cycle = getBillingCycleRange(account);
+    if (!cycle) return;
 
     const { data, error } = await supabase
       .from('transactions')
       .select('id, type, date, account_id, payment_method, twd_amount')
-      .gte('date', fromDate)
-      .lte('date', toDate);
+      .gte('date', cycle.prevBillingDate)
+      .lte('date', cycle.todayDate);
 
     if (error) return;
 

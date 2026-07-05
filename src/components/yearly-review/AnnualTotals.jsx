@@ -105,9 +105,11 @@ export default function AnnualTotals({ data, previous, year, loading, active }) 
         </div>
       </div>
 
-      <div className="review-result-tag">
-        {isPositive ? t('yearlyReview.totals.surplus') : t('yearlyReview.totals.deficit')}
-      </div>
+      {(data?.transactionCount ?? 0) > 0 && (
+        <div className="review-result-tag">
+          {isPositive ? t('yearlyReview.totals.surplus') : t('yearlyReview.totals.deficit')}
+        </div>
+      )}
     </div>
   );
 }

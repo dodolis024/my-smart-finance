@@ -7,6 +7,11 @@ This file records version updates for Smart Finance Tracker.
 - Improved foreign currency display: zero-decimal currencies (e.g. JPY, KRW, TWD) no longer show unnecessary decimals
 - Added default currency setting in categories options for transactions and subscriptions
 - Improved Year in Review: added year-over-year income and expense comparison
+- Fixed Year in Review best/worst month labels showing incorrectly when the balance sign flips
+- Fixed split expense and purchase dates showing a day off in some timezones
+- Fixed credit card billing cycle calculation for billing days 29-31 in short months
+- Fixed editing a transaction sometimes overwriting the original TWD amount with today's exchange rate
+- Improved Year in Review copy
 
 ## [1.17.2] - Jul-03 2026
 - Improved cross-timezone streak reminders: auto-sync device timezone, full IANA timezone picker, and fixed missed reminders when traveling due to date-only dedup
