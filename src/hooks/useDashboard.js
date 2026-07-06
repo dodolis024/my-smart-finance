@@ -4,9 +4,21 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd } from '@/lib/utils';
 import { getBillingCycleRange } from '@/lib/creditCard';
+import {
+  saveSnapshot,
+  loadSnapshot,
+  saveRates,
+  saveCurrencies,
+  loadCurrencies,
+  saveAccounts,
+  isOfflineError,
+} from '@/lib/offlineCache';
 
 // Module-level cache for currencies (rarely changes)
-let cachedCurrencies = null;
+// 離線啟動時以上次存下的清單起始,避免表單只剩 TWD
+let cachedCurrencies = loadCurrencies();
+// 匯率快取每次頁面載入只預熱一次(供離線記帳換算)
+let ratesPrimed = false;
 // 預設幣別為「每位使用者」的設定，需以 userId 綁定快取，避免切換帳號時沿用他人的值
 let cachedDefaultCurrency = null;
 let cachedDefaultCurrencyUserId = null;
@@ -32,7 +44,12 @@ export function useDashboard() {
   );
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
+  // 非 null 表示目前顯示的是離線快照:{ savedAt }
+  const [offlineSnapshot, setOfflineSnapshot] = useState(null);
   const requestIdRef = useRef(0);
+  // fetchDashboardData 依賴陣列刻意為空,以 ref 取得當前 userId
+  const userIdRef = useRef(user?.id);
+  userIdRef.current = user?.id;
 
   // 訂閱預設幣別變更，讓其他實例（例如已開啟的記帳表單）即時同步
   useEffect(() => {
@@ -84,9 +101,29 @@ export function useDashboard() {
       setCategoriesExpense(data.categoriesExpense || []);
       setCategoriesIncome(data.categoriesIncome || []);
 
+      setOfflineSnapshot(null);
+      saveSnapshot(userIdRef.current, year, month, data);
+      saveAccounts(userIdRef.current, data.accounts || []);
+
       return data;
     } catch (error) {
       if (reqId !== requestIdRef.current) return null;
+
+      // 斷網時回退到上次成功載入的快照(僅網路類錯誤;伺服器錯誤照舊拋出)
+      if (isOfflineError(error)) {
+        const snap = loadSnapshot(userIdRef.current, year, month);
+        if (snap) {
+          const cached = snap.data;
+          setDashboardData(cached);
+          setSummary(cached.summary || { totalIncome: 0, totalExpense: 0, balance: 0 });
+          setTransactionHistoryFull(cached.history || []);
+          setAccounts(cached.accounts || []);
+          setCategoriesExpense(cached.categoriesExpense || []);
+          setCategoriesIncome(cached.categoriesIncome || []);
+          setOfflineSnapshot({ savedAt: snap.savedAt });
+          return cached;
+        }
+      }
       throw error;
     } finally {
       if (reqId === requestIdRef.current) {
@@ -136,9 +173,29 @@ export function useDashboard() {
           if (!upper.includes('TWD')) upper.unshift('TWD');
           cachedCurrencies = upper;
           setCurrencies(upper);
+          saveCurrencies(upper);
         }
       } catch {
         // Keep default ['TWD']
+      }
+    }
+
+    // 預熱匯率快取(離線記帳時換算 TWD 用;exchange_rates 有 authenticated SELECT RLS)
+    if (!ratesPrimed && user) {
+      ratesPrimed = true;
+      try {
+        const { data: rateRows } = await supabase
+          .from('exchange_rates')
+          .select('currency_code, rate');
+        if (Array.isArray(rateRows) && rateRows.length > 0) {
+          saveRates(
+            Object.fromEntries(
+              rateRows.map((r) => [String(r.currency_code).toUpperCase(), Number(r.rate)])
+            )
+          );
+        }
+      } catch {
+        // 離線或查詢失敗:保留上次存的匯率
       }
     }
 
@@ -188,6 +245,7 @@ export function useDashboard() {
     defaultCurrency,
     loading,
     summary,
+    offlineSnapshot,
     fetchDashboardData,
     fetchCurrencies,
     saveDefaultCurrency,

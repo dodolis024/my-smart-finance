@@ -84,6 +84,15 @@ const zh = {
     checkinSuccess: '今日簽到成功！',
     checkinFailed: '簽到失敗，請稍後再試。',
     loadFailed: '無法取得資料',
+    offlineData: '離線資料 · 更新於 {time}',
+    pendingSync: '待同步',
+    pendingSyncCount: '{count} 筆待同步',
+    offlineQueued: '目前離線，已暫存這筆交易，恢復連線後會自動同步。',
+    offlineActionUnavailable: '目前離線，此操作需要網路連線。',
+    pendingEditBlocked: '這筆交易尚未同步，同步完成後才能編輯。',
+    syncNeedsLogin: '請重新登入後同步離線交易。',
+    syncFailed: '{count} 筆離線交易同步失敗，點擊「待同步」可重試。',
+    syncSuccess: '已同步 {count} 筆離線交易。',
   },
 
   transaction: {
@@ -523,6 +532,7 @@ const zh = {
     bannerSubtitle: '看看你的 {year} 年財務總結',
     bannerCta: '查看回顧',
     close: '關閉',
+    shareCard: '儲存圖片',
     prevYear: '上一年',
     nextYear: '下一年',
     prevCard: '上一張',

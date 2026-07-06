@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd, parseFormattedNumber } from '@/lib/utils';
+import { loadRates, loadAccounts, isOfflineError } from '@/lib/offlineCache';
+import { enqueueTransaction } from '@/lib/offlineQueue';
 
 export function useTransactions() {
   const { user } = useAuth();
@@ -53,6 +55,53 @@ export function useTransactions() {
 
     const normalizedCurrency = currency.trim().toUpperCase();
 
+    // 離線入列(僅新增):以本地快取解析匯率與帳戶,組出完整 insert payload 暫存,
+    // 恢復連線後由 offlineQueue 補送;客戶端自帶 UUID 確保重試不會重複記帳
+    const queueOffline = (resolvedRate = null) => {
+      let offlineRate = resolvedRate;
+      if (offlineRate == null) {
+        if (normalizedCurrency === 'TWD') {
+          offlineRate = 1.0;
+        } else {
+          const cachedRate = Number(loadRates()?.[normalizedCurrency]);
+          // 快取也沒有匯率時比照線上行為擋下,避免外幣被錯記
+          if (!(cachedRate > 0)) {
+            throw new Error(t('transaction.rateUnavailable', { currency: normalizedCurrency }));
+          }
+          offlineRate = cachedRate;
+        }
+      }
+      const cachedAccount = paymentTrimmed
+        ? loadAccounts(user.id).find((a) => (a.accountName || a.name) === paymentTrimmed)
+        : null;
+      enqueueTransaction(
+        user.id,
+        {
+          id: crypto.randomUUID(),
+          user_id: user.id,
+          date,
+          type,
+          item_name: itemName,
+          category,
+          payment_method: paymentTrimmed || null,
+          account_id: cachedAccount?.id || null,
+          currency: normalizedCurrency,
+          amount,
+          exchange_rate: offlineRate,
+          twd_amount: Math.round(amount * offlineRate * 100) / 100,
+          note: note || null,
+        },
+        getTodayYmd()
+      );
+      return { date, isEdit: false, queued: true };
+    };
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      // 編輯需要先讀伺服器上的既有資料,離線時直接擋下
+      if (editId) throw new Error(t('dashboard.offlineActionUnavailable'));
+      return queueOffline();
+    }
+
     // 編輯時沿用原本的匯率，避免用今日匯率改寫歷史台幣金額；只有幣別變更才重新取匯率
     let exchangeRate = null;
     if (editId) {
@@ -79,6 +128,8 @@ export function useTransactions() {
         });
         // 查無匯率時擋下送出，避免外幣被靜默以 1:1 記成錯誤的台幣金額
         if (rateErr || exchangeRateVal == null || Number(exchangeRateVal) <= 0) {
+          // 網路中斷造成的查詢失敗:新增改走離線入列(匯率從本地快取解析)
+          if (!editId && rateErr && isOfflineError(rateErr)) return queueOffline();
           throw new Error(t('transaction.rateUnavailable', { currency: normalizedCurrency }));
         }
         exchangeRate = Number(exchangeRateVal);
@@ -110,10 +161,17 @@ export function useTransactions() {
 
     if (editId) {
       const { error } = await supabase.from('transactions').update(transactionData).eq('id', editId);
-      if (error) throw error;
+      if (error) {
+        if (isOfflineError(error)) throw new Error(t('dashboard.offlineActionUnavailable'));
+        throw error;
+      }
     } else {
       const { error } = await supabase.from('transactions').insert(transactionData);
-      if (error) throw error;
+      if (error) {
+        // 送出瞬間斷網:沿用已解析好的匯率轉入離線佇列
+        if (isOfflineError(error)) return queueOffline(exchangeRate);
+        throw error;
+      }
 
       const today = getTodayYmd();
       if (date === today) {
@@ -129,9 +187,15 @@ export function useTransactions() {
   }, [user, t]);
 
   const deleteTransaction = useCallback(async (id) => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      throw new Error(t('dashboard.offlineActionUnavailable'));
+    }
     const { error } = await supabase.from('transactions').delete().eq('id', id);
-    if (error) throw error;
-  }, []);
+    if (error) {
+      if (isOfflineError(error)) throw new Error(t('dashboard.offlineActionUnavailable'));
+      throw error;
+    }
+  }, [t]);
 
   return {
     submitTransaction,

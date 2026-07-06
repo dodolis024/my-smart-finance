@@ -27,7 +27,11 @@ export function usePushNotifications() {
     setPermission(Notification.permission);
 
     // 檢查目前裝置是否已訂閱
-    navigator.serviceWorker.register(SW_PATH).then((reg) => {
+    // PROD 由 main.jsx 於啟動時註冊,這裡等 ready 即可;dev 環境沒人註冊,補註冊一次
+    const regPromise = import.meta.env.PROD
+      ? navigator.serviceWorker.ready
+      : navigator.serviceWorker.register(SW_PATH);
+    regPromise.then((reg) => {
       reg.pushManager.getSubscription().then((sub) => {
         setIsSubscribed(!!sub);
       });

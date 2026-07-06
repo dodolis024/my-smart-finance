@@ -1,6 +1,9 @@
 {
   "name": "Smart Finance",
   "short_name": "Smart Finance",
+  "id": "/my-smart-finance/",
+  "start_url": "/my-smart-finance/",
+  "scope": "/my-smart-finance/",
   "icons": [
     {
       "src": "favicons/web-app-manifest-192x192.png",

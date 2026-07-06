@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useStreak } from '@/hooks/useStreak';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useCreditCardNotifications } from '@/hooks/useCreditCardNotifications';
 import { useModalStates } from '@/hooks/useModalStates';
 import { supabase } from '@/lib/supabase';
@@ -39,6 +40,7 @@ export default function DashboardPage() {
     currencies,
     defaultCurrency,
     loading,
+    offlineSnapshot,
     fetchDashboardData,
     fetchCurrencies,
     removeTransactionLocally,
@@ -68,6 +70,61 @@ export default function DashboardPage() {
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [editingTransaction, setEditingTransaction] = useState(null);
+
+  // 離線記帳佇列:自動補送(掛載 + 恢復連線),結果以 toast 通知
+  const { queuedItems, pendingCount, flushNow, removeQueuedItem } = useOfflineSync({
+    onSynced: (result) => {
+      toast.success(t('dashboard.syncSuccess', { count: result.synced }));
+      fetchDashboardData(currentYear, currentMonth, { silent: true });
+    },
+    onFailed: (result) => toast.error(t('dashboard.syncFailed', { count: result.failed })),
+    onNeedsLogin: () => toast.error(t('dashboard.syncNeedsLogin')),
+  });
+
+  // 把佇列中的交易(尚未同步)合併進當月列表與彙總,標記 pending 供 UI 顯示
+  const queuedRows = useMemo(() => {
+    if (queuedItems.length === 0) return [];
+    const monthPrefix = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+    return queuedItems
+      .filter((item) => String(item.tx?.date || '').startsWith(monthPrefix))
+      .map((item) => ({
+        id: item.tx.id,
+        date: item.tx.date,
+        type: item.tx.type,
+        category: item.tx.category,
+        itemName: item.tx.item_name,
+        paymentMethod: item.tx.payment_method,
+        currency: item.tx.currency,
+        amount: item.tx.amount,
+        twdAmount: item.tx.twd_amount,
+        note: item.tx.note,
+        pending: true,
+      }));
+  }, [queuedItems, currentYear, currentMonth]);
+
+  const displayHistory = useMemo(() => {
+    if (queuedRows.length === 0) return transactionHistoryFull;
+    return [...queuedRows, ...transactionHistoryFull].sort((a, b) =>
+      String(b.date).localeCompare(String(a.date))
+    );
+  }, [queuedRows, transactionHistoryFull]);
+
+  const displaySummary = useMemo(() => {
+    if (queuedRows.length === 0) return summary;
+    let dIncome = 0;
+    let dExpense = 0;
+    for (const row of queuedRows) {
+      const amt = typeof row.twdAmount === 'number' ? row.twdAmount : 0;
+      if (row.type === 'income') dIncome += amt;
+      else dExpense += amt;
+    }
+    return {
+      ...summary,
+      totalIncome: summary.totalIncome + dIncome,
+      totalExpense: summary.totalExpense + dExpense,
+      balance: summary.balance + dIncome - dExpense,
+    };
+  }, [queuedRows, summary]);
 
   const formRef = useRef(null);
   const historyRef = useRef(null);
@@ -131,6 +188,14 @@ export default function DashboardPage() {
         const result = await submitTransaction(formData, editId, {
           isSplitSynced: !!editingTransaction?.isSplitSynced,
         });
+
+        // 離線入列:不重新抓資料(佇列訂閱會更新列表),不觸發 streak/信用卡檢查
+        if (result.queued) {
+          setEditingTransaction(null);
+          toast.info(t('dashboard.offlineQueued'));
+          return;
+        }
+
         const [y, m] = result.date
           ? result.date.split('-')
           : [String(currentYear), String(currentMonth)];
@@ -175,17 +240,28 @@ export default function DashboardPage() {
   }, []);
 
   const handleStartEdit = useCallback(async (transaction) => {
+    // 未同步的離線交易還沒有伺服器資料,先擋編輯(可刪除重記)
+    if (transaction.pending) {
+      toast.info(t('dashboard.pendingEditBlocked'));
+      return;
+    }
     const isSplitSynced = await resolveSplitSynced(transaction);
     setEditingTransaction({ ...transaction, isSplitSynced });
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
-  }, [resolveSplitSynced]);
+  }, [resolveSplitSynced, toast, t]);
 
   const handleDeleteTransaction = useCallback(
     async (id) => {
       const confirmed = await confirm(t('dashboard.deleteTransactionConfirm'), { danger: true });
       if (!confirmed) return;
+      // 未同步的離線交易:直接從本地佇列移除,不打伺服器
+      if (queuedItems.some((item) => item.id === id)) {
+        removeQueuedItem(id);
+        toast.success(t('dashboard.transactionDeleted'));
+        return;
+      }
       // 找到要刪除的交易，記錄其付款帳戶（刪除後無法再查）
       // （history 與 accounts 皆來自 RPC，欄位為駝峰 paymentMethod / accountName）
       const txToDelete = transactionHistoryFull.find((tx) => tx.id === id);
@@ -203,7 +279,7 @@ export default function DashboardPage() {
         toast.error(err.message || t('dashboard.deleteTransactionFailed'));
       }
     },
-    [confirm, deleteTransaction, removeTransactionLocally, fetchDashboardData, currentYear, currentMonth, toast, transactionHistoryFull, accounts, checkCreditUsageAlert]
+    [confirm, deleteTransaction, removeTransactionLocally, fetchDashboardData, currentYear, currentMonth, toast, transactionHistoryFull, accounts, checkCreditUsageAlert, queuedItems, removeQueuedItem, t]
   );
 
   const handleCheckin = useCallback(async () => {
@@ -275,10 +351,31 @@ export default function DashboardPage() {
                 onChange={handleMonthChange}
                 disabled={loading}
               />
+              {offlineSnapshot && (
+                <span className="offline-badge">
+                  {t('dashboard.offlineData', {
+                    time: new Date(offlineSnapshot.savedAt).toLocaleString([], {
+                      month: 'numeric',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }),
+                  })}
+                </span>
+              )}
+              {pendingCount > 0 && (
+                <button
+                  type="button"
+                  className="pending-sync-pill"
+                  onClick={() => flushNow({ includeFailed: true })}
+                >
+                  {t('dashboard.pendingSyncCount', { count: pendingCount })}
+                </button>
+              )}
             </div>
             {streakBadge}
           </div>
-          <StatCards summary={summary} loading={loading} />
+          <StatCards summary={displaySummary} loading={loading} />
         </section>
 
         <section className="analytics-section">
@@ -289,7 +386,7 @@ export default function DashboardPage() {
               {loading ? (
                 <p className="category-stats-empty">{t('common.loadingDots')}</p>
               ) : (
-                <CategoryChart history={transactionHistoryFull} incomeCategories={categoriesIncome} />
+                <CategoryChart history={displayHistory} incomeCategories={categoriesIncome} />
               )}
             </div>
             <div className="analytics-col payment-breakdown">
@@ -298,7 +395,7 @@ export default function DashboardPage() {
                 <p className="payment-stats-empty">{t('common.loadingDots')}</p>
               ) : (
                 <PaymentStats
-                  history={transactionHistoryFull}
+                  history={displayHistory}
                   accounts={accounts}
                   onOpenCreditCard={handleOpenCreditCard}
                 />
@@ -310,7 +407,7 @@ export default function DashboardPage() {
         <section className="transaction-history-section" ref={historyRef}>
           <h2>{t('dashboard.transactions')}</h2>
           <TransactionTable
-            transactions={transactionHistoryFull}
+            transactions={displayHistory}
             onEdit={handleStartEdit}
             onDelete={handleDeleteTransaction}
             loading={loading}

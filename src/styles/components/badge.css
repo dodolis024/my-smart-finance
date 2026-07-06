@@ -41,3 +41,38 @@
 .transaction-detail-value .badge {
   display: inline-block;
 }
+
+/* 離線佇列:交易列「待同步」標記與未同步列的弱化 */
+.badge--pending {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 999px;
+  background: var(--color-card);
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.transaction-row--pending {
+  opacity: 0.75;
+}
+
+/* 待同步數量 pill(儀表板標頭,點擊立即補送) */
+.pending-sync-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border: 1px dashed var(--color-primary);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  background: var(--color-card);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+.pending-sync-pill:hover {
+  background: var(--color-primary-tint-hover);
+}

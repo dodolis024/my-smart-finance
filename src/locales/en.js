@@ -84,6 +84,15 @@ const en = {
     checkinSuccess: 'Checked in today!',
     checkinFailed: 'Check-in failed, please try again.',
     loadFailed: 'Failed to load data.',
+    offlineData: 'Offline data · updated {time}',
+    pendingSync: 'Pending sync',
+    pendingSyncCount: '{count} pending sync',
+    offlineQueued: 'You are offline. This transaction is saved locally and will sync once you are back online.',
+    offlineActionUnavailable: 'You are offline. This action requires a network connection.',
+    pendingEditBlocked: 'This transaction has not synced yet. It can be edited after syncing.',
+    syncNeedsLogin: 'Please sign in again to sync offline transactions.',
+    syncFailed: '{count} offline transaction(s) failed to sync. Tap "Pending sync" to retry.',
+    syncSuccess: 'Synced {count} offline transaction(s).',
   },
 
   transaction: {
@@ -523,6 +532,7 @@ const en = {
     bannerSubtitle: 'See your {year} financial recap',
     bannerCta: 'View Review',
     close: 'Close',
+    shareCard: 'Save Image',
     prevYear: 'Previous year',
     nextYear: 'Next year',
     prevCard: 'Previous card',

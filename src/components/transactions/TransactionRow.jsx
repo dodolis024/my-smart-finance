@@ -43,11 +43,17 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
     'transaction-row',
     'transaction-row--semantic',
     tx.subscriptionId && 'transaction-row--subscription',
+    tx.pending && 'transaction-row--pending',
     swipedRight && 'swiped-right',
     swipedLeft && 'swiped-left',
   ]
     .filter(Boolean)
     .join(' ');
+
+  // 離線佇列中的交易(尚未同步至伺服器)
+  const pendingBadge = tx.pending ? (
+    <span className="badge badge--pending">{t('dashboard.pendingSync')}</span>
+  ) : null;
 
   /* 手機版：4 欄 slider，左滑刪除（金額右側）、右滑編輯（日期左側） */
   if (isMobile) {
@@ -70,7 +76,7 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
               <div className="slider-cell cell-category">
                 <span className="badge">{tx.category}</span>
               </div>
-              <div className="slider-cell cell-item">{tx.itemName}</div>
+              <div className="slider-cell cell-item">{tx.itemName}{pendingBadge}</div>
               <div className="slider-cell cell-amount">{displayAmount}</div>
             </div>
             <div className="swipe-action swipe-action--edit">
@@ -122,7 +128,7 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
         </div>
       </td>
       <td className="cell-item" headers="col-item">
-        <div className="cell-item-inner">{tx.itemName}</div>
+        <div className="cell-item-inner">{tx.itemName}{pendingBadge}</div>
       </td>
       <td className="cell-payment" headers="col-payment">
         <div className="cell-payment-inner">{tx.paymentMethod}</div>
