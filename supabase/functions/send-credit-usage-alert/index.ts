@@ -33,15 +33,43 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const body = await req.json()
-    const { user_id, account_id, account_name, usage_rate } = body
+    // 驗證呼叫者身分：以 JWT 為準，不信任 request body 傳入的 user_id
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const jwt = authHeader.replace(/^Bearer\s+/i, '')
+    const { data: authData, error: authError } = await supabase.auth.getUser(jwt)
+    if (authError || !authData?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    const user_id = authData.user.id
 
-    if (!user_id || !account_id || !account_name || usage_rate == null) {
+    const body = await req.json()
+    const { account_id, usage_rate } = body
+
+    if (!account_id || usage_rate == null) {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    // 確認帳戶屬於呼叫者，帳戶名稱以資料庫為準（不信任 body 傳入的文字）
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('name')
+      .eq('id', account_id)
+      .eq('user_id', user_id)
+      .maybeSingle()
+
+    if (!account) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Account not found' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    const account_name = account.name
 
     // 1. 查詢用戶通知設定
     const { data: settingsRows } = await supabase

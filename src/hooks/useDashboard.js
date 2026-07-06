@@ -149,7 +149,7 @@ export function useDashboard() {
           .select('value')
           .eq('user_id', user.id)
           .eq('key', 'default_currency')
-          .single();
+          .maybeSingle();
         const code = data?.value ? String(data.value).toUpperCase() : 'TWD';
         cachedDefaultCurrency = code;
         cachedDefaultCurrencyUserId = user.id;

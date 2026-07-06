@@ -129,7 +129,7 @@ BEGIN
     'expense_snapshot', v_sync.expense_snapshot
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
 
 -- =============================================================================
 -- 4. RPC: sync_split_to_ledger
@@ -285,4 +285,4 @@ BEGIN
     'is_update',      v_existing_sync.id IS NOT NULL
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

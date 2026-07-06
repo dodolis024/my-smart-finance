@@ -32,13 +32,22 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // 驗證呼叫者身分：以 JWT 為準，不信任 request body 傳入的 actor_user_id
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const jwt = authHeader.replace(/^Bearer\s+/i, '')
+    const { data: authData, error: authError } = await supabase.auth.getUser(jwt)
+    if (authError || !authData?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    const actor_user_id = authData.user.id
+
     const body = await req.json()
     const {
       event,
       group_id,
-      group_name,
-      actor_name,
-      actor_user_id,
       expense_title,
       expense_amount,
       currency,
@@ -47,11 +56,41 @@ serve(async (req) => {
       to_name,
     } = body
 
-    if (!event || !group_id || !actor_user_id) {
+    if (!event || !group_id) {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // 確認呼叫者是該群組的已連結成員或擁有者；群組與操作者名稱以資料庫為準
+    const { data: actorMember } = await supabase
+      .from('split_members')
+      .select('name, split_groups ( name )')
+      .eq('group_id', group_id)
+      .eq('user_id', actor_user_id)
+      .maybeSingle()
+
+    let actor_name = actorMember?.name ?? ''
+    let group_name = actorMember?.split_groups?.name ?? ''
+
+    if (!actorMember) {
+      // 擁有者可能已把自己從成員名單移除，退回用 owner 身分驗證
+      const { data: ownedGroup } = await supabase
+        .from('split_groups')
+        .select('name')
+        .eq('id', group_id)
+        .eq('owner_id', actor_user_id)
+        .maybeSingle()
+
+      if (!ownedGroup) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Not a member of this group' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      group_name = ownedGroup.name
+      actor_name = body.actor_name ?? ''
     }
 
     // 組合通知文字

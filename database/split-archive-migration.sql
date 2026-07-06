@@ -38,4 +38,4 @@ BEGIN
 
   RETURN json_build_object('id', v_member.id, 'name', v_member.name, 'user_id', v_member.user_id);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

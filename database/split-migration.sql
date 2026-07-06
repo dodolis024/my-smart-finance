@@ -122,7 +122,7 @@ ALTER TABLE split_settlements ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION get_user_split_group_ids(p_user_id UUID)
 RETURNS SETOF UUID AS $$
   SELECT group_id FROM split_members WHERE user_id = p_user_id;
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 -- 檢查用戶是否可存取指定群組（owner 或已連結成員）
 CREATE OR REPLACE FUNCTION can_access_split_group(p_group_id UUID, p_user_id UUID)
@@ -135,7 +135,7 @@ RETURNS BOOLEAN AS $$
     SELECT 1 FROM split_members
     WHERE group_id = p_group_id AND user_id = p_user_id
   );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 -- =============================================================================
 -- 8. split_groups RLS policies
@@ -160,6 +160,28 @@ CREATE POLICY "split_groups_update" ON split_groups
 
 CREATE POLICY "split_groups_delete" ON split_groups
   FOR DELETE USING (owner_id = auth.uid());
+
+-- 安全性：UPDATE policy 無法比較新舊值，用 trigger 防止非擁有者
+-- 竄改 owner_id（奪走群組擁有權）或 invite_code
+CREATE OR REPLACE FUNCTION protect_split_group_ownership()
+RETURNS TRIGGER
+SET search_path = public
+AS $$
+BEGIN
+  IF (NEW.owner_id IS DISTINCT FROM OLD.owner_id
+      OR NEW.invite_code IS DISTINCT FROM OLD.invite_code)
+     AND (auth.uid() IS NULL OR auth.uid() <> OLD.owner_id) THEN
+    RAISE EXCEPTION '只有群組擁有者可以變更擁有權或邀請碼';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS protect_split_group_ownership ON split_groups;
+CREATE TRIGGER protect_split_group_ownership
+  BEFORE UPDATE ON split_groups
+  FOR EACH ROW
+  EXECUTE FUNCTION protect_split_group_ownership();
 
 -- =============================================================================
 -- 9. split_members RLS policies
@@ -275,7 +297,7 @@ BEGIN
     'members', COALESCE(members, '[]'::json)
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- =============================================================================
 -- 13. 加入群組 RPC（SECURITY DEFINER，繞過 RLS FK 限制）
@@ -300,7 +322,7 @@ BEGIN
       AND sm.user_id IS NOT NULL
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
 
 -- 連結自己到已存在的成員位置
 CREATE OR REPLACE FUNCTION link_self_to_split_member(p_member_id UUID)
@@ -329,7 +351,7 @@ BEGIN
 
   UPDATE split_members SET user_id = auth.uid() WHERE id = p_member_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 以新成員身份加入群組（接受邀請碼，不接受 group_id，防止 group_id 外洩後繞過邀請機制）
 CREATE OR REPLACE FUNCTION join_split_group_as_new_member(p_invite_code TEXT, p_name TEXT)
@@ -363,4 +385,4 @@ BEGIN
 
   RETURN json_build_object('id', v_member.id, 'name', v_member.name, 'user_id', v_member.user_id);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

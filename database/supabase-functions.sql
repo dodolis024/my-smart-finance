@@ -179,7 +179,7 @@ BEGIN
 
     RETURN v_result;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- =============================================================================
 -- 2. 計算 Streak 統計資料
@@ -328,7 +328,12 @@ BEGIN
         v_longest,
         COALESCE(v_logged_dates_json, '[]'::json);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 安全性：此函數接受 p_user_id 參數且為 SECURITY DEFINER，
+-- 不可讓用戶端直接呼叫（否則可查詢他人的簽到記錄）。
+-- 僅供 get_dashboard_data 內部呼叫（以函數擁有者身分執行，不受 REVOKE 影響）。
+REVOKE EXECUTE ON FUNCTION calculate_streak_stats(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 
 -- =============================================================================
 -- 3. 取得可用幣別列表（供前端動態幣別選單）
@@ -341,7 +346,7 @@ CREATE OR REPLACE FUNCTION get_available_currencies()
 RETURNS TEXT[] AS $$
     SELECT COALESCE(ARRAY_AGG(currency_code ORDER BY currency_code), ARRAY['TWD']::TEXT[])
     FROM exchange_rates;
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 
 -- 4. 取得匯率（用於新增/編輯交易時計算 TWD 金額）
 -- =============================================================================
@@ -364,7 +369,7 @@ BEGIN
     END IF;
     RETURN v_rate;
 END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
 
 -- =============================================================================
 -- 5. 年度回顧（Yearly Review）
@@ -494,7 +499,7 @@ BEGIN
                             )
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- =============================================================================
 -- 完成！

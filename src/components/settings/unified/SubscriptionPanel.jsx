@@ -8,7 +8,7 @@ const makeEmptyForm = (defaultCurrency = 'TWD') => ({ name: '', amount: '', curr
 
 export default function SubscriptionPanel({ isOpen, confirm, toast }) {
   const { t } = useLanguage();
-  const { categoriesExpense, accounts } = useSettings();
+  const { expenseCategories: categoriesExpense, accounts, loadSettingsData } = useSettings();
   const { currencies, defaultCurrency } = useDashboard();
   const { subscriptions, loading, loadSubscriptions, saveSubscription, deleteSubscription, toggleSubscription } = useSubscriptions();
   const [showForm, setShowForm] = useState(false);
@@ -17,8 +17,8 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (isOpen) { loadSubscriptions(); setShowForm(false); setEditingId(null); }
-  }, [isOpen, loadSubscriptions]);
+    if (isOpen) { loadSubscriptions(); loadSettingsData(); setShowForm(false); setEditingId(null); }
+  }, [isOpen, loadSubscriptions, loadSettingsData]);
 
   const setField = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 

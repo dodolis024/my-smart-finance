@@ -263,7 +263,10 @@ BEGIN
         (p_user_id, '信用卡A', 'credit_card', 50000, 5, 25)
     ON CONFLICT DO NOTHING;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 安全性：接受 p_user_id 且為 SECURITY DEFINER，不可讓用戶端直接呼叫
+REVOKE EXECUTE ON FUNCTION create_default_accounts(UUID) FROM PUBLIC, anon, authenticated;
 
 -- 建立預設設定的函數（由應用程式在註冊時呼叫）
 CREATE OR REPLACE FUNCTION create_default_settings(p_user_id UUID)
@@ -283,7 +286,10 @@ BEGIN
         (p_user_id, 'income_categories', '["薪水", "投資", "其他"]'::jsonb)
     ON CONFLICT (user_id, key) DO NOTHING;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 安全性：接受 p_user_id 且為 SECURITY DEFINER，不可讓用戶端直接呼叫
+REVOKE EXECUTE ON FUNCTION create_default_settings(UUID) FROM PUBLIC, anon, authenticated;
 
 -- =============================================================================
 -- 完成！
