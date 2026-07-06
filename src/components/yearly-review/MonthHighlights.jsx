@@ -3,8 +3,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { formatMoneyInteger } from '@/lib/utils';
 import zh from '@/locales/zh';
 import en from '@/locales/en';
+import ReviewExportFooter from './ReviewExportFooter';
 
-export default function MonthHighlights({ data = [], loading }) {
+export default function MonthHighlights({ data = [], loading, forExport = false, year }) {
   const { t, lang } = useLanguage();
   const monthNames = (lang === 'en' ? en : zh).yearlyReview.monthlyChart.months;
 
@@ -69,6 +70,7 @@ export default function MonthHighlights({ data = [], loading }) {
         {best && box(best, 'bestSaving', 'highestNet')}
         {worst && !sameMonth && box(worst, 'lowestNet', 'mostOverspent')}
       </div>
+      {forExport && <ReviewExportFooter year={year} />}
     </div>
   );
 }

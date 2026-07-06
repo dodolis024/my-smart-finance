@@ -4,6 +4,7 @@ import { Chart as ChartJS, ArcElement, Tooltip } from 'chart.js';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatMoneyInteger } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
+import ReviewExportFooter from './ReviewExportFooter';
 import {
   CHART_COLORS_ROSE, CHART_COLORS_GRAY, CHART_COLORS_DAWN, CHART_COLORS_SODA,
   CHART_COLORS_LAVENDER, CHART_COLORS_SORBET, CHART_COLORS_PEACH, CHART_COLORS_LIME,
@@ -20,7 +21,7 @@ const THEME_PALETTES = {
 
 const MAX_RING_ITEMS = 3;
 
-export default function TopCategory({ data = [], loading, expenseCount = 0, totalExpense = 0 }) {
+export default function TopCategory({ data = [], loading, expenseCount = 0, totalExpense = 0, forExport = false, year }) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const palette = THEME_PALETTES[theme] || CHART_COLORS;
@@ -43,6 +44,7 @@ export default function TopCategory({ data = [], loading, expenseCount = 0, tota
   const chartOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: true,
+    animation: forExport ? false : undefined,
     cutout: '74%',
     plugins: {
       legend: { display: false },
@@ -98,6 +100,7 @@ export default function TopCategory({ data = [], loading, expenseCount = 0, tota
           {t('yearlyReview.topCategory.summary', { count: expenseCount, amount: formatMoneyInteger(totalExpense) })}
         </p>
       )}
+      {forExport && <ReviewExportFooter year={year} />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useYearlyReview } from '@/hooks/useYearlyReview';
+import { useCardExport } from '@/hooks/useCardExport';
 import { useLanguage } from '@/contexts/LanguageContext';
 import StoryProgressBar from '@/components/yearly-review/StoryProgressBar';
 import ReviewCover from '@/components/yearly-review/ReviewCover';
@@ -11,7 +12,10 @@ import TopExpenses from '@/components/yearly-review/TopExpenses';
 import MonthHighlights from '@/components/yearly-review/MonthHighlights';
 import HabitJourney from '@/components/yearly-review/HabitJourney';
 import ReviewClosing from '@/components/yearly-review/ReviewClosing';
+import CardExportStage from '@/components/yearly-review/CardExportStage';
+import ShareCardButton from '@/components/yearly-review/ShareCardButton';
 import '@/styles/yearly-review.css';
+import '@/styles/card-export.css';
 
 function defaultYear() {
   const now = new Date();
@@ -29,6 +33,7 @@ export default function YearlyReviewPage() {
   });
 
   const { loading, error, annualTotals, previousTotals, monthlyBreakdown, topCategories, topExpenses, highlights } = useYearlyReview(year);
+  const { exporting, stageRef, shareCard } = useCardExport();
 
   const handleClose = useCallback(() => navigate('/'), [navigate]);
 
@@ -37,40 +42,54 @@ export default function YearlyReviewPage() {
   // Narrative arc — build to the climax: warm up with habits, walk through the
   // spending details, then land the annual verdict + YoY as the payoff.
   const cardDefs = [
-    { key: 'cover', render: () => (
-      <ReviewCover year={year} onYearChange={(y) => { setYear(y); setCurrentIndex(0); }} />
+    { key: 'cover', render: (active, forExport) => (
+      <ReviewCover
+        year={year}
+        onYearChange={forExport ? () => {} : (y) => { setYear(y); setCurrentIndex(0); }}
+        forExport={forExport}
+      />
     ) },
-    { key: 'habit', render: () => (
+    { key: 'habit', render: (active, forExport) => (
       <HabitJourney
         year={year}
         checkinDays={highlights?.checkinDays ?? 0}
         transactionCount={annualTotals?.transactionCount ?? 0}
         previousCount={previousTotals?.transactionCount ?? 0}
         loading={loading}
+        forExport={forExport}
       />
     ) },
-    { key: 'chart', render: () => (
-      <MonthlyTrendChart data={monthlyBreakdown} loading={loading} />
+    { key: 'chart', render: (active, forExport) => (
+      <MonthlyTrendChart data={monthlyBreakdown} loading={loading} forExport={forExport} year={year} />
     ) },
-    { key: 'category', render: () => (
+    { key: 'category', render: (active, forExport) => (
       <TopCategory
         data={topCategories}
         loading={loading}
         expenseCount={annualTotals?.expenseCount}
         totalExpense={annualTotals?.totalExpense}
+        forExport={forExport}
+        year={year}
       />
     ) },
-    { key: 'expenses', render: () => (
-      <TopExpenses data={topExpenses} loading={loading} />
+    { key: 'expenses', render: (active, forExport) => (
+      <TopExpenses data={topExpenses} loading={loading} forExport={forExport} year={year} />
     ) },
-    { key: 'months', render: () => (
-      <MonthHighlights data={monthlyBreakdown} loading={loading} />
+    { key: 'months', render: (active, forExport) => (
+      <MonthHighlights data={monthlyBreakdown} loading={loading} forExport={forExport} year={year} />
     ) },
-    { key: 'totals', render: (active) => (
-      <AnnualTotals data={annualTotals} previous={previousTotals} year={year} loading={loading} active={active} />
+    { key: 'totals', render: (active, forExport) => (
+      <AnnualTotals
+        data={annualTotals}
+        previous={previousTotals}
+        year={year}
+        loading={loading}
+        active={forExport ? false : active}
+        forExport={forExport}
+      />
     ) },
-    { key: 'closing', render: () => (
-      <ReviewClosing year={year} onClose={handleClose} />
+    { key: 'closing', render: (active, forExport) => (
+      <ReviewClosing year={year} onClose={forExport ? () => {} : handleClose} forExport={forExport} />
     ) },
   ];
 
@@ -126,6 +145,10 @@ export default function YearlyReviewPage() {
     >
       <div className="yearly-review__header">
         <StoryProgressBar total={total} current={currentIndex} onJump={goTo} />
+        <ShareCardButton
+          exporting={exporting}
+          onClick={() => shareCard({ cardKey: cardDefs[currentIndex].key, year })}
+        />
         <button className="yearly-review__close" onClick={handleClose} aria-label={t('yearlyReview.close')}>✕</button>
       </div>
 
@@ -136,7 +159,7 @@ export default function YearlyReviewPage() {
         >
           {cardDefs.map((card, i) => (
             <div key={card.key} className="yearly-review__card-slot">
-              {card.render(i === currentIndex)}
+              {card.render(i === currentIndex, false)}
             </div>
           ))}
         </div>
@@ -160,6 +183,10 @@ export default function YearlyReviewPage() {
           ›
         </button>
       )}
+
+      <CardExportStage stageRef={stageRef}>
+        {cardDefs[currentIndex].render(false, true)}
+      </CardExportStage>
     </div>
   );
 }

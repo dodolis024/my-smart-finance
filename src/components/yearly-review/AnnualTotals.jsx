@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatMoneyInteger } from '@/lib/utils';
+import ReviewExportFooter from './ReviewExportFooter';
 
-function useCountUp(target, duration = 1200, active = true) {
+function useCountUp(target, duration = 700, active = true) {
   const [value, setValue] = useState(0);
   useEffect(() => {
     if (!active || !target) { setValue(target || 0); return; }
@@ -54,12 +55,13 @@ function DeltaChip({ chip }) {
   );
 }
 
-export default function AnnualTotals({ data, previous, year, loading, active }) {
+export default function AnnualTotals({ data, previous, year, loading, active, forExport = false }) {
   const { t } = useLanguage();
 
-  const income  = useCountUp(data?.totalIncome  ?? 0, 1200, active && !loading);
-  const expense = useCountUp(data?.totalExpense ?? 0, 1200, active && !loading);
-  const balance = useCountUp(Math.abs(data?.balance ?? 0), 1200, active && !loading);
+  // forExport: active=false causes useCountUp to skip animation and return final value directly
+  const income  = useCountUp(data?.totalIncome  ?? 0, 1200, !forExport && active && !loading);
+  const expense = useCountUp(data?.totalExpense ?? 0, 1200, !forExport && active && !loading);
+  const balance = useCountUp(Math.abs(data?.balance ?? 0), 1200, !forExport && active && !loading);
   const isPositive = (data?.balance ?? 0) >= 0;
 
   // Only compare when last year actually had records.
@@ -110,6 +112,7 @@ export default function AnnualTotals({ data, previous, year, loading, active }) 
           {isPositive ? t('yearlyReview.totals.surplus') : t('yearlyReview.totals.deficit')}
         </div>
       )}
+      {forExport && <ReviewExportFooter year={year} />}
     </div>
   );
 }

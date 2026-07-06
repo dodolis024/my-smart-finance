@@ -14,6 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/hooks/useTheme';
 import zh from '@/locales/zh';
 import en from '@/locales/en';
+import ReviewExportFooter from './ReviewExportFooter';
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Filler, Tooltip, Legend);
 
@@ -32,7 +33,7 @@ function withAlpha(color, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export default function MonthlyTrendChart({ data = [], loading }) {
+export default function MonthlyTrendChart({ data = [], loading, forExport = false, year }) {
   const { t, lang } = useLanguage();
   const { theme } = useTheme();
   const monthLabels = (lang === 'en' ? en : zh).yearlyReview.monthlyChart.months;
@@ -82,6 +83,7 @@ export default function MonthlyTrendChart({ data = [], loading }) {
   const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    animation: forExport ? false : undefined,
     interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: {
@@ -132,6 +134,7 @@ export default function MonthlyTrendChart({ data = [], loading }) {
       <div className="review-chart-wrap">
         <Line data={chartData} options={options} />
       </div>
+      {forExport && <ReviewExportFooter year={year} />}
     </div>
   );
 }

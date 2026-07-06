@@ -1,0 +1,142 @@
+/* ===== Card Export Stage — off-screen 1080×1920 render target ===== *
+ * Captured at scale:1 → final output 1080×1920 (9:16 portrait).    *
+ * Using actual target size avoids the ×2 amplification that made    *
+ * elements look proportionally larger than on the website.          *
+ * Scoped under .card-export-stage to never affect the live UI.      */
+
+.card-export-stage {
+  position: fixed;
+  left: -99999px;
+  top: 0;
+  width: 1080px;
+  height: 1920px;
+  overflow: hidden;
+  background: var(--color-bg);
+  pointer-events: none;
+}
+
+.card-export-stage .review-card {
+  position: relative; /* anchor the absolutely-positioned footer */
+  width: 1080px;
+  height: 1920px;
+  padding: 120px 80px 80px;
+  overflow: hidden;
+}
+
+/* ---- Pin clamp() / vw / vh values to deterministic px ----
+ * These units resolve against the browser viewport, not the stage.
+ * We scale each to proportionally match a 1080px-wide portrait card. */
+
+/* clamp(1.5rem, 5vw, 2.2rem) → proportional for 1080px */
+.card-export-stage .review-card__title {
+  font-size: 2.6rem;
+}
+
+/* clamp(0.9rem, 2.5vw, 1.1rem) */
+.card-export-stage .review-card__subtitle {
+  font-size: 1.3rem;
+  margin-bottom: 48px;
+}
+
+/* clamp(1.2rem, 4vw, 2rem) */
+.card-export-stage .review-stat-item__value {
+  font-size: 2.4rem;
+}
+
+/* clamp(180px, 35vh, 280px) → scale for 1920px height */
+.card-export-stage .review-chart-wrap {
+  height: 480px;
+}
+
+/* clamp(220px, 58vw, 280px) → scale for 1080px width */
+.card-export-stage .review-category-ring-wrap {
+  width: 480px;
+  height: 480px;
+}
+
+/* clamp(140px, 30vw, 200px) → scale for 1080px width */
+.card-export-stage .review-checkin-circle {
+  width: 320px;
+  height: 320px;
+  margin: 48px auto;
+}
+
+/* clamp(2.5rem, 8vw, 4rem) */
+.card-export-stage .review-checkin-circle__number {
+  font-size: 5.5rem;
+}
+
+/* 30vw → fixed for 1080px stage */
+.card-export-stage .review-category-legend-row__name {
+  max-width: 220px;
+}
+
+/* Stat grid spacing for 1920px height */
+.card-export-stage .review-stat-grid {
+  margin: 48px 0;
+  gap: 32px;
+}
+
+/* Show final count-up state immediately — no fade animation in static image */
+.card-export-stage .review-count-up {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+/* ---- Export-only branding footer ----
+ * Absolutely positioned so it doesn't disrupt justify-content:center
+ * on the card's flex layout (margin-top:auto would push content to top). */
+.review-export-footer {
+  position: absolute;
+  bottom: 32px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* ---- Share button in page header ---- */
+.yearly-review__share {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--color-primary-tint-light);
+  color: var(--color-text);
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.yearly-review__share:hover:not(:disabled) {
+  background: var(--color-primary-tint);
+}
+
+.yearly-review__share:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* Loading spinner for share button */
+@keyframes share-spin {
+  to { transform: rotate(360deg); }
+}
+
+.yearly-review__share-spinner {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-primary-tint-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: share-spin 0.7s linear infinite;
+}

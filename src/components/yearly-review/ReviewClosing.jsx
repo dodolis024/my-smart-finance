@@ -1,6 +1,7 @@
 import { useLanguage } from '@/contexts/LanguageContext';
+import ReviewExportFooter from './ReviewExportFooter';
 
-export default function ReviewClosing({ year, onClose }) {
+export default function ReviewClosing({ year, onClose, forExport = false }) {
   const { t } = useLanguage();
 
   return (
@@ -10,9 +11,12 @@ export default function ReviewClosing({ year, onClose }) {
       <p className="review-card__subtitle">
         {t('yearlyReview.closing.subtitle').replace('{year}', year)}
       </p>
-      <button className="review-closing-back" onClick={onClose}>
-        {t('yearlyReview.closing.backBtn')}
-      </button>
+      {!forExport && (
+        <button className="review-closing-back" onClick={onClose}>
+          {t('yearlyReview.closing.backBtn')}
+        </button>
+      )}
+      {forExport && <ReviewExportFooter year={year} />}
     </div>
   );
 }

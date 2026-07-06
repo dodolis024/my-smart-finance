@@ -1,5 +1,6 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import ReviewExportFooter from './ReviewExportFooter';
 
 // Membership days as-of the reviewed year's last day — so a past year's review
 // reflects that year, not "today". Returns null if the user joined after it.
@@ -15,7 +16,7 @@ function membershipDaysAsOf(createdAt, year) {
   return Math.round((asOf - created) / 86400000) + 1;
 }
 
-export default function HabitJourney({ year, checkinDays = 0, transactionCount = 0, previousCount = 0, loading }) {
+export default function HabitJourney({ year, checkinDays = 0, transactionCount = 0, previousCount = 0, loading, forExport = false }) {
   const { user } = useAuth();
   const { t, lang } = useLanguage();
   const locale = lang === 'en' ? 'en-US' : 'zh-TW';
@@ -65,6 +66,7 @@ export default function HabitJourney({ year, checkinDays = 0, transactionCount =
       )}
 
       <p className="review-encourage">{encouragement}</p>
+      {forExport && <ReviewExportFooter year={year} />}
     </div>
   );
 }
