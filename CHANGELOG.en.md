@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.18.0] - Jul-06 2026
 - Fixed foreign currency transactions silently recorded at 1:1 rate when exchange rate is unavailable; now shows an error prompt instead
 - Fixed subscription billing dates appearing one day early in Taiwan timezone (UTC+8)
 - Fixed notification settings potentially leaking across accounts after switching users
