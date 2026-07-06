@@ -6,23 +6,21 @@ This file records version updates for Smart Finance Tracker.
 - Added share/export for Year in Review story cards: save any card as an image to share or download
 
 ## [1.18.0] - Jul-06 2026
-- Fixed foreign currency transactions silently recorded at 1:1 rate when exchange rate is unavailable; now shows an error prompt instead
-- Fixed subscription billing dates appearing one day early in Taiwan timezone (UTC+8)
-- Fixed notification settings potentially leaking across accounts after switching users
-- Strengthened account security: prevented unauthorized split group ownership changes and improved backend API authentication
-- Fixed subscription panel not loading expense categories correctly on open
-- Added Year in Review: swipeable story cards with annual totals, category rankings, top purchases, consistency stats, and best/overspent months
+- Added Year in Review: swipeable story cards with annual totals, category rankings, top purchases, consistency stats, and best/overspent months, plus year-over-year income and expense comparison
 - Added KRW support for split-bill currencies and exchange rate updates
-- Improved foreign currency display: zero-decimal currencies (e.g. JPY, KRW, TWD) no longer show unnecessary decimals
 - Added default currency setting in categories options for transactions and subscriptions
-- Improved Year in Review: added year-over-year income and expense comparison
-- Fixed Year in Review best/worst month labels showing incorrectly when the balance sign flips
-- Fixed split expense and purchase dates showing a day off in some timezones
-- Fixed credit card billing cycle calculation for billing days 29-31 in short months
-- Fixed editing a transaction sometimes overwriting the original TWD amount with today's exchange rate
-- Improved Year in Review copy
 - Added split group archiving: archive inactive groups to hide them from the list and make them read-only
 - Added yearly billing cycle for subscriptions with configurable renewal month
+- Improved foreign currency display: zero-decimal currencies (e.g. JPY, KRW, TWD) no longer show unnecessary decimals
+- Improved Year in Review copy, and fixed best/worst month labels showing incorrectly when the balance sign flips
+- Strengthened account security: prevented unauthorized split group ownership changes and improved backend API authentication
+- Fixed foreign currency transactions silently recorded at 1:1 rate when exchange rate is unavailable; now shows an error prompt instead
+- Fixed editing a transaction sometimes overwriting the original TWD amount with today's exchange rate
+- Fixed subscription billing dates appearing one day early in Taiwan timezone (UTC+8)
+- Fixed subscription panel not loading expense categories correctly on open
+- Fixed split expense and purchase dates showing a day off in some timezones
+- Fixed credit card billing cycle calculation for billing days 29-31 in short months
+- Fixed notification settings potentially leaking across accounts after switching users
 
 ## [1.17.2] - Jul-03 2026
 - Improved cross-timezone streak reminders: auto-sync device timezone, full IANA timezone picker, and fixed missed reminders when traveling due to date-only dedup
