@@ -352,7 +352,8 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 -- =============================================================================
 -- 功能：從中央 exchange_rates 表取得指定貨幣對 TWD 的匯率
 -- 參數：p_currency TEXT
--- 回傳：NUMERIC（匯率）
+-- 回傳：NUMERIC（匯率）；查無匯率時回傳 NULL，
+--       讓呼叫端可區分「真的是 1.0」與「沒有匯率資料」，避免外幣被靜默以 1:1 記帳
 DROP FUNCTION IF EXISTS get_exchange_rate(TEXT);
 
 CREATE OR REPLACE FUNCTION get_exchange_rate(p_currency TEXT)
@@ -365,7 +366,7 @@ BEGIN
     WHERE currency_code = UPPER(TRIM(p_currency));
 
     IF v_rate IS NULL OR v_rate <= 0 THEN
-        RETURN 1.0;
+        RETURN NULL;
     END IF;
     RETURN v_rate;
 END;

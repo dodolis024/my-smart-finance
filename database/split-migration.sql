@@ -386,3 +386,51 @@ BEGIN
   RETURN json_build_object('id', v_member.id, 'name', v_member.name, 'user_id', v_member.user_id);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- =============================================================================
+-- 14. 更新費用 RPC（原子操作：更新費用 + 重建分攤明細在同一交易內完成，
+--     避免「刪除舊分攤後插入失敗」留下沒有分攤明細的費用）
+-- =============================================================================
+CREATE OR REPLACE FUNCTION update_split_expense(
+  p_expense_id UUID,
+  p_title      TEXT,
+  p_amount     NUMERIC,
+  p_currency   TEXT,
+  p_date       DATE,
+  p_note       TEXT,
+  p_paid_by    UUID,
+  p_shares     JSONB  -- [{ "member_id": UUID, "share": NUMERIC }]
+)
+RETURNS VOID AS $$
+DECLARE
+  v_group_id UUID;
+BEGIN
+  SELECT group_id INTO v_group_id FROM split_expenses WHERE id = p_expense_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION '找不到此費用';
+  END IF;
+
+  IF NOT can_access_split_group(v_group_id, auth.uid()) THEN
+    RAISE EXCEPTION '你沒有權限修改此費用';
+  END IF;
+
+  IF p_shares IS NULL OR jsonb_typeof(p_shares) <> 'array' OR jsonb_array_length(p_shares) = 0 THEN
+    RAISE EXCEPTION '分攤明細不可為空';
+  END IF;
+
+  UPDATE split_expenses SET
+    paid_by  = p_paid_by,
+    title    = p_title,
+    amount   = p_amount,
+    currency = COALESCE(p_currency, 'TWD'),
+    date     = p_date,
+    note     = p_note
+  WHERE id = p_expense_id;
+
+  DELETE FROM split_expense_shares WHERE expense_id = p_expense_id;
+
+  INSERT INTO split_expense_shares (expense_id, member_id, share)
+  SELECT p_expense_id, (s->>'member_id')::UUID, (s->>'share')::NUMERIC
+  FROM jsonb_array_elements(p_shares) AS s;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

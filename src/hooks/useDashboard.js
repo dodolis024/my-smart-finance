@@ -45,21 +45,22 @@ export function useDashboard() {
     return () => defaultCurrencyListeners.delete(sync);
   }, [user?.id]);
 
+  // 注意：setSummary 不可放進 setTransactionHistoryFull 的 updater 內，
+  // StrictMode 會將 updater 執行兩次，導致彙總被重複扣除
   const removeTransactionLocally = useCallback((id) => {
-    setTransactionHistoryFull((prev) => {
-      const removed = prev.find((tx) => tx.id === id);
-      if (!removed) return prev;
-      const next = prev.filter((tx) => tx.id !== id);
-      const amt = typeof removed.twdAmount === 'number' ? removed.twdAmount : 0;
-      setSummary((s) => {
-        if (removed.type === 'income') {
-          return { ...s, totalIncome: s.totalIncome - amt, balance: s.balance - amt };
-        }
-        return { ...s, totalExpense: s.totalExpense - amt, balance: s.balance + amt };
-      });
-      return next;
+    const removed = transactionHistoryFull.find((tx) => tx.id === id);
+    if (!removed) return;
+
+    setTransactionHistoryFull((prev) => prev.filter((tx) => tx.id !== id));
+
+    const amt = typeof removed.twdAmount === 'number' ? removed.twdAmount : 0;
+    setSummary((s) => {
+      if (removed.type === 'income') {
+        return { ...s, totalIncome: s.totalIncome - amt, balance: s.balance - amt };
+      }
+      return { ...s, totalExpense: s.totalExpense - amt, balance: s.balance + amt };
     });
-  }, []);
+  }, [transactionHistoryFull]);
 
   const fetchDashboardData = useCallback(async (year, month, { silent = false } = {}) => {
     const reqId = ++requestIdRef.current;

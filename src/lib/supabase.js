@@ -30,7 +30,7 @@ const DEFAULT_DATA = {
 export async function createDefaultData(userId, lang = 'zh') {
   const data = DEFAULT_DATA[lang] || DEFAULT_DATA.zh;
 
-  await supabase.from('accounts').insert([
+  const { error: accountsError } = await supabase.from('accounts').insert([
     { user_id: userId, name: data.cashAccount, type: 'cash' },
     {
       user_id: userId,
@@ -42,7 +42,7 @@ export async function createDefaultData(userId, lang = 'zh') {
     },
   ]);
 
-  await supabase.from('settings').insert([
+  const { error: settingsError } = await supabase.from('settings').insert([
     { user_id: userId, key: 'TWD', value: { rate: 1.0 } },
     { user_id: userId, key: 'USD', value: { rate: 30.0 } },
     { user_id: userId, key: 'JPY', value: { rate: 0.2 } },
@@ -51,4 +51,10 @@ export async function createDefaultData(userId, lang = 'zh') {
     { user_id: userId, key: 'expense_categories', value: data.expenseCategories },
     { user_id: userId, key: 'income_categories', value: data.incomeCategories },
   ]);
+
+  // 註冊當下若尚未建立 session（例如 Email 確認開啟時），RLS 會擋下 insert；
+  // DashboardPage 的 ensureDefaultDataForOAuth 會在首次載入時補建，這裡留下記錄方便追查
+  if (accountsError || settingsError) {
+    console.error('[createDefaultData] failed:', accountsError || settingsError);
+  }
 }

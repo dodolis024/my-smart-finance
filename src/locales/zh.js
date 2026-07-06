@@ -104,6 +104,7 @@ const zh = {
     selectPayment: '請選擇支付方式！',
     selectDate: '請選擇日期！',
     invalidAmount: '請輸入有效的金額！',
+    rateUnavailable: '目前無法取得 {currency} 匯率，請稍後再試',
     amount: '金額',
     note: '備註',
     noteOptional: '選填',

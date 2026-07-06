@@ -33,10 +33,12 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // 以台灣時間（UTC+8）為基準計算「今天」，避免 UTC 使扣款日與交易日期提早一天
     const now = new Date()
-    const year = now.getUTCFullYear()
-    const month = now.getUTCMonth() + 1
-    const today = now.getUTCDate()
+    const tw = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+    const year = tw.getUTCFullYear()
+    const month = tw.getUTCMonth() + 1
+    const today = tw.getUTCDate()
 
     const monthStr = String(month).padStart(2, '0')
     const monthStart = `${year}-${monthStr}-01`

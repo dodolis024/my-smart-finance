@@ -71,13 +71,18 @@ export function useTransactions() {
     }
 
     if (exchangeRate == null) {
-      const { data: exchangeRateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
-        p_currency: normalizedCurrency,
-      });
-      exchangeRate =
-        rateErr === null && exchangeRateVal != null && exchangeRateVal > 0
-          ? Number(exchangeRateVal)
-          : 1.0;
+      if (normalizedCurrency === 'TWD') {
+        exchangeRate = 1.0;
+      } else {
+        const { data: exchangeRateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
+          p_currency: normalizedCurrency,
+        });
+        // 查無匯率時擋下送出，避免外幣被靜默以 1:1 記成錯誤的台幣金額
+        if (rateErr || exchangeRateVal == null || Number(exchangeRateVal) <= 0) {
+          throw new Error(t('transaction.rateUnavailable', { currency: normalizedCurrency }));
+        }
+        exchangeRate = Number(exchangeRateVal);
+      }
     }
 
     let account = null;

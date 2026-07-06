@@ -203,7 +203,7 @@ export default function DashboardPage() {
         toast.error(err.message || t('dashboard.deleteTransactionFailed'));
       }
     },
-    [confirm, deleteTransaction, fetchDashboardData, currentYear, currentMonth, toast, transactionHistoryFull, accounts, checkCreditUsageAlert]
+    [confirm, deleteTransaction, removeTransactionLocally, fetchDashboardData, currentYear, currentMonth, toast, transactionHistoryFull, accounts, checkCreditUsageAlert]
   );
 
   const handleCheckin = useCallback(async () => {

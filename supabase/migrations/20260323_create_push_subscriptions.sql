@@ -17,5 +17,10 @@ CREATE POLICY "owner_select" ON public.push_subscriptions
 CREATE POLICY "owner_insert" ON public.push_subscriptions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+-- 前端以 upsert 註冊訂閱，(user_id, endpoint) 衝突時會走 UPDATE 路徑，
+-- 缺這條 policy 會導致同裝置重新訂閱（金鑰輪替）被 RLS 擋下
+CREATE POLICY "owner_update" ON public.push_subscriptions
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
 CREATE POLICY "owner_delete" ON public.push_subscriptions
   FOR DELETE USING (auth.uid() = user_id);

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const DEFAULT_SETTINGS = {
@@ -11,25 +12,27 @@ const DEFAULT_SETTINGS = {
 
 const SETTINGS_KEY = 'credit_card_notification_settings';
 
-// Module-level cache
+// Module-level cache（以 userId 綁定，避免同瀏覽器切換帳號時沿用他人的設定）
 let cachedSettings = null;
+let cachedUserId = null;
 
 export function useCreditCardNotificationSettings() {
+  const { user } = useAuth();
   const { t } = useLanguage();
-  const [settings, setSettings] = useState(() => cachedSettings || DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(() => !cachedSettings);
+  const hasCached = cachedSettings && cachedUserId === user?.id;
+  const [settings, setSettings] = useState(() => (hasCached ? cachedSettings : DEFAULT_SETTINGS));
+  const [loading, setLoading] = useState(() => !hasCached);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     cachedSettings = settings;
-  }, [settings]);
+    cachedUserId = user?.id ?? null;
+  }, [settings, user?.id]);
 
   const loadSettings = useCallback(async () => {
-    if (!cachedSettings) setLoading(true);
+    if (!user) return;
+    if (!(cachedSettings && cachedUserId === user.id)) setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const { data, error } = await supabase
         .from('settings')
         .select('value')
@@ -47,12 +50,11 @@ export function useCreditCardNotificationSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   const saveSettings = useCallback(async (newSettings) => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error(t('auth.loginRequired'));
 
       const { error } = await supabase.from('settings').upsert(
@@ -65,7 +67,7 @@ export function useCreditCardNotificationSettings() {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [user, t]);
 
   return {
     settings,

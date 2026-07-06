@@ -104,6 +104,7 @@ const en = {
     selectPayment: 'Please select a payment method!',
     selectDate: 'Please select a date!',
     invalidAmount: 'Please enter a valid amount!',
+    rateUnavailable: 'Exchange rate for {currency} is currently unavailable. Please try again later.',
     amount: 'Amount',
     note: 'Note',
     noteOptional: 'Optional',

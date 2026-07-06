@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const DEFAULT_SETTINGS = {
@@ -10,33 +11,35 @@ const DEFAULT_SETTINGS = {
 
 const SETTINGS_KEY = 'reminder_settings';
 
-// Module-level cache
+// Module-level cache（以 userId 綁定，避免同瀏覽器切換帳號時沿用他人的設定）
 let cachedSettings = null;
+let cachedUserId = null;
 
 export function useReminderSettings() {
+  const { user } = useAuth();
   const { t } = useLanguage();
+  const hasCached = cachedSettings && cachedUserId === user?.id;
   const [reminderSettings, setReminderSettings] = useState(() =>
-    cachedSettings || DEFAULT_SETTINGS
+    hasCached ? cachedSettings : DEFAULT_SETTINGS
   );
-  const [loading, setLoading] = useState(() => !cachedSettings);
+  const [loading, setLoading] = useState(() => !hasCached);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     cachedSettings = reminderSettings;
-  }, [reminderSettings]);
+    cachedUserId = user?.id ?? null;
+  }, [reminderSettings, user?.id]);
 
   const loadReminderSettings = useCallback(async () => {
-    if (!cachedSettings) setLoading(true);
+    if (!user) return;
+    if (!(cachedSettings && cachedUserId === user.id)) setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const { data, error } = await supabase
         .from('settings')
         .select('value')
         .eq('user_id', user.id)
         .eq('key', SETTINGS_KEY)
-        .single();
+        .maybeSingle();
 
       if (!error && data?.value) {
         setReminderSettings({ ...DEFAULT_SETTINGS, ...data.value });
@@ -51,12 +54,11 @@ export function useReminderSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   const saveReminderSettings = useCallback(async (settings) => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error(t('auth.loginRequired'));
 
       const { error } = await supabase.from('settings').upsert(
@@ -69,7 +71,7 @@ export function useReminderSettings() {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [user, t]);
 
   return {
     reminderSettings,

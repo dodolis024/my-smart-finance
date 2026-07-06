@@ -2,6 +2,10 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Fixed foreign currency transactions silently recorded at 1:1 rate when exchange rate is unavailable; now shows an error prompt instead
+- Fixed subscription billing dates appearing one day early in Taiwan timezone (UTC+8)
+- Fixed push notification re-registration on the same device being blocked by missing RLS policy
+- Fixed notification settings potentially leaking across accounts after switching users
 - Fixed security vulnerabilities: locked SECURITY DEFINER function search paths, revoked direct access to privileged functions, validated Edge Function callers via JWT, and blocked unauthorized changes to split group ownership and invite codes
 - Fixed subscription panel not loading expense categories correctly on open
 - Added Year in Review: swipeable story cards with annual totals, category rankings, top purchases, consistency stats, and best/overspent months

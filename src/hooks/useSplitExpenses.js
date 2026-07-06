@@ -96,30 +96,18 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
   }, [groupId, groupName, actorName, actorUserId, fetchExpenses]);
 
   const updateExpense = useCallback(async (expenseId, { title, amount, currency, date, note, paidBy, shares }) => {
-    const { error: expenseError } = await supabase
-      .from('split_expenses')
-      .update({
-        paid_by: paidBy,
-        title,
-        amount,
-        currency: currency || 'TWD',
-        date,
-        note: note || null,
-      })
-      .eq('id', expenseId);
-    if (expenseError) throw expenseError;
-
-    // 刪除舊的分攤明細，重新插入
-    const { error: delError } = await supabase
-      .from('split_expense_shares')
-      .delete()
-      .eq('expense_id', expenseId);
-    if (delError) throw delError;
-
-    const { error: sharesError } = await supabase
-      .from('split_expense_shares')
-      .insert(shares.map(s => ({ expense_id: expenseId, member_id: s.member_id, share: s.share })));
-    if (sharesError) throw sharesError;
+    // 以 RPC 原子更新費用與分攤明細，避免刪除舊分攤後插入失敗留下不完整資料
+    const { error } = await supabase.rpc('update_split_expense', {
+      p_expense_id: expenseId,
+      p_title: title,
+      p_amount: amount,
+      p_currency: currency || 'TWD',
+      p_date: date,
+      p_note: note || null,
+      p_paid_by: paidBy,
+      p_shares: shares.map(s => ({ member_id: s.member_id, share: s.share })),
+    });
+    if (error) throw error;
 
     await fetchExpenses();
     notifySplit({
