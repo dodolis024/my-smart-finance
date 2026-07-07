@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
 import { supabase, createDefaultData } from '@/lib/supabase';
+import { clearAllCaches } from '@/lib/resourceCache';
 
 export const AuthContext = createContext(null);
 
@@ -36,7 +37,9 @@ export function AuthProvider({ children }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // 登出時清空所有以 userId 綁定的資源快取，避免前一位使用者的資料續留記憶體
+      if (event === 'SIGNED_OUT') clearAllCaches();
       setSession(session);
       setUser(session?.user ?? null);
       setUserInfo(extractUserInfo(session?.user ?? null));

@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCachedResource } from '@/hooks/useCachedResource';
 
 const DEFAULT_SETTINGS = {
   payment_reminder_enabled: false,
@@ -12,45 +13,38 @@ const DEFAULT_SETTINGS = {
 
 const SETTINGS_KEY = 'credit_card_notification_settings';
 
-// Module-level cache（以 userId 綁定，避免同瀏覽器切換帳號時沿用他人的設定）
-let cachedSettings = null;
-let cachedUserId = null;
-
 export function useCreditCardNotificationSettings() {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const hasCached = cachedSettings && cachedUserId === user?.id;
-  const [settings, setSettings] = useState(() => (hasCached ? cachedSettings : DEFAULT_SETTINGS));
-  const [loading, setLoading] = useState(() => !hasCached);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    cachedSettings = settings;
-    cachedUserId = user?.id ?? null;
-  }, [settings, user?.id]);
+  const {
+    data: settings,
+    setData: setSettings,
+    loading,
+    load: loadSettings,
+  } = useCachedResource(SETTINGS_KEY, {
+    userId: user?.id,
+    initial: DEFAULT_SETTINGS,
+    fetcher: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('user_id', user.id)
+          .eq('key', SETTINGS_KEY)
+          .maybeSingle();
 
-  const loadSettings = useCallback(async () => {
-    if (!user) return;
-    if (!(cachedSettings && cachedUserId === user.id)) setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('user_id', user.id)
-        .eq('key', SETTINGS_KEY)
-        .maybeSingle();
-
-      if (!error && data?.value) {
-        setSettings({ ...DEFAULT_SETTINGS, ...data.value });
-      } else {
-        setSettings(DEFAULT_SETTINGS);
+        if (!error && data?.value) {
+          return { ...DEFAULT_SETTINGS, ...data.value };
+        }
+        return DEFAULT_SETTINGS;
+      } catch {
+        // 沿用原本行為：載入失敗時保留現值、不覆寫（不對呼叫端拋錯）
+        return settings;
       }
-    } catch {
-      // No saved settings yet, use defaults
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+    },
+  });
 
   const saveSettings = useCallback(async (newSettings) => {
     setSaving(true);

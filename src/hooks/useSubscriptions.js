@@ -1,42 +1,31 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-// Module-level cache
-let cachedSubscriptions = null;
-let cachedUserId = null;
+import { useCachedResource } from '@/hooks/useCachedResource';
 
 export function useSubscriptions() {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [subscriptions, setSubscriptions] = useState(() =>
-    (cachedSubscriptions && cachedUserId === user?.id) ? cachedSubscriptions : []
-  );
-  const [loading, setLoading] = useState(() =>
-    !(cachedSubscriptions && cachedUserId === user?.id)
-  );
 
-  useEffect(() => {
-    cachedSubscriptions = subscriptions;
-    cachedUserId = user?.id ?? null;
-  }, [subscriptions, user?.id]);
-
-  const loadSubscriptions = useCallback(async () => {
-    if (!user) return;
-    if (!cachedSubscriptions || cachedUserId !== user.id) setLoading(true);
-    try {
+  const {
+    data: subscriptions,
+    setData: setSubscriptions,
+    loading,
+    load: loadSubscriptions,
+  } = useCachedResource('subscriptions', {
+    userId: user?.id,
+    initial: [],
+    fetcher: async () => {
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      setSubscriptions(data || []);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+      return data || [];
+    },
+  });
 
   const saveSubscription = useCallback(async (formData, id = null) => {
     if (!user) return;

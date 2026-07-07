@@ -1,35 +1,23 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { notifySplit } from '@/lib/splitNotify';
-
-// Module-level cache — survives component unmount/remount
-let cachedGroups = null;
-let cachedUserId = null;
+import { useCachedResource } from '@/hooks/useCachedResource';
 
 export function useSplitGroups() {
   const { user, userInfo } = useAuth();
   const { t } = useLanguage();
-  // Initialise from cache if same user
-  const [groups, setGroups] = useState(() =>
-    (cachedGroups && cachedUserId === user?.id) ? cachedGroups : []
-  );
-  const [loading, setLoading] = useState(() =>
-    !(cachedGroups && cachedUserId === user?.id)
-  );
 
-  // Keep module cache in sync
-  useEffect(() => {
-    cachedGroups = groups;
-    cachedUserId = user?.id ?? null;
-  }, [groups, user?.id]);
-
-  const fetchGroups = useCallback(async () => {
-    if (!user) return;
-    // Only show loading spinner when there's no cached data
-    if (!cachedGroups || cachedUserId !== user.id) setLoading(true);
-    try {
+  const {
+    data: groups,
+    setData: setGroups,
+    loading,
+    load: fetchGroups,
+  } = useCachedResource('split_groups', {
+    userId: user?.id,
+    initial: [],
+    fetcher: async () => {
       const { data, error } = await supabase
         .from('split_groups')
         .select(`
@@ -50,19 +38,15 @@ export function useSplitGroups() {
         (avatars || []).forEach(a => { avatarMap[`${a.group_id}:${a.member_id}`] = a.avatar_url; });
       }
 
-      const groupsWithAvatars = (data || []).map(g => ({
+      return (data || []).map(g => ({
         ...g,
         split_members: (g.split_members || []).map(m => ({
           ...m,
           avatar_url: avatarMap[`${g.id}:${m.id}`] || null,
         })),
       }));
-
-      setGroups(groupsWithAvatars);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+    },
+  });
 
   const createGroup = useCallback(async ({ name, description, currency, defaultExpenseCurrency, myName, extraMembers }) => {
     if (!user) throw new Error(t('auth.loginRequired'));
