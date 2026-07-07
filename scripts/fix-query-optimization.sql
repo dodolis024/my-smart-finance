@@ -1,46 +1,48 @@
 -- =============================================================================
--- Supabase Database Functions
--- 用於處理複雜的業務邏輯（如 streak 計算、儀表板資料聚合）
+-- Smart Finance Tracker - 查詢效能優化（一次性腳本）
+-- 在 Supabase Dashboard > SQL Editor 中執行
 -- =============================================================================
--- 
--- 使用說明：
--- 在 Supabase Dashboard > SQL Editor 中執行此腳本
--- 這些函數會被前端透過 Supabase Client 呼叫
--- 
+--
+-- 三項優化（正式定義已同步更新於 database/）：
+-- 1. 頭像批次 RPC：前端原本逐群組呼叫 get_split_member_avatars(N 次往返)，
+--    新增 get_split_member_avatars_batch 一次撈回所有群組成員頭像
+--    （正式定義：database/split-migration.sql）
+-- 2. get_dashboard_data（月）：WHERE 由 EXTRACT(YEAR/MONTH FROM date) 改為
+--    date >= X AND date < Y 範圍條件，讓 idx_transactions_user_id_date 生效
+-- 3. get_yearly_review（年）：同上，年度/去年同期改用範圍條件
+--    （2、3 正式定義：database/supabase-functions.sql）
+--
+-- 注意：第 1 項的 RPC 必須先於新版前端部署（前端會改呼叫此 RPC，否則 404）
+-- 語意等價：範圍為半開區間 [當期第一天, 下一期第一天)，結果與原本逐年/月相同
 -- =============================================================================
 
--- =============================================================================
--- 0. 依賴：exchange_rates 表（若尚未建立，先建立表與 RLS，函數才可正常執行）
--- =============================================================================
-CREATE TABLE IF NOT EXISTS exchange_rates (
-    currency_code TEXT PRIMARY KEY,
-    rate NUMERIC(10, 6) NOT NULL DEFAULT 1.0,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE exchange_rates ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Authenticated users can read exchange_rates" ON exchange_rates;
-CREATE POLICY "Authenticated users can read exchange_rates"
-    ON exchange_rates FOR SELECT
-    TO authenticated
-    USING (true);
-
-INSERT INTO exchange_rates (currency_code, rate)
-VALUES ('TWD', 1.0), ('USD', 30.0), ('JPY', 0.2), ('EUR', 32.0), ('GBP', 38.0)
-ON CONFLICT (currency_code) DO UPDATE SET rate = EXCLUDED.rate, updated_at = NOW();
 
 -- =============================================================================
--- 1. 取得儀表板資料（getDashboardData）
+-- 1. 批次取得多個群組成員的頭像（避免前端逐群組 N 次 RPC）
 -- =============================================================================
--- 功能：回傳指定年月的摘要、交易紀錄、帳戶列表、類別列表、streak 資訊
--- 參數：p_client_today (TEXT, 可選), p_month (INTEGER), p_year (INTEGER)
--- 注意：參數順序必須與 PostgREST 預期一致（依字母順序），否則會 404
--- 回傳：JSON 物件
--- 若曾建立過舊版（參數名不同），需先 DROP 再建立
-DROP FUNCTION IF EXISTS get_dashboard_data(INTEGER, INTEGER);
-DROP FUNCTION IF EXISTS get_dashboard_data(TEXT, INTEGER, INTEGER);
+CREATE OR REPLACE FUNCTION get_split_member_avatars_batch(p_group_ids UUID[])
+RETURNS JSON AS $$
+BEGIN
+  RETURN (
+    SELECT COALESCE(json_agg(json_build_object(
+      'group_id',   sm.group_id,
+      'member_id',  sm.id,
+      'avatar_url', COALESCE(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture')
+    )), '[]'::json)
+    FROM split_members sm
+    JOIN auth.users u ON u.id = sm.user_id
+    WHERE sm.group_id = ANY(p_group_ids)
+      AND sm.user_id IS NOT NULL
+      -- 沿用單筆版的存取語意：owner 或成員才可讀
+      AND can_access_split_group(sm.group_id, auth.uid())
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
 
+
+-- =============================================================================
+-- 2. get_dashboard_data（月）：EXTRACT → date 範圍查詢
+-- =============================================================================
 CREATE OR REPLACE FUNCTION get_dashboard_data(
     p_client_today TEXT DEFAULT NULL,
     p_month INTEGER DEFAULT NULL,
@@ -64,7 +66,7 @@ DECLARE
 BEGIN
     -- 取得目前使用者 ID
     v_user_id := auth.uid();
-    
+
     IF v_user_id IS NULL THEN
         RETURN json_build_object('success', false, 'error', 'User not authenticated');
     END IF;
@@ -147,7 +149,7 @@ BEGIN
     v_categories := v_expense_categories || v_income_categories;
 
     -- 計算 streak 相關資料（呼叫專門的函數，傳入客戶端的今天日期）
-    SELECT 
+    SELECT
         streak_count,
         streak_broken,
         total_logged_days,
@@ -181,203 +183,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- =============================================================================
--- 2. 計算 Streak 統計資料
--- =============================================================================
--- 功能：計算連續記帳天數、總記帳天數、最長連續記帳等
--- 參數：p_user_id UUID, p_client_today TEXT (可選，客戶端的今天日期)
--- 回傳：TABLE (streak_count, streak_broken, total_logged_days, longest_streak, logged_dates)
-DROP FUNCTION IF EXISTS calculate_streak_stats(UUID);
-DROP FUNCTION IF EXISTS calculate_streak_stats(UUID, TEXT);
-
-CREATE OR REPLACE FUNCTION calculate_streak_stats(
-    p_user_id UUID,
-    p_client_today TEXT DEFAULT NULL
-)
-RETURNS TABLE (
-    streak_count INTEGER,
-    streak_broken BOOLEAN,
-    total_logged_days INTEGER,
-    longest_streak INTEGER,
-    logged_dates JSON
-) AS $$
-DECLARE
-    v_today DATE;
-    v_yesterday DATE;
-    v_checkin_dates DATE[];
-    v_transaction_dates DATE[];
-    v_current_streak INTEGER := 0;
-    v_longest INTEGER := 0;
-    v_broken BOOLEAN := false;
-    v_logged_dates_json JSON;
-    v_total_logged_days INTEGER;
-BEGIN
-    -- 取得今天和昨天的日期
-    -- 優先使用客戶端傳入的日期（支援跨時區旅行），否則使用台灣時區（向後相容）
-    IF p_client_today IS NOT NULL AND p_client_today != '' THEN
-        v_today := p_client_today::DATE;
-    ELSE
-        v_today := (NOW() AT TIME ZONE 'Asia/Taipei')::DATE;
-    END IF;
-    v_yesterday := v_today - INTERVAL '1 day';
-
-    -- 取得所有簽到日期
-    SELECT ARRAY_AGG(DISTINCT date ORDER BY date DESC)
-    INTO v_checkin_dates
-    FROM checkins
-    WHERE user_id = p_user_id;
-
-    -- 取得所有有交易的日期（用於計算 total_logged_days）
-    SELECT ARRAY_AGG(DISTINCT date ORDER BY date DESC)
-    INTO v_transaction_dates
-    FROM transactions
-    WHERE user_id = p_user_id;
-
-    -- 計算 total_logged_days（使用 checkins 表，包含所有有記帳或簽到的日期）
-    SELECT COUNT(DISTINCT date) INTO v_total_logged_days
-    FROM checkins
-    WHERE user_id = p_user_id;
-
-    -- 轉換簽到日期為 JSON 陣列（含 date 與 source，供前端區分記帳簽到 / 簽到按鈕）
-    SELECT json_agg(json_build_object('date', date::text, 'source', source) ORDER BY date DESC)
-    INTO v_logged_dates_json
-    FROM checkins
-    WHERE user_id = p_user_id;
-
-    -- 計算目前連續記帳天數
-    IF v_checkin_dates IS NULL OR array_length(v_checkin_dates, 1) IS NULL THEN
-        v_current_streak := 0;
-        v_broken := true;
-    ELSE
-        -- 檢查今天或昨天是否有簽到
-        IF v_today = ANY(v_checkin_dates) OR v_yesterday = ANY(v_checkin_dates) THEN
-            -- 從今天或昨天開始往回計算連續天數
-            DECLARE
-                v_start_date DATE;
-                v_check_date DATE;
-                v_has_checkin BOOLEAN;
-            BEGIN
-                -- 決定起始日期（今天有簽到就用今天，否則用昨天）
-                IF v_today = ANY(v_checkin_dates) THEN
-                    v_start_date := v_today;
-                ELSE
-                    v_start_date := v_yesterday;
-                END IF;
-
-                -- 往回計算連續天數
-                v_check_date := v_start_date;
-                LOOP
-                    IF v_check_date = ANY(v_checkin_dates) THEN
-                        v_current_streak := v_current_streak + 1;
-                        v_check_date := v_check_date - INTERVAL '1 day';
-                    ELSE
-                        EXIT;
-                    END IF;
-                END LOOP;
-            END;
-            v_broken := false;
-        ELSE
-            v_current_streak := 0;
-            v_broken := true;
-        END IF;
-    END IF;
-
-    -- 計算最長連續記帳天數
-    IF v_checkin_dates IS NOT NULL AND array_length(v_checkin_dates, 1) > 0 THEN
-        DECLARE
-            v_sorted_dates DATE[];
-            v_prev_date DATE;
-            v_current_run INTEGER := 0;
-            v_max_run INTEGER := 0;
-            v_date DATE;
-        BEGIN
-            -- 排序日期（由舊到新）
-            SELECT ARRAY_AGG(date ORDER BY date ASC)
-            INTO v_sorted_dates
-            FROM (SELECT DISTINCT date FROM checkins WHERE user_id = p_user_id) AS unique_dates;
-
-            v_prev_date := NULL;
-            FOREACH v_date IN ARRAY v_sorted_dates
-            LOOP
-                IF v_prev_date IS NULL THEN
-                    v_current_run := 1;
-                ELSIF v_date = v_prev_date + INTERVAL '1 day' THEN
-                    v_current_run := v_current_run + 1;
-                ELSE
-                    v_current_run := 1;
-                END IF;
-
-                IF v_current_run > v_max_run THEN
-                    v_max_run := v_current_run;
-                END IF;
-
-                v_prev_date := v_date;
-            END LOOP;
-
-            v_longest := v_max_run;
-        END;
-    ELSE
-        v_longest := 0;
-    END IF;
-
-    -- 回傳結果
-    RETURN QUERY SELECT
-        v_current_streak,
-        v_broken,
-        v_total_logged_days,
-        v_longest,
-        COALESCE(v_logged_dates_json, '[]'::json);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
--- 安全性：此函數接受 p_user_id 參數且為 SECURITY DEFINER，
--- 不可讓用戶端直接呼叫（否則可查詢他人的簽到記錄）。
--- 僅供 get_dashboard_data 內部呼叫（以函數擁有者身分執行，不受 REVOKE 影響）。
-REVOKE EXECUTE ON FUNCTION calculate_streak_stats(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 
 -- =============================================================================
--- 3. 取得可用幣別列表（供前端動態幣別選單）
+-- 3. get_yearly_review（年）：EXTRACT → date 範圍查詢
 -- =============================================================================
--- 功能：從中央 exchange_rates 表回傳所有幣別代碼，前端依此渲染選單
--- 回傳：TEXT[]（幣別代碼陣列，依字母排序）
-DROP FUNCTION IF EXISTS get_available_currencies();
-
-CREATE OR REPLACE FUNCTION get_available_currencies()
-RETURNS TEXT[] AS $$
-    SELECT COALESCE(ARRAY_AGG(currency_code ORDER BY currency_code), ARRAY['TWD']::TEXT[])
-    FROM exchange_rates;
-$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
-
--- 4. 取得匯率（用於新增/編輯交易時計算 TWD 金額）
--- =============================================================================
--- 功能：從中央 exchange_rates 表取得指定貨幣對 TWD 的匯率
--- 參數：p_currency TEXT
--- 回傳：NUMERIC（匯率）；查無匯率時回傳 NULL，
---       讓呼叫端可區分「真的是 1.0」與「沒有匯率資料」，避免外幣被靜默以 1:1 記帳
-DROP FUNCTION IF EXISTS get_exchange_rate(TEXT);
-
-CREATE OR REPLACE FUNCTION get_exchange_rate(p_currency TEXT)
-RETURNS NUMERIC AS $$
-DECLARE
-    v_rate NUMERIC;
-BEGIN
-    SELECT rate INTO v_rate
-    FROM exchange_rates
-    WHERE currency_code = UPPER(TRIM(p_currency));
-
-    IF v_rate IS NULL OR v_rate <= 0 THEN
-        RETURN NULL;
-    END IF;
-    RETURN v_rate;
-END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public;
-
--- =============================================================================
--- 5. 年度回顧（Yearly Review）
--- =============================================================================
--- 功能：回傳指定年份的年度彙總、月份明細、支出類別排行、亮點數據
--- 參數：p_year INTEGER
--- 回傳：JSON 物件
 DROP FUNCTION IF EXISTS get_yearly_review(INTEGER);
 
 CREATE OR REPLACE FUNCTION get_yearly_review(p_year INTEGER)
@@ -509,5 +318,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- =============================================================================
--- 完成！
+-- 完成！部署順序：
+--   1) 執行本腳本（建立 batch RPC + 重定義 dashboard/yearly 函式）
+--   2) 部署新版前端（useSplitGroups 改呼叫 get_split_member_avatars_batch）
 -- =============================================================================

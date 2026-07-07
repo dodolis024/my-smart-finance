@@ -110,14 +110,21 @@ serve(async (req) => {
 
     // 從回傳的匯率中提取我們需要的幣別
     // 因為 API 回傳的是 1 TWD = X 外幣，我們需要反轉（1 外幣 = Y TWD）
+    // 幣別清單動態決定：以資料庫現有幣別為準，聯集種子清單（首次啟動的後備），
+    // 日後於 exchange_rates 新增幣別即自動納入更新，無需改動此函數。
     const rates = data.conversion_rates
-    const newRates: { [key: string]: number } = {
-      TWD: 1.0,
-      USD: rates.USD ? (1 / rates.USD) : (lastKnownGood.USD || defaultRates.USD),
-      JPY: rates.JPY ? (1 / rates.JPY) : (lastKnownGood.JPY || defaultRates.JPY),
-      EUR: rates.EUR ? (1 / rates.EUR) : (lastKnownGood.EUR || defaultRates.EUR),
-      GBP: rates.GBP ? (1 / rates.GBP) : (lastKnownGood.GBP || defaultRates.GBP),
-      KRW: rates.KRW ? (1 / rates.KRW) : (lastKnownGood.KRW || defaultRates.KRW),
+    const defaultRatesMap = defaultRates as { [key: string]: number }
+    const currencyCodes = Array.from(new Set([
+      ...Object.keys(lastKnownGood),
+      ...Object.keys(defaultRatesMap),
+    ]))
+
+    const newRates: { [key: string]: number } = { TWD: 1.0 }
+    for (const cur of currencyCodes) {
+      if (cur === 'TWD') continue
+      // API 有回 → 反轉；否則退回舊值 / 種子值；都沒有則略過該幣別
+      const v = rates[cur] ? (1 / rates[cur]) : (lastKnownGood[cur] ?? defaultRatesMap[cur])
+      if (v != null) newRates[cur] = v
     }
 
     console.log('Fetched new exchange rates:', newRates)

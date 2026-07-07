@@ -158,11 +158,3 @@ export const CHART_COLORS_LAVENDER = [
 ];
 
 export const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-export const ACCOUNT_TYPE_NAMES = {
-  cash: '現金',
-  credit_card: '信用卡',
-  debit_card: '金融卡',
-  digital_wallet: '電子錢包',
-  bank: '銀行帳戶',
-};

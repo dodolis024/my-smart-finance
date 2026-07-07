@@ -324,6 +324,28 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
 
+-- =============================================================================
+-- 批次取得多個群組成員的頭像資訊（避免前端逐群組 N 次 RPC）
+-- 回傳每筆含 group_id，供前端以 group_id + member_id 對應
+CREATE OR REPLACE FUNCTION get_split_member_avatars_batch(p_group_ids UUID[])
+RETURNS JSON AS $$
+BEGIN
+  RETURN (
+    SELECT COALESCE(json_agg(json_build_object(
+      'group_id',   sm.group_id,
+      'member_id',  sm.id,
+      'avatar_url', COALESCE(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture')
+    )), '[]'::json)
+    FROM split_members sm
+    JOIN auth.users u ON u.id = sm.user_id
+    WHERE sm.group_id = ANY(p_group_ids)
+      AND sm.user_id IS NOT NULL
+      -- 沿用單筆版的存取語意：owner 或成員才可讀
+      AND can_access_split_group(sm.group_id, auth.uid())
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
+
 -- 連結自己到已存在的成員位置
 CREATE OR REPLACE FUNCTION link_self_to_split_member(p_member_id UUID)
 RETURNS VOID AS $$

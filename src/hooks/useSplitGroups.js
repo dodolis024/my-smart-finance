@@ -39,27 +39,24 @@ export function useSplitGroups() {
         .order('created_at', { ascending: false });
       if (error) throw error;
 
-      // 為每個群組的已連結成員取得頭像
-      const groupsWithAvatars = await Promise.all(
-        (data || []).map(async (g) => {
-          const hasLinkedMembers = g.split_members?.some(m => m.user_id);
-          if (!hasLinkedMembers) return g;
+      // 為所有含已連結成員的群組一次取得頭像（單一批次 RPC，避免逐群組 N 次往返）
+      const linkedGroupIds = (data || [])
+        .filter(g => g.split_members?.some(m => m.user_id))
+        .map(g => g.id);
 
-          const { data: avatars } = await supabase.rpc('get_split_member_avatars', { p_group_id: g.id });
-          if (!avatars?.length) return g;
+      let avatarMap = {};
+      if (linkedGroupIds.length) {
+        const { data: avatars } = await supabase.rpc('get_split_member_avatars_batch', { p_group_ids: linkedGroupIds });
+        (avatars || []).forEach(a => { avatarMap[`${a.group_id}:${a.member_id}`] = a.avatar_url; });
+      }
 
-          const avatarMap = {};
-          avatars.forEach(a => { avatarMap[a.member_id] = a.avatar_url; });
-
-          return {
-            ...g,
-            split_members: g.split_members.map(m => ({
-              ...m,
-              avatar_url: avatarMap[m.id] || null,
-            })),
-          };
-        })
-      );
+      const groupsWithAvatars = (data || []).map(g => ({
+        ...g,
+        split_members: (g.split_members || []).map(m => ({
+          ...m,
+          avatar_url: avatarMap[`${g.id}:${m.id}`] || null,
+        })),
+      }));
 
       setGroups(groupsWithAvatars);
     } finally {
