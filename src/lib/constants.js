@@ -1,6 +1,3 @@
-// 每次推出新版本時更新此版本號（需與 CHANGELOG 最新版本一致），未讀通知小點會自動出現
-export const CURRENT_VERSION = '1.18.0';
-
 export const LAYOUT = {
   VERTICAL_MAX_WIDTH: 870,
   MOBILE_MAX_WIDTH: 600,

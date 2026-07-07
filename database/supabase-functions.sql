@@ -336,6 +336,26 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 REVOKE EXECUTE ON FUNCTION calculate_streak_stats(UUID, TEXT) FROM PUBLIC, anon, authenticated;
 
 -- =============================================================================
+-- 批次取得多個用戶的 email（供 send-streak-reminder edge function 一次撈回，
+-- 取代逐用戶 auth.admin.getUserById，避免用戶數成長時往返次數線性上升而超時）
+-- 參數：p_user_ids UUID[]
+-- 回傳：JSON 陣列，每筆 { id, email }
+-- 安全性：回傳 auth.users 的 email，屬敏感資料；SECURITY DEFINER 讀 auth.users 與
+--         get_split_member_avatars_batch 一致，並 REVOKE 掉客戶端權限，僅 service-role 可呼叫。
+CREATE OR REPLACE FUNCTION get_user_emails(p_user_ids UUID[])
+RETURNS JSON AS $$
+BEGIN
+  RETURN (
+    SELECT COALESCE(json_agg(json_build_object('id', u.id, 'email', u.email)), '[]'::json)
+    FROM auth.users u
+    WHERE u.id = ANY(p_user_ids)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION get_user_emails(UUID[]) FROM PUBLIC, anon, authenticated;
+
+-- =============================================================================
 -- 3. 取得可用幣別列表（供前端動態幣別選單）
 -- =============================================================================
 -- 功能：從中央 exchange_rates 表回傳所有幣別代碼，前端依此渲染選單

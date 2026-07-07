@@ -7,6 +7,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { isReminderTime, getUserToday } from './reminderTime.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -80,6 +81,11 @@ serve(async (req) => {
     // 收集需要發信的用戶（含 userToday，供寄信後更新用）
     const usersToNotify: { userId: string; email: string; userToday: string }[] = []
 
+    // 3~5. 純記憶體篩選（不觸及 DB）：挑出「此刻該提醒且未被防重複壓下」的候選用戶。
+    //      判斷邏輯（時區比對、±2 分容差、跨時區防重複）維持原樣，僅把後續的 DB 查詢
+    //      改為批次，避免用戶數成長時逐一往返而超過 edge function 時限。
+    const candidates: { userId: string; userToday: string }[] = []
+
     for (const [userId, { config, lastSentDate, lastSentAt }] of userMap) {
       // 跳過沒設定或未啟用的用戶
       if (!config?.enabled) continue
@@ -116,29 +122,63 @@ serve(async (req) => {
         continue
       }
 
-      // 6. 檢查今天是否已簽到（已簽到就不需要提醒）
-      const { data: checkinData } = await supabase
+      candidates.push({ userId, userToday })
+    }
+
+    // 6. 批次檢查今天是否已簽到（已簽到就不需要提醒）
+    //    一次撈回所有候選用戶的當日簽到，取代逐一 .eq(user_id).eq(date) 往返。
+    //    各時區「今天」不同，故 user_id 與 date 都用 IN 收斂；索引 idx_checkins_user_id_date 可命中。
+    const checkedInKeys = new Set<string>()
+    if (candidates.length > 0) {
+      const candidateIds = [...new Set(candidates.map((c) => c.userId))]
+      const candidateDates = [...new Set(candidates.map((c) => c.userToday))]
+      const { data: checkinRows, error: checkinError } = await supabase
         .from('checkins')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('date', userToday)
-        .limit(1)
+        .select('user_id, date')
+        .in('user_id', candidateIds)
+        .in('date', candidateDates)
 
-      if (checkinData && checkinData.length > 0) {
-        console.log(`User ${userId} already checked in today (${userToday}), skipping`)
-        continue
+      if (checkinError) {
+        throw new Error(`Failed to fetch checkins: ${checkinError.message}`)
+      }
+      for (const row of checkinRows || []) {
+        checkedInKeys.add(`${row.user_id}|${row.date}`)
+      }
+    }
+
+    // 過濾掉今天已簽到的候選；其餘才需要寄信、需要 email
+    const needEmail = candidates.filter((c) => {
+      if (checkedInKeys.has(`${c.userId}|${c.userToday}`)) {
+        console.log(`User ${c.userId} already checked in today (${c.userToday}), skipping`)
+        return false
+      }
+      return true
+    })
+
+    // 7. 批次取得需寄信用戶的 email（一次 RPC 取代逐一 auth.admin.getUserById）
+    if (needEmail.length > 0) {
+      const emailIds = [...new Set(needEmail.map((c) => c.userId))]
+      const { data: emailRows, error: emailError } = await supabase
+        .rpc('get_user_emails', { p_user_ids: emailIds })
+
+      if (emailError) {
+        throw new Error(`Failed to fetch user emails: ${emailError.message}`)
       }
 
-      // 7. 取得用戶 email
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
-
-      if (userError || !userData?.user?.email) {
-        console.error(`Failed to get email for user ${userId}:`, userError?.message)
-        errors.push({ userId, error: userError?.message || 'No email found' })
-        continue
+      const emailMap = new Map<string, string>()
+      for (const row of (emailRows as { id: string; email: string | null }[]) || []) {
+        if (row.email) emailMap.set(row.id, row.email)
       }
 
-      usersToNotify.push({ userId, email: userData.user.email, userToday })
+      for (const { userId, userToday } of needEmail) {
+        const email = emailMap.get(userId)
+        if (!email) {
+          console.error(`Failed to get email for user ${userId}`)
+          errors.push({ userId, error: 'No email found' })
+          continue
+        }
+        usersToNotify.push({ userId, email, userToday })
+      }
     }
 
     // 8. 如果有需要通知的用戶，透過 Brevo API 發信
@@ -228,58 +268,4 @@ function buildEmailHtml(): string {
       </p>
     </div>
   `
-}
-
-/**
- * 判斷現在是否為該用戶的提醒時刻（±2 分鐘容差）
- * cron 每 5 分鐘跑一次，用戶最小設定單位也是 5 分鐘，
- * 所以 ±2 分鐘保證每個 target 只被一次 cron 命中，不會重複觸發
- */
-function isReminderTime(now: Date, timezone: string, reminderTime: string): boolean {
-  try {
-    // 取得用戶時區的當前時間
-    const userNow = new Date(now.toLocaleString('en-US', { timeZone: timezone }))
-    const userHour = userNow.getHours()
-    const userMinute = userNow.getMinutes()
-
-    // 解析設定的提醒時間
-    const [targetHour, targetMinute] = reminderTime.split(':').map(Number)
-
-    // 計算分鐘差距
-    const currentMinutes = userHour * 60 + userMinute
-    const targetMinutes = targetHour * 60 + targetMinute
-    const diff = Math.abs(currentMinutes - targetMinutes)
-
-    // 處理跨午夜的情況（例如 23:58 vs 00:00）
-    const wrappedDiff = Math.min(diff, 1440 - diff)
-
-    return wrappedDiff <= 2
-  } catch {
-    console.error(`Invalid timezone: ${timezone}`)
-    return false
-  }
-}
-
-/**
- * 取得用戶時區的「今天」日期（YYYY-MM-DD 格式）
- */
-function getUserToday(now: Date, timezone: string): string {
-  try {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(now)
-    return parts // en-CA 格式自動為 YYYY-MM-DD
-  } catch {
-    // Fallback 到台灣時區
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Taipei',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(now)
-    return parts
-  }
 }
