@@ -11,6 +11,33 @@
   margin-bottom: 1.5rem;
 }
 
+.auth-lang-switch {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.auth-lang {
+  padding: 0.25rem 0.7rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.auth-lang:hover {
+  border-color: var(--color-primary);
+}
+
+.auth-lang.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;

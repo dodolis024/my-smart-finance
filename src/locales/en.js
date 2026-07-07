@@ -26,6 +26,7 @@ const en = {
   },
 
   auth: {
+    languageLabel: 'Select language',
     loginTab: 'Log in',
     signupTab: 'Sign up',
     email: 'Email',

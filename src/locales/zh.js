@@ -26,6 +26,7 @@ const zh = {
   },
 
   auth: {
+    languageLabel: '選擇語言',
     loginTab: '登入',
     signupTab: '註冊',
     email: '電子郵件',

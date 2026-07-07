@@ -8,6 +8,7 @@ import { NavActionsProvider } from '@/contexts/NavActionsContext';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { useTimezoneSync } from '@/hooks/useTimezoneSync';
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
+import PreferenceSync from '@/components/PreferenceSync';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
@@ -122,6 +123,7 @@ export default function App() {
         <LanguageProvider>
           <ThemeProvider>
             <AuthProvider>
+              <PreferenceSync />
               <ToastProvider>
                 <ConfirmProvider>
                   <NavActionsProvider>
