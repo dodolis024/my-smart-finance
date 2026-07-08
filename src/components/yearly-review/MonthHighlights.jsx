@@ -62,13 +62,24 @@ export default function MonthHighlights({ data = [], loading, forExport = false,
     );
   };
 
+  // Only one active month means there's nothing to contrast against — keep
+  // the second grid cell so the pair doesn't collapse into a lone box.
+  const placeholderBox = () => (
+    <div className="review-highlight-box review-highlight-box--placeholder">
+      <span className="review-highlight-box__label">{t('yearlyReview.monthHighlights.onlyOneMonth')}</span>
+      <span className="review-highlight-box__placeholder-hint">
+        {t('yearlyReview.monthHighlights.onlyOneMonthHint')}
+      </span>
+    </div>
+  );
+
   return (
     <div className="review-card review-card--month-highlights">
       <p className="review-card__eyebrow">{t('yearlyReview.monthHighlights.title')}</p>
 
       <div className="review-highlight-pair">
         {best && box(best, 'bestSaving', 'highestNet')}
-        {worst && !sameMonth && box(worst, 'lowestNet', 'mostOverspent')}
+        {worst && (sameMonth ? placeholderBox() : box(worst, 'lowestNet', 'mostOverspent'))}
       </div>
       {forExport && <ReviewExportFooter year={year} />}
     </div>

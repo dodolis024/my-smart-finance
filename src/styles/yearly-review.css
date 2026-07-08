@@ -383,6 +383,20 @@
 .review-highlight-box--high .review-highlight-box__month { color: var(--color-progress-danger); }
 .review-highlight-box--low  .review-highlight-box__month { color: var(--color-progress-safe); }
 
+.review-highlight-box--placeholder {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed var(--color-border);
+}
+
+.review-highlight-box__placeholder-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
 /* ---- Habit journey card — check-in circle ---- */
 .review-checkin-circle {
   width: clamp(140px, 30vw, 200px);

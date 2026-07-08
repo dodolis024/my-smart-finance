@@ -606,6 +606,8 @@ const zh = {
       lowestNet: '結餘最低的月份',
       netLabel: '淨結餘 {amount}',
       noData: '資料不足，無法計算',
+      onlyOneMonth: '尚無可比較資料',
+      onlyOneMonthHint: '本年僅一個月份有紀錄',
     },
 
     compare: {

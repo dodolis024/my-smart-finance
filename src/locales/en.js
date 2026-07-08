@@ -606,6 +606,8 @@ const en = {
       lowestNet: 'Lowest Net Month',
       netLabel: 'Net {amount}',
       noData: 'Not enough data to compare',
+      onlyOneMonth: 'Nothing to compare yet',
+      onlyOneMonthHint: 'Only one month has records this year',
     },
 
     compare: {
