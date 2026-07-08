@@ -99,6 +99,9 @@ export default function DashboardPage() {
         twdAmount: item.tx.twd_amount,
         note: item.tx.note,
         pending: true,
+        // failed = 補送失敗需手動重試,UI 以危險色標記並顯示失敗原因
+        queueStatus: item.status,
+        queueError: item.errorMessage,
       }));
   }, [queuedItems, currentYear, currentMonth]);
 

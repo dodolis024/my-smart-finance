@@ -74,7 +74,7 @@ export function useTransactions() {
       const cachedAccount = paymentTrimmed
         ? loadAccounts(user.id).find((a) => (a.accountName || a.name) === paymentTrimmed)
         : null;
-      enqueueTransaction(
+      const queued = enqueueTransaction(
         user.id,
         {
           id: crypto.randomUUID(),
@@ -93,6 +93,8 @@ export function useTransactions() {
         },
         getTodayYmd()
       );
+      // localStorage 額滿等原因入列失敗:必須明確告知,不能讓交易無聲消失
+      if (!queued) throw new Error(t('transaction.offlineQueueFailed'));
       return { date, isEdit: false, queued: true };
     };
 

@@ -50,9 +50,15 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
     .filter(Boolean)
     .join(' ');
 
-  // 離線佇列中的交易(尚未同步至伺服器)
+  // 離線佇列中的交易(尚未同步至伺服器);failed = 補送失敗,等待手動重試
+  const isSyncFailed = tx.pending && tx.queueStatus === 'failed';
   const pendingBadge = tx.pending ? (
-    <span className="badge badge--pending">{t('dashboard.pendingSync')}</span>
+    <span
+      className={`badge ${isSyncFailed ? 'badge--sync-failed' : 'badge--pending'}`}
+      title={isSyncFailed ? tx.queueError || undefined : undefined}
+    >
+      {isSyncFailed ? t('dashboard.pendingSyncFailed') : t('dashboard.pendingSync')}
+    </span>
   ) : null;
 
   /* 手機版：4 欄 slider，左滑刪除（金額右側）、右滑編輯（日期左側） */

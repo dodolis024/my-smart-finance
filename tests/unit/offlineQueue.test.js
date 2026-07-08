@@ -80,6 +80,20 @@ describe('offlineQueue - 入列與移除', () => {
     enqueueTransaction(USER_ID, makeTx(), '2026-07-06');
     expect(listQueue('user-2')).toHaveLength(0);
   });
+
+  it('入列成功回傳 true;localStorage 額滿時回傳 false 且不留半套資料', () => {
+    expect(enqueueTransaction(USER_ID, makeTx(), '2026-07-06')).toBe(true);
+
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError');
+    });
+    const ok = enqueueTransaction(USER_ID, makeTx(), '2026-07-06');
+    spy.mockRestore();
+
+    // 呼叫端(useTransactions)靠這個 false 拋錯告知使用者,不能無聲吞掉
+    expect(ok).toBe(false);
+    expect(listQueue(USER_ID)).toHaveLength(1); // 只有第一筆,失敗那筆沒被寫入
+  });
 });
 
 describe('offlineQueue - flush', () => {

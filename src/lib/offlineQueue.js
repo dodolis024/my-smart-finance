@@ -32,6 +32,7 @@ export function listQueue(userId) {
   }
 }
 
+// 回傳是否寫入成功;quota 滿或隱私模式下 setItem 會拋錯 → false
 function writeQueue(userId, items) {
   try {
     if (items.length === 0) {
@@ -40,13 +41,16 @@ function writeQueue(userId, items) {
       localStorage.setItem(queueKey(userId), JSON.stringify(items));
     }
   } catch {
-    // quota 滿:佇列寫入失敗時交易已在呼叫端拋錯處理,這裡不再擴大影響
+    return false;
   }
   notify();
+  return true;
 }
 
 /**
  * 將完整的 transactions insert payload(含客戶端 UUID id)入列。
+ * 回傳是否入列成功——localStorage 額滿時會失敗,呼叫端必須據此告知使用者,
+ * 否則交易會在「看似已暫存」的狀態下無聲遺失。
  * @param {string} enqueuedOn 入列當天(local YYYY-MM-DD),flush 時據此補簽到
  */
 export function enqueueTransaction(userId, tx, enqueuedOn) {
@@ -59,7 +63,7 @@ export function enqueueTransaction(userId, tx, enqueuedOn) {
     errorMessage: null,
     tx,
   });
-  writeQueue(userId, items);
+  return writeQueue(userId, items);
 }
 
 export function removeQueued(userId, id) {

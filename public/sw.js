@@ -153,25 +153,27 @@ self.addEventListener('push', (event) => {
 
   const { title = 'Smart Finance', body = '', icon, badge, url } = payload;
 
+  // 預設路徑依 SW 所在 base 推導(與 App Shell 快取一致),部署路徑變更時不需改動;
+  // edge function 的 payload 若自帶 icon/url 仍以 payload 為準
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: icon || '/my-smart-finance/favicons/web-app-manifest-192x192.png',
-      badge: badge || '/my-smart-finance/favicons/favicon-96x96.png',
-      data: { url: url || '/my-smart-finance/' },
+      icon: icon || BASE + 'favicons/web-app-manifest-192x192.png',
+      badge: badge || BASE + 'favicons/favicon-96x96.png',
+      data: { url: url || BASE },
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/my-smart-finance/';
+  const targetUrl = event.notification.data?.url || BASE;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // 若已有開啟的視窗，直接 focus
+      // 若已有開啟的視窗，直接 focus(dev 時 BASE 為 '/',任一同源視窗皆符合)
       for (const client of clientList) {
-        if (client.url.includes('/my-smart-finance/') && 'focus' in client) {
+        if (client.url.includes(BASE) && 'focus' in client) {
           return client.focus();
         }
       }

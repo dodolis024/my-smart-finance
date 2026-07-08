@@ -28,9 +28,34 @@ function writeJson(key, value) {
   }
 }
 
+// 每位使用者最多保留的月份快照數;瀏覽過的月份會各存一份,
+// 不清理的話會永久累積、擠壓 localStorage 空間(離線佇列與快照共用 quota)
+const MAX_SNAPSHOTS_PER_USER = 3;
+
+function pruneSnapshots(userId) {
+  try {
+    const prefix = `${SNAPSHOT_PREFIX}:${userId}:`;
+    const entries = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(prefix)) {
+        entries.push({ key, savedAt: readJson(key)?.savedAt ?? 0 });
+      }
+    }
+    if (entries.length <= MAX_SNAPSHOTS_PER_USER) return;
+    entries
+      .sort((a, b) => a.savedAt - b.savedAt)
+      .slice(0, entries.length - MAX_SNAPSHOTS_PER_USER)
+      .forEach((e) => localStorage.removeItem(e.key));
+  } catch {
+    // best-effort,清理失敗不影響主流程
+  }
+}
+
 export function saveSnapshot(userId, year, month, data) {
   if (!userId) return;
   writeJson(snapshotKey(userId, year, month), { savedAt: Date.now(), data });
+  pruneSnapshots(userId);
 }
 
 export function loadSnapshot(userId, year, month) {

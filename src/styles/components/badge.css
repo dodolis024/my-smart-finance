@@ -43,7 +43,8 @@
 }
 
 /* 離線佇列:交易列「待同步」標記與未同步列的弱化 */
-.badge--pending {
+.badge--pending,
+.badge--sync-failed {
   display: inline-block;
   margin-left: 0.4rem;
   padding: 0.05rem 0.45rem;
@@ -54,6 +55,13 @@
   font-size: 0.7rem;
   white-space: nowrap;
   vertical-align: middle;
+}
+
+/* 補送失敗:同型但以危險色標示,hover title 顯示失敗原因 */
+.badge--sync-failed {
+  border-color: var(--color-danger);
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
 }
 .transaction-row--pending {
   opacity: 0.75;

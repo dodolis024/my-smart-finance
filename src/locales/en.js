@@ -115,6 +115,7 @@ const en = {
     selectDate: 'Please select a date!',
     invalidAmount: 'Please enter a valid amount!',
     rateUnavailable: 'Exchange rate for {currency} is currently unavailable. Please try again later.',
+    offlineQueueFailed: 'Offline storage is full — this transaction could not be queued. Free up space or try again once back online.',
     amount: 'Amount',
     note: 'Note',
     noteOptional: 'Optional',

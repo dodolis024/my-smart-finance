@@ -25,6 +25,21 @@ export function useCachedResource(key, { userId, initial, fetcher }) {
   const [loading, setLoading] = useState(() => getCached(key, userId) === undefined);
   const [error, setError] = useState(null);
 
+  // userId 變更時（同分頁登出→換帳號）於 render 期重置為新使用者的快取/初始值。
+  // 沒有這段的話，下方「state → 快取」的同步 effect 會在 data 還是前一位使用者的
+  // 那一刻先跑一次，把舊資料寫進新使用者的快取 key（常駐元件如 useTimezoneSync
+  // 會踩到）。Render 期 setState 是 React 官方的 derive-state-from-props 模式，
+  // 會在本次 render 直接以新值重跑，effect 只會看到重置後的狀態。
+  const [prevIdentity, setPrevIdentity] = useState(() => `${key}:${userId ?? ''}`);
+  const identity = `${key}:${userId ?? ''}`;
+  if (prevIdentity !== identity) {
+    setPrevIdentity(identity);
+    const cached = getCached(key, userId);
+    setData(cached !== undefined ? cached : initial);
+    setLoading(cached === undefined);
+    setError(null);
+  }
+
   // fetcher 以 ref 保存，讓 load 的識別只隨 [key, userId] 變動，
   // 避免呼叫端每次 render 重建 fetcher 而造成 load 變動、進而觸發 effect 無限迴圈。
   const fetcherRef = useRef(fetcher);

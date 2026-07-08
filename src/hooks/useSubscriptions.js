@@ -50,10 +50,12 @@ export function useSubscriptions() {
       if (error) throw error;
 
       // 若今天剛好是扣款日，立刻建立交易
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth() + 1;
-      const todayDay = today.getDate();
+      // 與 process-subscriptions edge function 同樣以台灣時間(UTC+8)判斷「今天」,
+      // 避免裝置時區不同時兩端判定不一致(最壞情況兩邊都不建立交易)
+      const tw = new Date(Date.now() + 8 * 60 * 60 * 1000);
+      const year = tw.getUTCFullYear();
+      const month = tw.getUTCMonth() + 1;
+      const todayDay = tw.getUTCDate();
 
       const cycle = formData.billing_cycle || 'monthly';
       let isDueToday = false;
