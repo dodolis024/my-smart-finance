@@ -4,10 +4,10 @@ This file records version updates for Smart Finance Tracker.
 
 - Added offline support: the app now opens, shows last-seen data, and lets you record transactions while offline, syncing automatically once reconnected
 - Added share/export for Year in Review story cards: save any card as an image to share or download
-- Improved loading performance for the dashboard, yearly review, and split pages
 - Added cross-device sync for language and theme preferences: settings now follow your account
 - Added a language switcher on the login page so you can choose your language before signing up
-- Improved streak reminder delivery performance: batched checkin and email lookups to avoid timeouts as user count grows
+- Improved loading performance for the dashboard, yearly review, and split pages
+- Improved streak reminder delivery performance: batched checkin and email lookups and now filters out users without reminders enabled directly in the database, avoiding timeouts as user count grows
 - Fixed the changelog unread indicator potentially breaking when the version number wasn't manually kept in sync, now reads the latest version directly
 - Fixed transactions potentially disappearing silently when offline storage is full, and capped how many offline snapshots are kept
 - Fixed a brief chance of seeing the previous user's data right after switching accounts

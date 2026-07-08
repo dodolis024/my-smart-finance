@@ -31,17 +31,19 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // 1. 一次撈出所有 reminder_settings 和 reminder_last_sent 紀錄
-    const { data: allSettings, error: settingsError } = await supabase
+    // 1. 只撈「已啟用提醒」的 reminder_settings（enabled 在 DB 端以 jsonb 包含過濾，
+    //    未啟用／未設定的使用者不進記憶體，避免使用者數成長時整表搬回來再丟掉）
+    const { data: enabledSettings, error: settingsError } = await supabase
       .from('settings')
-      .select('user_id, key, value')
-      .in('key', ['reminder_settings', 'reminder_last_sent'])
+      .select('user_id, value')
+      .eq('key', 'reminder_settings')
+      .contains('value', { enabled: true })
 
     if (settingsError) {
       throw new Error(`Failed to fetch settings: ${settingsError.message}`)
     }
 
-    if (!allSettings || allSettings.length === 0) {
+    if (!enabledSettings || enabledSettings.length === 0) {
       console.log('No users with reminder settings found')
       return new Response(
         JSON.stringify({
@@ -54,24 +56,35 @@ serve(async (req) => {
       )
     }
 
-    // 2. 按 user_id 分組：把 config 和 lastSentDate 整理到一起
+    // 2. 只對啟用中的使用者補查 reminder_last_sent，按 user_id 整理到一起
     const userMap = new Map<string, {
       config?: { enabled: boolean; timezone: string; time: string }
       lastSentDate?: string
       lastSentAt?: string
     }>()
 
-    for (const row of allSettings) {
-      if (!userMap.has(row.user_id)) userMap.set(row.user_id, {})
-      const entry = userMap.get(row.user_id)!
-      if (row.key === 'reminder_settings') {
-        entry.config = row.value as { enabled: boolean; timezone: string; time: string }
-      }
-      if (row.key === 'reminder_last_sent') {
-        const v = row.value as { date?: string; sentAt?: string }
-        entry.lastSentDate = v?.date
-        entry.lastSentAt = v?.sentAt
-      }
+    for (const row of enabledSettings) {
+      userMap.set(row.user_id, {
+        config: row.value as { enabled: boolean; timezone: string; time: string },
+      })
+    }
+
+    const { data: lastSentRows, error: lastSentError } = await supabase
+      .from('settings')
+      .select('user_id, value')
+      .eq('key', 'reminder_last_sent')
+      .in('user_id', [...userMap.keys()])
+
+    if (lastSentError) {
+      throw new Error(`Failed to fetch reminder_last_sent: ${lastSentError.message}`)
+    }
+
+    for (const row of lastSentRows || []) {
+      const entry = userMap.get(row.user_id)
+      if (!entry) continue
+      const v = row.value as { date?: string; sentAt?: string }
+      entry.lastSentDate = v?.date
+      entry.lastSentAt = v?.sentAt
     }
 
     const now = new Date()
