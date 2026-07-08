@@ -5,8 +5,10 @@ import { useSplitExpenses } from '@/hooks/useSplitExpenses';
 import { useSplitSync } from '@/hooks/useSplitSync';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { formatSplitAmount, calcMemberTotals } from '@/lib/splitSettlement';
 import SplitExpenseItem from './SplitExpenseItem';
 import SplitSettlement from './SplitSettlement';
+import SplitSyncBox from './SplitSyncBox';
 import SplitShareDetailModal from './SplitShareDetailModal';
 import AddExpenseModal from './AddExpenseModal';
 import ManageMembersModal from './ManageMembersModal';
@@ -74,22 +76,8 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
   const settlement = calcSettlement(members, expenses, settlements, rates, group.currency);
 
   const cur = group.currency || 'TWD';
-  const ZERO_DECIMAL = new Set(['TWD', 'JPY', 'KRW', 'VND']);
-  const fmtAmt = (amt) => {
-    const d = ZERO_DECIMAL.has(cur) ? 0 : 2;
-    const rounded = Number(amt.toFixed(d));
-    return rounded.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
-  };
-  const memberTotals = {};
-  members.forEach(m => { memberTotals[m.id] = 0; });
-  const toRate = (rates && group.currency) ? (rates[group.currency] ?? 1) : 1;
-  expenses.forEach(expense => {
-    const fromRate = (rates && expense.currency) ? (rates[expense.currency] ?? 1) : 1;
-    const factor = toRate > 0 ? fromRate / toRate : 1;
-    (expense.split_expense_shares || []).forEach(s => {
-      memberTotals[s.member_id] = (memberTotals[s.member_id] || 0) + Number(s.share) * factor;
-    });
-  });
+  const fmtAmt = (amt) => formatSplitAmount(amt, cur);
+  const memberTotals = calcMemberTotals(members, expenses, rates, group.currency);
 
   const handleAddExpense = async (data) => {
     await addExpense(data);
@@ -318,81 +306,14 @@ export default function SplitGroupDetail({ group, onBack, rates, currencies, onA
           <div className="split-group-detail__section-header split-group-detail__section-header--summary">
             <p className="split-group-detail__section-title">{t('split.syncSection')}</p>
           </div>
-          <div className="split-sync-box">
-            {!syncStatus || !syncStatus.synced ? (
-              <div className="split-sync-box__unsync">
-                <p className="split-sync-box__desc">
-                  {t('split.syncDesc', {
-                    currency: syncStatus?.currency || group.currency || 'TWD',
-                    amount: fmtAmt(syncStatus?.current_total ?? memberTotals[actorMember.id] ?? 0),
-                  })}
-                </p>
-                <button
-                  type="button"
-                  className="split-sync-box__btn split-sync-box__btn--primary"
-                  onClick={handleSyncToLedger}
-                  disabled={syncing}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                  </svg>
-                  {syncing ? t('split.syncing') : t('split.syncBtn')}
-                </button>
-              </div>
-            ) : syncStatus.needs_update ? (
-              <div className="split-sync-box__needs-update">
-                <div className="split-sync-box__update-info">
-                  <span className="split-sync-box__dot" />
-                  <span className="split-sync-box__update-text">{t('split.hasNewExpenses')}</span>
-                </div>
-                <p className="split-sync-box__desc">
-                  {t('split.ledgerRecord')}{syncStatus.currency} {fmtAmt(syncStatus.synced_amount)}　→　{t('split.latest')}{syncStatus.currency} {fmtAmt(syncStatus.current_total)}
-                </p>
-                <div className="split-sync-box__actions">
-                  <button
-                    type="button"
-                    className="split-sync-box__btn split-sync-box__btn--primary"
-                    onClick={handleSyncToLedger}
-                    disabled={syncing}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
-                    {syncing ? t('split.updating') : t('split.updateSync')}
-                  </button>
-                  <button type="button" className="split-sync-box__btn split-sync-box__btn--secondary" onClick={() => setShareDetailOpen(true)}>
-                    {t('split.viewDetail')}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="split-sync-box__synced">
-                <div className="split-sync-box__synced-info">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="split-sync-box__check-icon" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                  <span className="split-sync-box__synced-label">{t('split.synced')}</span>
-                  <span className="split-sync-box__synced-amount">{syncStatus.currency} {fmtAmt(syncStatus.synced_amount)}</span>
-                </div>
-                <div className="split-sync-box__actions">
-                  <button
-                    type="button"
-                    className="split-sync-box__btn split-sync-box__btn--secondary"
-                    onClick={handleSyncToLedger}
-                    disabled={syncing}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
-                    {syncing ? t('split.updating') : t('split.resync')}
-                  </button>
-                  <button type="button" className="split-sync-box__btn split-sync-box__btn--secondary" onClick={() => setShareDetailOpen(true)}>
-                    {t('split.viewDetail')}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <SplitSyncBox
+            syncStatus={syncStatus}
+            syncing={syncing}
+            currency={cur}
+            fallbackAmount={memberTotals[actorMember.id]}
+            onSync={handleSyncToLedger}
+            onViewDetail={() => setShareDetailOpen(true)}
+          />
         </>
       )}
 

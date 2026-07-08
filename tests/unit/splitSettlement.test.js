@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcSettlement } from '@/lib/splitSettlement';
+import { calcSettlement, calcMemberTotals, formatSplitAmount } from '@/lib/splitSettlement';
 
 const members = [
   { id: 'A', name: 'Alice' },
@@ -140,5 +140,66 @@ describe('calcSettlement', () => {
     expect(result).toEqual([
       { fromId: 'B', toId: 'A', from: 'Bob', to: 'Alice', amount: 50 },
     ]);
+  });
+});
+
+describe('calcMemberTotals', () => {
+  it('無費用時每位成員總額為 0', () => {
+    expect(calcMemberTotals(members, [], { TWD: 1 }, 'TWD')).toEqual({ A: 0, B: 0, C: 0 });
+  });
+
+  it('同幣別：各成員加總自己的分攤', () => {
+    const expenses = [
+      { currency: 'TWD', split_expense_shares: [
+        { member_id: 'A', share: 50 },
+        { member_id: 'B', share: 50 },
+      ] },
+      { currency: 'TWD', split_expense_shares: [
+        { member_id: 'A', share: 30 },
+      ] },
+    ];
+    expect(calcMemberTotals(members, expenses, { TWD: 1 }, 'TWD')).toEqual({ A: 80, B: 50, C: 0 });
+  });
+
+  it('跨幣別：分攤依匯率換算成群組幣別（USD 31.5 → TWD）', () => {
+    const expenses = [
+      { currency: 'USD', split_expense_shares: [
+        { member_id: 'A', share: 10 },
+      ] },
+    ];
+    expect(calcMemberTotals(members, expenses, { TWD: 1, USD: 31.5 }, 'TWD')).toEqual({ A: 315, B: 0, C: 0 });
+  });
+
+  it('member_id 不在 members 內時也計入（與原行為一致）', () => {
+    const expenses = [
+      { currency: 'TWD', split_expense_shares: [
+        { member_id: 'X', share: 20 },
+      ] },
+    ];
+    expect(calcMemberTotals(members, expenses, { TWD: 1 }, 'TWD')).toEqual({ A: 0, B: 0, C: 0, X: 20 });
+  });
+
+  it('群組幣別匯率為 0 時 factor 退回 1，不產生 NaN', () => {
+    const expenses = [
+      { currency: 'TWD', split_expense_shares: [
+        { member_id: 'A', share: 50 },
+      ] },
+    ];
+    expect(calcMemberTotals(members, expenses, { TWD: 1, ZZZ: 0 }, 'ZZZ')).toEqual({ A: 50, B: 0, C: 0 });
+  });
+});
+
+describe('formatSplitAmount', () => {
+  it('零小數幣別（TWD/JPY）不顯示小數', () => {
+    expect(formatSplitAmount(1234.56, 'TWD')).toBe('1,235');
+    expect(formatSplitAmount(1000, 'JPY')).toBe('1,000');
+  });
+
+  it('其他幣別顯示兩位小數', () => {
+    expect(formatSplitAmount(1234.5, 'USD')).toBe('1,234.50');
+  });
+
+  it('幣別為空時視為 TWD', () => {
+    expect(formatSplitAmount(99.4, '')).toBe('99');
   });
 });

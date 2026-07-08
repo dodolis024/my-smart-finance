@@ -1,3 +1,42 @@
+const ZERO_DECIMAL_CURRENCIES = new Set(['TWD', 'JPY', 'KRW', 'VND']);
+
+/**
+ * Format an amount for display in the given currency
+ * (zero-decimal currencies show no decimal places, others show two).
+ *
+ * @param {number} amount
+ * @param {string} currency
+ * @returns {string}
+ */
+export function formatSplitAmount(amount, currency) {
+  const d = ZERO_DECIMAL_CURRENCIES.has(currency || 'TWD') ? 0 : 2;
+  const rounded = Number(amount.toFixed(d));
+  return rounded.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+/**
+ * Per-member total spend (sum of own shares), converted to the group currency.
+ *
+ * @param {Array} members - [{ id, name }]
+ * @param {Array} expenseList - expenses with split_expense_shares
+ * @param {Object} rates - { TWD: 1, USD: 31.5, ... } (1 unit = how many TWD)
+ * @param {string} groupCurrency - target currency for totals
+ * @returns {Object} { [memberId]: number }
+ */
+export function calcMemberTotals(members, expenseList, rates, groupCurrency) {
+  const totals = {};
+  members.forEach(m => { totals[m.id] = 0; });
+  const toRate = (rates && groupCurrency) ? (rates[groupCurrency] ?? 1) : 1;
+  expenseList.forEach(expense => {
+    const fromRate = (rates && expense.currency) ? (rates[expense.currency] ?? 1) : 1;
+    const factor = toRate > 0 ? fromRate / toRate : 1;
+    (expense.split_expense_shares || []).forEach(s => {
+      totals[s.member_id] = (totals[s.member_id] || 0) + Number(s.share) * factor;
+    });
+  });
+  return totals;
+}
+
 /**
  * Minimize-transactions settlement algorithm (greedy matching).
  *
