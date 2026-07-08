@@ -1,33 +1,23 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { notifySplit } from '@/lib/splitNotify';
 import { calcSettlement } from '@/lib/splitSettlement';
-import { getCachedExpenses, getCachedSettlements, updateCache } from '@/lib/splitCache';
 import { getTodayYmd } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { useCachedResource } from '@/hooks/useCachedResource';
+
+const INITIAL = { expenses: [], settlements: [] };
 
 export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', groupName = '' } = {}) {
-  const hasCached = groupId && getCachedExpenses(groupId);
+  const { user } = useAuth();
 
-  const [expenses, setExpenses] = useState(() =>
-    hasCached ? getCachedExpenses(groupId) : []
-  );
-  const [settlements, setSettlements] = useState(() =>
-    groupId && getCachedSettlements(groupId) ? getCachedSettlements(groupId) : []
-  );
-  const [loading, setLoading] = useState(() => !hasCached);
-
-  // Keep cache in sync
-  useEffect(() => {
-    if (groupId) {
-      updateCache(groupId, expenses, settlements);
-    }
-  }, [expenses, settlements, groupId]);
-
-  const fetchExpenses = useCallback(async () => {
-    if (!groupId) return;
-    if (!getCachedExpenses(groupId)) setLoading(true);
-    try {
-      const { data, error } = await supabase
+  // 快取鍵含 groupId（各群組獨立）、綁 userId（換帳號自動失效），
+  // 並納入 resourceCache 的 clearAllCaches 範圍（登出一次清空）。
+  const { data, setData, loading, load } = useCachedResource(`split-expenses:${groupId ?? ''}`, {
+    userId: user?.id,
+    initial: INITIAL,
+    fetcher: async () => {
+      const { data: expenseRows, error } = await supabase
         .from('split_expenses')
         .select(`
           *,
@@ -37,19 +27,25 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setExpenses(data || []);
 
-      // 還款紀錄獨立查詢，表不存在時不影響費用載入
+      // 還款紀錄獨立查詢，表不存在時不影響費用載入（沿用現值）
       const setRes = await supabase
         .from('split_settlements')
         .select('*')
         .eq('group_id', groupId)
         .order('created_at', { ascending: false });
-      if (!setRes.error) setSettlements(setRes.data || []);
-    } finally {
-      setLoading(false);
-    }
-  }, [groupId]);
+      return {
+        expenses: expenseRows || [],
+        settlements: setRes.error ? data.settlements : (setRes.data || []),
+      };
+    },
+  });
+  const { expenses, settlements } = data;
+
+  const fetchExpenses = useCallback(async () => {
+    if (!groupId) return;
+    await load();
+  }, [groupId, load]);
 
   const addExpense = useCallback(async ({ title, amount, currency, date, note, paidBy, shares }) => {
     const { data: expense, error: expenseError } = await supabase
@@ -127,7 +123,7 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
       .delete()
       .eq('id', expenseId);
     if (error) throw error;
-    setExpenses(prev => prev.filter(e => e.id !== expenseId));
+    setData(prev => ({ ...prev, expenses: prev.expenses.filter(e => e.id !== expenseId) }));
     notifySplit({
       event: 'expense_deleted',
       group_id: groupId,
@@ -136,7 +132,7 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
       actor_user_id: actorUserId,
       expense_title: expenseToDelete?.title ?? '',
     });
-  }, [expenses, groupId, groupName, actorName, actorUserId]);
+  }, [expenses, setData, groupId, groupName, actorName, actorUserId]);
 
   // 新增還款紀錄
   const addSettlement = useCallback(async ({ fromMember, toMember, amount, currency, fromName = '', toName = '' }) => {
@@ -171,8 +167,8 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
       .delete()
       .eq('id', settlementId);
     if (error) throw error;
-    setSettlements(prev => prev.filter(s => s.id !== settlementId));
-  }, []);
+    setData(prev => ({ ...prev, settlements: prev.settlements.filter(s => s.id !== settlementId) }));
+  }, [setData]);
 
   // Wrap pure calcSettlement in useCallback for stable reference
   const calcSettlementCb = useCallback(
