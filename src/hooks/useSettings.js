@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCachedResource } from '@/hooks/useCachedResource';
 
 const DEFAULT_EXPENSE_CATEGORIES = {
   zh: ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他'],
@@ -12,69 +13,51 @@ const DEFAULT_INCOME_CATEGORIES = {
   en: ['Salary', 'Investment', 'Other'],
 };
 
-// Module-level cache
-let cachedExpenseCats = null;
-let cachedIncomeCats = null;
-let cachedAccounts = null;
-let cachedUserId = null;
+const CACHE_KEY = 'settings';
+const INITIAL = { expenseCategories: [], incomeCategories: [], accounts: [] };
 
 export function useSettings() {
   const { user } = useAuth();
   const { lang, t } = useLanguage();
-  const hasCached = cachedUserId === user?.id && cachedExpenseCats;
 
-  const [expenseCategories, setExpenseCategories] = useState(() =>
-    hasCached ? cachedExpenseCats : []
-  );
-  const [incomeCategories, setIncomeCategories] = useState(() =>
-    hasCached ? cachedIncomeCats : []
-  );
-  const [accounts, setAccounts] = useState(() =>
-    hasCached ? cachedAccounts : []
-  );
-  const [loading, setLoading] = useState(() => !hasCached);
-  const [loadError, setLoadError] = useState(null);
-
-  // Keep cache in sync
-  useEffect(() => {
-    cachedExpenseCats = expenseCategories;
-    cachedIncomeCats = incomeCategories;
-    cachedAccounts = accounts;
-    cachedUserId = user?.id ?? null;
-  }, [expenseCategories, incomeCategories, accounts, user?.id]);
-
-  const loadSettingsData = useCallback(async () => {
-    if (!user) return;
-    if (!cachedExpenseCats || cachedUserId !== user.id) setLoading(true);
-    setLoadError(null);
-    try {
+  const { data, setData, loading, error, load } = useCachedResource(CACHE_KEY, {
+    userId: user?.id,
+    initial: INITIAL,
+    fetcher: async () => {
       const [{ data: expenseData }, { data: incomeData }, { data: accountsData }] = await Promise.all([
         supabase.from('settings').select('value').eq('user_id', user.id).eq('key', 'expense_categories').single(),
         supabase.from('settings').select('value').eq('user_id', user.id).eq('key', 'income_categories').single(),
         supabase.from('accounts').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
       ]);
+      return {
+        expenseCategories: expenseData?.value || DEFAULT_EXPENSE_CATEGORIES[lang] || DEFAULT_EXPENSE_CATEGORIES.zh,
+        incomeCategories: incomeData?.value || DEFAULT_INCOME_CATEGORIES[lang] || DEFAULT_INCOME_CATEGORIES.zh,
+        accounts: accountsData || [],
+      };
+    },
+  });
+  const { expenseCategories, incomeCategories, accounts } = data;
 
-      setExpenseCategories(expenseData?.value || DEFAULT_EXPENSE_CATEGORIES[lang] || DEFAULT_EXPENSE_CATEGORIES.zh);
-      setIncomeCategories(incomeData?.value || DEFAULT_INCOME_CATEGORIES[lang] || DEFAULT_INCOME_CATEGORIES.zh);
-      setAccounts(accountsData || []);
-    } catch (err) {
-      setLoadError(err?.message || t('settings.loadError'));
-    } finally {
-      setLoading(false);
+  const loadSettingsData = useCallback(async () => {
+    if (!user) return;
+    try {
+      await load();
+    } catch {
+      // 沿用原本行為：載入失敗只寫入 loadError，不對呼叫端拋錯
     }
-  }, [user]);
+  }, [user, load]);
 
   const saveCategoriesType = useCallback(async (type, categories) => {
     if (!user) return;
     const key = type === 'expense' ? 'expense_categories' : 'income_categories';
-    const { error } = await supabase.from('settings').upsert(
+    const { error: saveError } = await supabase.from('settings').upsert(
       { user_id: user.id, key, value: categories },
       { onConflict: 'user_id,key' }
     );
-    if (error) throw error;
-    if (type === 'expense') setExpenseCategories([...categories]);
-    else setIncomeCategories([...categories]);
-  }, [user]);
+    if (saveError) throw saveError;
+    const field = type === 'expense' ? 'expenseCategories' : 'incomeCategories';
+    setData((prev) => ({ ...prev, [field]: [...categories] }));
+  }, [user, setData]);
 
   const addCategory = useCallback(async (type, name) => {
     const categories = type === 'expense' ? [...expenseCategories] : [...incomeCategories];
@@ -101,8 +84,8 @@ export function useSettings() {
 
   const updateTransactionCategories = useCallback(async (oldName, newName) => {
     if (!user) return;
-    const { error } = await supabase.from('transactions').update({ category: newName }).eq('user_id', user.id).eq('category', oldName);
-    if (error) throw error;
+    const { error: updateError } = await supabase.from('transactions').update({ category: newName }).eq('user_id', user.id).eq('category', oldName);
+    if (updateError) throw updateError;
   }, [user]);
 
   const saveAccount = useCallback(async (accountData, accountId = null) => {
@@ -117,14 +100,14 @@ export function useSettings() {
     const payload = { ...accountData, name: trimmedName, user_id: user.id };
     if (accountId) {
       const oldAccount = accounts.find((a) => a.id === accountId);
-      const { error } = await supabase.from('accounts').update(payload).eq('id', accountId);
-      if (error) throw error;
+      const { error: saveError } = await supabase.from('accounts').update(payload).eq('id', accountId);
+      if (saveError) throw saveError;
       if (oldAccount?.name && oldAccount.name !== trimmedName) {
         await updateTransactionPaymentMethods(oldAccount.name, trimmedName);
       }
     } else {
-      const { error } = await supabase.from('accounts').insert(payload);
-      if (error) throw error;
+      const { error: saveError } = await supabase.from('accounts').insert(payload);
+      if (saveError) throw saveError;
     }
     await loadSettingsData();
   }, [user, accounts, loadSettingsData]);
@@ -141,23 +124,17 @@ export function useSettings() {
         throw new Error(t('settings.account.hasTransactions', { name: account.name, count }));
       }
     }
-    const { error } = await supabase.from('accounts').delete().eq('id', accountId);
-    if (error) throw error;
+    const { error: deleteError } = await supabase.from('accounts').delete().eq('id', accountId);
+    if (deleteError) throw deleteError;
     await loadSettingsData();
   }, [user, accounts, loadSettingsData]);
-
-  const updateTransactionPaymentMethods = useCallback(async (oldName, newName) => {
-    if (!user) return;
-    const { error } = await supabase.from('transactions').update({ payment_method: newName }).eq('user_id', user.id).eq('payment_method', oldName);
-    if (error) throw error;
-  }, [user]);
 
   return {
     expenseCategories,
     incomeCategories,
     accounts,
     loading,
-    loadError,
+    loadError: error ? (error.message || t('settings.loadError')) : null,
     loadSettingsData,
     addCategory,
     renameCategory,
