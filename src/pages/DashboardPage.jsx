@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useStreak } from '@/hooks/useStreak';
 import { useTransactions } from '@/hooks/useTransactions';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
+import { useOfflineMergedView } from '@/hooks/useOfflineMergedView';
 import { useCreditCardNotifications } from '@/hooks/useCreditCardNotifications';
 import { useModalStates } from '@/hooks/useModalStates';
 import { supabase } from '@/lib/supabase';
@@ -71,8 +71,19 @@ export default function DashboardPage() {
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [editingTransaction, setEditingTransaction] = useState(null);
 
-  // 離線記帳佇列:自動補送(掛載 + 恢復連線),結果以 toast 通知
-  const { queuedItems, pendingCount, flushNow, removeQueuedItem } = useOfflineSync({
+  // 離線記帳佇列:自動補送(掛載 + 恢復連線)並把未同步交易併入當月列表與彙總,結果以 toast 通知
+  const {
+    queuedItems,
+    pendingCount,
+    flushNow,
+    removeQueuedItem,
+    displayHistory,
+    displaySummary,
+  } = useOfflineMergedView({
+    history: transactionHistoryFull,
+    summary,
+    year: currentYear,
+    month: currentMonth,
     onSynced: (result) => {
       toast.success(t('dashboard.syncSuccess', { count: result.synced }));
       fetchDashboardData(currentYear, currentMonth, { silent: true });
@@ -80,54 +91,6 @@ export default function DashboardPage() {
     onFailed: (result) => toast.error(t('dashboard.syncFailed', { count: result.failed })),
     onNeedsLogin: () => toast.error(t('dashboard.syncNeedsLogin')),
   });
-
-  // 把佇列中的交易(尚未同步)合併進當月列表與彙總,標記 pending 供 UI 顯示
-  const queuedRows = useMemo(() => {
-    if (queuedItems.length === 0) return [];
-    const monthPrefix = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-    return queuedItems
-      .filter((item) => String(item.tx?.date || '').startsWith(monthPrefix))
-      .map((item) => ({
-        id: item.tx.id,
-        date: item.tx.date,
-        type: item.tx.type,
-        category: item.tx.category,
-        itemName: item.tx.item_name,
-        paymentMethod: item.tx.payment_method,
-        currency: item.tx.currency,
-        amount: item.tx.amount,
-        twdAmount: item.tx.twd_amount,
-        note: item.tx.note,
-        pending: true,
-        // failed = 補送失敗需手動重試,UI 以危險色標記並顯示失敗原因
-        queueStatus: item.status,
-        queueError: item.errorMessage,
-      }));
-  }, [queuedItems, currentYear, currentMonth]);
-
-  const displayHistory = useMemo(() => {
-    if (queuedRows.length === 0) return transactionHistoryFull;
-    return [...queuedRows, ...transactionHistoryFull].sort((a, b) =>
-      String(b.date).localeCompare(String(a.date))
-    );
-  }, [queuedRows, transactionHistoryFull]);
-
-  const displaySummary = useMemo(() => {
-    if (queuedRows.length === 0) return summary;
-    let dIncome = 0;
-    let dExpense = 0;
-    for (const row of queuedRows) {
-      const amt = typeof row.twdAmount === 'number' ? row.twdAmount : 0;
-      if (row.type === 'income') dIncome += amt;
-      else dExpense += amt;
-    }
-    return {
-      ...summary,
-      totalIncome: summary.totalIncome + dIncome,
-      totalExpense: summary.totalExpense + dExpense,
-      balance: summary.balance + dIncome - dExpense,
-    };
-  }, [queuedRows, summary]);
 
   const formRef = useRef(null);
   const historyRef = useRef(null);
