@@ -118,8 +118,7 @@ BEGIN
             'type', type,
             'creditLimit', credit_limit,
             'billingDay', billing_day,
-            'paymentDueDay', payment_due_day,
-            'currentBalanceFormula', current_balance_formula
+            'paymentDueDay', payment_due_day
         ) ORDER BY created_at ASC
     ) INTO v_accounts
     FROM accounts

@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS accounts (
     credit_limit NUMERIC(10, 2),
     billing_day INTEGER CHECK (billing_day >= 1 AND billing_day <= 31),
     payment_due_day INTEGER CHECK (payment_due_day >= 1 AND payment_due_day <= 31),
-    current_balance_formula TEXT,
     details JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
