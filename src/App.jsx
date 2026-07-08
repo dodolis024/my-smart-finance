@@ -19,6 +19,8 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const SplitPage = lazy(() => import('@/pages/SplitPage'));
 const JoinPage = lazy(() => import('@/pages/JoinSplitPage'));
 const YearlyReviewPage = lazy(() => import('@/pages/YearlyReviewPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 
 function LoadingFallback() {
   const { t } = useLanguage();
@@ -67,6 +69,8 @@ function AppShell() {
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/"
             element={

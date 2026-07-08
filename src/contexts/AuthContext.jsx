@@ -83,6 +83,17 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, []);
 
+  const sendPasswordReset = useCallback(async (email) => {
+    const redirectTo = window.location.origin + import.meta.env.BASE_URL + 'reset-password';
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
@@ -106,6 +117,8 @@ export function AuthProvider({ children }) {
     signInWithPassword,
     signUp,
     signInWithGoogle,
+    sendPasswordReset,
+    updatePassword,
     signOut,
     ensureDefaultDataForOAuth,
   };

@@ -55,6 +55,13 @@ export default function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
         required
       />
+      <button
+        type="button"
+        className="auth-link auth-forgot-link"
+        onClick={() => navigate('/forgot-password')}
+      >
+        {t('auth.forgotPassword')}
+      </button>
       <button type="submit" disabled={submitting}>
         {submitting ? t('auth.loggingIn') : t('auth.login')}
       </button>

@@ -6,6 +6,7 @@ This file records version updates for Smart Finance Tracker.
 - Added share/export for Year in Review story cards: save any card as an image to share or download
 - Added cross-device sync for language and theme preferences: settings now follow your account
 - Added a language switcher on the login page so you can choose your language before signing up
+- Added a forgot password flow: a "Forgot password?" link on the login page lets users reset their password via email
 - Improved loading performance for the dashboard, yearly review, and split pages
 - Improved streak reminder delivery performance: batched checkin and email lookups and now filters out users without reminders enabled directly in the database, avoiding timeouts as user count grows
 - Fixed the changelog unread indicator potentially breaking when the version number wasn't manually kept in sync, now reads the latest version directly
