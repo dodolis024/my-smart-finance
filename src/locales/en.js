@@ -80,6 +80,9 @@ const en = {
     changelog: 'Change log',
     moreOptions: 'More options',
     settingsCategories: 'Settings categories',
+    home: 'Home',
+    split: 'Split',
+    yearReview: 'Year Review',
   },
 
   dashboard: {

@@ -81,7 +81,7 @@ export default function SplitPage() {
               </svg>
               {t('split.back')}
             </button>
-            <h1 className="split-page__title">Split</h1>
+            <h1 className="split-page__title">{t('layout.split')}</h1>
           </div>
           <SplitGroupDetail
             group={selectedGroup}
@@ -126,7 +126,7 @@ export default function SplitPage() {
               </svg>
               {t('split.back')}
             </button>
-            <h1 className="split-page__title">Split</h1>
+            <h1 className="split-page__title">{t('layout.split')}</h1>
           </div>
 
           {loading ? (

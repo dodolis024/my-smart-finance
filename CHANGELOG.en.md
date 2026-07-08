@@ -13,6 +13,8 @@ This file records version updates for Smart Finance Tracker.
 - Fixed transactions potentially disappearing silently when offline storage is full, and capped how many offline snapshots are kept
 - Fixed a brief chance of seeing the previous user's data right after switching accounts
 - Fixed subscription due-date checks possibly disagreeing with the backend on devices outside the Taiwan timezone
+- Fixed the sidebar and bottom nav showing some labels (Home, Split, Year Review, Change log) in English even after switching to Chinese
+- Fixed the language toggle button showing the target language instead of the current one
 
 ## [1.18.0] - Jul-06 2026
 - Added Year in Review: swipeable story cards with annual totals, category rankings, top purchases, consistency stats, and best/overspent months, plus year-over-year income and expense comparison

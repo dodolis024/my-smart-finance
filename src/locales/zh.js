@@ -80,6 +80,9 @@ const zh = {
     changelog: '更新紀錄',
     moreOptions: '更多選項',
     settingsCategories: '設定分類',
+    home: '首頁',
+    split: '分帳',
+    yearReview: '年度回顧',
   },
 
   dashboard: {
