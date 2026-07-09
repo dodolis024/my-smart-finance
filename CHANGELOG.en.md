@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.19.0] - Jul-09 2026
 - Added offline support: the app now opens, shows last-seen data, and lets you record transactions while offline, syncing automatically once reconnected
 - Added share/export for Year in Review story cards: save any card as an image to share or download
 - Added cross-device sync for language and theme preferences: settings now follow your account
