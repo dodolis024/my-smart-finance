@@ -83,6 +83,16 @@ export function formatMonthLabel(year, month) {
   return MONTH_ABBREVS[month - 1] + ' ' + year;
 }
 
+/** 年度回顧鎖定規則：當年度（含網址帶未來年份）在年底跨年前都不開放查看 */
+export function isYearLocked(year) {
+  return year >= new Date().getFullYear();
+}
+
+/** 年度回顧橫幅只在隔年 1~2 月出現，提示剛結束的上一年度回顧已出爐 */
+export function isYearlyReviewAnnounceWindow(date = new Date()) {
+  return date.getMonth() <= 1;
+}
+
 export function getDaysUntilDay(day) {
   if (!day || day < 1 || day > 31) return null;
   const today = new Date();

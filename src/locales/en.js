@@ -563,6 +563,12 @@ const en = {
     loading: 'Loading…',
     loadError: 'Could not load your year in review',
 
+    locked: {
+      title: 'Your {year} Year in Review unlocks at year end',
+      hint: "This year is still in progress — come back once it wraps up to see the full recap!",
+      viewPastYears: 'View past years',
+    },
+
     cover: {
       title: '{year} Year in Review',
       subtitle: "Let's look back at your whole year",

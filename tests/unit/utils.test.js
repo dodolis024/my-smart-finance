@@ -10,6 +10,8 @@ import {
   formatNumberWithCommas,
   parseFormattedNumber,
   parseChangelogMarkdown,
+  isYearLocked,
+  isYearlyReviewAnnounceWindow,
 } from '@/lib/utils';
 
 describe('utils - formatMoney', () => {
@@ -108,6 +110,35 @@ describe('utils - debounce', () => {
 
     await new Promise((r) => setTimeout(r, 50));
     expect(lastArg).toBe(3);
+  });
+});
+
+describe('utils - isYearLocked', () => {
+  it('當年度應為鎖定', () => {
+    expect(isYearLocked(new Date().getFullYear())).toBe(true);
+  });
+
+  it('去年應為未鎖定', () => {
+    expect(isYearLocked(new Date().getFullYear() - 1)).toBe(false);
+  });
+
+  it('未來年份（含網址帶入異常值）應視為鎖定', () => {
+    expect(isYearLocked(new Date().getFullYear() + 1)).toBe(true);
+  });
+});
+
+describe('utils - isYearlyReviewAnnounceWindow', () => {
+  it('隔年 1 月與 2 月應顯示', () => {
+    expect(isYearlyReviewAnnounceWindow(new Date('2027-01-15'))).toBe(true);
+    expect(isYearlyReviewAnnounceWindow(new Date('2027-02-28'))).toBe(true);
+  });
+
+  it('3 月以後不應顯示', () => {
+    expect(isYearlyReviewAnnounceWindow(new Date('2027-03-01'))).toBe(false);
+  });
+
+  it('去年 12 月不應顯示', () => {
+    expect(isYearlyReviewAnnounceWindow(new Date('2026-12-31'))).toBe(false);
   });
 });
 

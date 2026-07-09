@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useYearlyReview } from '@/hooks/useYearlyReview';
 import { useCardExport } from '@/hooks/useCardExport';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { isYearLocked } from '@/lib/utils';
 import StoryProgressBar from '@/components/yearly-review/StoryProgressBar';
 import ReviewCover from '@/components/yearly-review/ReviewCover';
 import AnnualTotals from '@/components/yearly-review/AnnualTotals';
@@ -32,10 +33,15 @@ export default function YearlyReviewPage() {
     return Number.isFinite(fromUrl) ? fromUrl : defaultYear();
   });
 
-  const { loading, error, annualTotals, previousTotals, monthlyBreakdown, topCategories, topExpenses, highlights } = useYearlyReview(year);
+  const locked = isYearLocked(year);
+  const { loading, error, annualTotals, previousTotals, monthlyBreakdown, topCategories, topExpenses, highlights } = useYearlyReview(locked ? null : year);
   const { exporting, stageRef, shareCard } = useCardExport();
 
   const handleClose = useCallback(() => navigate('/'), [navigate]);
+  const goToPreviousYear = useCallback(() => {
+    setYear((y) => y - 1);
+    setCurrentIndex(0);
+  }, []);
 
   // Each card renders from its own index, so `active`-driven animations stay
   // correct no matter how the order changes.
@@ -118,6 +124,25 @@ export default function YearlyReviewPage() {
     if (Math.abs(diff) > 50) diff > 0 ? next() : prev();
     touchStartX.current = null;
   };
+
+  if (locked) {
+    return (
+      <div className="yearly-review" role="dialog" aria-modal="true" aria-label={t('yearlyReview.bannerTitle')}>
+        <div className="yearly-review__header">
+          <div style={{ flex: 1 }} />
+          <button className="yearly-review__close" onClick={handleClose} aria-label={t('yearlyReview.close')}>✕</button>
+        </div>
+        <div className="review-card review-card--cover">
+          <p className="review-card__eyebrow">✦ Smart Finance</p>
+          <h1 className="review-card__title">{t('yearlyReview.locked.title').replace('{year}', year)}</h1>
+          <p className="review-card__subtitle">{t('yearlyReview.locked.hint')}</p>
+          <button className="review-closing-back" onClick={goToPreviousYear}>
+            {t('yearlyReview.locked.viewPastYears')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!loading && error) {
     return (

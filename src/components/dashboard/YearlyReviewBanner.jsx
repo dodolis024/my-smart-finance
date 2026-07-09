@@ -1,11 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { isYearlyReviewAnnounceWindow } from '@/lib/utils';
 
 export default function YearlyReviewBanner() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const now = new Date();
-  const reviewYear = now.getFullYear();
+  const reviewYear = now.getFullYear() - 1;
+
+  if (!isYearlyReviewAnnounceWindow(now)) return null;
 
   return (
     <button

@@ -2,6 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added a lock for the current year's Year in Review, showing a "coming at year end" message with a quick link back to past years until the year wraps up
+- Improved the Year in Review dashboard banner to only appear in Jan-Feb the following year, prompting users to check out last year's recap
+
 ## [1.19.0] - Jul-09 2026
 - Added offline support: the app now opens, shows last-seen data, and lets you record transactions while offline, syncing automatically once reconnected
 - Added share/export for Year in Review story cards: save any card as an image to share or download

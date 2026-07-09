@@ -563,6 +563,12 @@ const zh = {
     loading: '載入中…',
     loadError: '年度回顧載入失敗',
 
+    locked: {
+      title: '{year} 年年度回顧將於年底揭曉',
+      hint: '這一年還在進行中，等年度結束後再回來看看完整的總結吧！',
+      viewPastYears: '查看過去年度的回顧',
+    },
+
     cover: {
       title: '{year} 年度回顧',
       subtitle: '讓我們來看看你的一整年',
