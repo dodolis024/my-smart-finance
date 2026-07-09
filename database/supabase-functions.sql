@@ -204,6 +204,7 @@ DECLARE
     v_today DATE;
     v_yesterday DATE;
     v_checkin_dates DATE[];
+    v_frozen_dates DATE[];
     v_transaction_dates DATE[];
     v_current_streak INTEGER := 0;
     v_longest INTEGER := 0;
@@ -226,48 +227,60 @@ BEGIN
     FROM checkins
     WHERE user_id = p_user_id;
 
+    -- 取得所有凍結日期（streak freeze：漏記時用庫存卡橋接的日期，只保護不加天數）
+    SELECT ARRAY_AGG(DISTINCT date ORDER BY date DESC)
+    INTO v_frozen_dates
+    FROM streak_freezes
+    WHERE user_id = p_user_id;
+
     -- 取得所有有交易的日期（用於計算 total_logged_days）
     SELECT ARRAY_AGG(DISTINCT date ORDER BY date DESC)
     INTO v_transaction_dates
     FROM transactions
     WHERE user_id = p_user_id;
 
-    -- 計算 total_logged_days（使用 checkins 表，包含所有有記帳或簽到的日期）
+    -- 計算 total_logged_days（使用 checkins 表，包含所有有記帳或簽到的日期；不含凍結日）
     SELECT COUNT(DISTINCT date) INTO v_total_logged_days
     FROM checkins
     WHERE user_id = p_user_id;
 
-    -- 轉換簽到日期為 JSON 陣列（含 date 與 source，供前端區分記帳簽到 / 簽到按鈕）
-    SELECT json_agg(json_build_object('date', date::text, 'source', source) ORDER BY date DESC)
+    -- 轉換簽到日期為 JSON 陣列（含 date 與 source，供前端區分記帳簽到 / 簽到按鈕 / 凍結卡橋接）
+    SELECT json_agg(json_build_object('date', combined.date_val::text, 'source', combined.source_val) ORDER BY combined.date_val DESC)
     INTO v_logged_dates_json
-    FROM checkins
-    WHERE user_id = p_user_id;
+    FROM (
+        SELECT date AS date_val, source AS source_val FROM checkins WHERE user_id = p_user_id
+        UNION ALL
+        SELECT date AS date_val, 'frozen' AS source_val FROM streak_freezes WHERE user_id = p_user_id
+    ) AS combined;
 
     -- 計算目前連續記帳天數
-    IF v_checkin_dates IS NULL OR array_length(v_checkin_dates, 1) IS NULL THEN
+    IF (v_checkin_dates IS NULL OR array_length(v_checkin_dates, 1) IS NULL)
+        AND (v_frozen_dates IS NULL OR array_length(v_frozen_dates, 1) IS NULL) THEN
         v_current_streak := 0;
         v_broken := true;
     ELSE
-        -- 檢查今天或昨天是否有簽到
-        IF v_today = ANY(v_checkin_dates) OR v_yesterday = ANY(v_checkin_dates) THEN
+        -- 檢查今天或昨天是否有簽到或凍結卡橋接（凍結日視同「還活著」，但不加天數）
+        IF v_today = ANY(v_checkin_dates) OR v_today = ANY(v_frozen_dates)
+            OR v_yesterday = ANY(v_checkin_dates) OR v_yesterday = ANY(v_frozen_dates) THEN
             -- 從今天或昨天開始往回計算連續天數
             DECLARE
                 v_start_date DATE;
                 v_check_date DATE;
-                v_has_checkin BOOLEAN;
             BEGIN
-                -- 決定起始日期（今天有簽到就用今天，否則用昨天）
-                IF v_today = ANY(v_checkin_dates) THEN
+                -- 決定起始日期（今天有簽到或凍結就用今天，否則用昨天）
+                IF v_today = ANY(v_checkin_dates) OR v_today = ANY(v_frozen_dates) THEN
                     v_start_date := v_today;
                 ELSE
                     v_start_date := v_yesterday;
                 END IF;
 
-                -- 往回計算連續天數
+                -- 往回計算連續天數：checkin 才 +1；frozen 只橋接不 +1；兩者皆非則停止
                 v_check_date := v_start_date;
                 LOOP
                     IF v_check_date = ANY(v_checkin_dates) THEN
                         v_current_streak := v_current_streak + 1;
+                        v_check_date := v_check_date - INTERVAL '1 day';
+                    ELSIF v_check_date = ANY(v_frozen_dates) THEN
                         v_check_date := v_check_date - INTERVAL '1 day';
                     ELSE
                         EXIT;
@@ -333,6 +346,141 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- 不可讓用戶端直接呼叫（否則可查詢他人的簽到記錄）。
 -- 僅供 get_dashboard_data 內部呼叫（以函數擁有者身分執行，不受 REVOKE 影響）。
 REVOKE EXECUTE ON FUNCTION calculate_streak_stats(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+
+-- =============================================================================
+-- 2.1 對帳並發放/消耗 streak 凍結卡（reconcile_streak_freezes）
+-- =============================================================================
+-- 功能：開 App 時呼叫一次，做「補橋接 + 發卡」對帳：
+--   1) 若使用者漏記一天且庫存足夠，自動用凍結卡橋接缺口（寫入 streak_freezes），
+--      讓 streak 不歸零（凍結日只保護、不計入天數）；庫存不足則不消耗（不浪費在注定斷掉的缺口）。
+--   2) 橋接後重新計算目前 streak，每滿 10 天發 1 張凍結卡（上限 2 張）；
+--      若 streak 斷過重新累積（newLevel < lastGrantLevel），只重設 lastGrantLevel、不發卡。
+-- 參數：p_client_today TEXT（可選，客戶端的今天日期，同 calculate_streak_stats）
+-- 回傳：JSON { success, balance, earnedTotal, lastGrantLevel, consumedThisCall, consumedDates }
+--
+-- 安全性判斷：calculate_streak_stats 採 p_user_id 參數 + REVOKE，僅供內部函數呼叫；
+-- 但此函數需要「能被前端直接呼叫」（dashboard 載入時觸發）。若沿用 p_user_id 參數，
+-- SECURITY DEFINER 會繞過 RLS，用戶端可任意傳他人 user_id 竄改/竊取其凍結卡狀態。
+-- 因此比照 get_dashboard_data 的既有模式：不接受 p_user_id 參數，一律以 auth.uid() 取得
+-- 當前使用者，函數本體不加 REVOKE（與 get_dashboard_data / get_available_currencies /
+-- get_exchange_rate 等可直接被前端呼叫的 RPC 一致，安全性由 auth.uid() 保證)。
+DROP FUNCTION IF EXISTS reconcile_streak_freezes(UUID, TEXT);
+DROP FUNCTION IF EXISTS reconcile_streak_freezes(TEXT);
+
+CREATE OR REPLACE FUNCTION reconcile_streak_freezes(
+    p_client_today TEXT DEFAULT NULL
+)
+RETURNS JSON AS $$
+DECLARE
+    v_user_id UUID;
+    v_today DATE;
+    v_yesterday DATE;
+    v_settings_value JSONB;
+    v_balance INTEGER;
+    v_earned_total INTEGER;
+    v_last_grant_level INTEGER;
+    v_last_date DATE;
+    v_needed INTEGER;
+    v_consumed_count INTEGER := 0;
+    v_consumed_dates_json JSON := '[]'::json;
+    v_streak_count INTEGER;
+    v_new_level INTEGER;
+    v_delta INTEGER;
+BEGIN
+    v_user_id := auth.uid();
+    IF v_user_id IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'User not authenticated');
+    END IF;
+
+    -- 今天/昨天：與 calculate_streak_stats 相同的日期判斷邏輯
+    IF p_client_today IS NOT NULL AND p_client_today != '' THEN
+        v_today := p_client_today::DATE;
+    ELSE
+        v_today := (NOW() AT TIME ZONE 'Asia/Taipei')::DATE;
+    END IF;
+    v_yesterday := v_today - INTERVAL '1 day';
+
+    -- 讀出目前凍結卡庫存狀態（沒有就當作全 0）
+    SELECT value INTO v_settings_value
+    FROM settings
+    WHERE user_id = v_user_id AND key = 'streak_freeze';
+
+    v_balance := COALESCE((v_settings_value->>'balance')::INTEGER, 0);
+    v_earned_total := COALESCE((v_settings_value->>'earnedTotal')::INTEGER, 0);
+    v_last_grant_level := COALESCE((v_settings_value->>'lastGrantLevel')::INTEGER, 0);
+
+    -- 找出最近一個「有 checkin 或已凍結」的日期 L
+    SELECT MAX(d) INTO v_last_date
+    FROM (
+        SELECT date AS d FROM checkins WHERE user_id = v_user_id
+        UNION
+        SELECT date AS d FROM streak_freezes WHERE user_id = v_user_id
+    ) AS combined;
+
+    -- needed：從 L+1 到昨天（不含今天）尚未被記錄的天數，即需要橋接的缺口天數
+    IF v_last_date IS NOT NULL THEN
+        v_needed := GREATEST((v_yesterday - v_last_date)::INTEGER, 0);
+    ELSE
+        v_needed := 0;
+    END IF;
+
+    -- 消耗：庫存足夠才橋接，避免把卡浪費在注定會斷掉的缺口上
+    IF v_needed > 0 AND v_balance >= v_needed THEN
+        SELECT json_agg(gs::date::text ORDER BY gs)
+        INTO v_consumed_dates_json
+        FROM generate_series(v_last_date + 1, v_yesterday, INTERVAL '1 day') AS gs;
+
+        INSERT INTO streak_freezes (user_id, date)
+        SELECT v_user_id, gs::date
+        FROM generate_series(v_last_date + 1, v_yesterday, INTERVAL '1 day') AS gs
+        ON CONFLICT (user_id, date) DO NOTHING;
+
+        v_consumed_count := v_needed;
+        v_balance := v_balance - v_needed;
+        v_consumed_dates_json := COALESCE(v_consumed_dates_json, '[]'::json);
+    ELSE
+        v_consumed_count := 0;
+        v_consumed_dates_json := '[]'::json;
+    END IF;
+
+    -- 橋接寫入後重新計算目前 streak（沿用 calculate_streak_stats，同一筆交易內可見剛寫入的凍結日）
+    SELECT streak_count INTO v_streak_count
+    FROM calculate_streak_stats(v_user_id, p_client_today);
+
+    -- 發卡：每滿 10 天發 1 張，庫存上限 2 張；streak 斷過重來則只重設 lastGrantLevel、不發卡
+    v_new_level := FLOOR(v_streak_count::NUMERIC / 10)::INTEGER;
+    IF v_new_level > v_last_grant_level THEN
+        v_delta := v_new_level - v_last_grant_level;
+        v_balance := LEAST(v_balance + v_delta, 2);
+        v_earned_total := v_earned_total + v_delta;
+        v_last_grant_level := v_new_level;
+    ELSIF v_new_level < v_last_grant_level THEN
+        v_last_grant_level := v_new_level;
+    END IF;
+
+    -- 寫回庫存狀態
+    INSERT INTO settings (user_id, key, value)
+    VALUES (
+        v_user_id,
+        'streak_freeze',
+        json_build_object(
+            'balance', v_balance,
+            'earnedTotal', v_earned_total,
+            'lastGrantLevel', v_last_grant_level
+        )::jsonb
+    )
+    ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
+
+    RETURN json_build_object(
+        'success', true,
+        'balance', v_balance,
+        'earnedTotal', v_earned_total,
+        'lastGrantLevel', v_last_grant_level,
+        'consumedThisCall', v_consumed_count,
+        'consumedDates', v_consumed_dates_json
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- =============================================================================
 -- 批次取得多個用戶的 email（供 send-streak-reminder edge function 一次撈回，

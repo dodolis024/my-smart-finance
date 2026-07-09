@@ -35,5 +35,14 @@ to-do.md
 .claude/
 .claude/worktrees
 
+# Implementation spec manuals from /spec skill (local only, not pushed)
+docs/specs/
+
+# Local-only manual test/seed scripts (not pushed).
+# 正式單元測試放在 tests/ 底下、要進 CI，不受此規則影響。
+scripts/test-*.sql
+scripts/test-*.js
+scripts/seed-*.sql
+
 # Personal files
 .cursor/

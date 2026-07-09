@@ -201,6 +201,10 @@ const zh = {
     neutralActiveBtn: '好的',
     neutralNoneTitle: '還沒有連續紀錄',
     neutralNoneText: '從今天開始記第一筆，就會開始累積你的連續紀錄！',
+    legendFrozen: '凍結卡橋接',
+    frozenDayTooltip: '這天用凍結卡保護，未計入天數但連續紀錄不中斷',
+    freezeBalanceLabel: '剩餘凍結卡：{count} 張',
+    freezeConsumedToast: '你有一天沒記帳，用掉 {count} 張凍結卡保住了連續紀錄 ❄️',
   },
 
   settings: {

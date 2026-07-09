@@ -201,6 +201,10 @@ const en = {
     neutralActiveBtn: 'Got it',
     neutralNoneTitle: 'No streak yet',
     neutralNoneText: 'Log your first entry today to start your streak!',
+    legendFrozen: 'Freeze bridge',
+    frozenDayTooltip: 'Protected by a freeze card — not counted, but keeps your streak unbroken',
+    freezeBalanceLabel: '{count} freeze card(s) left',
+    freezeConsumedToast: 'You missed a day, but {count} freeze card(s) kept your streak alive ❄️',
   },
 
   settings: {

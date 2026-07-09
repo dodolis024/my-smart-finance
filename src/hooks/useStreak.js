@@ -15,6 +15,12 @@ export function useStreak(userId) {
     loggedDatesWithSource: [],
   });
   const [streakInitialHandled, setStreakInitialHandled] = useState(false);
+  // 凍結卡庫存狀態：balance/earnedTotal 皆來自 reconcile_streak_freezes 的回傳，
+  // earnedTotal>0 是 UI 是否顯示任何 frozen 相關內容的總開關
+  const [freezeState, setFreezeState] = useState({
+    balance: 0,
+    earnedTotal: 0,
+  });
 
   const updateStreakFromServer = useCallback((data) => {
     const count = data?.streakCount ?? 0;
@@ -53,6 +59,46 @@ export function useStreak(userId) {
 
     if (error) throw error;
   }, [t]);
+
+  /**
+   * 開 App 對帳：呼叫 reconcile_streak_freezes 完成「補橋接 + 發卡」，
+   * 並把回傳的凍結卡庫存狀態存進 state。回傳完整 data 供呼叫端判斷是否要跳消耗提示。
+   */
+  const reconcileStreakFreezes = useCallback(async () => {
+    const { data, error } = await supabase.rpc('reconcile_streak_freezes', {
+      p_client_today: getTodayYmd(),
+    });
+    if (error) throw error;
+    if (data?.success) {
+      setFreezeState({
+        balance: data.balance ?? 0,
+        earnedTotal: data.earnedTotal ?? 0,
+      });
+    }
+    return data;
+  }, []);
+
+  /**
+   * 判斷本次是否該跳「用掉凍結卡」的簡單提示：本次有消耗、使用者曾獲得過卡，
+   * 且今天 localStorage 尚未顯示過（比照 shouldShowBrokenModal 的去重寫法）。
+   * @param {{ earnedTotal?: number, consumedThisCall?: number }} [data]
+   */
+  const shouldShowFreezeConsumedToast = useCallback((data) => {
+    const earnedTotal = data?.earnedTotal ?? 0;
+    const consumedThisCall = data?.consumedThisCall ?? 0;
+    if (earnedTotal <= 0 || consumedThisCall <= 0) return false;
+
+    const today = getTodayYmd();
+    const key = userId ? `streakFreezeConsumedShownDate:${userId}` : 'streakFreezeConsumedShownDate';
+    try {
+      const shownFor = window.localStorage.getItem(key);
+      if (shownFor === today) return false;
+      window.localStorage.setItem(key, today);
+      return true;
+    } catch {
+      return true;
+    }
+  }, [userId]);
 
   /**
    * @param {boolean} [brokenFromServer]
@@ -172,5 +218,8 @@ export function useStreak(userId) {
     getPositiveModalContent,
     getCurrentModalContent,
     getCurrentModalContentFromData,
+    freezeState,
+    reconcileStreakFreezes,
+    shouldShowFreezeConsumedToast,
   };
 }

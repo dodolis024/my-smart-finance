@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useStreak } from '@/hooks/useStreak';
@@ -26,7 +25,6 @@ import StreakModal from '@/components/streak/StreakModal';
 import YearlyReviewBanner from '@/components/dashboard/YearlyReviewBanner';
 
 export default function DashboardPage() {
-  const navigate = useNavigate();
   const { user, ensureDefaultDataForOAuth } = useAuth();
   const {
     dashboardData,
@@ -57,6 +55,9 @@ export default function DashboardPage() {
     getPositiveModalContent,
     getCurrentModalContent,
     getCurrentModalContentFromData,
+    freezeState,
+    reconcileStreakFreezes,
+    shouldShowFreezeConsumedToast,
   } = useStreak(user?.id);
   const { submitTransaction, deleteTransaction } = useTransactions();
   const { checkCreditUsageAlert } = useCreditCardNotifications();
@@ -64,12 +65,15 @@ export default function DashboardPage() {
   const { confirm } = useConfirm();
   const { t } = useLanguage();
   const modals = useModalStates();
+  const { openStreakModal } = modals;
 
 
 
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [editingTransaction, setEditingTransaction] = useState(null);
+  // 凍結卡對帳若實際橋接了缺口，就 +1 觸發 dashboard 重抓，讓 streak 反映補上的凍結日
+  const [streakRefreshTick, setStreakRefreshTick] = useState(0);
 
   // 離線記帳佇列:自動補送(掛載 + 恢復連線)並把未同步交易併入當月列表與彙總,結果以 toast 通知
   const {
@@ -104,9 +108,37 @@ export default function DashboardPage() {
     if (user) ensureDefaultDataForOAuth(user.id);
   }, [user, ensureDefaultDataForOAuth]);
 
+  // 用 ref 讀取 toast/t，讓它們不必進 reconcile effect 的 deps（否則切換語言會重打對帳 RPC）
+  const toastRef = useRef(toast);
+  const tRef = useRef(t);
+  useEffect(() => {
+    toastRef.current = toast;
+    tRef.current = t;
+  });
+
+  // 開 App 對帳：呼叫 reconcile_streak_freezes 補橋接漏記的缺口並發卡。
+  // 與 dashboard 抓取平行進行（不擋首載）；只有實際橋接了缺口（consumedThisCall>0）
+  // 才 +1 觸發重抓，讓 streak 反映補上的凍結日。
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    reconcileStreakFreezes()
+      .then((data) => {
+        if (cancelled || !data) return;
+        if (shouldShowFreezeConsumedToast(data)) {
+          toastRef.current.info(tRef.current('streak.freezeConsumedToast', { count: data.consumedThisCall }));
+        }
+        if ((data.consumedThisCall ?? 0) > 0) {
+          setStreakRefreshTick((n) => n + 1);
+        }
+      })
+      .catch((err) => console.error('[Dashboard] reconcile streak freezes failed:', err));
+    return () => { cancelled = true; };
+  }, [user?.id, reconcileStreakFreezes, shouldShowFreezeConsumedToast]);
+
   useEffect(() => {
     fetchDashboardData(currentYear, currentMonth).catch(err => console.error('[Dashboard] fetch failed:', err));
-  }, [currentYear, currentMonth, fetchDashboardData]);
+  }, [currentYear, currentMonth, fetchDashboardData, streakRefreshTick]);
 
   useEffect(() => {
     fetchCurrencies().catch(err => console.error('[Dashboard] fetchCurrencies failed:', err));
@@ -122,9 +154,9 @@ export default function DashboardPage() {
     if (!dashboardData || streakInitialHandled) return;
     setStreakInitialHandled(true);
     if (shouldShowBrokenModal(dashboardData.streakBroken)) {
-      modals.openStreakModal(t('streak.brokenTitle'), 'broken');
+      openStreakModal(t('streak.brokenTitle'), 'broken');
     }
-  }, [dashboardData, streakInitialHandled, setStreakInitialHandled, shouldShowBrokenModal, modals.openStreakModal]);
+  }, [dashboardData, streakInitialHandled, setStreakInitialHandled, shouldShowBrokenModal, openStreakModal, t]);
 
   const handleMonthChange = useCallback((year, month) => {
     setCurrentYear(year);
@@ -171,7 +203,7 @@ export default function DashboardPage() {
 
         if (!result.isEdit && shouldShowPositiveModal(result.date)) {
           const content = getPositiveModalContent();
-          modals.openStreakModal(content.title, 'positive');
+          openStreakModal(content.title, 'positive');
         }
 
         // 若此筆交易的付款方式為信用卡，檢查使用率並在需要時推播警告
@@ -191,10 +223,11 @@ export default function DashboardPage() {
       toast,
       shouldShowPositiveModal,
       getPositiveModalContent,
-      modals.openStreakModal,
+      openStreakModal,
       accounts,
       checkCreditUsageAlert,
       editingTransaction,
+      t,
     ]
   );
 
@@ -255,21 +288,21 @@ export default function DashboardPage() {
       if (data) {
         updateStreakFromServer(data);
         const content = getCurrentModalContentFromData(data);
-        modals.openStreakModal(content.title, content.variant);
+        openStreakModal(content.title, content.variant);
       } else {
         const content = getCurrentModalContent();
-        modals.openStreakModal(content.title, content.variant);
+        openStreakModal(content.title, content.variant);
       }
       toast.success(t('dashboard.checkinSuccess'));
     } catch (err) {
       toast.error(err.message || t('dashboard.checkinFailed'));
     }
-  }, [submitDailyCheckin, fetchDashboardData, updateStreakFromServer, currentYear, currentMonth, toast, getCurrentModalContentFromData, getCurrentModalContent, modals.openStreakModal]);
+  }, [submitDailyCheckin, fetchDashboardData, updateStreakFromServer, currentYear, currentMonth, toast, getCurrentModalContentFromData, getCurrentModalContent, openStreakModal, t]);
 
   const handleStreakBadgeClick = useCallback(() => {
     const content = getCurrentModalContent();
-    modals.openStreakModal(content.title, content.variant);
-  }, [getCurrentModalContent, modals.openStreakModal]);
+    openStreakModal(content.title, content.variant);
+  }, [getCurrentModalContent, openStreakModal]);
 
 
   const checkedInToday = hasCheckinToday();
@@ -385,6 +418,7 @@ export default function DashboardPage() {
         isOpen={modals.streakModal.open}
         onClose={modals.closeStreakModal}
         streakState={streakState}
+        freezeState={freezeState}
         title={modals.streakModal.title}
         variant={modals.streakModal.variant}
       />

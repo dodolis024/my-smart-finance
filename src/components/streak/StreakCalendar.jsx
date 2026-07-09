@@ -5,23 +5,28 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import zhLocale from '@/locales/zh';
 import enLocale from '@/locales/en';
 
-export default function StreakCalendar({ streakState }) {
+export default function StreakCalendar({ streakState, freezeState }) {
   const { theme } = useTheme();
   const { t, lang } = useLanguage();
   const [calYear, setCalYear] = useState(() => new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth() + 1);
 
+  // 曾獲得過凍結卡（earnedTotal>0）才是 frozen 相關 UI 的總開關
+  const hasEverEarnedFreeze = (freezeState?.earnedTotal ?? 0) > 0;
+
   const loggedBySource = useMemo(() => {
     const onTime = new Set();
     const manual = new Set();
+    const frozen = new Set();
     (streakState?.loggedDatesWithSource || streakState?.loggedDates || []).forEach((item) => {
       const dateStr = typeof item === 'string' ? item : item?.date;
       if (!dateStr) return;
       const src = typeof item === 'object' && item && 'source' in item ? String(item.source) : '';
       if (src === 'onTimeTransaction') onTime.add(dateStr);
+      else if (src === 'frozen') frozen.add(dateStr);
       else manual.add(dateStr);
     });
-    return { onTime, manual };
+    return { onTime, manual, frozen };
   }, [streakState]);
 
   const navigate = (dir) => {
@@ -44,9 +49,17 @@ export default function StreakCalendar({ streakState }) {
     const dateStr = `${calYear}-${mm}-${dd}`;
     const isTransaction = loggedBySource.onTime.has(dateStr);
     const isManual = loggedBySource.manual.has(dateStr);
+    const isFrozen = hasEverEarnedFreeze && loggedBySource.frozen.has(dateStr);
     const isToday = dateStr === todayStr;
     const isFuture = dateStr > todayStr;
-    days.push({ d, dateStr, isTransaction: !isFuture && isTransaction, isManual: !isFuture && isManual, isToday });
+    days.push({
+      d,
+      dateStr,
+      isTransaction: !isFuture && isTransaction,
+      isManual: !isFuture && isManual,
+      isFrozen: !isFuture && isFrozen,
+      isToday,
+    });
   }
 
   const count = streakState?.count || 0;
@@ -78,7 +91,18 @@ export default function StreakCalendar({ streakState }) {
             if (day.isToday) cls += ' streak-calendar__day--today';
             return (
               <div key={day.dateStr} className={cls}>
-                <div className="streak-calendar__day-inner">{day.d}</div>
+                <div className="streak-calendar__day-inner">
+                  {day.d}
+                  {day.isFrozen && (
+                    <span
+                      className="streak-calendar__frozen-mark"
+                      aria-hidden="true"
+                      title={t('streak.frozenDayTooltip')}
+                    >
+                      ❄️
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -86,6 +110,9 @@ export default function StreakCalendar({ streakState }) {
         <div className="streak-calendar__legend">
           <span className="streak-calendar__legend-item streak-calendar__legend-item--transaction">{t('streak.legendTransaction')}</span>
           <span className="streak-calendar__legend-item streak-calendar__legend-item--manual">{t('streak.legendCheckin')}</span>
+          {hasEverEarnedFreeze && (
+            <span className="streak-calendar__legend-item streak-calendar__legend-item--frozen">{t('streak.legendFrozen')}</span>
+          )}
         </div>
       </div>
       <div className="streak-summary">
@@ -119,6 +146,12 @@ export default function StreakCalendar({ streakState }) {
           </div>
         </div>
       </div>
+      {hasEverEarnedFreeze && (
+        <div className="streak-freeze-balance">
+          <span aria-hidden="true">❄️</span>
+          <span>{t('streak.freezeBalanceLabel', { count: freezeState?.balance ?? 0 })}</span>
+        </div>
+      )}
     </div>
   );
 }
