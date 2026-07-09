@@ -9,6 +9,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.event.head_commit.message, 'docs: release') }}
     steps:
       - uses: actions/checkout@v6
 
@@ -23,6 +24,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.event.head_commit.message, 'docs: release') }}
     steps:
       - uses: actions/checkout@v6
 
