@@ -21,7 +21,7 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
 
   useEffect(() => {
     if (isOpen) initFromGroup(group);
-  }, [isOpen, group]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, group]);
 
   const handleClose = () => {
     initFromGroup(group);

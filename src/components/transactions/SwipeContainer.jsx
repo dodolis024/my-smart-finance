@@ -159,7 +159,7 @@ export default function SwipeContainer({ onEdit, onDelete, onClick, children }) 
       content.removeEventListener('click', handleContentClick);
       if (currentResetFn === resetSwipe) currentResetFn = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSwipeEdit() {
     containerRef.current?._resetSwipe?.();

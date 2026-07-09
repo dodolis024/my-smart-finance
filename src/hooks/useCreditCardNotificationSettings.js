@@ -61,7 +61,7 @@ export function useCreditCardNotificationSettings() {
     } finally {
       setSaving(false);
     }
-  }, [user, t]);
+  }, [user, t, setSettings]);
 
   return {
     settings,

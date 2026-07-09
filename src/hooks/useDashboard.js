@@ -130,7 +130,7 @@ export function useDashboard() {
         setLoading(false);
       }
     }
-  }, []);
+  }, [t]);
 
   const fetchCreditHistory = useCallback(async (account) => {
     const cycle = getBillingCycleRange(account);

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/contexts/ToastContext';
 import { useSplitGroups } from '@/hooks/useSplitGroups';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -10,8 +9,7 @@ export default function JoinPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { t } = useLanguage();
-  const { user } = useAuth();
-  const { getGroupByCode, linkSelfToMember, joinGroupAsNewMember, fetchGroups } = useSplitGroups();
+  const { getGroupByCode, linkSelfToMember, joinGroupAsNewMember } = useSplitGroups();
 
   const [inputCode, setInputCode] = useState(code || '');
   const [groupInfo, setGroupInfo] = useState(null);

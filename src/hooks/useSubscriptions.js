@@ -114,7 +114,7 @@ export function useSubscriptions() {
 
     await loadSubscriptions();
     return { transactionCreated };
-  }, [user, loadSubscriptions]);
+  }, [user, loadSubscriptions, t]);
 
   const deleteSubscription = useCallback(async (id) => {
     const { error } = await supabase.from('subscriptions').delete().eq('id', id);
@@ -131,7 +131,7 @@ export function useSubscriptions() {
     setSubscriptions((prev) =>
       prev.map((s) => (s.id === id ? { ...s, is_active: isActive } : s))
     );
-  }, []);
+  }, [setSubscriptions]);
 
   return {
     subscriptions,

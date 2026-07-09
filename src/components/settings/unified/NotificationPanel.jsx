@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { WheelPicker, HOURS, MINUTES } from '../wheelPicker/WheelPicker';
 import { getCommonTimezones } from '../data/commonTimezones';
 import { useReminderSettings } from '@/hooks/useReminderSettings';
@@ -287,7 +287,7 @@ export default function NotificationPanel({ isOpen, toast }) {
   const reminderRef = useRef(null);
   const pushRef = useRef(null);
   const creditCardRef = useRef(null);
-  const sectionRefs = { reminder: reminderRef, push: pushRef, creditCard: creditCardRef };
+  const sectionRefs = useMemo(() => ({ reminder: reminderRef, push: pushRef, creditCard: creditCardRef }), []);
   const toggle = (k) => setOpen((s) => {
     const isMobile = window.matchMedia('(max-width: 600px)').matches;
     if (isMobile) {
@@ -302,7 +302,7 @@ export default function NotificationPanel({ isOpen, toast }) {
     const el = openKey ? sectionRefs[openKey].current : null;
     const container = el?.closest('.usm__content');
     if (el && container) container.scrollTop = el.offsetTop - container.offsetTop;
-  }, [open]);
+  }, [open, sectionRefs]);
 
   const SectionHeader = ({ id, label }) => (
     <div

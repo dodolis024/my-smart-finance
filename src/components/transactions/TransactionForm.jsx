@@ -62,7 +62,7 @@ export default function TransactionForm({
       currencyTouchedRef.current = false;
       setForm(makeInitialForm(defaultCurrency));
     }
-  }, [editingTransaction]);
+  }, [editingTransaction]); // eslint-disable-line react-hooks/exhaustive-deps -- 僅在切換編輯對象時重設表單，defaultCurrency 不應觸發重設
 
   // 預設幣別可能較晚載入（冷啟動）或於設定頁被變更：
   // 只要使用者尚未手動選過幣別，就同步為使用者預設值

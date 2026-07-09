@@ -56,7 +56,7 @@ export default function TopCategory({ data = [], loading, expenseCount = 0, tota
         },
       },
     },
-  }), [topEntries]);
+  }), [topEntries, forExport]);
 
   if (loading) {
     return (

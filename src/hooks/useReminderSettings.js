@@ -63,7 +63,7 @@ export function useReminderSettings() {
     } finally {
       setSaving(false);
     }
-  }, [user, t]);
+  }, [user, t, setReminderSettings]);
 
   return {
     reminderSettings,

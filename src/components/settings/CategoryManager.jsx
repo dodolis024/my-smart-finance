@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 function InlineInput({ defaultValue = '', placeholder, onConfirm, onCancel, confirmLabel, cancelLabel }) {
@@ -30,7 +30,7 @@ export default function CategoryManager({ expenseCategories, incomeCategories, o
   const [openGroups, setOpenGroups] = useState({ expense: false, income: false });
   const expenseRef = useRef(null);
   const incomeRef = useRef(null);
-  const groupRefs = { expense: expenseRef, income: incomeRef };
+  const groupRefs = useMemo(() => ({ expense: expenseRef, income: incomeRef }), []);
   const toggleGroup = (type) => setOpenGroups((s) => {
     const isMobile = window.matchMedia('(max-width: 600px)').matches;
     if (isMobile) {
@@ -45,7 +45,7 @@ export default function CategoryManager({ expenseCategories, incomeCategories, o
     const el = openKey ? groupRefs[openKey].current : null;
     const container = el?.closest('.usm__content');
     if (el && container) container.scrollTop = el.offsetTop - container.offsetTop;
-  }, [openGroups]);
+  }, [openGroups, groupRefs]);
 
   const handleAdd = async (type, name) => {
     if (!name?.trim()) { setAddingType(null); return; }

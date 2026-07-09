@@ -6,7 +6,7 @@ import { notifySplit } from '@/lib/splitNotify';
 import { useCachedResource } from '@/hooks/useCachedResource';
 
 export function useSplitGroups() {
-  const { user, userInfo } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
 
   const {
@@ -82,7 +82,7 @@ export function useSplitGroups() {
 
     await fetchGroups();
     return group;
-  }, [user, fetchGroups]);
+  }, [user, fetchGroups, t]);
 
   const updateGroup = useCallback(async (groupId, updates) => {
     const { data, error } = await supabase
@@ -94,7 +94,7 @@ export function useSplitGroups() {
     if (error) throw error;
     setGroups(prev => prev.map(g => g.id === groupId ? { ...g, ...data } : g));
     return data;
-  }, []);
+  }, [setGroups]);
 
   const archiveGroup = useCallback(
     (groupId) => updateGroup(groupId, { archived_at: new Date().toISOString() }),
@@ -113,7 +113,7 @@ export function useSplitGroups() {
       .eq('id', groupId);
     if (error) throw error;
     setGroups(prev => prev.filter(g => g.id !== groupId));
-  }, []);
+  }, [setGroups]);
 
   const addMember = useCallback(async (groupId, name) => {
     const { data, error } = await supabase
@@ -138,7 +138,7 @@ export function useSplitGroups() {
       member_name: name.trim(),
     });
     return data;
-  }, [groups, user]);
+  }, [groups, user, setGroups]);
 
   const updateMemberName = useCallback(async (groupId, memberId, newName) => {
     const trimmed = newName.trim();
@@ -153,7 +153,7 @@ export function useSplitGroups() {
         ? { ...g, split_members: (g.split_members || []).map(m => m.id === memberId ? { ...m, name: trimmed } : m) }
         : g
     ));
-  }, []);
+  }, [setGroups, t]);
 
   const removeMember = useCallback(async (groupId, memberId) => {
     const currentGroup = groups.find(g => g.id === groupId);
@@ -177,7 +177,7 @@ export function useSplitGroups() {
       actor_user_id: user?.id,
       member_name: memberToRemove?.name ?? '',
     });
-  }, [groups, user]);
+  }, [groups, user, setGroups]);
 
   // 用邀請代碼查詢群組（RPC，任何登入用戶皆可）
   const getGroupByCode = useCallback(async (code) => {
@@ -192,7 +192,7 @@ export function useSplitGroups() {
     const { error } = await supabase.rpc('link_self_to_split_member', { p_member_id: memberId });
     if (error) throw error;
     await fetchGroups();
-  }, [user, fetchGroups]);
+  }, [user, fetchGroups, t]);
 
   // 新增自己為群組新成員並連結帳號（透過 RPC 繞過 RLS，傳邀請碼而非 group_id）
   const joinGroupAsNewMember = useCallback(async (inviteCode, name) => {
@@ -204,7 +204,7 @@ export function useSplitGroups() {
     if (error) throw error;
     await fetchGroups();
     return data;
-  }, [user, fetchGroups]);
+  }, [user, fetchGroups, t]);
 
   return {
     groups,

@@ -59,6 +59,18 @@ export function useSettings() {
     setData((prev) => ({ ...prev, [field]: [...categories] }));
   }, [user, setData]);
 
+  const updateTransactionCategories = useCallback(async (oldName, newName) => {
+    if (!user) return;
+    const { error: updateError } = await supabase.from('transactions').update({ category: newName }).eq('user_id', user.id).eq('category', oldName);
+    if (updateError) throw updateError;
+  }, [user]);
+
+  const updateTransactionPaymentMethods = useCallback(async (oldName, newName) => {
+    if (!user) return;
+    const { error: updateError } = await supabase.from('transactions').update({ payment_method: newName }).eq('user_id', user.id).eq('payment_method', oldName);
+    if (updateError) throw updateError;
+  }, [user]);
+
   const addCategory = useCallback(async (type, name) => {
     const categories = type === 'expense' ? [...expenseCategories] : [...incomeCategories];
     if (categories.includes(name.trim())) throw new Error(t('settings.category.alreadyExists'));
@@ -75,18 +87,12 @@ export function useSettings() {
     categories[idx] = trimmed;
     await saveCategoriesType(type, categories);
     await updateTransactionCategories(oldName, trimmed);
-  }, [expenseCategories, incomeCategories, saveCategoriesType, t]);
+  }, [expenseCategories, incomeCategories, saveCategoriesType, t, updateTransactionCategories]);
 
   const deleteCategory = useCallback(async (type, name) => {
     const categories = (type === 'expense' ? [...expenseCategories] : [...incomeCategories]).filter((c) => c !== name);
     await saveCategoriesType(type, categories);
   }, [expenseCategories, incomeCategories, saveCategoriesType]);
-
-  const updateTransactionCategories = useCallback(async (oldName, newName) => {
-    if (!user) return;
-    const { error: updateError } = await supabase.from('transactions').update({ category: newName }).eq('user_id', user.id).eq('category', oldName);
-    if (updateError) throw updateError;
-  }, [user]);
 
   const saveAccount = useCallback(async (accountData, accountId = null) => {
     if (!user) return;
@@ -110,7 +116,7 @@ export function useSettings() {
       if (saveError) throw saveError;
     }
     await loadSettingsData();
-  }, [user, accounts, loadSettingsData]);
+  }, [user, accounts, loadSettingsData, t, updateTransactionPaymentMethods]);
 
   const deleteAccount = useCallback(async (accountId) => {
     const account = accounts.find(a => a.id === accountId);
@@ -127,7 +133,7 @@ export function useSettings() {
     const { error: deleteError } = await supabase.from('accounts').delete().eq('id', accountId);
     if (deleteError) throw deleteError;
     await loadSettingsData();
-  }, [user, accounts, loadSettingsData]);
+  }, [user, accounts, loadSettingsData, t]);
 
   return {
     expenseCategories,

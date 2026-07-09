@@ -177,11 +177,11 @@ export function useTransactions() {
 
       const today = getTodayYmd();
       if (date === today) {
-        const { error: checkinError } = await supabase.from('checkins').upsert(
+        // checkin failure is non-critical, silently ignore
+        await supabase.from('checkins').upsert(
           { user_id: user.id, date: today, source: 'onTimeTransaction' },
           { onConflict: 'user_id,date' }
         );
-        // checkin failure is non-critical, silently ignore
       }
     }
 

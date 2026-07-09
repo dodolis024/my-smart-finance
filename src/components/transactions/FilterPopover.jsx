@@ -7,7 +7,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 export default function FilterPopover({
   isOpen,
   anchorRef,
-  kind,
   items,
   selected,
   onSelect,

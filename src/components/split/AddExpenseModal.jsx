@@ -65,7 +65,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
       shares.forEach(s => { cs[s.member_id] = String(s.share); });
       setCustomShares(cs);
     }
-  }, [editingExpense, groupCurrency]);
+  }, [editingExpense, groupCurrency]); // eslint-disable-line react-hooks/exhaustive-deps -- 僅在編輯項目變動時載入表單，initialCurrency 為 fallback 不應觸發重載
 
   // 自訂模式：計算已手動輸入的金額總和、剩餘金額、未輸入的成員數
   const totalAmt = parseExpression(amount) || 0;
@@ -213,7 +213,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [activeField]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeField]);
 
   const toggleParticipant = (id) => {
     setParticipants(prev =>

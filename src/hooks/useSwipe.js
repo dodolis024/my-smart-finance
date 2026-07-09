@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { SWIPE, TIMING } from '@/lib/constants';
+import { SWIPE } from '@/lib/constants';
 
 /** Module-level singleton: holds reset fn of whichever row is currently swiped open */
 let currentResetFn = null;
@@ -73,7 +73,7 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
       const limited = Math.max(SWIPE.MAX_LEFT, Math.min(maxRight, newTranslate));
       setTranslateX(limited);
     },
-    []
+    [disableRight]
   );
 
   const handleTouchEnd = useCallback(

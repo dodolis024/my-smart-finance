@@ -14,7 +14,7 @@ import AddExpenseModal from './AddExpenseModal';
 import ManageMembersModal from './ManageMembersModal';
 import GroupSettingsModal from './GroupSettingsModal';
 
-export default function SplitGroupDetail({ group, onBack, rates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onUpdateGroup, onArchiveGroup, onUnarchiveGroup }) {
+export default function SplitGroupDetail({ group, rates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onUpdateGroup, onArchiveGroup, onUnarchiveGroup }) {
   const toast = useToast();
   const { confirm } = useConfirm();
   const { t } = useLanguage();

@@ -43,7 +43,7 @@ export default function MonthlyTrendChart({ data = [], loading, forExport = fals
     expense: cssVar('--color-progress-danger', '#f87171'),
     text: cssVar('--color-text-secondary', '#797169'),
     grid: cssVar('--color-border-light', '#eeeeee'),
-  }), [theme]);
+  }), [theme]); // eslint-disable-line react-hooks/exhaustive-deps -- theme 僅作觸發器，主題切換時需重新讀取 cssVar 顏色
 
   const chartData = useMemo(() => ({
     labels: monthLabels,
@@ -118,7 +118,7 @@ export default function MonthlyTrendChart({ data = [], loading, forExport = fals
         },
       },
     },
-  }), [colors]);
+  }), [colors, forExport]);
 
   if (loading) {
     return (
