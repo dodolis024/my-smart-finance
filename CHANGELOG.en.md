@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.21.0] - Jul-10 2026
 - Added cross-month transaction search to the transaction list
 - Added CSV export for the transaction list, covering the current month or search results
 - Improved the credit card spending status hint shown when viewing a month other than the current one
