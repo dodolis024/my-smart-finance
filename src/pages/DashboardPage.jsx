@@ -428,6 +428,8 @@ export default function DashboardPage() {
         onClose={modals.closeCreditCardModal}
         account={modals.creditCardModal.account}
         history={creditHistory}
+        viewedYear={currentYear}
+        viewedMonth={currentMonth}
       />
 
     </div>

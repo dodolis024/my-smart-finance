@@ -58,7 +58,9 @@
 
   /* 表頭 4 欄 flex（與 slider-cell 一致） */
   .transaction-history-section .table-wrapper thead tr {
-    align-items: center;
+    /* stretch 讓各欄 th 等高，底線對齊成一條連續線
+       （避免英文縮字時，含篩選鈕的 Category 欄比純文字欄高、底線斷開） */
+    align-items: stretch;
     padding: 0 0.5rem;
   }
 
@@ -190,6 +192,7 @@
   .transaction-history-section .table-wrapper tbody tr:not(.transaction-row--semantic) td {
     flex: 1;
   }
+
 }
 
 /* Responsive — Narrow Mobile (≤570px) */

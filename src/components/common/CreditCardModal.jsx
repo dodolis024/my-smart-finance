@@ -5,7 +5,12 @@ import { formatMoney, getDaysUntilDay } from '@/lib/utils';
 import { calculateCreditUsage } from '@/lib/creditCard';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function CreditCardModal({ isOpen, onClose, account, history = [] }) {
+export default function CreditCardModal({ isOpen, onClose, account, history = [], viewedYear, viewedMonth }) {
+  const now = new Date();
+  const isViewingOtherMonth =
+    (viewedYear != null && viewedYear !== now.getFullYear()) ||
+    (viewedMonth != null && viewedMonth !== now.getMonth() + 1);
+
   const data = useMemo(() => {
     if (!account) return null;
     const creditLimit = account.credit_limit || account.creditLimit;
@@ -51,6 +56,11 @@ export default function CreditCardModal({ isOpen, onClose, account, history = []
       <div ref={dialogRef} className="credit-card-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="credit-card-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
         <h2 id="credit-card-modal-title" className="credit-card-modal__title">{accountName}</h2>
+        {isViewingOtherMonth && (
+          <p className="credit-card-modal__live-hint">
+            {t('creditCard.liveDataHint', { year: viewedYear, month: viewedMonth })}
+          </p>
+        )}
         <div className="credit-card-info">
           <div className="credit-limit-section">
             <div className="credit-limit-header">

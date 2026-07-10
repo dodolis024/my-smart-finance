@@ -2,6 +2,10 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Improved the credit card spending status hint shown when viewing a month other than the current one
+- Improved cross-month browsing by adding a quick "return to current month" button
+- Fixed language/theme preferences being overwritten by stale data due to an async refresh race after switching
+
 ## [1.20.0] - Jul-09 2026
 - Added a lock for the current year's Year in Review, showing a "coming at year end" message with a quick link back to past years until the year wraps up
 - Added streak freeze cards: a missed day no longer breaks your logging streak when you have a card, and you earn cards automatically as your streak grows

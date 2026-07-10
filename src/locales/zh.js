@@ -174,6 +174,7 @@ const zh = {
     paymentDueDay: '繳款日',
     dayOfMonth: '每月 {day} 日',
     daysLeft: '還有 {days} 天',
+    liveDataHint: '以下為即時卡片狀態，非 {year} 年 {month} 月的資料',
   },
 
   streak: {
@@ -551,6 +552,7 @@ const zh = {
   monthPicker: {
     prevYear: '上一年',
     nextYear: '下一年',
+    today: '回本月',
   },
 
   yearlyReview: {

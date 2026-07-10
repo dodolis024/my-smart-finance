@@ -62,7 +62,16 @@ export default function MonthPicker({ year, month, onChange, disabled }) {
     setIsOpen(false);
   };
 
+  const handleTodayClick = () => {
+    const now = new Date();
+    onChange(now.getFullYear(), now.getMonth() + 1);
+    setIsOpen(false);
+  };
+
   const selectedValue = `${year}-${month}`;
+
+  const now = new Date();
+  const isCurrentPeriod = year === now.getFullYear() && month === now.getMonth() + 1;
 
   return (
     <div className="month-picker">
@@ -89,6 +98,28 @@ export default function MonthPicker({ year, month, onChange, disabled }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
         </svg>
       </button>
+
+      {!isCurrentPeriod && (
+        <button
+          type="button"
+          className="month-picker-today"
+          onClick={handleTodayClick}
+          disabled={disabled}
+          aria-label={t('monthPicker.today')}
+          title={t('monthPicker.today')}
+        >
+          <svg
+            className="month-picker-today__icon"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="1.5"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+          </svg>
+        </button>
+      )}
 
       {isOpen && (
         <div

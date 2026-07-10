@@ -174,6 +174,7 @@ const en = {
     paymentDueDay: 'Payment Due',
     dayOfMonth: '{day}th of each month',
     daysLeft: '{days} days left',
+    liveDataHint: 'Showing live card status, not data for {month}/{year}',
   },
 
   streak: {
@@ -551,6 +552,7 @@ const en = {
   monthPicker: {
     prevYear: 'Previous year',
     nextYear: 'Next year',
+    today: 'This month',
   },
 
   yearlyReview: {

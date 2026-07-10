@@ -5,6 +5,52 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme, THEMES } from '@/hooks/useTheme';
 
 const PREF_KEY = 'ui_preferences';
+const PENDING_PREFIX = 'sf:prefs:pending:v1';
+
+function pendingKey(userId) {
+  return `${PENDING_PREFIX}:${userId}`;
+}
+
+function readPending(userId) {
+  try {
+    const raw = localStorage.getItem(pendingKey(userId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePending(userId, value) {
+  try {
+    localStorage.setItem(pendingKey(userId), JSON.stringify(value));
+  } catch {
+    // quota/private mode — write-back is still attempted, just not durable across refresh
+  }
+}
+
+function clearPendingIfUnchanged(userId, value) {
+  const current = readPending(userId);
+  if (current && current.lang === value.lang && current.theme === value.theme) {
+    try {
+      localStorage.removeItem(pendingKey(userId));
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/**
+ * Upsert prefs to Supabase, marking the write as "pending" in localStorage first
+ * so an interrupted request (e.g. the tab is refreshed mid-flight) survives reload
+ * and gets retried on next mount instead of a stale server row winning hydration.
+ */
+async function pushPreferences(userId, value) {
+  writePending(userId, value);
+  const { error } = await supabase
+    .from('settings')
+    .upsert({ user_id: userId, key: PREF_KEY, value }, { onConflict: 'user_id,key' });
+  if (!error) clearPendingIfUnchanged(userId, value);
+}
 
 /**
  * Bridges local UI preferences (language + theme) with Supabase so they follow
@@ -44,6 +90,19 @@ export default function PreferenceSync() {
 
     let cancelled = false;
     (async () => {
+      // A pending write from last session means the local choice never reached
+      // Supabase (e.g. the tab was refreshed mid-request) — it's newer than
+      // whatever's on the server, so retry it instead of fetching and letting
+      // the stale server row overwrite the user's actual choice.
+      const pending = readPending(userId);
+      if (pending) {
+        if (pending.theme) lastSyncedThemeRef.current = pending.theme;
+        pushPreferences(userId, pending);
+        syncedUserRef.current = userId;
+        hydratedRef.current = true;
+        return;
+      }
+
       const { data } = await supabase
         .from('settings')
         .select('value')
@@ -66,10 +125,7 @@ export default function PreferenceSync() {
         if (pref.theme) lastSyncedThemeRef.current = pref.theme;
       } else {
         // No row yet (existing user's first login here) — migrate local values up.
-        await supabase.from('settings').upsert(
-          { user_id: userId, key: PREF_KEY, value: { lang, theme } },
-          { onConflict: 'user_id,key' }
-        );
+        await pushPreferences(userId, { lang, theme });
         lastSyncedThemeRef.current = theme;
       }
 
@@ -105,10 +161,7 @@ export default function PreferenceSync() {
     // language-only change during shuffle never drops it).
     const value = { lang, theme: lastSyncedThemeRef.current ?? theme };
 
-    supabase.from('settings').upsert(
-      { user_id: user.id, key: PREF_KEY, value },
-      { onConflict: 'user_id,key' }
-    );
+    pushPreferences(user.id, value);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang, theme]);
 
