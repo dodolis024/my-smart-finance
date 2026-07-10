@@ -294,36 +294,39 @@ BEGIN
         END IF;
     END IF;
 
-    -- 計算最長連續記帳天數
+    -- 計算最長連續記帳天數（對 checkins ∪ freezes 合併序列分段，段內只數 checkin 天）
     IF v_checkin_dates IS NOT NULL AND array_length(v_checkin_dates, 1) > 0 THEN
         DECLARE
-            v_sorted_dates DATE[];
-            v_prev_date DATE;
+            v_prev_date DATE := NULL;
             v_current_run INTEGER := 0;
             v_max_run INTEGER := 0;
-            v_date DATE;
+            v_rec RECORD;
         BEGIN
-            -- 排序日期（由舊到新）
-            SELECT ARRAY_AGG(date ORDER BY date ASC)
-            INTO v_sorted_dates
-            FROM (SELECT DISTINCT date FROM checkins WHERE user_id = p_user_id) AS unique_dates;
-
-            v_prev_date := NULL;
-            FOREACH v_date IN ARRAY v_sorted_dates
+            FOR v_rec IN
+                SELECT date_val, bool_or(is_checkin) AS has_checkin
+                FROM (
+                    SELECT date AS date_val, true  AS is_checkin FROM checkins       WHERE user_id = p_user_id
+                    UNION ALL
+                    SELECT date AS date_val, false AS is_checkin FROM streak_freezes WHERE user_id = p_user_id
+                ) merged
+                GROUP BY date_val
+                ORDER BY date_val ASC
             LOOP
-                IF v_prev_date IS NULL THEN
-                    v_current_run := 1;
-                ELSIF v_date = v_prev_date + INTERVAL '1 day' THEN
-                    v_current_run := v_current_run + 1;
+                IF v_prev_date IS NOT NULL AND v_rec.date_val = v_prev_date + INTERVAL '1 day' THEN
+                    -- 同一段連續日期：是 checkin 才 +1，凍結日只橋接
+                    IF v_rec.has_checkin THEN
+                        v_current_run := v_current_run + 1;
+                    END IF;
                 ELSE
-                    v_current_run := 1;
+                    -- 斷開，開新段
+                    v_current_run := CASE WHEN v_rec.has_checkin THEN 1 ELSE 0 END;
                 END IF;
 
                 IF v_current_run > v_max_run THEN
                     v_max_run := v_current_run;
                 END IF;
 
-                v_prev_date := v_date;
+                v_prev_date := v_rec.date_val;
             END LOOP;
 
             v_longest := v_max_run;
