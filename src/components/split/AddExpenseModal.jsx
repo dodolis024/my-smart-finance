@@ -241,15 +241,19 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     return shares;
   };
 
-  // 自訂模式送出時，將自動分配的金額也納入
+  // 自訂模式送出時，將自動分配的金額也納入；
+  // 比照 calcEqualShares，把無條件捨去產生的零頭補給第一位自動分配的成員，避免總和與總額不符
   const buildCustomShares = () => {
     const shares = {};
+    const n = unfilledIds.length;
+    const base = n > 0 ? Math.floor((remaining / n) * 100) / 100 : 0;
+    const remainder = n > 0 ? Math.round((remaining - base * n) * 100) / 100 : 0;
     participants.forEach(id => {
       const v = customShares[id];
       if (v !== undefined && v !== '') {
         shares[id] = parseExpression(v) || 0;
       } else {
-        shares[id] = autoShare;
+        shares[id] = id === unfilledIds[0] ? Math.round((base + remainder) * 100) / 100 : base;
       }
     });
     return shares;

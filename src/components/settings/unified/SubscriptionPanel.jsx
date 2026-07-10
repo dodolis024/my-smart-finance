@@ -43,6 +43,7 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
       const result = await saveSubscription({ name: form.name.trim(), amount, currency: form.currency, category: form.category || null, payment_method: form.payment_method || null, billing_cycle: form.billing_cycle, renewal_month: form.billing_cycle === 'yearly' ? renewal_month : null, renewal_day, is_active: true }, editingId);
       if (editingId) { toast.success(t('settings.subscription.subscriptionUpdated')); }
       else if (result?.transactionCreated) { toast.success(t('settings.subscription.subscriptionAddedWithTx')); }
+      else if (result?.rateUnavailable) { toast.error(t('settings.subscription.subscriptionAddedRateUnavailable')); }
       else { toast.success(t('settings.subscription.subscriptionAdded')); }
       setShowForm(false); setEditingId(null);
     } catch (err) {

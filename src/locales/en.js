@@ -370,6 +370,7 @@ const en = {
       saving: 'Saving...',
       subscriptionAdded: 'Subscription added!',
       subscriptionAddedWithTx: "Subscription added with today's transaction!",
+      subscriptionAddedRateUnavailable: "Subscription created, but today's charge was not recorded because the exchange rate is unavailable. Please add it manually.",
       subscriptionUpdated: 'Subscription updated.',
       subscriptionDeleted: 'Deleted.',
       deleteConfirm: 'Are you sure you want to delete this subscription?',

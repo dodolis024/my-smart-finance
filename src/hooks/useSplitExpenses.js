@@ -48,25 +48,18 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
   }, [groupId, load]);
 
   const addExpense = useCallback(async ({ title, amount, currency, date, note, paidBy, shares }) => {
-    const { data: expense, error: expenseError } = await supabase
-      .from('split_expenses')
-      .insert({
-        group_id: groupId,
-        paid_by: paidBy,
-        title,
-        amount,
-        currency: currency || 'TWD',
-        date,
-        note: note || null,
-      })
-      .select()
-      .single();
-    if (expenseError) throw expenseError;
-
-    const { error: sharesError } = await supabase
-      .from('split_expense_shares')
-      .insert(shares.map(s => ({ expense_id: expense.id, member_id: s.member_id, share: s.share })));
-    if (sharesError) throw sharesError;
+    // 以 RPC 原子建立費用與分攤明細，避免費用建立後分攤明細插入失敗留下不完整資料
+    const { data: expense, error } = await supabase.rpc('add_split_expense', {
+      p_group_id: groupId,
+      p_title: title,
+      p_amount: amount,
+      p_currency: currency || 'TWD',
+      p_date: date,
+      p_note: note || null,
+      p_paid_by: paidBy,
+      p_shares: shares.map(s => ({ member_id: s.member_id, share: s.share })),
+    });
+    if (error) throw error;
 
     await fetchExpenses();
 

@@ -4,6 +4,7 @@ import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const EMPTY_FORM = {
   name: '',
@@ -26,6 +27,7 @@ export default function SubscriptionModal({ isOpen, onClose, categoriesExpense =
 
   const toast = useToast();
   const { confirm } = useConfirm();
+  const { t } = useLanguage();
   const dialogRef = useRef(null);
   useScrollbarOnScroll(dialogRef, isOpen);
 
@@ -91,6 +93,8 @@ export default function SubscriptionModal({ isOpen, onClose, categoriesExpense =
         toast.success('已更新訂閱。');
       } else if (result?.transactionCreated) {
         toast.success('已新增訂閱，並自動建立今日交易！');
+      } else if (result?.rateUnavailable) {
+        toast.error(t('settings.subscription.subscriptionAddedRateUnavailable'));
       } else {
         toast.success('已新增訂閱！');
       }

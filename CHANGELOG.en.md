@@ -2,6 +2,12 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Improved custom split: auto-split remainders no longer block submission with a total mismatch
+- Fixed subscription charges and split sync possibly using a 1:1 exchange rate when none is available
+- Fixed an interrupted split expense add potentially leaving an expense without shares
+- Fixed re-synced ledger transactions keeping their old date, causing report drift
+- Fixed the dashboard requiring a manual refresh to show a subscription's same-day charge
+
 ## [1.21.0] - Jul-10 2026
 - Added cross-month transaction search to the transaction list
 - Added CSV export for the transaction list, covering the current month or search results

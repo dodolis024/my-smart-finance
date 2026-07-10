@@ -440,6 +440,20 @@ BEGIN
     RAISE EXCEPTION '分攤明細不可為空';
   END IF;
 
+  -- 成員歸屬檢查：付款人與所有分攤成員都必須屬於此群組
+  IF (p_paid_by IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM split_members WHERE id = p_paid_by AND group_id = v_group_id
+      ))
+     OR EXISTS (
+        SELECT 1 FROM jsonb_array_elements(p_shares) AS s
+        WHERE NOT EXISTS (
+          SELECT 1 FROM split_members
+          WHERE id = (s->>'member_id')::UUID AND group_id = v_group_id
+        )
+      ) THEN
+    RAISE EXCEPTION '分攤成員不屬於此群組';
+  END IF;
+
   UPDATE split_expenses SET
     paid_by  = p_paid_by,
     title    = p_title,
@@ -454,5 +468,57 @@ BEGIN
   INSERT INTO split_expense_shares (expense_id, member_id, share)
   SELECT p_expense_id, (s->>'member_id')::UUID, (s->>'share')::NUMERIC
   FROM jsonb_array_elements(p_shares) AS s;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- =============================================================================
+-- 15. 新增費用 RPC（原子操作：建立費用 + 分攤明細在同一交易內完成，
+--     避免「費用已建立但分攤明細插入失敗」留下沒有分攤的費用）
+-- =============================================================================
+CREATE OR REPLACE FUNCTION add_split_expense(
+  p_group_id UUID,
+  p_title    TEXT,
+  p_amount   NUMERIC,
+  p_currency TEXT,
+  p_date     DATE,
+  p_note     TEXT,
+  p_paid_by  UUID,
+  p_shares   JSONB  -- [{ "member_id": UUID, "share": NUMERIC }]
+)
+RETURNS JSON AS $$
+DECLARE
+  v_expense split_expenses%ROWTYPE;
+BEGIN
+  IF NOT can_access_split_group(p_group_id, auth.uid()) THEN
+    RAISE EXCEPTION '你沒有權限在此群組新增費用';
+  END IF;
+
+  IF p_shares IS NULL OR jsonb_typeof(p_shares) <> 'array' OR jsonb_array_length(p_shares) = 0 THEN
+    RAISE EXCEPTION '分攤明細不可為空';
+  END IF;
+
+  -- 成員歸屬檢查：付款人與所有分攤成員都必須屬於此群組
+  IF (p_paid_by IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM split_members WHERE id = p_paid_by AND group_id = p_group_id
+      ))
+     OR EXISTS (
+        SELECT 1 FROM jsonb_array_elements(p_shares) AS s
+        WHERE NOT EXISTS (
+          SELECT 1 FROM split_members
+          WHERE id = (s->>'member_id')::UUID AND group_id = p_group_id
+        )
+      ) THEN
+    RAISE EXCEPTION '分攤成員不屬於此群組';
+  END IF;
+
+  INSERT INTO split_expenses (group_id, paid_by, title, amount, currency, date, note)
+  VALUES (p_group_id, p_paid_by, p_title, p_amount, COALESCE(p_currency, 'TWD'), p_date, p_note)
+  RETURNING * INTO v_expense;
+
+  INSERT INTO split_expense_shares (expense_id, member_id, share)
+  SELECT v_expense.id, (s->>'member_id')::UUID, (s->>'share')::NUMERIC
+  FROM jsonb_array_elements(p_shares) AS s;
+
+  RETURN row_to_json(v_expense);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

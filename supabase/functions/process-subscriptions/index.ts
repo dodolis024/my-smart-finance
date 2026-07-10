@@ -98,13 +98,18 @@ serve(async (req) => {
           continue
         }
 
-        // 取得匯率（失敗則預設 1）
+        // 取得匯率；查無匯率時跳過該筆，避免外幣被靜默以 1:1 記成錯誤的台幣金額
+        // 取捨：當天跳過後該期扣款不補建，寧缺勿錯（需手動補記）
         let exchangeRate = 1
         if (sub.currency && sub.currency !== 'TWD') {
-          const { data: rateVal } = await supabase.rpc('get_exchange_rate', {
+          const { data: rateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
             p_currency: sub.currency.toUpperCase(),
           })
-          if (rateVal && rateVal > 0) exchangeRate = Number(rateVal)
+          if (rateErr || rateVal == null || Number(rateVal) <= 0) {
+            errors.push({ subscriptionId: sub.id, error: `no exchange rate for ${sub.currency}` })
+            continue
+          }
+          exchangeRate = Number(rateVal)
         }
         const twdAmount = Math.round(sub.amount * exchangeRate * 100) / 100
 

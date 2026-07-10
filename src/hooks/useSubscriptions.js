@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCachedResource } from '@/hooks/useCachedResource';
+import { notifyTransactionsChanged } from '@/lib/transactionEvents';
 
 export function useSubscriptions() {
   const { user } = useAuth();
@@ -73,12 +74,17 @@ export function useSubscriptions() {
       if (isDueToday) {
         const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
 
+        // 查無匯率時不建立當日交易（訂閱本身照常保留），避免外幣被靜默以 1:1 記成錯誤的台幣金額
         let exchangeRate = 1;
         if (formData.currency && formData.currency !== 'TWD') {
-          const { data: rateVal } = await supabase.rpc('get_exchange_rate', {
+          const { data: rateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
             p_currency: formData.currency.toUpperCase(),
           });
-          if (rateVal && rateVal > 0) exchangeRate = Number(rateVal);
+          if (rateErr || rateVal == null || Number(rateVal) <= 0) {
+            await loadSubscriptions();
+            return { transactionCreated: false, rateUnavailable: true };
+          }
+          exchangeRate = Number(rateVal);
         }
         const twdAmount = Math.round(formData.amount * exchangeRate * 100) / 100;
 
@@ -108,7 +114,12 @@ export function useSubscriptions() {
           subscription_id: inserted.id,
         });
 
-        if (!txError) transactionCreated = true;
+        if (!txError) {
+          transactionCreated = true;
+          // 通知已掛載的儀表板重抓當月資料，否則設定面板疊在儀表板上，
+          // 關閉後要手動刷新才看得到這筆當日扣款
+          notifyTransactionsChanged();
+        }
       }
     }
 
