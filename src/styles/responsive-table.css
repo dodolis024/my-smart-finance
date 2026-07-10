@@ -24,6 +24,37 @@
     text-align: center;
   }
 
+  /* 手機版：用 grid 讓標題置中、icon 釘右上、搜尋框獨佔第二列（避免與 icon 重疊） */
+  .transaction-history-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    row-gap: var(--space-sm);
+  }
+
+  /* 標題置於中間欄（兩側等寬 → 真正置中，取消電腦版靠左的 auto margin） */
+  .transaction-history-header h2 {
+    grid-column: 2;
+    grid-row: 1;
+    margin-right: 0;
+  }
+
+  /* icon 群固定在第一列右側 */
+  .transaction-history-header__controls {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  /* 搜尋框容器橫跨整列、置於第二列並置中 */
+  .transaction-search-box {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+    width: 100%;
+    max-width: 22rem;
+  }
+
   /* 隱藏支付方式、操作表頭 */
   .transaction-history-section .table-wrapper thead th:nth-child(4),
   .transaction-history-section .table-wrapper thead th:nth-child(6) {

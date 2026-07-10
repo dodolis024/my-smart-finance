@@ -6,7 +6,9 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useOfflineMergedView } from '@/hooks/useOfflineMergedView';
 import { useCreditCardNotifications } from '@/hooks/useCreditCardNotifications';
 import { useModalStates } from '@/hooks/useModalStates';
+import { useTransactionSearch } from '@/hooks/useTransactionSearch';
 import { supabase } from '@/lib/supabase';
+import { buildTransactionsCsv, downloadCsv } from '@/lib/csvExport';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -74,6 +76,37 @@ export default function DashboardPage() {
   const [editingTransaction, setEditingTransaction] = useState(null);
   // 凍結卡對帳若實際橋接了缺口，就 +1 觸發 dashboard 重抓，讓 streak 反映補上的凍結日
   const [streakRefreshTick, setStreakRefreshTick] = useState(0);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  // 表格套完表頭篩選後的實際列數（由 TransactionTable 回報），供搜尋提示顯示一致的筆數
+  const [visibleRowCount, setVisibleRowCount] = useState(0);
+  const searchInputRef = useRef(null);
+  const {
+    results: searchResults,
+    searching: searchLoading,
+    searchError,
+    refresh: refreshSearch,
+  } = useTransactionSearch(user?.id, searchQuery);
+  const searchActive = searchQuery.trim() !== '';
+
+  // 點搜尋 icon 展開/收合；收合時清空關鍵字回到當月列表
+  const toggleSearch = useCallback(() => {
+    setSearchOpen((open) => {
+      if (open) setSearchQuery('');
+      return !open;
+    });
+  }, []);
+
+  // 搜尋框為空時、點到別處(blur)才收合；打叉清空(原生 X)只清字並保持開啟聚焦，不被誤解為關閉
+  const handleSearchBlur = useCallback(() => {
+    if (!searchQuery.trim()) setSearchOpen(false);
+  }, [searchQuery]);
+
+  // 展開後自動聚焦輸入框
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
 
   // 離線記帳佇列:自動補送(掛載 + 恢復連線)並把未同步交易併入當月列表與彙總,結果以 toast 通知
   const {
@@ -194,12 +227,10 @@ export default function DashboardPage() {
           return;
         }
 
-        const [y, m] = result.date
-          ? result.date.split('-')
-          : [String(currentYear), String(currentMonth)];
         setEditingTransaction(null);
         toast.success(result.isEdit ? t('dashboard.transactionUpdated') : t('dashboard.transactionAdded'));
-        fetchDashboardData(parseInt(y, 10), parseInt(m, 10), { silent: true });
+        fetchDashboardData(currentYear, currentMonth, { silent: true });
+        refreshSearch();
 
         if (!result.isEdit && shouldShowPositiveModal(result.date)) {
           const content = getPositiveModalContent();
@@ -227,6 +258,7 @@ export default function DashboardPage() {
       accounts,
       checkCreditUsageAlert,
       editingTransaction,
+      refreshSearch,
       t,
     ]
   );
@@ -272,13 +304,14 @@ export default function DashboardPage() {
         removeTransactionLocally(id);
         toast.success(t('dashboard.transactionDeleted'));
         fetchDashboardData(currentYear, currentMonth, { silent: true });
+        refreshSearch();
         // 刪除後重新計算信用卡使用率
         if (relatedAccount?.type === 'credit_card') checkCreditUsageAlert(relatedAccount);
       } catch (err) {
         toast.error(err.message || t('dashboard.deleteTransactionFailed'));
       }
     },
-    [confirm, deleteTransaction, removeTransactionLocally, fetchDashboardData, currentYear, currentMonth, toast, transactionHistoryFull, accounts, checkCreditUsageAlert, queuedItems, removeQueuedItem, t]
+    [confirm, deleteTransaction, removeTransactionLocally, fetchDashboardData, currentYear, currentMonth, toast, transactionHistoryFull, accounts, checkCreditUsageAlert, queuedItems, removeQueuedItem, refreshSearch, t]
   );
 
   const handleCheckin = useCallback(async () => {
@@ -313,6 +346,40 @@ export default function DashboardPage() {
       onClick={handleStreakBadgeClick}
     />
   );
+
+  const tableRows = searchActive ? searchResults : displayHistory;
+
+  const handleExportCsv = useCallback(async () => {
+    if (tableRows.length === 0) return;
+    const monthLabel = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+    const confirmed = await confirm(
+      searchActive
+        ? t('dashboard.exportConfirmSearch', { count: tableRows.length })
+        : t('dashboard.exportConfirmMonth', { count: tableRows.length, month: monthLabel })
+    );
+    if (!confirmed) return;
+    const csv = buildTransactionsCsv(tableRows, {
+      headers: [
+        t('transaction.tableDate'),
+        t('transaction.tableType'),
+        t('transaction.tableCategory'),
+        t('transaction.tableItem'),
+        t('transaction.tablePayment'),
+        t('transaction.currencyLabel'),
+        t('transaction.tableAmount'),
+        t('transaction.twdAmount'),
+        t('transaction.note'),
+      ],
+      typeLabels: {
+        expense: t('transaction.expenseGroup'),
+        income: t('transaction.incomeGroup'),
+      },
+    });
+    const filename = searchActive
+      ? 'my-smart-finance-search.csv'
+      : `my-smart-finance-${currentYear}-${String(currentMonth).padStart(2, '0')}.csv`;
+    downloadCsv(filename, csv);
+  }, [tableRows, searchActive, currentYear, currentMonth, t, confirm]);
 
   return (
     <div className="app-container">
@@ -404,12 +471,90 @@ export default function DashboardPage() {
         </section>
 
         <section className="transaction-history-section" ref={historyRef}>
-          <h2>{t('dashboard.transactions')}</h2>
+          <div className="transaction-history-header">
+            <h2>{t('dashboard.transactions')}</h2>
+            {searchOpen && (
+              <div className="transaction-search-box">
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  className="transaction-search-input"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onBlur={handleSearchBlur}
+                  placeholder={t('dashboard.searchPlaceholder')}
+                  aria-label={t('dashboard.searchPlaceholder')}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="transaction-search-clear"
+                    // 用 mousedown 擋 blur：清空後仍保持聚焦、不被 handleSearchBlur 收合
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setSearchQuery('');
+                      searchInputRef.current?.focus();
+                    }}
+                    aria-label={t('dashboard.searchClear')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="transaction-history-header__controls">
+              <button
+                type="button"
+                className={`btn-search-toggle${searchOpen ? ' btn-search-toggle--active' : ''}`}
+                onMouseDown={(e) => { if (searchOpen) e.preventDefault(); }}
+                onClick={toggleSearch}
+                aria-label={t('dashboard.searchPlaceholder')}
+                aria-expanded={searchOpen}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="btn-export-csv"
+                onClick={handleExportCsv}
+                disabled={tableRows.length === 0}
+                aria-label={t('dashboard.exportCsvAria')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          {searchActive && (
+            <p
+              className={`transaction-search-hint${searchError ? ' transaction-search-hint--error' : ''}`}
+              role="status"
+            >
+              {searchLoading
+                ? t('common.loadingDots')
+                : searchError
+                ? t('dashboard.searchFailed')
+                : t('dashboard.searchResultCount', { count: visibleRowCount })}
+            </p>
+          )}
           <TransactionTable
-            transactions={displayHistory}
+            transactions={tableRows}
             onEdit={handleStartEdit}
             onDelete={handleDeleteTransaction}
+            onVisibleCountChange={setVisibleRowCount}
             loading={loading}
+            emptyMessage={
+              searchActive
+                ? searchLoading
+                  ? t('common.loadingDots')
+                  : t('dashboard.searchNoResults')
+                : undefined
+            }
           />
         </section>
       </DashboardColumn>

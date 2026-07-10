@@ -1,10 +1,10 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import TransactionRow from './TransactionRow';
 import FilterPopover from './FilterPopover';
 import TransactionDetail from './TransactionDetail';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function TransactionTable({ transactions = [], onEdit, onDelete, loading }) {
+export default function TransactionTable({ transactions = [], onEdit, onDelete, loading, emptyMessage, onVisibleCountChange }) {
   const { t } = useLanguage();
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedPayments, setSelectedPayments] = useState([]);
@@ -33,6 +33,11 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
       return catOk && pmOk;
     });
   }, [transactions, selectedCategories, selectedPayments, t]);
+
+  // 把套完表頭篩選後的實際列數回報給上層（讓搜尋提示筆數與畫面一致）
+  useEffect(() => {
+    onVisibleCountChange?.(filteredTransactions.length);
+  }, [filteredTransactions.length, onVisibleCountChange]);
 
   const toggleFilter = useCallback((kind) => {
     setActiveFilter((prev) => (prev === kind ? null : kind));
@@ -67,7 +72,7 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
     return (
       <div className="table-wrapper">
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
-          {t('transaction.noTransactions')}
+          {emptyMessage || t('transaction.noTransactions')}
         </div>
       </div>
     );
