@@ -6,6 +6,7 @@ import { useSplitSync } from '@/hooks/useSplitSync';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatSplitAmount, calcMemberTotals } from '@/lib/splitSettlement';
+import { resolveRpcError } from '@/lib/splitErrors';
 import SplitExpenseItem from './SplitExpenseItem';
 import SplitSettlement from './SplitSettlement';
 import SplitSyncBox from './SplitSyncBox';
@@ -165,7 +166,8 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
         toast.success(t('split.syncSuccess'));
       }
     } catch (err) {
-      toast.error(err?.message || t('split.syncFailed'));
+      console.error(err);
+      toast.error(resolveRpcError(err, t) || t('split.syncFailed'));
     }
   };
 

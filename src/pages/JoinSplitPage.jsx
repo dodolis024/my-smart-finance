@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
 import { useSplitGroups } from '@/hooks/useSplitGroups';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { resolveRpcError } from '@/lib/splitErrors';
 
 export default function JoinPage() {
   const { code } = useParams();
@@ -68,7 +69,8 @@ export default function JoinPage() {
       toast.success(t('split.joinPage.joinSuccess'));
       navigate('/split');
     } catch (err) {
-      setError(err.message || t('split.joinPage.joinFailed'));
+      console.error(err);
+      setError(resolveRpcError(err, t) || t('split.joinPage.joinFailed'));
     } finally {
       setJoining(false);
     }

@@ -655,6 +655,23 @@ const zh = {
       backBtn: '回到主畫面',
     },
   },
+
+  errors: {
+    AUTH_REQUIRED: '未登入',
+    SPLIT_NOT_LINKED_MEMBER: '你不是此群組的已連結成員',
+    SPLIT_RATE_UNAVAILABLE: '目前無法取得 {currency} 匯率，請稍後再試',
+    SPLIT_INVALID_INVITE: '邀請碼無效',
+    SPLIT_GROUP_ARCHIVED: '此群組已封存',
+    SPLIT_ALREADY_MEMBER: '你已經是此群組的成員',
+    SPLIT_OWNER_ONLY: '只有群組擁有者可以變更擁有權或邀請碼',
+    SPLIT_MEMBER_NOT_FOUND: '找不到此成員',
+    SPLIT_MEMBER_LINKED: '此成員已被其他用戶連結',
+    SPLIT_EXPENSE_NOT_FOUND: '找不到此費用',
+    SPLIT_NO_EDIT_PERMISSION: '你沒有權限修改此費用',
+    SPLIT_SHARES_EMPTY: '分攤明細不可為空',
+    SPLIT_SHARE_MEMBER_INVALID: '分攤成員不屬於此群組',
+    SPLIT_NO_ADD_PERMISSION: '你沒有權限在此群組新增費用',
+  },
 };
 
 export default zh;

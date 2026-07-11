@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from '@/components/common/Modal';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { resolveRpcError } from '@/lib/splitErrors';
 
 let nextMemberId = 1;
 
@@ -40,7 +41,8 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
       });
       handleClose();
     } catch (err) {
-      setError(err.message || t('common.saveFailed'));
+      console.error(err);
+      setError(resolveRpcError(err, t) || t('common.saveFailed'));
     } finally {
       setSaving(false);
     }

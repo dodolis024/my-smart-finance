@@ -8,6 +8,7 @@ This file records version updates for Smart Finance Tracker.
 - Fixed subscription charges and split sync possibly using a 1:1 exchange rate when none is available
 - Fixed an interrupted split expense add potentially leaving an expense without shares
 - Fixed re-synced ledger transactions keeping their old date, causing report drift
+- Fixed split-bill error messages not following the interface language (Chinese text appearing in the English UI)
 - Fixed the dashboard requiring a manual refresh to show a subscription's same-day charge
 - Fixed an older offline preference choice possibly overwriting a newer one from another device
 - Fixed credit usage over-counting the previous cycle in shorter months when the due day falls at month end

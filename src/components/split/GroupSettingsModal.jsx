@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { resolveRpcError } from '@/lib/splitErrors';
 
 export default function GroupSettingsModal({ isOpen, onClose, onSave, group, currencies = [], canArchive = false, onArchive }) {
   const { t } = useLanguage();
@@ -40,7 +41,8 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
       });
       onClose();
     } catch (err) {
-      setError(err.message || t('common.saveFailed'));
+      console.error(err);
+      setError(resolveRpcError(err, t) || t('common.saveFailed'));
     } finally {
       setSaving(false);
     }

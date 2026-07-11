@@ -3,6 +3,7 @@ import Modal from '@/components/common/Modal';
 import CalcKeypad from './CalcKeypad';
 import { parseExpression, getTodayYmd } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { resolveRpcError } from '@/lib/splitErrors';
 
 export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', defaultExpenseCurrency, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
   const { t } = useLanguage();
@@ -293,7 +294,8 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
       }
       handleClose();
     } catch (err) {
-      setError(err.message || (isEditing ? t('split.addExpenseModal.updateFailed') : t('split.addExpenseModal.addFailed')));
+      console.error(err);
+      setError(resolveRpcError(err, t) || (isEditing ? t('split.addExpenseModal.updateFailed') : t('split.addExpenseModal.addFailed')));
     } finally {
       setSaving(false);
     }

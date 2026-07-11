@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { resolveRpcError } from '@/lib/splitErrors';
 
 let nextId = 1;
 
@@ -49,7 +50,8 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
       setEditingId(null);
       setEditValue('');
     } catch (err) {
-      setError(err.message || t('split.updateNameFailed'));
+      console.error(err);
+      setError(resolveRpcError(err, t) || t('split.updateNameFailed'));
     }
   };
 
@@ -62,7 +64,8 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
       await onAddMembers(names);
       setNewMembers([]);
     } catch (err) {
-      setError(err.message || t('split.addMemberFailed'));
+      console.error(err);
+      setError(resolveRpcError(err, t) || t('split.addMemberFailed'));
     } finally {
       setSaving(false);
     }

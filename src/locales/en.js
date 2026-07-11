@@ -655,6 +655,23 @@ const en = {
       backBtn: 'Back to Dashboard',
     },
   },
+
+  errors: {
+    AUTH_REQUIRED: 'Please sign in first',
+    SPLIT_NOT_LINKED_MEMBER: 'You are not a linked member of this group',
+    SPLIT_RATE_UNAVAILABLE: '{currency} exchange rate is currently unavailable, please try again later',
+    SPLIT_INVALID_INVITE: 'Invalid invite code',
+    SPLIT_GROUP_ARCHIVED: 'This group has been archived',
+    SPLIT_ALREADY_MEMBER: 'You are already a member of this group',
+    SPLIT_OWNER_ONLY: 'Only the group owner can change ownership or the invite code',
+    SPLIT_MEMBER_NOT_FOUND: 'Member not found',
+    SPLIT_MEMBER_LINKED: 'This member is already linked to another user',
+    SPLIT_EXPENSE_NOT_FOUND: 'Expense not found',
+    SPLIT_NO_EDIT_PERMISSION: 'You do not have permission to edit this expense',
+    SPLIT_SHARES_EMPTY: 'Shares cannot be empty',
+    SPLIT_SHARE_MEMBER_INVALID: 'A share member does not belong to this group',
+    SPLIT_NO_ADD_PERMISSION: 'You do not have permission to add expenses to this group',
+  },
 };
 
 export default en;
