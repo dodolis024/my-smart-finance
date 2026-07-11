@@ -43,9 +43,13 @@ function clearPendingIfUnchanged(userId, value) {
  * Upsert prefs to Supabase, marking the write as "pending" in localStorage first
  * so an interrupted request (e.g. the tab is refreshed mid-flight) survives reload
  * and gets retried on next mount instead of a stale server row winning hydration.
+ *
+ * pending 額外記錄 savedAt 時間戳（僅存在本機、不會送進 value 欄位），
+ * 讓下次 hydration 能跟伺服器的 updated_at 比對新舊，避免多裝置情境下
+ * 舊裝置的殘留 pending 蓋掉另一台裝置較新已同步成功的設定。
  */
 async function pushPreferences(userId, value) {
-  writePending(userId, value);
+  writePending(userId, { ...value, savedAt: Date.now() });
   const { error } = await supabase
     .from('settings')
     .upsert({ user_id: userId, key: PREF_KEY, value }, { onConflict: 'user_id,key' });
@@ -91,25 +95,46 @@ export default function PreferenceSync() {
     let cancelled = false;
     (async () => {
       // A pending write from last session means the local choice never reached
-      // Supabase (e.g. the tab was refreshed mid-request) — it's newer than
-      // whatever's on the server, so retry it instead of fetching and letting
-      // the stale server row overwrite the user's actual choice.
+      // Supabase (e.g. the tab was refreshed mid-request). It's *usually* newer
+      // than whatever's on the server, so we'd normally retry it instead of
+      // fetching and letting the stale server row overwrite the user's actual
+      // choice — but with multiple devices, another device may have synced a
+      // genuinely newer choice to the server *after* this pending was written
+      // (e.g. this tab was left open offline). So always fetch the server row
+      // (with updated_at) and compare timestamps before deciding which wins.
       const pending = readPending(userId);
-      if (pending) {
-        if (pending.theme) lastSyncedThemeRef.current = pending.theme;
-        pushPreferences(userId, pending);
-        syncedUserRef.current = userId;
-        hydratedRef.current = true;
-        return;
-      }
 
       const { data } = await supabase
         .from('settings')
-        .select('value')
+        .select('value, updated_at')
         .eq('user_id', userId)
         .eq('key', PREF_KEY)
         .maybeSingle();
       if (cancelled) return;
+
+      if (pending) {
+        // server 較新，才需要捨棄 pending 改走 server-wins；否則（server 沒有這筆、
+        // 或 pending 是沒有 savedAt 的舊版殘留，向後相容）維持原行為重放 pending。
+        const serverIsNewer =
+          data?.updated_at != null &&
+          pending.savedAt != null &&
+          new Date(data.updated_at).getTime() > pending.savedAt;
+
+        if (!serverIsNewer) {
+          if (pending.theme) lastSyncedThemeRef.current = pending.theme;
+          pushPreferences(userId, pending);
+          syncedUserRef.current = userId;
+          hydratedRef.current = true;
+          return;
+        }
+
+        // server 較新：這筆 pending 已經過期，捨棄它，改走下面的 server-wins 套用路徑。
+        try {
+          localStorage.removeItem(pendingKey(userId));
+        } catch {
+          // ignore
+        }
+      }
 
       const pref = data?.value;
       if (pref && (pref.lang || pref.theme)) {

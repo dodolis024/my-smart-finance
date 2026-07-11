@@ -8,6 +8,8 @@ This file records version updates for Smart Finance Tracker.
 - Fixed an interrupted split expense add potentially leaving an expense without shares
 - Fixed re-synced ledger transactions keeping their old date, causing report drift
 - Fixed the dashboard requiring a manual refresh to show a subscription's same-day charge
+- Fixed an older offline preference choice possibly overwriting a newer one from another device
+- Fixed credit usage over-counting the previous cycle in shorter months when the due day falls at month end
 
 ## [1.21.0] - Jul-10 2026
 - Added cross-month transaction search to the transaction list

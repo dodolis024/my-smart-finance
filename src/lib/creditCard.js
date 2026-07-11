@@ -54,24 +54,31 @@ export function getBillingCycleRange(account, today = new Date()) {
   };
 }
 
-export function calculateCreditUsage(account, history) {
+export function calculateCreditUsage(account, history, today = new Date()) {
   const paymentDueDay = account.payment_due_day || account.paymentDueDay;
   const billingDay = account.billing_day || account.billingDay;
   const accountId = account.id;
   const accountName = account.name || account.accountName;
 
-  const cycle = getBillingCycleRange(account);
+  const cycle = getBillingCycleRange(account, today);
   if (!cycle) return 0;
   const { prevBillingDate, lastBillingDate, lastBillingEndDate, todayDate } = cycle;
 
-  const currentDay = new Date().getDate();
+  const currentDay = today.getDate();
+
+  // 繳款日/帳單日設在 29–31 號時，小月（如二月）沒有這些日期，直接比較會讓
+  // currentDay >= paymentDueDay 永遠不成立、hasPaid 判定失效。比照 fmtClamped
+  // 的做法，先把兩者夾在當月實際天數內，再用夾取後的值判斷（含大小關係）。
+  const daysInThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const effDue = Math.min(paymentDueDay, daysInThisMonth);
+  const effBilling = Math.min(billingDay, daysInThisMonth);
 
   let hasPaid = false;
   if (paymentDueDay) {
-    if (paymentDueDay > billingDay) {
-      if (currentDay >= billingDay && currentDay >= paymentDueDay) hasPaid = true;
+    if (effDue > effBilling) {
+      if (currentDay >= effBilling && currentDay >= effDue) hasPaid = true;
     } else {
-      if (currentDay < billingDay && currentDay >= paymentDueDay) hasPaid = true;
+      if (currentDay < effBilling && currentDay >= effDue) hasPaid = true;
     }
   }
 
