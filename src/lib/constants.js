@@ -33,6 +33,8 @@ export const DEFAULT_ACCOUNT = {
 // Currencies with no minor unit — displayed as whole numbers, no decimal point.
 // Based on the standard ISO 4217 zero-decimal list, plus TWD by this app's own
 // convention (Taiwan practice treats NT$ as whole dollars despite ISO allowing 2).
+// database/split-sync-migration.sql (sync_split_to_ledger) keeps a SQL copy of
+// this list for v_decimal_places — keep both in sync when changing this set.
 export const ZERO_DECIMAL_CURRENCIES = new Set([
   'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW',
   'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',

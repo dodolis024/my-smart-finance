@@ -171,7 +171,7 @@ BEGIN
   IF (NEW.owner_id IS DISTINCT FROM OLD.owner_id
       OR NEW.invite_code IS DISTINCT FROM OLD.invite_code)
      AND (auth.uid() IS NULL OR auth.uid() <> OLD.owner_id) THEN
-    RAISE EXCEPTION '只有群組擁有者可以變更擁有權或邀請碼';
+    RAISE EXCEPTION 'SPLIT_OWNER_ONLY';
   END IF;
   RETURN NEW;
 END;
@@ -353,22 +353,26 @@ DECLARE
   v_group_id UUID;
   v_existing_user UUID;
 BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'AUTH_REQUIRED';
+  END IF;
+
   -- 取得成員所屬群組與現有 user_id
   SELECT group_id, user_id INTO v_group_id, v_existing_user
   FROM split_members WHERE id = p_member_id;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION '找不到此成員';
+    RAISE EXCEPTION 'SPLIT_MEMBER_NOT_FOUND';
   END IF;
 
   -- 確保該位置尚未被連結
   IF v_existing_user IS NOT NULL THEN
-    RAISE EXCEPTION '此成員已被其他用戶連結';
+    RAISE EXCEPTION 'SPLIT_MEMBER_LINKED';
   END IF;
 
   -- 確保用戶未重複加入同一群組
   IF EXISTS (SELECT 1 FROM split_members WHERE group_id = v_group_id AND user_id = auth.uid()) THEN
-    RAISE EXCEPTION '你已經是此群組的成員';
+    RAISE EXCEPTION 'SPLIT_ALREADY_MEMBER';
   END IF;
 
   UPDATE split_members SET user_id = auth.uid() WHERE id = p_member_id;
@@ -382,23 +386,27 @@ DECLARE
   v_group_id UUID;
   v_member split_members%ROWTYPE;
 BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'AUTH_REQUIRED';
+  END IF;
+
   -- 用邀請碼查 group_id，查不到直接擋
   SELECT id INTO v_group_id
   FROM split_groups
   WHERE invite_code = upper(trim(p_invite_code));
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION '邀請碼無效';
+    RAISE EXCEPTION 'SPLIT_INVALID_INVITE';
   END IF;
 
   -- 已封存的群組不允許加入
   IF EXISTS (SELECT 1 FROM split_groups WHERE id = v_group_id AND archived_at IS NOT NULL) THEN
-    RAISE EXCEPTION '此群組已封存';
+    RAISE EXCEPTION 'SPLIT_GROUP_ARCHIVED';
   END IF;
 
   -- 確保用戶未重複加入同一群組
   IF EXISTS (SELECT 1 FROM split_members WHERE group_id = v_group_id AND user_id = auth.uid()) THEN
-    RAISE EXCEPTION '你已經是此群組的成員';
+    RAISE EXCEPTION 'SPLIT_ALREADY_MEMBER';
   END IF;
 
   INSERT INTO split_members (group_id, name, user_id)
@@ -429,15 +437,15 @@ DECLARE
 BEGIN
   SELECT group_id INTO v_group_id FROM split_expenses WHERE id = p_expense_id;
   IF NOT FOUND THEN
-    RAISE EXCEPTION '找不到此費用';
+    RAISE EXCEPTION 'SPLIT_EXPENSE_NOT_FOUND';
   END IF;
 
   IF NOT can_access_split_group(v_group_id, auth.uid()) THEN
-    RAISE EXCEPTION '你沒有權限修改此費用';
+    RAISE EXCEPTION 'SPLIT_NO_EDIT_PERMISSION';
   END IF;
 
   IF p_shares IS NULL OR jsonb_typeof(p_shares) <> 'array' OR jsonb_array_length(p_shares) = 0 THEN
-    RAISE EXCEPTION '分攤明細不可為空';
+    RAISE EXCEPTION 'SPLIT_SHARES_EMPTY';
   END IF;
 
   -- 成員歸屬檢查：付款人與所有分攤成員都必須屬於此群組
@@ -451,7 +459,7 @@ BEGIN
           WHERE id = (s->>'member_id')::UUID AND group_id = v_group_id
         )
       ) THEN
-    RAISE EXCEPTION '分攤成員不屬於此群組';
+    RAISE EXCEPTION 'SPLIT_SHARE_MEMBER_INVALID';
   END IF;
 
   UPDATE split_expenses SET
@@ -490,11 +498,11 @@ DECLARE
   v_expense split_expenses%ROWTYPE;
 BEGIN
   IF NOT can_access_split_group(p_group_id, auth.uid()) THEN
-    RAISE EXCEPTION '你沒有權限在此群組新增費用';
+    RAISE EXCEPTION 'SPLIT_NO_ADD_PERMISSION';
   END IF;
 
   IF p_shares IS NULL OR jsonb_typeof(p_shares) <> 'array' OR jsonb_array_length(p_shares) = 0 THEN
-    RAISE EXCEPTION '分攤明細不可為空';
+    RAISE EXCEPTION 'SPLIT_SHARES_EMPTY';
   END IF;
 
   -- 成員歸屬檢查：付款人與所有分攤成員都必須屬於此群組
@@ -508,7 +516,7 @@ BEGIN
           WHERE id = (s->>'member_id')::UUID AND group_id = p_group_id
         )
       ) THEN
-    RAISE EXCEPTION '分攤成員不屬於此群組';
+    RAISE EXCEPTION 'SPLIT_SHARE_MEMBER_INVALID';
   END IF;
 
   INSERT INTO split_expenses (group_id, paid_by, title, amount, currency, date, note)

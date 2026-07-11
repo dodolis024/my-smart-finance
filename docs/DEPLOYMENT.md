@@ -52,6 +52,7 @@
 | scripts/fix-user-emails-rpc.sql | get_user_emails RPC | 2026-07-08 |
 | scripts/fix-split-atomic-add-and-rate-guard.sql | add_split_expense/成員歸屬檢查/匯率守門/重同步日期 | 2026-07-11 |
 | scripts/fix-split-error-codes.sql | 分帳 6 個 RPC 的 RAISE 訊息改為錯誤碼(供前端 i18n 對映) | 2026-07-11 |
+| scripts/fix-split-join-auth-and-decimal-list.sql | join/link RPC 加登入檢查/零小數幣別清單對齊前端/DETAIL 分隔符改 ", " | 2026-07-11 |
 
 ### 正式定義檔重跑紀錄
 

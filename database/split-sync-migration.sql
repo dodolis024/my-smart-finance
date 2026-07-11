@@ -97,9 +97,13 @@ BEGIN
   JOIN split_expenses se ON se.id = ses.expense_id
   WHERE se.group_id = p_group_id AND ses.member_id = v_member_id;
 
-  -- 依幣別決定小數位數
+  -- 依幣別決定小數位數（此清單須與 src/lib/constants.js 的 ZERO_DECIMAL_CURRENCIES 保持一致）
   v_decimal_places := CASE
-    WHEN v_group_currency IN ('TWD', 'JPY', 'KRW', 'VND', 'HUF', 'ISK', 'IDR') THEN 0
+    WHEN v_group_currency IN (
+      'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW',
+      'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+      'TWD'
+    ) THEN 0
     ELSE 2
   END;
   v_current_total := ROUND(v_current_total, v_decimal_places);
@@ -158,7 +162,7 @@ DECLARE
 BEGIN
   v_user_id := auth.uid();
   IF v_user_id IS NULL THEN
-    RAISE EXCEPTION '未登入';
+    RAISE EXCEPTION 'AUTH_REQUIRED';
   END IF;
 
   -- 查詢用戶在此群組的 member_id
@@ -167,7 +171,7 @@ BEGIN
   WHERE sm.group_id = p_group_id AND sm.user_id = v_user_id;
 
   IF v_member_id IS NULL THEN
-    RAISE EXCEPTION '你不是此群組的已連結成員';
+    RAISE EXCEPTION 'SPLIT_NOT_LINKED_MEMBER';
   END IF;
 
   -- 取得群組資訊
@@ -177,7 +181,7 @@ BEGIN
 
   -- 匯率前置檢查：寫入路徑查無匯率時直接報錯，避免以 1:1 匯率寫入錯誤金額
   -- （SUM 表達式內無法 RAISE，故在計算前先檢查所有涉及的幣別）
-  SELECT string_agg(DISTINCT se.currency, '、')
+  SELECT string_agg(DISTINCT se.currency, ', ')
   INTO v_missing
   FROM split_expense_shares ses
   JOIN split_expenses se ON se.id = ses.expense_id
@@ -190,7 +194,7 @@ BEGIN
     );
 
   IF v_missing IS NOT NULL THEN
-    RAISE EXCEPTION '目前無法取得 % 匯率', v_missing;
+    RAISE EXCEPTION 'SPLIT_RATE_UNAVAILABLE' USING DETAIL = v_missing;
   END IF;
 
   -- 群組幣別本身（非 TWD 時）也需有對 TWD 的匯率
@@ -198,7 +202,7 @@ BEGIN
     SELECT 1 FROM exchange_rates er
     WHERE er.currency_code = v_group_currency AND er.rate > 0
   ) THEN
-    RAISE EXCEPTION '目前無法取得 % 匯率', v_group_currency;
+    RAISE EXCEPTION 'SPLIT_RATE_UNAVAILABLE' USING DETAIL = v_group_currency;
   END IF;
 
   -- 計算分攤總額（轉換至群組幣別；前置檢查通過後 COALESCE 不會走到 fallback）
@@ -217,9 +221,13 @@ BEGIN
   JOIN split_expenses se ON se.id = ses.expense_id
   WHERE se.group_id = p_group_id AND ses.member_id = v_member_id;
 
-  -- 依幣別決定小數位數（TWD/JPY/KRW/VND 等無小數）
+  -- 依幣別決定小數位數（此清單須與 src/lib/constants.js 的 ZERO_DECIMAL_CURRENCIES 保持一致）
   v_decimal_places := CASE
-    WHEN v_group_currency IN ('TWD', 'JPY', 'KRW', 'VND', 'HUF', 'ISK', 'IDR') THEN 0
+    WHEN v_group_currency IN (
+      'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW',
+      'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+      'TWD'
+    ) THEN 0
     ELSE 2
   END;
   v_total_share := ROUND(v_total_share, v_decimal_places);

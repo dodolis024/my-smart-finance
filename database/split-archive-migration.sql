@@ -13,23 +13,27 @@ DECLARE
   v_group_id UUID;
   v_member split_members%ROWTYPE;
 BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'AUTH_REQUIRED';
+  END IF;
+
   -- 用邀請碼查 group_id，查不到直接擋
   SELECT id INTO v_group_id
   FROM split_groups
   WHERE invite_code = upper(trim(p_invite_code));
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION '邀請碼無效';
+    RAISE EXCEPTION 'SPLIT_INVALID_INVITE';
   END IF;
 
   -- 已封存的群組不允許加入
   IF EXISTS (SELECT 1 FROM split_groups WHERE id = v_group_id AND archived_at IS NOT NULL) THEN
-    RAISE EXCEPTION '此群組已封存';
+    RAISE EXCEPTION 'SPLIT_GROUP_ARCHIVED';
   END IF;
 
   -- 確保用戶未重複加入同一群組
   IF EXISTS (SELECT 1 FROM split_members WHERE group_id = v_group_id AND user_id = auth.uid()) THEN
-    RAISE EXCEPTION '你已經是此群組的成員';
+    RAISE EXCEPTION 'SPLIT_ALREADY_MEMBER';
   END IF;
 
   INSERT INTO split_members (group_id, name, user_id)
