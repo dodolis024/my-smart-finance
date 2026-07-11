@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.21.1] - Jul-11 2026
 - Improved push notification and reminder email content for multi-language display
 - Improved custom split: auto-split remainders no longer block submission with a total mismatch
 - Fixed the longest streak possibly showing less than the current streak after freeze cards bridged missed days
