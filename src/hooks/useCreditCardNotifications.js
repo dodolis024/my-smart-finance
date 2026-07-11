@@ -41,11 +41,11 @@ export function useCreditCardNotifications() {
         const used = calculateCreditUsage(account, history);
         const usageRate = used / creditLimit;
 
+        // user_id／account_name 由 edge function 端以 JWT 與資料庫查詢為準（不信任 body），
+        // 這裡不再傳送這兩個欄位
         supabase.functions.invoke('send-credit-usage-alert', {
           body: {
-            user_id: user.id,
             account_id: account.id,
-            account_name: account.name ?? account.accountName,
             usage_rate: usageRate,
           },
         }).catch(() => {});

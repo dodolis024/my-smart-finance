@@ -1,4 +1,4 @@
-const ZERO_DECIMAL_CURRENCIES = new Set(['TWD', 'JPY', 'KRW', 'VND']);
+import { ZERO_DECIMAL_CURRENCIES } from './constants';
 
 /**
  * Format an amount for display in the given currency

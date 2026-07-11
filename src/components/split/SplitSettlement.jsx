@@ -1,16 +1,12 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { formatSplitAmount } from '@/lib/splitSettlement';
 
 export default function SplitSettlement({ transactions, currency, onSettle, settlementHistory, onDeleteSettlement }) {
   const { t } = useLanguage();
   const [showHistory, setShowHistory] = useState(false);
   const cur = currency || 'TWD';
-  const ZERO_DECIMAL = new Set(['TWD', 'JPY', 'KRW', 'VND']);
-  const fmtAmt = (amt, c = cur) => {
-    const d = ZERO_DECIMAL.has(c) ? 0 : 2;
-    const rounded = Number(amt.toFixed(d));
-    return rounded.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
-  };
+  const fmtAmt = (amt, c = cur) => formatSplitAmount(amt, c);
 
   return (
     <div className="split-settlement">
