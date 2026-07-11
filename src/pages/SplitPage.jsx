@@ -9,10 +9,12 @@ import SplitGroupCard from '@/components/split/SplitGroupCard';
 import SplitGroupDetail from '@/components/split/SplitGroupDetail';
 import CreateGroupModal from '@/components/split/CreateGroupModal';
 
-const SPLIT_CURRENCIES = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP'];
+// 幣別下拉選項排序：常用幣別優先，其餘照字母序（與個人帳本一致）
+const PREFERRED_ORDER = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP'];
 
-// Module-level cache for exchange rates
+// Module-level caches（跨頁面切換沿用，避免重複查詢）
 let cachedRates = null;
+let cachedCurrencies = null;
 
 // ── 分帳主頁（/split）────────────────────────────────────────────────────────
 export default function SplitPage() {
@@ -23,6 +25,7 @@ export default function SplitPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [rates, setRates] = useState(() => cachedRates || { TWD: 1 });
+  const [currencies, setCurrencies] = useState(() => cachedCurrencies || PREFERRED_ORDER);
   const toast = useToast();
   const { confirm } = useConfirm();
 
@@ -40,7 +43,6 @@ export default function SplitPage() {
     supabase
       .from('exchange_rates')
       .select('currency_code, rate')
-      .in('currency_code', SPLIT_CURRENCIES)
       .then(({ data }) => {
         if (!data) return;
         const obj = { TWD: 1 };
@@ -48,6 +50,26 @@ export default function SplitPage() {
         cachedRates = obj;
         setRates(obj);
       });
+  }, []);
+
+  // 幣別選項改由匯率表動態決定（與個人帳本同一來源），免手動維護清單
+  useEffect(() => {
+    if (cachedCurrencies) return;
+    supabase.rpc('get_available_currencies').then(({ data, error }) => {
+      if (error || !Array.isArray(data) || data.length === 0) return;
+      const upper = data.map(c => String(c).toUpperCase());
+      upper.sort((a, b) => {
+        const ai = PREFERRED_ORDER.indexOf(a);
+        const bi = PREFERRED_ORDER.indexOf(b);
+        if (ai !== -1 && bi !== -1) return ai - bi;
+        if (ai !== -1) return -1;
+        if (bi !== -1) return 1;
+        return a.localeCompare(b);
+      });
+      if (!upper.includes('TWD')) upper.unshift('TWD');
+      cachedCurrencies = upper;
+      setCurrencies(upper);
+    });
   }, []);
 
   const handleCreate = async (data) => {
@@ -87,7 +109,7 @@ export default function SplitPage() {
             group={selectedGroup}
             onBack={() => setSelectedGroup(null)}
             rates={rates}
-            currencies={SPLIT_CURRENCIES}
+            currencies={currencies}
             onAddMember={async (groupId, name) => {
               try {
                 await addMember(groupId, name);
@@ -190,7 +212,7 @@ export default function SplitPage() {
             isOpen={createOpen}
             onClose={() => setCreateOpen(false)}
             onCreate={handleCreate}
-            currencies={SPLIT_CURRENCIES}
+            currencies={currencies}
           />
         </>
       )}
