@@ -2,6 +2,12 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added an export menu to transactions: export the current month, search results, or a custom month range as CSV
+- Improved the cross-month search hint: shows the true total when matches exceed 200, and export still includes every match
+- Strengthened split security: unauthenticated requests can no longer write member records via an invite code
+- Fixed custom split amounts exceeding the total leaving other members with negative shares
+- Fixed the missing-rate split error listing multiple currencies with a Chinese separator in the English UI
+
 ## [1.21.1] - Jul-11 2026
 - Improved push notification and reminder email content for multi-language display
 - Improved custom split: auto-split remainders no longer block submission with a total mismatch
