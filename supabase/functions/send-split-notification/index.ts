@@ -6,6 +6,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import webpush from 'npm:web-push'
+import { splitNotifyBody } from '../_shared/notificationTexts.ts'
+import { getUserLangs } from '../_shared/userLang.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -93,30 +95,22 @@ serve(async (req) => {
       actor_name = body.actor_name ?? ''
     }
 
-    // 組合通知文字
+    // 組合通知文字（依收件者語言，預組兩份）
     const amountStr = expense_amount != null ? ` ${currency || 'TWD'} ${expense_amount}` : ''
-    let notifyBody = ''
-    switch (event) {
-      case 'expense_added':
-        notifyBody = `${actor_name} 在「${group_name}」新增了費用「${expense_title}」${amountStr}`
-        break
-      case 'expense_updated':
-        notifyBody = `${actor_name} 更新了費用「${expense_title}」`
-        break
-      case 'expense_deleted':
-        notifyBody = `${actor_name} 刪除了費用「${expense_title}」`
-        break
-      case 'member_added':
-        notifyBody = `${actor_name} 將「${member_name}」加入了「${group_name}」`
-        break
-      case 'member_removed':
-        notifyBody = `「${member_name}」已從「${group_name}」被移除`
-        break
-      case 'settlement_added':
-        notifyBody = `${actor_name} 記錄了「${from_name}」→「${to_name}」的還款 ${currency || 'TWD'} ${expense_amount}`
-        break
-      default:
-        notifyBody = `${group_name} 有新的異動`
+    const textParams = {
+      actorName: actor_name,
+      groupName: group_name,
+      expenseTitle: expense_title,
+      memberName: member_name,
+      fromName: from_name,
+      toName: to_name,
+      amountStr,
+      currency,
+      expenseAmount: expense_amount,
+    }
+    const bodyByLang = {
+      zh: splitNotifyBody(event, 'zh', textParams),
+      en: splitNotifyBody(event, 'en', textParams),
     }
 
     // 查詢群組內有 user_id 的成員，排除操作者本人
@@ -137,6 +131,7 @@ serve(async (req) => {
     }
 
     const userIds = members.map((m) => m.user_id)
+    const langs = await getUserLangs(supabase, userIds)
 
     // 查詢這些 user_id 的所有 push_subscriptions
     const { data: subscriptions, error: subsError } = await supabase
@@ -153,13 +148,22 @@ serve(async (req) => {
       )
     }
 
-    const payload = JSON.stringify({
-      title: 'Smart Finance',
-      body: notifyBody,
-      icon: '/my-smart-finance/favicons/web-app-manifest-192x192.png',
-      badge: '/my-smart-finance/favicons/favicon-96x96.png',
-      url: '/my-smart-finance/',
-    })
+    const payloadByLang = {
+      zh: JSON.stringify({
+        title: 'Smart Finance',
+        body: bodyByLang.zh,
+        icon: '/my-smart-finance/favicons/web-app-manifest-192x192.png',
+        badge: '/my-smart-finance/favicons/favicon-96x96.png',
+        url: '/my-smart-finance/',
+      }),
+      en: JSON.stringify({
+        title: 'Smart Finance',
+        body: bodyByLang.en,
+        icon: '/my-smart-finance/favicons/web-app-manifest-192x192.png',
+        badge: '/my-smart-finance/favicons/favicon-96x96.png',
+        url: '/my-smart-finance/',
+      }),
+    }
 
     let sent = 0
     let failed = 0
@@ -167,6 +171,7 @@ serve(async (req) => {
 
     for (const sub of subscriptions) {
       try {
+        const payload = payloadByLang[langs.get(sub.user_id) ?? 'zh']
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           payload

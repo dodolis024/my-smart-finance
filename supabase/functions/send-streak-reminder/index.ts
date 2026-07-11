@@ -8,6 +8,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { isReminderTime, getUserToday } from './reminderTime.ts'
+import { streakEmailSubject, streakEmailHtml } from '../_shared/notificationTexts.ts'
+import { getUserLangs } from '../_shared/userLang.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -168,6 +170,8 @@ serve(async (req) => {
       return true
     })
 
+    const langs = await getUserLangs(supabase, needEmail.map((c) => c.userId))
+
     // 7. 批次取得需寄信用戶的 email（一次 RPC 取代逐一 auth.admin.getUserById）
     if (needEmail.length > 0) {
       const emailIds = [...new Set(needEmail.map((c) => c.userId))]
@@ -195,9 +199,11 @@ serve(async (req) => {
     }
 
     // 8. 如果有需要通知的用戶，透過 Brevo API 發信
-    const emailHtml = buildEmailHtml()
+    const htmlByLang = { zh: streakEmailHtml('zh'), en: streakEmailHtml('en') }
+    const subjectByLang = { zh: streakEmailSubject('zh'), en: streakEmailSubject('en') }
     for (const { userId, email, userToday } of usersToNotify) {
       try {
+        const lang = langs.get(userId) ?? 'zh'
         const res = await fetch('https://api.brevo.com/v3/smtp/email', {
           method: 'POST',
           headers: {
@@ -207,8 +213,8 @@ serve(async (req) => {
           body: JSON.stringify({
             sender: { name: 'My Smart Finance', email: 'dorischen0910224@gmail.com' },
             to: [{ email }],
-            subject: '你今天還沒記帳喔！別讓連續紀錄中斷了 🔥',
-            htmlContent: emailHtml,
+            subject: subjectByLang[lang],
+            htmlContent: htmlByLang[lang],
           }),
         })
 
@@ -256,29 +262,3 @@ serve(async (req) => {
     )
   }
 })
-
-/**
- * 組合 email HTML 內容
- */
-function buildEmailHtml(): string {
-  return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 2rem;">
-      <h2 style="color: #333; margin-bottom: 1rem;">哈嚕！你的提醒已抵達 ✨</h2>
-      <p style="color: #666; line-height: 1.6; font-size: 1rem;">
-        你今天還迷有記帳或簽到，再不快點紀錄就要中斷了！
-      </p>
-      <p style="color: #666; line-height: 1.6; font-size: 1rem;">
-        快去紀錄今天的花費，或者按一下 Check-in Button 來維持你的 streak 吧～！
-      </p>
-      <div style="margin-top: 1.5rem;">
-        <a href="https://dodolis024.github.io/my-smart-finance/"
-           style="display: inline-block; padding: 0.75rem 1.5rem; background: #b59c80; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
-          前往記帳
-        </a>
-      </div>
-      <p style="color: #999; font-size: 0.8rem; margin-top: 2rem;">
-        你可以在 My Smart Finance 的 更多->簽到提醒 關閉此提醒。
-      </p>
-    </div>
-  `
-}

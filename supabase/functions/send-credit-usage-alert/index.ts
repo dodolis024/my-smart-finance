@@ -7,6 +7,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import webpush from 'npm:web-push'
+import { usageAlertBody } from '../_shared/notificationTexts.ts'
+import { normalizeLang, type Lang } from '../_shared/userLang.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,19 +73,21 @@ serve(async (req) => {
     }
     const account_name = account.name
 
-    // 1. 查詢用戶通知設定
+    // 1. 查詢用戶通知設定（順便併入語言偏好，省一次往返）
     const { data: settingsRows } = await supabase
       .from('settings')
       .select('key, value')
       .eq('user_id', user_id)
-      .in('key', ['credit_card_notification_settings', 'credit_card_usage_alert_last_sent'])
+      .in('key', ['credit_card_notification_settings', 'credit_card_usage_alert_last_sent', 'ui_preferences'])
 
     const notifSettings: Record<string, unknown> = {}
     let lastSentMap: Record<string, { warn?: string; over?: string }> = {}
+    let lang: Lang = 'zh'
 
     for (const row of (settingsRows || [])) {
       if (row.key === 'credit_card_notification_settings') Object.assign(notifSettings, row.value)
       if (row.key === 'credit_card_usage_alert_last_sent') lastSentMap = row.value || {}
+      if (row.key === 'ui_preferences') lang = normalizeLang(row.value)
     }
 
     // 跳過未啟用使用率警告的用戶
@@ -136,9 +140,7 @@ serve(async (req) => {
 
     // 4. 組合通知文字
     const pctStr = Math.round(usagePct)
-    const notifyBody = isOver
-      ? `「${account_name}」已超過信用額度（${pctStr}%），請注意！`
-      : `「${account_name}」使用率已達 ${pctStr}%，接近額度上限`
+    const notifyBody = usageAlertBody(lang, account_name, pctStr, isOver)
 
     const payload = JSON.stringify({
       title: 'Smart Finance',

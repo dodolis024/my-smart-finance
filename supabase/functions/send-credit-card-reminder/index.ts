@@ -7,6 +7,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import webpush from 'npm:web-push'
+import { creditReminderBody } from '../_shared/notificationTexts.ts'
+import { getUserLangs } from '../_shared/userLang.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,6 +52,7 @@ serve(async (req) => {
 
     // 2. 取出有信用卡的 user_id 清單，撈出他們的通知設定與防重複記錄
     const userIds = [...new Set(creditCards.map((c) => c.user_id))]
+    const langs = await getUserLangs(supabase, userIds)
 
     const { data: allSettings, error: settingsError } = await supabase
       .from('settings')
@@ -110,9 +113,8 @@ serve(async (req) => {
 
       // 組合通知文字
       const notifyTitle = 'Smart Finance'
-      const notifyBody = daysUntilDue === 0
-        ? `「${card.name}」今天是繳款日，記得繳清！`
-        : `「${card.name}」還有 ${daysUntilDue} 天到繳款日`
+      const lang = langs.get(userId) ?? 'zh'
+      const notifyBody = creditReminderBody(lang, card.name, daysUntilDue)
 
       const payload = JSON.stringify({
         title: notifyTitle,
