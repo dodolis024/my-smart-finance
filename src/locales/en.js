@@ -525,6 +525,7 @@ const en = {
       noPayerSelected: 'Please select who paid',
       noParticipants: 'Please select at least one participant',
       customMismatch: 'Custom amounts ({total}) must equal the expense amount ({amount})',
+      customNegative: 'Custom amounts exceed the expense total, leaving other members with negative shares — please adjust',
       shareBalanced: 'Allocated {amount} / {total} ✓',
       shareOver: 'Over-allocated {amount} / {total} (over by {diff})',
       shareRemaining: 'Allocated {amount} / {total} (remaining {diff})',

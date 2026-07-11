@@ -122,7 +122,10 @@ export default function PreferenceSync() {
 
         if (!serverIsNewer) {
           if (pending.theme) lastSyncedThemeRef.current = pending.theme;
-          pushPreferences(userId, pending);
+          // pending 是從 localStorage 讀回的物件，含本機專用的 savedAt；
+          // 重放時要剝掉，避免 savedAt 混進伺服器 value 欄位（見上方 pushPreferences 註解）。
+          const { savedAt: _saved, ...prefValue } = pending;
+          pushPreferences(userId, prefValue);
           syncedUserRef.current = userId;
           hydratedRef.current = true;
           return;

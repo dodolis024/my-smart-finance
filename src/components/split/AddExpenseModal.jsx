@@ -272,6 +272,12 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
       shares = calcEqualShares();
     } else {
       shares = buildCustomShares();
+      // 手動金額超過總額時，未填成員的自動分配為負數，總和仍等於總額而能通過
+      // customMismatch 檢查——先擋下，避免負的分攤被寫入資料庫
+      if (Object.values(shares).some(v => v < 0)) {
+        setError(t('split.addExpenseModal.customNegative'));
+        return;
+      }
       const total = Object.values(shares).reduce((s, v) => s + v, 0);
       if (Math.abs(total - amt) > 0.02) {
         setError(t('split.addExpenseModal.customMismatch', { total: total.toFixed(2), amount: amt.toFixed(2) }));

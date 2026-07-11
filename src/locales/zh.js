@@ -525,6 +525,7 @@ const zh = {
       noPayerSelected: '請選擇付款人',
       noParticipants: '請選擇至少一位參與成員',
       customMismatch: '自訂金額總和（{total}）必須等於費用金額（{amount}）',
+      customNegative: '自訂金額已超過費用總額，其他成員的分攤會變成負數，請調整',
       shareBalanced: '已分配 {amount} / {total} ✓',
       shareOver: '已超出 {amount} / {total}（超出 {diff}）',
       shareRemaining: '已分配 {amount} / {total}（剩餘 {diff}）',
