@@ -2,8 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const SEARCH_DEBOUNCE_MS = 300;
-const SEARCH_LIMIT = 200;
+export const SEARCH_LIMIT = 200;
 const SEARCH_COLUMNS = ['item_name', 'category', 'note', 'payment_method'];
+// 兩個查詢（跨月搜尋 / 自訂區間匯出）共用同一份欄位定義，避免日後漂移
+const SELECT_COLUMNS = 'id, date, type, item_name, category, payment_method, currency, amount, exchange_rate, twd_amount, note';
 
 /**
  * 消毒搜尋字（export 供測試直接驗）：
@@ -36,11 +38,62 @@ export function mapSearchRow(row) {
 }
 
 /**
+ * 跨月交易搜尋的共用查詢邏輯（供 hook 內部與 CSV 完整匯出共用，避免兩邊查詢條件漂移）。
+ * @param {string} userId
+ * @param {string} rawQuery 未消毒的搜尋字
+ * @param {{ limit?: number, count?: boolean }} [options] limit 為 null/undefined 時不限筆數；count 為 true 時向 PostgREST 要精確總數
+ * @returns {Promise<{ rows: object[], count: number, error: object|null }>}
+ */
+export async function fetchTransactionMatches(userId, rawQuery, { limit, count = false } = {}) {
+  const sanitized = sanitizeSearchQuery(rawQuery);
+  if (!userId || !sanitized) {
+    return { rows: [], count: 0, error: null };
+  }
+  const pattern = `%${sanitized}%`;
+  const orExpr = SEARCH_COLUMNS.map((c) => `${c}.ilike.${pattern}`).join(',');
+  let queryBuilder = supabase
+    .from('transactions')
+    .select(SELECT_COLUMNS, count ? { count: 'exact' } : undefined)
+    .eq('user_id', userId)
+    .or(orExpr)
+    .order('date', { ascending: false });
+  if (limit != null) {
+    queryBuilder = queryBuilder.limit(limit);
+  }
+  const { data, count: total, error } = await queryBuilder;
+  const rows = (data || []).map(mapSearchRow);
+  return { rows, count: total ?? rows.length, error };
+}
+
+/**
+ * 依日期區間（含端點）查詢交易，供「自訂區間匯出 CSV」使用。
+ * 不限筆數、日期舊→新排序，與跨月搜尋共用同一份欄位定義（SELECT_COLUMNS）。
+ * @param {string} userId
+ * @param {string} startDate 'YYYY-MM-DD'
+ * @param {string} endDate 'YYYY-MM-DD'
+ * @returns {Promise<{ rows: object[], error: object|null }>}
+ */
+export async function fetchTransactionsByDateRange(userId, startDate, endDate) {
+  if (!userId || !startDate || !endDate) {
+    return { rows: [], error: null };
+  }
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(SELECT_COLUMNS)
+    .eq('user_id', userId)
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: true });
+  return { rows: (data || []).map(mapSearchRow), error };
+}
+
+/**
  * 跨月交易搜尋（伺服器端 ilike，上限 200 筆，日期新→舊）。
  * debounce 300ms；requestIdRef 防過期回應（仿 useDashboard.js:83）。
  */
 export function useTransactionSearch(userId, query) {
   const [results, setResults] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const requestIdRef = useRef(0);
@@ -51,32 +104,28 @@ export function useTransactionSearch(userId, query) {
       const sanitized = sanitizeSearchQuery(rawQuery);
       if (!userId || !sanitized) {
         setResults([]);
+        setTotalCount(0);
         setSearching(false);
         setSearchError(null);
         return;
       }
       setSearching(true);
       setSearchError(null);
-      const pattern = `%${sanitized}%`;
-      const orExpr = SEARCH_COLUMNS.map((c) => `${c}.ilike.${pattern}`).join(',');
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(
-          'id, date, type, item_name, category, payment_method, currency, amount, exchange_rate, twd_amount, note'
-        )
-        .eq('user_id', userId)
-        .or(orExpr)
-        .order('date', { ascending: false })
-        .limit(SEARCH_LIMIT);
+      const { rows, count, error } = await fetchTransactionMatches(userId, rawQuery, {
+        limit: SEARCH_LIMIT,
+        count: true,
+      });
 
       if (reqId !== requestIdRef.current) return;
       setSearching(false);
       if (error) {
         setSearchError(error.message || 'search failed');
         setResults([]);
+        setTotalCount(0);
         return;
       }
-      setResults((data || []).map(mapSearchRow));
+      setResults(rows);
+      setTotalCount(count);
     },
     [userId]
   );
@@ -86,6 +135,7 @@ export function useTransactionSearch(userId, query) {
       // 作廢在途請求，立即清空
       requestIdRef.current++;
       setResults([]);
+      setTotalCount(0);
       setSearching(false);
       setSearchError(null);
       return;
@@ -103,5 +153,5 @@ export function useTransactionSearch(userId, query) {
     if (query && query.trim()) runSearch(query);
   }, [query, runSearch]);
 
-  return { results, searching, searchError, refresh };
+  return { results, totalCount, searching, searchError, refresh };
 }

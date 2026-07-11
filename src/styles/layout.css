@@ -89,6 +89,16 @@
   box-shadow: var(--shadow-focus);
 }
 
+.more-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.more-menu-item:disabled:hover {
+  background: transparent;
+  color: var(--color-text);
+}
+
 .more-menu-item-icon {
   width: 1.125rem;
   height: 1.125rem;

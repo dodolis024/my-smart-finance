@@ -6,7 +6,7 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useOfflineMergedView } from '@/hooks/useOfflineMergedView';
 import { useCreditCardNotifications } from '@/hooks/useCreditCardNotifications';
 import { useModalStates } from '@/hooks/useModalStates';
-import { useTransactionSearch } from '@/hooks/useTransactionSearch';
+import { useTransactionSearch, fetchTransactionMatches, fetchTransactionsByDateRange, SEARCH_LIMIT } from '@/hooks/useTransactionSearch';
 import { supabase } from '@/lib/supabase';
 import { buildTransactionsCsv, downloadCsv } from '@/lib/csvExport';
 import { subscribeTransactionsChanged } from '@/lib/transactionEvents';
@@ -18,6 +18,8 @@ import FormColumn from '@/components/layout/FormColumn';
 import DashboardColumn from '@/components/layout/DashboardColumn';
 import StatCards from '@/components/dashboard/StatCards';
 import MonthPicker from '@/components/dashboard/MonthPicker';
+import ExportMenu from '@/components/dashboard/ExportMenu';
+import ExportRangeModal from '@/components/dashboard/ExportRangeModal';
 import CategoryChart from '@/components/dashboard/CategoryChart';
 import PaymentStats from '@/components/dashboard/PaymentStats';
 import TransactionForm from '@/components/transactions/TransactionForm';
@@ -80,11 +82,14 @@ export default function DashboardPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  // 自訂區間匯出彈窗開關
+  const [exportRangeOpen, setExportRangeOpen] = useState(false);
   // 表格套完表頭篩選後的實際列數（由 TransactionTable 回報），供搜尋提示顯示一致的筆數
   const [visibleRowCount, setVisibleRowCount] = useState(0);
   const searchInputRef = useRef(null);
   const {
     results: searchResults,
+    totalCount: searchTotalCount,
     searching: searchLoading,
     searchError,
     refresh: refreshSearch,
@@ -357,16 +362,17 @@ export default function DashboardPage() {
   );
 
   const tableRows = searchActive ? searchResults : displayHistory;
+  const currentMonthLabel = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
 
-  const handleExportCsv = useCallback(async () => {
+  // 匯出本月（一般模式下的匯出鈕主選項）：保留原本的確認訊息與檔名，行為不變
+  const exportCurrentMonth = useCallback(async () => {
     if (tableRows.length === 0) return;
-    const monthLabel = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+
     const confirmed = await confirm(
-      searchActive
-        ? t('dashboard.exportConfirmSearch', { count: tableRows.length })
-        : t('dashboard.exportConfirmMonth', { count: tableRows.length, month: monthLabel })
+      t('dashboard.exportConfirmMonth', { count: tableRows.length, month: currentMonthLabel })
     );
     if (!confirmed) return;
+
     const csv = buildTransactionsCsv(tableRows, {
       headers: [
         t('transaction.tableDate'),
@@ -384,11 +390,96 @@ export default function DashboardPage() {
         income: t('transaction.incomeGroup'),
       },
     });
-    const filename = searchActive
-      ? 'my-smart-finance-search.csv'
-      : `my-smart-finance-${currentYear}-${String(currentMonth).padStart(2, '0')}.csv`;
-    downloadCsv(filename, csv);
-  }, [tableRows, searchActive, currentYear, currentMonth, t, confirm]);
+    downloadCsv(`my-smart-finance-${currentMonthLabel}.csv`, csv);
+  }, [tableRows, currentMonthLabel, t, confirm]);
+
+  // 匯出搜尋結果（搜尋模式下的匯出鈕主選項）：保留原本 capped/一般確認、完整抓取、錯誤 toast 與檔名，行為不變
+  const exportSearchResults = useCallback(async () => {
+    if (searchResults.length === 0) return;
+
+    const confirmed = await confirm(
+      searchTotalCount > SEARCH_LIMIT
+        ? t('dashboard.exportConfirmSearchCapped', { count: searchTotalCount })
+        : t('dashboard.exportConfirmSearch', { count: searchTotalCount })
+    );
+    if (!confirmed) return;
+
+    // 畫面上最多只有 SEARCH_LIMIT 筆，總數超過時要另外抓齊全部符合的列再匯出
+    let exportRows = searchResults;
+    if (searchTotalCount > searchResults.length) {
+      const { rows, error } = await fetchTransactionMatches(user.id, searchQuery, {
+        limit: searchTotalCount,
+      });
+      if (error) {
+        toast.error(t('dashboard.exportFailed'));
+        return;
+      }
+      exportRows = rows;
+    }
+
+    const csv = buildTransactionsCsv(exportRows, {
+      headers: [
+        t('transaction.tableDate'),
+        t('transaction.tableType'),
+        t('transaction.tableCategory'),
+        t('transaction.tableItem'),
+        t('transaction.tablePayment'),
+        t('transaction.currencyLabel'),
+        t('transaction.tableAmount'),
+        t('transaction.twdAmount'),
+        t('transaction.note'),
+      ],
+      typeLabels: {
+        expense: t('transaction.expenseGroup'),
+        income: t('transaction.incomeGroup'),
+      },
+    });
+    downloadCsv('my-smart-finance-search.csv', csv);
+  }, [searchResults, searchTotalCount, searchQuery, user, t, confirm, toast]);
+
+  // 自訂區間匯出：start/end 若顛倒自動對調，查出區間內全部交易後下載，無資料時提示不下載
+  const exportRange = useCallback(async (start, end) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    let { year: sy, month: sm } = start;
+    let { year: ey, month: em } = end;
+    if (sy * 12 + sm > ey * 12 + em) {
+      [sy, sm, ey, em] = [ey, em, sy, sm];
+    }
+
+    const startDate = `${sy}-${pad(sm)}-01`;
+    const lastDay = new Date(ey, em, 0).getDate();
+    const endDate = `${ey}-${pad(em)}-${pad(lastDay)}`;
+
+    const { rows, error } = await fetchTransactionsByDateRange(user.id, startDate, endDate);
+    if (error) {
+      toast.error(t('dashboard.exportFailed'));
+      return;
+    }
+    if (rows.length === 0) {
+      toast.info(t('dashboard.exportRangeEmpty'));
+      return;
+    }
+
+    const csv = buildTransactionsCsv(rows, {
+      headers: [
+        t('transaction.tableDate'),
+        t('transaction.tableType'),
+        t('transaction.tableCategory'),
+        t('transaction.tableItem'),
+        t('transaction.tablePayment'),
+        t('transaction.currencyLabel'),
+        t('transaction.tableAmount'),
+        t('transaction.twdAmount'),
+        t('transaction.note'),
+      ],
+      typeLabels: {
+        expense: t('transaction.expenseGroup'),
+        income: t('transaction.incomeGroup'),
+      },
+    });
+    downloadCsv(`my-smart-finance-${sy}-${pad(sm)}_${ey}-${pad(em)}.csv`, csv);
+    setExportRangeOpen(false);
+  }, [user, t, toast]);
 
   return (
     <div className="app-container">
@@ -526,17 +617,18 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                 </svg>
               </button>
-              <button
-                type="button"
-                className="btn-export-csv"
-                onClick={handleExportCsv}
-                disabled={tableRows.length === 0}
-                aria-label={t('dashboard.exportCsvAria')}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15" />
-                </svg>
-              </button>
+              <ExportMenu
+                triggerAriaLabel={t('dashboard.exportCsvAria')}
+                primaryLabel={
+                  searchActive
+                    ? t('dashboard.exportMenuSearch', { count: searchTotalCount })
+                    : t('dashboard.exportMenuMonth', { month: currentMonthLabel })
+                }
+                primaryDisabled={searchActive ? searchResults.length === 0 : tableRows.length === 0}
+                onExportPrimary={searchActive ? exportSearchResults : exportCurrentMonth}
+                rangeLabel={t('dashboard.exportMenuRange')}
+                onExportRange={() => setExportRangeOpen(true)}
+              />
             </div>
           </div>
           {searchActive && (
@@ -548,6 +640,8 @@ export default function DashboardPage() {
                 ? t('common.loadingDots')
                 : searchError
                 ? t('dashboard.searchFailed')
+                : searchTotalCount > SEARCH_LIMIT
+                ? t('dashboard.searchResultCountCapped', { count: searchTotalCount })
                 : t('dashboard.searchResultCount', { count: visibleRowCount })}
             </p>
           )}
@@ -584,6 +678,14 @@ export default function DashboardPage() {
         history={creditHistory}
         viewedYear={currentYear}
         viewedMonth={currentMonth}
+      />
+
+      <ExportRangeModal
+        isOpen={exportRangeOpen}
+        onClose={() => setExportRangeOpen(false)}
+        initialYear={currentYear}
+        initialMonth={currentMonth}
+        onExport={(s, e) => exportRange(s, e)}
       />
 
     </div>

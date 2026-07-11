@@ -511,6 +511,11 @@
   cursor: not-allowed;
 }
 
+/* 匯出下拉選單的定位容器（讓 more-menu-dropdown 的 absolute 定位錨在此） */
+.export-menu-wrapper {
+  position: relative;
+}
+
 /* 跨月搜尋結果提示行 */
 .transaction-search-hint {
   margin: calc(var(--space-sm) * -0.35) 0 var(--space-sm);

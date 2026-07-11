@@ -244,8 +244,10 @@ body.calc-keypad-open .split-modal__dialog {
   margin-top: 1.5rem;
 }
 
-.split-modal__actions .split-btn-primary {
+.split-modal__actions .split-btn-primary,
+.split-modal__actions .split-btn-secondary {
   flex: 1;
+  width: auto;
 }
 
 .split-modal__share-modes {
