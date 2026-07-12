@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.21.2] - Jul-12 2026
 - Added a push reminder when a subscription charge is skipped because the exchange rate is unavailable
 - Improved transaction export: now a menu offering the current month, search results, or a custom month range as CSV
 - Improved the cross-month search hint: shows the true total when matches exceed 200, and export still includes every match
