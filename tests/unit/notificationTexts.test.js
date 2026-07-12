@@ -3,6 +3,7 @@ import {
   splitNotifyBody,
   creditReminderBody,
   usageAlertBody,
+  subscriptionRateSkipBody,
   streakEmailSubject,
   streakEmailHtml,
 } from '../../supabase/functions/_shared/notificationTexts.ts';
@@ -98,6 +99,17 @@ describe('usageAlertBody', () => {
     );
     expect(usageAlertBody('en', '國泰卡', 105, true)).toBe(
       '"國泰卡" is over its credit limit (105%)!'
+    );
+  });
+});
+
+describe('subscriptionRateSkipBody', () => {
+  it('zh/en', () => {
+    expect(subscriptionRateSkipBody('zh', 'Netflix', 'USD')).toBe(
+      '「Netflix」今日扣款因無法取得 USD 匯率未自動入帳，請手動記錄'
+    );
+    expect(subscriptionRateSkipBody('en', 'Netflix', 'USD')).toBe(
+      '"Netflix" wasn\'t charged today — USD exchange rate unavailable, please record it manually'
     );
   });
 });

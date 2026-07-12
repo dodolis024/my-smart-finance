@@ -7,6 +7,9 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import webpush from 'npm:web-push'
+import { subscriptionRateSkipBody } from '../_shared/notificationTexts.ts'
+import { getUserLangs } from '../_shared/userLang.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,6 +64,8 @@ serve(async (req) => {
 
     const created: string[] = []
     const errors: { subscriptionId: string; error: string }[] = []
+    // 因缺匯率被跳過的訂閱：主迴圈結束後批次推播提醒擁有者手動記帳
+    const rateSkipped: { userId: string; subName: string; currency: string }[] = []
 
     for (const sub of subscriptions) {
       try {
@@ -107,6 +112,7 @@ serve(async (req) => {
           })
           if (rateErr || rateVal == null || Number(rateVal) <= 0) {
             errors.push({ subscriptionId: sub.id, error: `no exchange rate for ${sub.currency}` })
+            rateSkipped.push({ userId: sub.user_id, subName: sub.name, currency: sub.currency.toUpperCase() })
             continue
           }
           exchangeRate = Number(rateVal)
@@ -153,6 +159,17 @@ serve(async (req) => {
       }
     }
 
+    // 推播提醒：訂閱因缺匯率被跳過時通知擁有者手動記帳
+    // 加值功能，VAPID 未設定或發送失敗都只記錄，不影響已完成的交易建立與回應
+    let rateSkipNotified = 0
+    if (rateSkipped.length > 0) {
+      try {
+        rateSkipNotified = await notifyRateSkipped(supabase, rateSkipped)
+      } catch (err) {
+        console.error('[process-subscriptions] rate-skip push notification failed:', err.message)
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -160,6 +177,7 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
         transactionsCreated: created.length,
         errors: errors.length > 0 ? errors : undefined,
+        rateSkipNotified,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
@@ -171,3 +189,82 @@ serve(async (req) => {
     )
   }
 })
+
+/**
+ * 訂閱因缺匯率被跳過時，推播提醒擁有者手動記帳（加值功能）
+ * VAPID 未設定或個別發送失敗都只記錄，回傳值為實際送達的通知數
+ */
+async function notifyRateSkipped(
+  supabase: any,
+  items: { userId: string; subName: string; currency: string }[]
+): Promise<number> {
+  const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
+  const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
+  const vapidSubject = Deno.env.get('VAPID_SUBJECT')
+
+  if (!vapidPublicKey || !vapidPrivateKey || !vapidSubject) {
+    console.error('[process-subscriptions] VAPID secrets not configured, skip rate-skip push')
+    return 0
+  }
+
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+
+  const userIds = [...new Set(items.map((i) => i.userId))]
+  const langs = await getUserLangs(supabase, userIds)
+
+  const { data: subscriptions, error: subsError } = await supabase
+    .from('push_subscriptions')
+    .select('user_id, endpoint, p256dh, auth')
+    .in('user_id', userIds)
+
+  if (subsError) {
+    console.error('[process-subscriptions] failed to fetch push_subscriptions:', subsError.message)
+    return 0
+  }
+  if (!subscriptions || subscriptions.length === 0) return 0
+
+  const subsByUser = new Map<string, typeof subscriptions>()
+  for (const s of subscriptions) {
+    if (!subsByUser.has(s.user_id)) subsByUser.set(s.user_id, [])
+    subsByUser.get(s.user_id)!.push(s)
+  }
+
+  let sent = 0
+  const staleEndpoints: string[] = []
+
+  for (const item of items) {
+    const userSubs = subsByUser.get(item.userId)
+    if (!userSubs || userSubs.length === 0) continue
+
+    const lang = langs.get(item.userId) ?? 'zh'
+    const payload = JSON.stringify({
+      title: 'Smart Finance',
+      body: subscriptionRateSkipBody(lang, item.subName, item.currency),
+      icon: '/my-smart-finance/favicons/web-app-manifest-192x192.png',
+      badge: '/my-smart-finance/favicons/favicon-96x96.png',
+      url: '/my-smart-finance/',
+    })
+
+    for (const sub of userSubs) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        )
+        sent++
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          staleEndpoints.push(sub.endpoint)
+        } else {
+          console.error(`[process-subscriptions] Push failed for ${sub.endpoint}:`, err.message)
+        }
+      }
+    }
+  }
+
+  if (staleEndpoints.length > 0) {
+    await supabase.from('push_subscriptions').delete().in('endpoint', staleEndpoints)
+  }
+
+  return sent
+}

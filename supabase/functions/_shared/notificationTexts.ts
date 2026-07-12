@@ -79,6 +79,14 @@ export function usageAlertBody(lang: Lang, accountName: string, pctStr: number, 
     : `「${accountName}」使用率已達 ${pctStr}%，接近額度上限`
 }
 
+// ── 訂閱缺匯率跳過推播（process-subscriptions）──
+export function subscriptionRateSkipBody(lang: Lang, subName: string, currency: string): string {
+  if (lang === 'en') {
+    return `"${subName}" wasn't charged today — ${currency} exchange rate unavailable, please record it manually`
+  }
+  return `「${subName}」今日扣款因無法取得 ${currency} 匯率未自動入帳，請手動記錄`
+}
+
 // ── 簽到提醒 Email（send-streak-reminder）──
 export function streakEmailSubject(lang: Lang): string {
   return lang === 'en'

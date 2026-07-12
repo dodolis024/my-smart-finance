@@ -71,7 +71,7 @@
 | send-split-notification | 2026-07-11 | v8 | 同上 |
 | send-credit-card-reminder | 2026-07-11 | v4 | 同上,repo 自 2026-03-26 起僅此次改動 |
 | send-credit-usage-alert | 2026-07-11 | v4 | 同上 |
-| process-subscriptions | 2026-07-10 | v6 | 匯率查無改跳過該筆 |
+| process-subscriptions | 2026-07-11 | v7 | 缺匯率跳過時推播提醒手動記帳 |
 
 (以 `supabase functions list` 的 updated_at/version 為準;2026-07-11 已核對)
 
