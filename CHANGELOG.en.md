@@ -5,6 +5,7 @@ This file records version updates for Smart Finance Tracker.
 - Added a push reminder when a subscription charge is skipped because the exchange rate is unavailable
 - Improved transaction export: now a menu offering the current month, search results, or a custom month range as CSV
 - Improved the cross-month search hint: shows the true total when matches exceed 200, and export still includes every match
+- Improved custom split: unfilled members' placeholder amounts now match what is actually submitted, including the rounding remainder
 - Strengthened split security: unauthenticated requests can no longer write member records via an invite code
 - Fixed custom split amounts exceeding the total leaving other members with negative shares
 - Fixed the missing-rate split error listing multiple currencies with a Chinese separator in the English UI

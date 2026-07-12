@@ -77,7 +77,11 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   }, 0);
   const unfilledIds = participants.filter(id => customShares[id] === undefined || customShares[id] === '');
   const remaining = totalAmt - manualTotal;
+  // 無條件捨去的零頭補給第一位未填成員（unfilledIds[0]），
+  // 提升到這一層讓 placeholder 顯示與 buildCustomShares 送出永遠同源，避免所見即所得跑掉
   const autoShare = unfilledIds.length > 0 ? Math.floor((remaining / unfilledIds.length) * 100) / 100 : 0;
+  const autoShareRemainder = unfilledIds.length > 0 ? Math.round((remaining - autoShare * unfilledIds.length) * 100) / 100 : 0;
+  const autoShareFirst = Math.round((autoShare + autoShareRemainder) * 100) / 100;
 
   const handleClose = () => {
     setTitle(''); setAmount(''); setNote(''); setError('');
@@ -244,17 +248,15 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
 
   // 自訂模式送出時，將自動分配的金額也納入；
   // 比照 calcEqualShares，把無條件捨去產生的零頭補給第一位自動分配的成員，避免總和與總額不符
+  // base/remainder 已提升到 autoShare/autoShareFirst，與 placeholder 顯示同源
   const buildCustomShares = () => {
     const shares = {};
-    const n = unfilledIds.length;
-    const base = n > 0 ? Math.floor((remaining / n) * 100) / 100 : 0;
-    const remainder = n > 0 ? Math.round((remaining - base * n) * 100) / 100 : 0;
     participants.forEach(id => {
       const v = customShares[id];
       if (v !== undefined && v !== '') {
         shares[id] = parseExpression(v) || 0;
       } else {
-        shares[id] = id === unfilledIds[0] ? Math.round((base + remainder) * 100) / 100 : base;
+        shares[id] = id === unfilledIds[0] ? autoShareFirst : autoShare;
       }
     });
     return shares;
@@ -390,7 +392,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
                       type="text"
                       inputMode="none"
                       className={`split-modal__participant-share is-calc${isAutoFilled ? ' is-auto' : ''}`}
-                      placeholder={isAutoFilled ? autoShare.toLocaleString() : '0'}
+                      placeholder={isAutoFilled ? (m.id === unfilledIds[0] ? autoShareFirst : autoShare).toLocaleString() : '0'}
                       value={customShares[m.id] ?? ''}
                       readOnly
                       ref={(el) => {
