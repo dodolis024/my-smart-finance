@@ -6,6 +6,7 @@ This file records version updates for Smart Finance Tracker.
 - Added income/expense totals for searches: the stat cards show total income, expense, and balance for matching results (covering every match, not just the display cap)
 - Added Hong Kong dollar (HKD) as a currency option
 - Improved category editing: the transaction form's category menu now updates instantly after adding, renaming, deleting, or reordering
+- Fixed a newly added currency not appearing on devices that had already loaded the app, caused by a stale cached currency list
 
 ## [1.21.2] - Jul-12 2026
 - Added a push reminder when a subscription charge is skipped because the exchange rate is unavailable
