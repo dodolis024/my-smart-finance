@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { getCached, setCached } from '@/lib/resourceCache';
+import { getCached, setCached, subscribe } from '@/lib/resourceCache';
 
 /**
  * 共用的「以 userId 綁定的模組級快取資源」hook。
@@ -51,6 +51,12 @@ export function useCachedResource(key, { userId, initial, fetcher }) {
   useEffect(() => {
     setCached(key, userId, data);
   }, [key, userId, data]);
+
+  // 同步 快取 → state：讓同 key 的其他實例（例如同時掛載的多個分頁）即時同步彼此的寫入
+  useEffect(() => subscribe(key, () => {
+    const cached = getCached(key, userId);
+    if (cached !== undefined) setData(cached);
+  }), [key, userId]);
 
   const load = useCallback(async () => {
     if (!userId) return;

@@ -94,6 +94,23 @@ export function useSettings() {
     await saveCategoriesType(type, categories);
   }, [expenseCategories, incomeCategories, saveCategoriesType]);
 
+  // 拖曳排序：以整個新順序覆寫（來源清單須與現有類別相同，只是順序不同）。
+  // 樂觀更新：先讓本地畫面立即到位（拖曳放手不閃動），存檔在背景進行，失敗才回滾。
+  const reorderCategoriesTo = useCallback(async (type, orderedNames) => {
+    const current = type === 'expense' ? expenseCategories : incomeCategories;
+    const sameSet = orderedNames.length === current.length && orderedNames.every((n) => current.includes(n));
+    if (!sameSet) return;
+    const field = type === 'expense' ? 'expenseCategories' : 'incomeCategories';
+    const prevOrder = [...current];
+    setData((prev) => ({ ...prev, [field]: [...orderedNames] }));
+    try {
+      await saveCategoriesType(type, orderedNames);
+    } catch (err) {
+      setData((prev) => ({ ...prev, [field]: prevOrder }));
+      throw err;
+    }
+  }, [expenseCategories, incomeCategories, saveCategoriesType, setData]);
+
   const saveAccount = useCallback(async (accountData, accountId = null) => {
     if (!user) return;
     const trimmedName = accountData.name?.trim();
@@ -145,6 +162,7 @@ export function useSettings() {
     addCategory,
     renameCategory,
     deleteCategory,
+    reorderCategoriesTo,
     saveAccount,
     deleteAccount,
   };

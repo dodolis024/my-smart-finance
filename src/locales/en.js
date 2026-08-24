@@ -292,6 +292,7 @@ const en = {
       newNamePlaceholder: 'Enter new name',
       rename: 'Rename',
       delete: 'Delete',
+      dragToReorder: 'Drag to reorder',
       deleteConfirm: 'Delete category "{name}"?\nNote: existing transactions will keep the category name.',
       addFailed: 'Failed to add',
       renameFailed: 'Failed to rename',

@@ -2,6 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added drag-to-reorder for categories: drag to rearrange category display order in settings
+- Improved category editing: the transaction form's category menu now updates instantly after adding, renaming, deleting, or reordering
+
 ## [1.21.2] - Jul-12 2026
 - Added a push reminder when a subscription charge is skipped because the exchange rate is unavailable
 - Improved transaction export: now a menu offering the current month, search results, or a custom month range as CSV

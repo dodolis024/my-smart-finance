@@ -11,6 +11,7 @@
  */
 
 const store = new Map(); // key -> { userId, value }
+const listeners = new Map(); // key -> Set<fn>
 
 /**
  * 取得快取值；未命中或 userId 不符時回傳 undefined。
@@ -22,10 +23,20 @@ export function getCached(key, userId) {
 }
 
 /**
- * 寫入快取值，並記錄所屬 userId。
+ * 寫入快取值，並記錄所屬 userId，同步通知同 key 的所有訂閱者。
  */
 export function setCached(key, userId, value) {
   store.set(key, { userId: userId ?? null, value });
+  listeners.get(key)?.forEach((l) => l());
+}
+
+/**
+ * 訂閱某 key 的快取變更（供同一資源的多個 hook 實例互相同步），回傳 unsubscribe 函式。
+ */
+export function subscribe(key, listener) {
+  if (!listeners.has(key)) listeners.set(key, new Set());
+  listeners.get(key).add(listener);
+  return () => listeners.get(key)?.delete(listener);
 }
 
 /**

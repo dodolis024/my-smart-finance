@@ -292,6 +292,7 @@ const zh = {
       newNamePlaceholder: '輸入新名稱',
       rename: '重新命名',
       delete: '刪除',
+      dragToReorder: '拖曳以調整順序',
       deleteConfirm: '確定要刪除類別「{name}」嗎？\n注意：既有交易的類別名稱會保留。',
       addFailed: '新增失敗',
       renameFailed: '重新命名失敗',

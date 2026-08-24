@@ -13,6 +13,7 @@ import {
   saveAccounts,
   isOfflineError,
 } from '@/lib/offlineCache';
+import { subscribe, getCached } from '@/lib/resourceCache';
 
 // Module-level cache for currencies (rarely changes)
 // 離線啟動時以上次存下的清單起始,避免表單只剩 TWD
@@ -61,6 +62,14 @@ export function useDashboard() {
     defaultCurrencyListeners.add(sync);
     return () => defaultCurrencyListeners.delete(sync);
   }, [user?.id]);
+
+  // 訂閱「設定」快取（useSettings 的類別新增/改名/刪除/排序），讓記帳表單的類別下拉即時同步
+  useEffect(() => subscribe('settings', () => {
+    const cached = getCached('settings', user?.id);
+    if (!cached) return;
+    setCategoriesExpense(cached.expenseCategories || []);
+    setCategoriesIncome(cached.incomeCategories || []);
+  }), [user?.id]);
 
   // 注意：setSummary 不可放進 setTransactionHistoryFull 的 updater 內，
   // StrictMode 會將 updater 執行兩次，導致彙總被重複扣除

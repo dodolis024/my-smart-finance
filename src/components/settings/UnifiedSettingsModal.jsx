@@ -18,7 +18,7 @@ function OptionsPanel({ isOpen, confirm, toast }) {
   const { t, lang, toggleLang } = useLanguage();
   const {
     expenseCategories, incomeCategories, loading, loadError,
-    loadSettingsData, addCategory, renameCategory, deleteCategory,
+    loadSettingsData, addCategory, renameCategory, deleteCategory, reorderCategoriesTo,
   } = useSettings();
   const { currencies, defaultCurrency, fetchCurrencies, saveDefaultCurrency } = useDashboard();
 
@@ -94,6 +94,7 @@ function OptionsPanel({ isOpen, confirm, toast }) {
             onAdd={addCategory}
             onRename={renameCategory}
             onDelete={deleteCategory}
+            onReorderTo={reorderCategoriesTo}
             loading={loading}
             confirm={confirm}
             onError={(msg) => toast.error(msg)}

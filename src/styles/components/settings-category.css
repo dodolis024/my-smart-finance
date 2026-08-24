@@ -74,6 +74,42 @@
   color: var(--color-text);
 }
 
+/* 拖曳浮層卡片：跟著游標移動、抬起感（陰影 + primary 邊框） */
+.category-item--overlay {
+  box-shadow: var(--shadow-focus);
+  border-color: var(--color-primary);
+  cursor: grabbing;
+}
+
+.category-item__drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  margin-right: 0.35rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: grab;
+  touch-action: none;
+  transition: var(--transition);
+}
+
+.category-item__drag-handle:hover:not(:disabled) {
+  background: var(--color-primary-tint-hover);
+  color: var(--color-primary);
+}
+
+.category-item__drag-handle:active {
+  cursor: grabbing;
+}
+
+.category-item__drag-handle:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .category-item__actions {
   display: flex;
   gap: 0.5rem;
