@@ -4,6 +4,7 @@ This file records version updates for Smart Finance Tracker.
 
 - Added drag-to-reorder for categories: drag to rearrange category display order in settings
 - Added income/expense totals for searches: the stat cards show total income, expense, and balance for matching results (covering every match, not just the display cap)
+- Added Hong Kong dollar (HKD) as a currency option
 - Improved category editing: the transaction form's category menu now updates instantly after adding, renaming, deleting, or reordering
 
 ## [1.21.2] - Jul-12 2026

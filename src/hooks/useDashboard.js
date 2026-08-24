@@ -169,7 +169,7 @@ export function useDashboard() {
         const { data: codes, error } = await supabase.rpc('get_available_currencies');
         const list = Array.isArray(codes) ? codes : codes ? [codes] : [];
         if (!error && list.length > 0) {
-          const PREFERRED_ORDER = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP'];
+          const PREFERRED_ORDER = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP', 'HKD'];
           const upper = list.map((c) => String(c).toUpperCase());
           upper.sort((a, b) => {
             const ai = PREFERRED_ORDER.indexOf(a);

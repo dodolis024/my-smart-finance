@@ -243,7 +243,7 @@ CREATE TRIGGER update_settings_updated_at
 
 -- 中央匯率表種子（前端幣別選單會依此動態顯示；之後在表內新增列即可出現新幣別）
 INSERT INTO exchange_rates (currency_code, rate)
-VALUES ('TWD', 1.0), ('USD', 30.0), ('JPY', 0.2), ('EUR', 32.0), ('GBP', 38.0)
+VALUES ('TWD', 1.0), ('USD', 30.0), ('JPY', 0.2), ('EUR', 32.0), ('GBP', 38.0), ('KRW', 0.022), ('HKD', 4.0)
 ON CONFLICT (currency_code) DO UPDATE SET rate = EXCLUDED.rate, updated_at = NOW();
 
 -- =============================================================================
