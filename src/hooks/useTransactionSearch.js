@@ -3,6 +3,25 @@ import { supabase } from '@/lib/supabase';
 
 const SEARCH_DEBOUNCE_MS = 300;
 export const SEARCH_LIMIT = 200;
+const EMPTY_SUMMARY = { totalIncome: 0, totalExpense: 0, balance: 0 };
+
+/** 加總一批交易的 TWD 收入/支出/結餘（結餘 = 收入 − 支出），與 get_dashboard_data 的彙總同義。 */
+export function sumTransactions(rows) {
+  return (rows || []).reduce(
+    (acc, tx) => {
+      const amt = typeof tx.twdAmount === 'number' ? tx.twdAmount : 0;
+      if (tx.type === 'income') {
+        acc.totalIncome += amt;
+        acc.balance += amt;
+      } else {
+        acc.totalExpense += amt;
+        acc.balance -= amt;
+      }
+      return acc;
+    },
+    { totalIncome: 0, totalExpense: 0, balance: 0 }
+  );
+}
 const SEARCH_COLUMNS = ['item_name', 'category', 'note', 'payment_method'];
 // 兩個查詢（跨月搜尋 / 自訂區間匯出）共用同一份欄位定義，避免日後漂移
 const SELECT_COLUMNS = 'id, date, type, item_name, category, payment_method, currency, amount, exchange_rate, twd_amount, note';
@@ -94,6 +113,7 @@ export async function fetchTransactionsByDateRange(userId, startDate, endDate) {
 export function useTransactionSearch(userId, query) {
   const [results, setResults] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const requestIdRef = useRef(0);
@@ -105,6 +125,7 @@ export function useTransactionSearch(userId, query) {
       if (!userId || !sanitized) {
         setResults([]);
         setTotalCount(0);
+        setSummary(EMPTY_SUMMARY);
         setSearching(false);
         setSearchError(null);
         return;
@@ -117,15 +138,31 @@ export function useTransactionSearch(userId, query) {
       });
 
       if (reqId !== requestIdRef.current) return;
-      setSearching(false);
       if (error) {
+        setSearching(false);
         setSearchError(error.message || 'search failed');
         setResults([]);
         setTotalCount(0);
+        setSummary(EMPTY_SUMMARY);
         return;
       }
+
+      // 三個總結數字要涵蓋「全部符合」的交易，而非畫面上限的 200 筆。
+      // 命中數超過上限時，另抓齊全部符合的列再加總（與匯出共用同一查詢，保證總額與清單一致）。
+      let summaryRows = rows;
+      if (count > rows.length) {
+        const { rows: allRows, error: allError } = await fetchTransactionMatches(userId, rawQuery, {
+          limit: count,
+        });
+        if (reqId !== requestIdRef.current) return;
+        if (!allError) summaryRows = allRows;
+      }
+
+      // 清單與總額一併更新，避免「清單已換、數字還停在前一筆」的閃爍
       setResults(rows);
       setTotalCount(count);
+      setSummary(sumTransactions(summaryRows));
+      setSearching(false);
     },
     [userId]
   );
@@ -136,6 +173,7 @@ export function useTransactionSearch(userId, query) {
       requestIdRef.current++;
       setResults([]);
       setTotalCount(0);
+      setSummary(EMPTY_SUMMARY);
       setSearching(false);
       setSearchError(null);
       return;
@@ -153,5 +191,5 @@ export function useTransactionSearch(userId, query) {
     if (query && query.trim()) runSearch(query);
   }, [query, runSearch]);
 
-  return { results, totalCount, searching, searchError, refresh };
+  return { results, totalCount, summary, searching, searchError, refresh };
 }

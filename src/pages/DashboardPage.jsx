@@ -90,6 +90,7 @@ export default function DashboardPage() {
   const {
     results: searchResults,
     totalCount: searchTotalCount,
+    summary: searchSummary,
     searching: searchLoading,
     searchError,
     refresh: refreshSearch,
@@ -541,9 +542,10 @@ export default function DashboardPage() {
             </div>
             {streakBadge}
           </div>
-          <StatCards summary={displaySummary} loading={loading} />
+          <StatCards summary={searchActive ? searchSummary : displaySummary} loading={loading} />
         </section>
 
+        {!searchActive && (
         <section className="analytics-section">
           <h2>{t('dashboard.analytics')}</h2>
           <div className="analytics-grid">
@@ -569,6 +571,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </section>
+        )}
 
         <section className="transaction-history-section" ref={historyRef}>
           <div className="transaction-history-header">
