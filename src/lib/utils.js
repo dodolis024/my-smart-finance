@@ -16,6 +16,13 @@ export function getTodayYmd() {
   return `${year}-${month}-${day}`;
 }
 
+export function getNowHm() {
+  const d = new Date();
+  const hour = String(d.getHours()).padStart(2, '0');
+  const minute = String(d.getMinutes()).padStart(2, '0');
+  return `${hour}:${minute}`;
+}
+
 // TWD is zero-decimal by this app's convention (see ZERO_DECIMAL_CURRENCIES) —
 // storage keeps the raw computed value, only the display is rounded.
 export function formatMoney(num) {

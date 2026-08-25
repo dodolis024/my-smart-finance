@@ -24,7 +24,7 @@ export function sumTransactions(rows) {
 }
 const SEARCH_COLUMNS = ['item_name', 'category', 'note', 'payment_method'];
 // 兩個查詢（跨月搜尋 / 自訂區間匯出）共用同一份欄位定義，避免日後漂移
-const SELECT_COLUMNS = 'id, date, type, item_name, category, payment_method, currency, amount, exchange_rate, twd_amount, note';
+const SELECT_COLUMNS = 'id, date, time, type, item_name, category, payment_method, currency, amount, exchange_rate, twd_amount, note';
 
 /**
  * 消毒搜尋字（export 供測試直接驗）：
@@ -43,6 +43,7 @@ export function mapSearchRow(row) {
   return {
     id: row.id,
     date: row.date,
+    time: row.time,
     type: row.type,
     category: row.category,
     itemName: row.item_name,
@@ -75,7 +76,8 @@ export async function fetchTransactionMatches(userId, rawQuery, { limit, count =
     .select(SELECT_COLUMNS, count ? { count: 'exact' } : undefined)
     .eq('user_id', userId)
     .or(orExpr)
-    .order('date', { ascending: false });
+    .order('date', { ascending: false })
+    .order('time', { ascending: false });
   if (limit != null) {
     queryBuilder = queryBuilder.limit(limit);
   }
@@ -102,7 +104,8 @@ export async function fetchTransactionsByDateRange(userId, startDate, endDate) {
     .eq('user_id', userId)
     .gte('date', startDate)
     .lte('date', endDate)
-    .order('date', { ascending: true });
+    .order('date', { ascending: true })
+    .order('time', { ascending: true });
   return { rows: (data || []).map(mapSearchRow), error };
 }
 

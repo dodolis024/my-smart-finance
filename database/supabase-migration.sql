@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     date DATE NOT NULL,
+    time TIME NOT NULL DEFAULT CURRENT_TIME, -- 交易發生時間，用於同日多筆交易的排序
     type TEXT NOT NULL CHECK (type IN ('expense', 'income')),
     item_name TEXT NOT NULL,
     category TEXT NOT NULL,

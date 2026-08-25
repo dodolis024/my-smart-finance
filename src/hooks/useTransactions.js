@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getTodayYmd, parseFormattedNumber } from '@/lib/utils';
+import { getTodayYmd, getNowHm, parseFormattedNumber } from '@/lib/utils';
 import { loadRates, loadAccounts, isOfflineError } from '@/lib/offlineCache';
 import { enqueueTransaction } from '@/lib/offlineQueue';
 
@@ -14,6 +14,7 @@ export function useTransactions() {
     const { isSplitSynced = false } = options;
     const {
       date,
+      time,
       itemName,
       categoryValue,
       paymentMethod,
@@ -80,6 +81,7 @@ export function useTransactions() {
           id: crypto.randomUUID(),
           user_id: user.id,
           date,
+          time: time || getNowHm(),
           type,
           item_name: itemName,
           category,
@@ -149,6 +151,7 @@ export function useTransactions() {
     const transactionData = {
       user_id: user.id,
       date,
+      time: time || getNowHm(),
       type,
       item_name: itemName,
       category,

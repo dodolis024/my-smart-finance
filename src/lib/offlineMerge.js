@@ -14,6 +14,7 @@ export function buildQueuedRows(queuedItems, year, month) {
     .map((item) => ({
       id: item.tx.id,
       date: item.tx.date,
+      time: item.tx.time,
       type: item.tx.type,
       category: item.tx.category,
       itemName: item.tx.item_name,
@@ -29,13 +30,15 @@ export function buildQueuedRows(queuedItems, year, month) {
 }
 
 /**
- * 佇列交易併入交易列表，依日期新→舊排序。
+ * 佇列交易併入交易列表，依日期＋時間新→舊排序（與 get_dashboard_data 的排序邏輯一致）。
  */
 export function mergeQueuedIntoHistory(history, queuedRows) {
   if (queuedRows.length === 0) return history;
-  return [...queuedRows, ...history].sort((a, b) =>
-    String(b.date).localeCompare(String(a.date))
-  );
+  return [...queuedRows, ...history].sort((a, b) => {
+    const dateDiff = String(b.date).localeCompare(String(a.date));
+    if (dateDiff !== 0) return dateDiff;
+    return String(b.time || '').localeCompare(String(a.time || ''));
+  });
 }
 
 /**

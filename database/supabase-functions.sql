@@ -91,6 +91,7 @@ BEGIN
         json_build_object(
             'id', t.id,
             'date', t.date,
+            'time', t.time,
             'itemName', t.item_name,
             'category', t.category,
             'paymentMethod', t.payment_method,
@@ -103,7 +104,7 @@ BEGIN
             'isSplitSynced', EXISTS (
                 SELECT 1 FROM split_ledger_syncs s WHERE s.transaction_id = t.id
             )
-        ) ORDER BY t.date DESC, t.created_at DESC
+        ) ORDER BY t.date DESC, t.time DESC, t.created_at DESC
     ) INTO v_history
     FROM transactions t
     WHERE t.user_id = v_user_id

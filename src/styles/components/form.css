@@ -107,18 +107,25 @@
 /* Form inputs */
 .form-group input[type="text"],
 .form-group input[type="number"],
-.form-group input[type="date"] {
+.form-group input[type="date"],
+.form-group input[type="datetime-local"] {
   width: 100%;
   max-width: 100%;
   padding: 0.75rem 0.75rem 0.75rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 1rem;
+  font-family: inherit;
   color: var(--color-text);
   transition: var(--transition);
   box-sizing: border-box;
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* 原生 datetime-local 內部文字靠左、icon 貼右，中間留白會顯得偏左；置中減少這種空洞感 */
+.form-group input[type="datetime-local"] {
+  text-align: center;
 }
 
 .form-group input:focus {

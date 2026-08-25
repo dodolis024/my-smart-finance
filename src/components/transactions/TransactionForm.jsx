@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getTodayYmd, formatNumberWithCommas } from '@/lib/utils';
+import { getTodayYmd, getNowHm, formatNumberWithCommas } from '@/lib/utils';
 import { useAmountInput } from '@/hooks/useAmountInput';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const makeInitialForm = (defaultCurrency = 'TWD') => ({
   date: getTodayYmd(),
+  time: getNowHm(),
   itemName: '',
   categoryValue: '',
   paymentMethod: '',
@@ -51,6 +52,8 @@ export default function TransactionForm({
 
       setForm({
         date: editingTransaction.date || getTodayYmd(),
+        // 舊資料可能沒有 time（migration 前建立）：退回目前時間
+        time: editingTransaction.time ? editingTransaction.time.slice(0, 5) : getNowHm(),
         itemName: editingTransaction.itemName || '',
         categoryValue: prefixedValue,
         paymentMethod: editingTransaction.paymentMethod || '',
@@ -75,6 +78,15 @@ export default function TransactionForm({
     const { name, value } = e.target;
     if (name === 'currency') currencyTouchedRef.current = true;
     setForm((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  // <input type="datetime-local"> 的 value 是 "YYYY-MM-DDTHH:mm" 單一字串；
+  // 拆回 date/time 兩個欄位存放（後端維持分開存的 schema）。任一段不完整時
+  // 瀏覽器會把整個 value 清空，此時保留原本的值，避免日期被意外清掉
+  const handleDateTimeChange = useCallback((e) => {
+    const [date, time] = e.target.value.split('T');
+    if (!date || !time) return;
+    setForm((prev) => ({ ...prev, date, time }));
   }, []);
 
   const handleSubmit = async (e) => {
@@ -131,11 +143,11 @@ export default function TransactionForm({
         <div className="form-group">
           <label htmlFor="date">{t('transaction.date')}</label>
           <input
-            type="date"
+            type="datetime-local"
             id="date"
             name="date"
-            value={form.date}
-            onChange={handleChange}
+            value={`${form.date}T${form.time}`}
+            onChange={handleDateTimeChange}
             disabled={isFormDisabled}
           />
         </div>

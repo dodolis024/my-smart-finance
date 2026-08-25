@@ -53,6 +53,7 @@
 | scripts/fix-split-atomic-add-and-rate-guard.sql | add_split_expense/成員歸屬檢查/匯率守門/重同步日期 | 2026-07-11 |
 | scripts/fix-split-error-codes.sql | 分帳 6 個 RPC 的 RAISE 訊息改為錯誤碼(供前端 i18n 對映) | 2026-07-11 |
 | scripts/fix-split-join-auth-and-decimal-list.sql | join/link RPC 加登入檢查/零小數幣別清單對齊前端/DETAIL 分隔符改 ", " | 2026-07-11 |
+| scripts/fix-add-transaction-time.sql | transactions 新增 time 欄位,既有資料以 created_at 回填 | 2026-08-25 |
 
 ### 正式定義檔重跑紀錄
 
@@ -61,6 +62,7 @@
 | database/streak-freeze-migration.sql + supabase-functions.sql | 凍結卡表 + reconcile RPC(v1.20) | 約 2026-07-09 |
 | database/subscriptions-migration.sql | FK 行為與 prod 核對一致(`ON DELETE SET NULL`),檔頭聲明已更新 | 2026-07-11(核對,非重跑) |
 | database/supabase-functions.sql | freeze 最長連續改合併分段 | 2026-07-11 |
+| database/supabase-functions.sql | get_dashboard_data 回傳 time 欄位,排序改 date+time+created_at | 2026-08-25 |
 
 ### Edge Functions 部署紀錄
 

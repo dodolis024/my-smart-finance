@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added a time field to transactions: set a time when adding or editing an entry; same-day transactions now sort by date and time instead of entry order
+
 ## [1.22.0] - Aug-25 2026
 - Added drag-to-reorder for categories: drag to rearrange category display order in settings
 - Added income/expense totals for searches: the stat cards show total income, expense, and balance for matching results (covering every match, not just the display cap)
