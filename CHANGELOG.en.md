@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.23.0] - Aug-27 2026
 - Added a time field to transactions: set a time when adding or editing an entry; same-day transactions now sort by date and time instead of entry order
 - Fixed automatic exchange rate updates being stuck, leaving foreign-currency entries converted at stale rates
 - Fixed the reminder time wheel displaying a different time than the one actually saved
