@@ -246,6 +246,13 @@ CREATE TRIGGER update_settings_updated_at
 -- 這裡的數值只是「表是空的時候」的起始值，不是正確匯率；正確匯率由
 -- update-exchange-rates 每日更新。必須 DO NOTHING：若改成 DO UPDATE，
 -- 重跑本腳本會把已更新的真實匯率覆寫回下面這些種子值。
+--
+-- 【新增幣別的正確做法】updated_at 要填一個明顯過去的時間，讓 update-exchange-rates
+-- 的陳舊值例外接手，首次同步就直接寫入真實匯率，不必事先查好初始值：
+--   INSERT INTO exchange_rates (currency_code, rate, updated_at)
+--   VALUES ('AUD', 1.0, '1970-01-01') ON CONFLICT (currency_code) DO NOTHING;
+-- 若照預設讓 updated_at = NOW()，rate 與真實匯率差超過 ±20% 會被防呆判為異常，
+-- 每天都退回種子值、每天都顯示執行成功，該幣別永遠卡住。
 INSERT INTO exchange_rates (currency_code, rate)
 VALUES ('TWD', 1.0), ('USD', 30.0), ('JPY', 0.2), ('EUR', 32.0), ('GBP', 38.0), ('KRW', 0.022), ('HKD', 4.0)
 ON CONFLICT (currency_code) DO NOTHING;

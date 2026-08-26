@@ -74,7 +74,7 @@
 
 | 函式 | 最後部署 | version | 備註 |
 |---|---|---|---|
-| update-exchange-rates | 2026-07-07 | v16 | |
+| update-exchange-rates | 2026-08-26 | v17 | 陳舊值例外:舊匯率逾 7 天未更新時跳過 ±20% 防呆(取代先前的 2026-07-07 v16) |
 | send-streak-reminder | 2026-07-11 | v24 | 通知多語化(`47f7b9b`)重新部署,取代先前記錄的 2026-07-08 v22 |
 | send-split-notification | 2026-07-11 | v8 | 同上 |
 | send-credit-card-reminder | 2026-07-11 | v4 | 同上,repo 自 2026-03-26 起僅此次改動 |

@@ -36,12 +36,14 @@ serve(async (req) => {
     // 先取得目前資料庫中的匯率（Last Known Good）
     const { data: existingRates, error: fetchError } = await supabase
       .from('exchange_rates')
-      .select('currency_code, rate')
-    
+      .select('currency_code, rate, updated_at')
+
     const lastKnownGood: { [key: string]: number } = {}
+    const lastUpdatedAt: { [key: string]: string } = {}
     if (!fetchError && existingRates) {
       existingRates.forEach(r => {
         lastKnownGood[r.currency_code] = r.rate
+        lastUpdatedAt[r.currency_code] = r.updated_at
       })
     }
 
@@ -133,6 +135,20 @@ serve(async (req) => {
     // 如果變動超過 ±20%，拒絕更新並記錄錯誤
     const MAX_CHANGE_PERCENT = 20
     const anomalies = []
+
+    // 陳舊值例外：舊匯率若已超過 STALE_AFTER_DAYS 沒更新，本身就不可信，
+    // 此時不該讓 ±20% 防呆把它鎖住——否則排程一旦停擺夠久（如 cron URL 壞掉
+    // 那 53 天），累積偏移就會超過門檻，之後每天「成功執行」卻永遠退回舊值。
+    // 新增幣別時把 updated_at 設為過去時間（見 database/supabase-migration.sql
+    // 的種子註解），即可走這條路徑，讓首次同步直接採用真實匯率。
+    const STALE_AFTER_DAYS = 7
+    const staleCutoff = Date.now() - STALE_AFTER_DAYS * 24 * 60 * 60 * 1000
+    const isStale = (currency: string) => {
+      const ts = lastUpdatedAt[currency]
+      if (!ts) return true
+      const parsed = new Date(ts).getTime()
+      return Number.isNaN(parsed) || parsed < staleCutoff
+    }
     const validatedRates: { [key: string]: number } = { TWD: 1.0 }
 
     for (const [currency, newRate] of Object.entries(newRates)) {
@@ -146,7 +162,23 @@ serve(async (req) => {
       if (oldRate && oldRate > 0) {
         const changePercent = Math.abs((newRate - oldRate) / oldRate * 100)
         
-        if (changePercent > MAX_CHANGE_PERCENT) {
+        if (changePercent > MAX_CHANGE_PERCENT && isStale(currency)) {
+          // 變動超過 20%，但舊匯率已陳舊到不值得保護，改為採用新匯率
+          console.warn(
+            `⚠️ ${currency} changed ${changePercent.toFixed(2)}% ` +
+            `(old: ${oldRate}, new: ${newRate}), but its stored rate is older than ` +
+            `${STALE_AFTER_DAYS} days (${lastUpdatedAt[currency] ?? 'never'}). Accepting new rate.`
+          )
+          anomalies.push({
+            currency,
+            oldRate,
+            newRate,
+            changePercent: changePercent.toFixed(2),
+            action: 'accepted_stale',
+            staleSince: lastUpdatedAt[currency] ?? null,
+          })
+          validatedRates[currency] = newRate
+        } else if (changePercent > MAX_CHANGE_PERCENT) {
           // 變動超過 20%，視為異常，保留舊匯率
           console.error(
             `⚠️ ANOMALY DETECTED: ${currency} changed ${changePercent.toFixed(2)}% ` +
@@ -197,16 +229,18 @@ serve(async (req) => {
       }
     }
 
+    const rejected = anomalies.filter(a => a.action === 'rejected')
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: anomalies.length > 0 
+        message: anomalies.length > 0
           ? `Exchange rates updated with ${anomalies.length} anomaly(ies) detected`
           : 'Exchange rates updated successfully',
         timestamp: new Date().toISOString(),
         updates,
         anomalies: anomalies.length > 0 ? anomalies : undefined,
-        warning: anomalies.length > 0 
+        warning: rejected.length > 0
           ? 'Some rates changed more than 20% and were rejected. Last known good rates were kept.'
           : undefined,
       }),
