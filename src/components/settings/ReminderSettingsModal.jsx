@@ -119,23 +119,9 @@ export default function ReminderSettingsModal({ isOpen, onClose }) {
               <div className="reminder-modal__field">
                 <label className="reminder-modal__label">提醒時間</label>
                 <div className="reminder-modal__time-wheels">
-                  <WheelPicker
-                    items={HOURS}
-                    value={hour}
-                    onChange={setHour}
-                    disabled={!enabled}
-                    itemHeight={40}
-                    visibleCount={3}
-                  />
+                  <WheelPicker items={HOURS} value={hour} onChange={setHour} disabled={!enabled} />
                   <span className="reminder-modal__time-sep" aria-hidden="true">:</span>
-                  <WheelPicker
-                    items={MINUTES}
-                    value={minute}
-                    onChange={setMinute}
-                    disabled={!enabled}
-                    itemHeight={40}
-                    visibleCount={3}
-                  />
+                  <WheelPicker items={MINUTES} value={minute} onChange={setMinute} disabled={!enabled} />
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import { useRef, useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => ({ value: i, label: String(i).padStart(2, '0') }));
 const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => ({
@@ -7,12 +7,47 @@ const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => ({
 }));
 const COPIES = 7;
 
-function WheelPicker({ items, value, onChange, disabled = false, itemHeight = 44, visibleCount = 5 }) {
+// fallback 值：僅在 layout 尚未就緒、量不到實際尺寸時暫用，須與 CSS 現值一致
+// （.wheel-picker__item 的 height 與 .wheel-picker 的 height ÷ item 高度）
+function WheelPicker({ items, value, onChange, disabled = false, itemHeight: itemHeightFallback = 40, visibleCount: visibleCountFallback = 3 }) {
   const scrollRef = useRef(null);
   const userScrollingRef = useRef(false);
   const endTimerRef = useRef(null);
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+
+  // 選中哪一格是用 scrollTop 反推的，若這裡的尺寸與 CSS 實際渲染不符，
+  // 顯示值與存入值就會整排錯位（曾因 CSS 改 44→40px 而 JS 仍寫 44 出過此問題）。
+  // 故一律以 DOM 實測為準，CSS 是唯一真相來源，改版型不需要回頭同步這裡。
+  const [metrics, setMetrics] = useState({ itemHeight: itemHeightFallback, visibleCount: visibleCountFallback });
+  const { itemHeight, visibleCount } = metrics;
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const item = el.querySelector('.wheel-picker__item');
+      if (!item) return;
+      const h = item.getBoundingClientRect().height;
+      const containerH = el.getBoundingClientRect().height;
+      // 開啟動畫期間或尚未 layout 時會量到 0，此時保留現值不動
+      if (h <= 0 || containerH <= 0) return;
+      const vc = Math.max(1, Math.round(containerH / h));
+      setMetrics((prev) =>
+        Math.abs(prev.itemHeight - h) < 0.5 && prev.visibleCount === vc
+          ? prev // 尺寸沒變就回傳原物件，避免無限量測→重繪循環
+          : { itemHeight: h, visibleCount: vc }
+      );
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    const item = el.querySelector('.wheel-picker__item');
+    if (item) ro.observe(item);
+    return () => ro.disconnect();
+  }, []);
 
   const pad = Math.floor(visibleCount / 2) * itemHeight;
   const len = items.length;
