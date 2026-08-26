@@ -56,8 +56,13 @@ SELECT cron.schedule(
 -- =============================================================================
 
 -- 驗證排程是否建立成功
-SELECT jobid, jobname, schedule, active, command 
-FROM cron.job 
+-- ⚠️ command 欄位務必逐字確認 URL 與 key 都已替換：placeholder 沒換掉的話，
+--    job 仍會建立成功、active=true，但每天執行都是 Bad hostname 失敗。
+SELECT jobid, jobname, schedule, active,
+       CASE WHEN command LIKE '%<YOUR%' THEN '❌ 仍有未替換的 placeholder'
+            ELSE '✅ 無 placeholder' END AS placeholder_check,
+       command
+FROM cron.job
 WHERE jobname = 'update-exchange-rates-daily';
 
 -- 提示：首次執行會在明天的排程時間自動執行

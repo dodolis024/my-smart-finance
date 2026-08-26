@@ -33,8 +33,13 @@ SELECT cron.schedule(
 );
 
 -- 驗證更新結果
-SELECT jobid, jobname, schedule, active 
-FROM cron.job 
+-- ⚠️ 一定要看 command：只檢查 schedule/active 的話，即使 URL 還是未替換的
+--    placeholder（job 每天必定 Bad hostname 失敗）也完全看不出來。
+SELECT jobid, jobname, schedule, active,
+       CASE WHEN command LIKE '%<YOUR%' THEN '❌ 仍有未替換的 placeholder'
+            ELSE '✅ 無 placeholder' END AS placeholder_check,
+       command
+FROM cron.job
 WHERE jobname = 'update-exchange-rates-daily';
 
--- 應該顯示：schedule = '0 2 * * *'
+-- 應該顯示：schedule = '0 2 * * *'，且 placeholder_check = ✅

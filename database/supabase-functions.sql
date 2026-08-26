@@ -26,9 +26,12 @@ CREATE POLICY "Authenticated users can read exchange_rates"
     TO authenticated
     USING (true);
 
+-- 這裡的數值只是「表是空的時候」的起始值，不是正確匯率；正確匯率由
+-- update-exchange-rates 每日更新。必須 DO NOTHING：若改成 DO UPDATE，
+-- 重跑本腳本會把已更新的真實匯率覆寫回下面這些種子值。
 INSERT INTO exchange_rates (currency_code, rate)
 VALUES ('TWD', 1.0), ('USD', 30.0), ('JPY', 0.2), ('EUR', 32.0), ('GBP', 38.0)
-ON CONFLICT (currency_code) DO UPDATE SET rate = EXCLUDED.rate, updated_at = NOW();
+ON CONFLICT (currency_code) DO NOTHING;
 
 -- =============================================================================
 -- 1. 取得儀表板資料（getDashboardData）

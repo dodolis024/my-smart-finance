@@ -243,9 +243,12 @@ CREATE TRIGGER update_settings_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- 中央匯率表種子（前端幣別選單會依此動態顯示；之後在表內新增列即可出現新幣別）
+-- 這裡的數值只是「表是空的時候」的起始值，不是正確匯率；正確匯率由
+-- update-exchange-rates 每日更新。必須 DO NOTHING：若改成 DO UPDATE，
+-- 重跑本腳本會把已更新的真實匯率覆寫回下面這些種子值。
 INSERT INTO exchange_rates (currency_code, rate)
 VALUES ('TWD', 1.0), ('USD', 30.0), ('JPY', 0.2), ('EUR', 32.0), ('GBP', 38.0), ('KRW', 0.022), ('HKD', 4.0)
-ON CONFLICT (currency_code) DO UPDATE SET rate = EXCLUDED.rate, updated_at = NOW();
+ON CONFLICT (currency_code) DO NOTHING;
 
 -- =============================================================================
 -- 11. 初始化預設資料（可選）
