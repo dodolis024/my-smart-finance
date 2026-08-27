@@ -56,6 +56,7 @@
 | scripts/fix-add-transaction-time.sql | transactions 新增 time 欄位,既有資料以 created_at 回填 | 2026-08-25 |
 | scripts/fix-cron-exchange-rate-url.sql | 匯率排程 command 內的 placeholder URL 改實際 URL,並手動觸發補回匯率 | 2026-08-26 |
 | scripts/fix-cron-streak-reminder-timeout.sql | 提醒排程的 HTTP 逾時 5 秒放寬為 30 秒(以 alter_job 只覆寫 command,不重建 job) | 2026-08-27 |
+| scripts/add-cron-secret-header.sql | 匯率／提醒兩個排程的 command 加上 `x-cron-secret` header(搭配 Edge Function 驗證) | 2026-08-27 |
 
 ### 正式定義檔重跑紀錄
 
@@ -75,14 +76,37 @@
 
 | 函式 | 最後部署 | version | 備註 |
 |---|---|---|---|
-| update-exchange-rates | 2026-08-26 | v17 | 陳舊值例外:舊匯率逾 7 天未更新時跳過 ±20% 防呆(取代先前的 2026-07-07 v16) |
-| send-streak-reminder | 2026-07-11 | v24 | 通知多語化(`47f7b9b`)重新部署,取代先前記錄的 2026-07-08 v22 |
+| update-exchange-rates | 2026-08-27 | v19 | 加 `x-cron-secret` 驗證(取代 2026-08-26 v17 的陳舊值例外版,該邏輯保留) |
+| send-streak-reminder | 2026-08-27 | v26 | 加 `x-cron-secret` 驗證(取代 2026-07-11 v24 的通知多語化版,該邏輯保留) |
 | send-split-notification | 2026-07-11 | v8 | 同上 |
 | send-credit-card-reminder | 2026-07-11 | v4 | 同上,repo 自 2026-03-26 起僅此次改動 |
 | send-credit-usage-alert | 2026-07-11 | v4 | 同上 |
 | process-subscriptions | 2026-07-11 | v7 | 缺匯率跳過時推播提醒手動記帳 |
 
-(以 `supabase functions list` 的 updated_at/version 為準;2026-07-11 已核對)
+(以 `supabase functions list` 的 updated_at/version 為準;2026-08-27 已核對)
+
+### Edge Function 的 cron 密鑰(CRON_SECRET)
+
+2026-08-27 起,`update-exchange-rates` 與 `send-streak-reminder` 只接受帶正確
+`x-cron-secret` header 的請求(`supabase/functions/_shared/cronAuth.ts`)。
+兩支的呼叫端都只有 pg_cron,密鑰同時存在兩個地方:
+
+- Supabase secrets 的 `CRON_SECRET`(函式端比對用)
+- 兩個 cron job 的 command 內(呼叫端夾帶用,見 `scripts/add-cron-secret-header.sql`)
+
+> **為什麼不是 verify_jwt**:cron 帶的 publishable key 同樣寫在前端 bundle 內人人可得,
+> 改 true 只是把門檻從「知道網址」變成「知道網址＋抄一把公開 key」。兩支的
+> verify_jwt 維持 false 是刻意的,防線在函式內。
+>
+> ⚠️ **fail closed**:`CRON_SECRET` 被刪或改掉而 cron command 沒同步更新時,
+> 兩支函式會回 401 拒絕**所有**請求——匯率停更、提醒信停寄,而 cron.job_run_details
+> 仍記為 succeeded(HTTP 有回應)。匯率或提醒突然失效時,這裡是第一個該查的地方。
+>
+> 輪換順序:先改 cron command 內的密鑰,再 `supabase secrets set`(中間有短暫空窗,
+> 詳見 `scripts/add-cron-secret-header.sql` 檔尾)。
+>
+> 已知缺口:`send-split-notification` 同為 verify_jwt = false,但呼叫端是前端,
+> 不適用此方案(密鑰放前端等於公開),待另外評估。
 
 ### pg_cron 排程
 

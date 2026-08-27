@@ -10,6 +10,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { isReminderTime, getUserToday } from './reminderTime.ts'
 import { streakEmailSubject, streakEmailHtml } from '../_shared/notificationTexts.ts'
 import { getUserLangs } from '../_shared/userLang.ts'
+import { cronSecretGuard } from '../_shared/cronAuth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,6 +22,10 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+
+  // 只接受帶正確 x-cron-secret 的請求（pg_cron 排程）
+  const unauthorized = cronSecretGuard(req, corsHeaders)
+  if (unauthorized) return unauthorized
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!

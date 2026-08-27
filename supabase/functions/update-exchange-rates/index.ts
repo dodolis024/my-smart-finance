@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { cronSecretGuard } from '../_shared/cronAuth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,14 +16,15 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // 只接受帶正確 x-cron-secret 的請求（pg_cron 排程）
+  const unauthorized = cronSecretGuard(req, corsHeaders)
+  if (unauthorized) return unauthorized
+
   try {
     // 初始化 Supabase client（使用 service role key 以便有寫入權限）
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    
-    // 驗證請求（可選）- 允許沒有驗證的請求，因為這是定時任務
-    // 如果需要更嚴格的安全性，可以添加自定義的 secret token
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // 使用免費的 Exchange Rate API
