@@ -55,6 +55,7 @@
 | scripts/fix-split-join-auth-and-decimal-list.sql | join/link RPC 加登入檢查/零小數幣別清單對齊前端/DETAIL 分隔符改 ", " | 2026-07-11 |
 | scripts/fix-add-transaction-time.sql | transactions 新增 time 欄位,既有資料以 created_at 回填 | 2026-08-25 |
 | scripts/fix-cron-exchange-rate-url.sql | 匯率排程 command 內的 placeholder URL 改實際 URL,並手動觸發補回匯率 | 2026-08-26 |
+| scripts/fix-cron-streak-reminder-timeout.sql | 提醒排程的 HTTP 逾時 5 秒放寬為 30 秒(以 alter_job 只覆寫 command,不重建 job) | 2026-08-27 |
 
 ### 正式定義檔重跑紀錄
 
@@ -100,6 +101,16 @@
 > 而該腳本的驗證查詢只看 schedule/active、不看 command,壞掉時看起來一切正常。
 > 已重建 job 並手動觸發補回匯率;兩個模板腳本的驗證查詢已補上 placeholder 檢查。
 > **核對 cron 時務必連 command 一起看**,只看 active=true 不足以判斷排程是否真的有效。
+>
+> 2026-08-27:`send-streak-reminder-hourly` 每天數筆
+> `Operation timed out after 5002 milliseconds` 是誤報——5002ms 是 http extension
+> 的預設逾時,Edge Function 仍在雲端寄完信(已驗證 08-26 台北 21:50 那班 failed
+> 但 reminder_last_sent 有寫入)。已在 command 最前面加
+> `extensions.http_set_curlopt('CURLOPT_TIMEOUT_MS', '30000')` 放寬為 30 秒
+> (http_set_curlopt 是 session 層級,pg_cron 每次執行都是獨立 session,
+> 必須寫進 command 內)。修的是**訊號可信度**,不是寄信本身。
+> 逐封序列寄信(`send-streak-reminder/index.ts:204-240`)未改;
+> 若日後收件者變多再度逾時,再考慮改平行寄送。
 
 ### 落後偵測方法
 
