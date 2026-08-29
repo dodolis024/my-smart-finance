@@ -2,6 +2,10 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.23.1] - Aug-29 2026
+- Hardened scheduled job security: exchange rate updates and streak reminder emails now only accept calls from the system scheduler
+- Fixed the streak reminder schedule being recorded as failed every day (the reminder emails themselves were sent correctly)
+
 ## [1.23.0] - Aug-27 2026
 - Added a time field to transactions: set a time when adding or editing an entry; same-day transactions now sort by date and time instead of entry order
 - Fixed automatic exchange rate updates being stuck, leaving foreign-currency entries converted at stale rates
