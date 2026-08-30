@@ -1,0 +1,40 @@
+{
+  "name": "my-smart-finance-cli",
+  "version": "1.0.0",
+  "description": "My Smart Finance 的命令列工具與 MCP server：在終端機記帳查帳，或讓 AI 助理代勞",
+  "type": "module",
+  "bin": {
+    "finance": "./cli/index.js"
+  },
+  "files": [
+    "cli",
+    "core",
+    "mcp",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "cli",
+    "finance",
+    "expense-tracker",
+    "supabase"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dodolis024/my-smart-finance.git",
+    "directory": "tools"
+  },
+  "homepage": "https://github.com/dodolis024/my-smart-finance/tree/main/tools#readme",
+  "scripts": {
+    "mcp": "node mcp/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.47.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

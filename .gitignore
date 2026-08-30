@@ -14,6 +14,9 @@ dist/
 .DS_Store
 backup/
 
+# npm pack 產出的封裝檔
+*.tgz
+
 # Test artifacts
 coverage/
 playwright-report/

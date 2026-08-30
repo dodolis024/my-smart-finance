@@ -1,3 +1,6 @@
+// ⚠️ 這裡的寫入邏輯（匯率換算、twd_amount 捨入、帳戶對應、簽到條件）在 tools/core/transactions.js
+// 有第二份實作，供 CLI 與 MCP server 使用。改動時兩邊都要改，否則兩邊會算出不同的台幣金額。
+// 詳見 tools/README.md 的「同步義務」。
 import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
