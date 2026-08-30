@@ -12,6 +12,9 @@ import { TABS } from './unified/UnifiedTabIcons';
 import ThemePanel from './unified/ThemePanel';
 import NotificationPanel from './unified/NotificationPanel';
 import SubscriptionPanel from './unified/SubscriptionPanel';
+import GuidePanel from './unified/GuidePanel';
+
+const DEFAULT_TAB = 'theme';
 
 // ─── Options Panel ────────────────────────────────────────────────
 function OptionsPanel({ isOpen, confirm, toast }) {
@@ -139,7 +142,7 @@ function AccountsPanel({ isOpen, confirm, toast }) {
 
 // ─── Main component ───────────────────────────────────────────────
 export default function UnifiedSettingsModal({ isOpen, onClose }) {
-  const [activeTab, setActiveTab] = useState('theme');
+  const [activeTab, setActiveTab] = useState(DEFAULT_TAB);
   const dialogRef = useRef(null);
   useScrollbarOnScroll(dialogRef, isOpen);
   const { confirm } = useConfirm();
@@ -147,8 +150,22 @@ export default function UnifiedSettingsModal({ isOpen, onClose }) {
   const { t } = useLanguage();
 
   useEffect(() => {
-    if (!isOpen) setActiveTab('theme');
+    if (!isOpen) setActiveTab(DEFAULT_TAB);
   }, [isOpen]);
+
+  // 視窗從電腦寬度縮到手機時，僅限電腦的分頁在 tab bar 上沒有對應按鈕，
+  // 停在那裡會變成切不回去，所以退回預設分頁
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 600px)');
+    const sync = () => {
+      if (mq.matches && TABS.find((tab) => tab.id === activeTab)?.desktopOnly) {
+        setActiveTab(DEFAULT_TAB);
+      }
+    };
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, [activeTab]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="usm" titleId="usm-title">
@@ -178,7 +195,7 @@ export default function UnifiedSettingsModal({ isOpen, onClose }) {
 
           {/* Tab bar (mobile) */}
           <div className="usm__tabs" role="tablist">
-            {TABS.map(({ id, labelKey, Icon }) => (
+            {TABS.filter((tab) => !tab.desktopOnly).map(({ id, labelKey, Icon }) => (
               <button
                 key={id}
                 type="button"
@@ -202,6 +219,7 @@ export default function UnifiedSettingsModal({ isOpen, onClose }) {
               <SubscriptionPanel isOpen={isOpen} confirm={confirm} toast={toast} />
             </div>
             <div hidden={activeTab !== 'theme'}><ThemePanel /></div>
+            <div hidden={activeTab !== 'guide'}><GuidePanel /></div>
           </div>
         </div>
       </div>

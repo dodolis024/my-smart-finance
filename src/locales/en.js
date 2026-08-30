@@ -253,6 +253,77 @@ const en = {
       accounts: 'Accounts',
       notification: 'Notifications',
       subscription: 'Subscriptions',
+      guide: 'CLI & MCP',
+    },
+
+    guide: {
+      title: 'Command Line Tool',
+      intro: 'Besides logging on the web, you can record entries from your terminal, or have an AI assistant do it for you. The steps below only need to be done once on your computer.',
+      copy: 'Copy',
+      copied: 'Copied',
+      steps: {
+        install: {
+          title: 'Install the tool',
+          desc: 'Requires Node.js 20 or later. Run this in your terminal.',
+          update: 'When the tool is updated later, you do not need to reinstall — just run this to get the latest version:',
+        },
+        login: {
+          title: 'Sign in to your account',
+          desc: 'A browser window opens — authorise with the same account you use on the website. You only need to do this once.',
+        },
+        add: {
+          title: 'Log your first entry',
+          desc: 'Use category and account names that already exist in your settings. If a name does not match, the tool lists the valid options instead of guessing.',
+          example: 'finance add Starbucks 150 --category Food --account Cash',
+        },
+        agent: {
+          title: 'Let an AI assistant do it for you (optional)',
+          desc: 'Once installed, any AI assistant that can run terminal commands (Claude Code, Cursor, and the like) can log entries for you — say “log a coffee for 150, paid in cash” and it will work out the right command.',
+          hint: 'When asking it to look things up, adding --json makes the output easier for it to read accurately:',
+          example: 'finance list --month 8 --json',
+        },
+      },
+      advanced: {
+        commands: {
+          title: 'Common commands',
+          list: 'List recent transactions',
+          summary: 'This month’s totals and category ranking',
+          streak: 'Current logging streak',
+          accounts: 'List available account names',
+          categories: 'List available category names',
+          edit: 'Edit a transaction (get the id from list)',
+          remove: 'Delete a transaction (get the id from list)',
+          help: 'Show full usage and every option',
+        },
+        trouble: {
+          title: 'Troubleshooting',
+          stuck: {
+            q: 'Stuck on the website homepage after authorising?',
+            a: 'The callback URL has not been allowed yet — ask the administrator to add http://localhost:9876/callback in Supabase. Press Ctrl+C to cancel.',
+          },
+          port: {
+            q: 'Seeing “port already in use”?',
+            a: 'Close the program using that port, or set SMF_OAUTH_PORT to another one (the new port also needs to be allowed by the administrator).',
+          },
+          ssh: {
+            q: 'Cannot open a browser on a remote machine?',
+            a: 'Prefix the command with SMF_NO_BROWSER=1 and the tool prints the URL instead, so you can open it in your own browser.',
+          },
+          session: {
+            q: 'Want to check which account is signed in?',
+            a: 'Run finance whoami. To switch accounts, run finance logout first.',
+          },
+        },
+        scope: {
+          title: 'What it can and cannot do',
+          canTitle: 'Available in the tool',
+          can: 'Log entries, search transactions, edit and delete them, and view monthly summaries and your logging streak.',
+          cannotTitle: 'Do these on the web',
+          cannot: 'Subscriptions, adding or editing accounts and categories, and split expenses. These are more involved and rarely change, so they stay on the web.',
+          safetyTitle: 'About security',
+          safety: 'The tool can only reach your own data, protected by the same rules as the website. It never stores your password — signing in uses the same authorisation flow as the web app.',
+        },
+      },
     },
 
     theme: {

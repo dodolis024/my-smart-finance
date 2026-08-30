@@ -29,12 +29,21 @@ const IconBell = () => (
   </svg>
 );
 
+const IconGuide = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+  </svg>
+);
+
+// desktopOnly：CLI 與 MCP 只能安裝在電腦上，手機使用者看到只會困惑，
+// 且手機版 tab bar 只有 icon 沒有文字，多一格會更擠
 const TABS = [
   { id: 'theme', labelKey: 'settings.tabs.theme', Icon: IconTheme },
   { id: 'options', labelKey: 'settings.tabs.options', Icon: IconOptions },
   { id: 'accounts', labelKey: 'settings.tabs.accounts', Icon: IconAccounts },
   { id: 'notification', labelKey: 'settings.tabs.notification', Icon: IconBell },
   { id: 'subscription', labelKey: 'settings.tabs.subscription', Icon: IconSubscription },
+  { id: 'guide', labelKey: 'settings.tabs.guide', Icon: IconGuide, desktopOnly: true },
 ];
 
-export { IconOptions, IconReminder, IconSubscription, IconAccounts, IconTheme, IconBell, TABS };
+export { IconOptions, IconReminder, IconSubscription, IconAccounts, IconTheme, IconBell, IconGuide, TABS };

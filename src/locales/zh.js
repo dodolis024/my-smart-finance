@@ -253,6 +253,77 @@ const zh = {
       accounts: '支付工具',
       notification: '通知設定',
       subscription: '訂閱管理',
+      guide: '命令列工具',
+    },
+
+    guide: {
+      title: '命令列工具',
+      intro: '除了在網頁上記帳，你也可以在電腦的終端機裡記帳，或是讓 AI 助理代你操作。以下步驟在你的電腦上設定一次就好。',
+      copy: '複製',
+      copied: '已複製',
+      steps: {
+        install: {
+          title: '安裝工具',
+          desc: '需要先安裝 Node.js 20 以上版本，然後在終端機執行這行。',
+          update: '之後我更新工具時，你不用重裝，執行這行就會拿到最新版：',
+        },
+        login: {
+          title: '登入你的帳號',
+          desc: '會自動開啟瀏覽器，用你平常登入網站的帳號授權即可。登入一次就好，之後不用重來。',
+        },
+        add: {
+          title: '記第一筆帳',
+          desc: '分類與帳戶要用你設定裡既有的名稱。名稱打錯時工具會列出可用選項，不會亂記一通。',
+          example: 'finance add 星巴克 150 --category 飲食 --account 現金',
+        },
+        agent: {
+          title: '讓 AI 助理代勞（選用）',
+          desc: '裝好之後，能執行終端機指令的 AI 助理（例如 Claude Code、Cursor）就可以直接幫你記帳——跟它說「幫我記一筆星巴克 150，現金付的」，它會自己組出正確的指令。',
+          hint: '請它查資料時，指令加上 --json 會讓它讀得更準確：',
+          example: 'finance list --month 8 --json',
+        },
+      },
+      advanced: {
+        commands: {
+          title: '常用指令',
+          list: '列出最近的交易',
+          summary: '本月收支總覽與分類排行',
+          streak: '連續記帳天數',
+          accounts: '列出可用的帳戶名稱',
+          categories: '列出可用的分類名稱',
+          edit: '修改某一筆交易（id 從 list 取得）',
+          remove: '刪除某一筆交易（id 從 list 取得）',
+          help: '顯示完整說明與所有參數',
+        },
+        trouble: {
+          title: '遇到問題',
+          stuck: {
+            q: '授權完停在網站首頁，終端機一直等？',
+            a: '這是回呼網址還沒開通，請聯絡管理員在 Supabase 加入 http://localhost:9876/callback。按 Ctrl+C 可以中止。',
+          },
+          port: {
+            q: '出現「連接埠已被占用」？',
+            a: '關掉占用該埠的程式，或用 SMF_OAUTH_PORT 指定其他埠（新的埠也要請管理員一併開通）。',
+          },
+          ssh: {
+            q: '在遠端主機上開不了瀏覽器？',
+            a: '在指令前加上 SMF_NO_BROWSER=1，工具會改成印出網址，你可以貼到自己電腦的瀏覽器完成授權。',
+          },
+          session: {
+            q: '想確認目前登入的是哪個帳號？',
+            a: '執行 finance whoami 查看。要換帳號的話先執行 finance logout。',
+          },
+        },
+        scope: {
+          title: '能做什麼、不能做什麼',
+          canTitle: '可以透過工具完成',
+          can: '記帳、查詢交易、修改與刪除交易、查看每月統計與連續記帳天數。',
+          cannotTitle: '請在網頁上操作',
+          cannot: '訂閱管理、帳戶與分類的新增修改、分帳。這些功能較複雜又不常變動，留在網頁上比較清楚。',
+          safetyTitle: '關於安全',
+          safety: '工具只能存取你自己的資料，與網頁受同一套權限保護；不會儲存你的密碼，登入走的是跟網頁相同的授權流程。',
+        },
+      },
     },
 
     theme: {
