@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCachedResource } from '@/hooks/useCachedResource';
-import { notifyTransactionsChanged } from '@/lib/transactionEvents';
+import { notifyDataChanged } from '@/lib/dataEvents';
 
 export function useSubscriptions() {
   const { user } = useAuth();
@@ -118,7 +118,7 @@ export function useSubscriptions() {
           transactionCreated = true;
           // 通知已掛載的儀表板重抓當月資料，否則設定面板疊在儀表板上，
           // 關閉後要手動刷新才看得到這筆當日扣款
-          notifyTransactionsChanged();
+          notifyDataChanged();
         }
       }
     }

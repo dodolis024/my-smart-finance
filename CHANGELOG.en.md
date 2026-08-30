@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Fixed needing a manual refresh to see updated credit limits and payment methods after editing accounts or categories in settings
+
 ## [1.23.1] - Aug-29 2026
 - Hardened scheduled job security: exchange rate updates and streak reminder emails now only accept calls from the system scheduler
 - Fixed the streak reminder schedule being recorded as failed every day (the reminder emails themselves were sent correctly)

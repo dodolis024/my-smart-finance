@@ -59,7 +59,7 @@ vi.mock('@/contexts/LanguageContext', () => ({
 
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { clearAllCaches } from '@/lib/resourceCache';
-import { subscribeTransactionsChanged } from '@/lib/transactionEvents';
+import { subscribeDataChanged } from '@/lib/dataEvents';
 
 function renderSubscriptions() {
   const container = document.createElement('div');
@@ -120,7 +120,7 @@ describe('useSubscriptions.saveSubscription（新增且今天是扣款日）', (
     h.rateResponse = { data: null, error: null };
     harness = renderSubscriptions();
     const onTxChanged = vi.fn();
-    const unsubscribe = subscribeTransactionsChanged(onTxChanged);
+    const unsubscribe = subscribeDataChanged(onTxChanged);
 
     let result;
     await act(async () => {
@@ -144,7 +144,7 @@ describe('useSubscriptions.saveSubscription（新增且今天是扣款日）', (
     h.rateResponse = { data: 31.5, error: null };
     harness = renderSubscriptions();
     const onTxChanged = vi.fn();
-    const unsubscribe = subscribeTransactionsChanged(onTxChanged);
+    const unsubscribe = subscribeDataChanged(onTxChanged);
 
     let result;
     await act(async () => {

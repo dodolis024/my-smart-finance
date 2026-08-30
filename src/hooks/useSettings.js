@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCachedResource } from '@/hooks/useCachedResource';
+import { notifyDataChanged } from '@/lib/dataEvents';
 
 const DEFAULT_EXPENSE_CATEGORIES = {
   zh: ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他'],
@@ -47,6 +48,9 @@ export function useSettings() {
     }
   }, [user, load]);
 
+  // 只寫 settings.value，不動交易。儀表板的類別下拉已透過 'settings' 快取訂閱即時同步
+  // （useDashboard），故新增／刪除／排序類別不需要 notifyDataChanged；只有會連帶改寫舊交易的
+  // 改名，以及帳戶異動（儀表板的帳戶來自 get_dashboard_data，非此快取）才需要。
   const saveCategoriesType = useCallback(async (type, categories) => {
     if (!user) return;
     const key = type === 'expense' ? 'expense_categories' : 'income_categories';
@@ -87,6 +91,9 @@ export function useSettings() {
     categories[idx] = trimmed;
     await saveCategoriesType(type, categories);
     await updateTransactionCategories(oldName, trimmed);
+    // 舊交易的類別已被改寫，通知在此面板下方的儀表板重抓，否則明細與圖表還停在舊名稱。
+    // 必須等 updateTransactionCategories 完成才通知，早一步重抓會拿到改寫前的交易。
+    notifyDataChanged();
   }, [expenseCategories, incomeCategories, saveCategoriesType, t, updateTransactionCategories]);
 
   const deleteCategory = useCallback(async (type, name) => {
@@ -133,6 +140,9 @@ export function useSettings() {
       if (saveError) throw saveError;
     }
     await loadSettingsData();
+    // 儀表板的帳戶（信用額度、付款方式下拉、信用卡卡片）另外由 get_dashboard_data 提供，
+    // 不吃這裡的快取，不通知的話要手動刷新才看得到新額度
+    notifyDataChanged();
   }, [user, accounts, loadSettingsData, t, updateTransactionPaymentMethods]);
 
   const deleteAccount = useCallback(async (accountId) => {
@@ -150,6 +160,7 @@ export function useSettings() {
     const { error: deleteError } = await supabase.from('accounts').delete().eq('id', accountId);
     if (deleteError) throw deleteError;
     await loadSettingsData();
+    notifyDataChanged();
   }, [user, accounts, loadSettingsData, t]);
 
   return {

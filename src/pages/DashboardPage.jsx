@@ -9,7 +9,7 @@ import { useModalStates } from '@/hooks/useModalStates';
 import { useTransactionSearch, fetchTransactionMatches, fetchTransactionsByDateRange, SEARCH_LIMIT } from '@/hooks/useTransactionSearch';
 import { supabase } from '@/lib/supabase';
 import { buildTransactionsCsv, downloadCsv } from '@/lib/csvExport';
-import { subscribeTransactionsChanged } from '@/lib/transactionEvents';
+import { subscribeDataChanged } from '@/lib/dataEvents';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -180,11 +180,11 @@ export default function DashboardPage() {
     fetchDashboardData(currentYear, currentMonth).catch(err => console.error('[Dashboard] fetch failed:', err));
   }, [currentYear, currentMonth, fetchDashboardData, streakRefreshTick]);
 
-  // 設定面板等外部入口寫入交易後（例如訂閱的當日扣款），靜默重抓當月資料
+  // 設定面板等外部入口寫入資料後（訂閱的當日扣款、帳戶額度、類別改名…），靜默重抓當月資料
   useEffect(() => {
-    return subscribeTransactionsChanged(() => {
+    return subscribeDataChanged(() => {
       fetchDashboardData(currentYear, currentMonth, { silent: true })
-        .catch(err => console.error('[Dashboard] refetch after external tx failed:', err));
+        .catch(err => console.error('[Dashboard] refetch after external change failed:', err));
     });
   }, [currentYear, currentMonth, fetchDashboardData]);
 
