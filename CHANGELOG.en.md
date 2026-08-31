@@ -3,6 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Hardened split security: joining a group now always requires invite code verification, and member lookups are scoped to the caller's own groups
+- Hardened scheduled job security: subscription auto-entry and credit card payment reminders now only accept calls from the system scheduler
 - Fixed credit card payment reminders never actually being sent (enable credit card notifications in settings to receive them)
 - Fixed users who had not enabled credit card notifications still receiving credit usage alerts
 

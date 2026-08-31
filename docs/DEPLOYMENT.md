@@ -57,6 +57,9 @@
 | scripts/fix-cron-exchange-rate-url.sql | 匯率排程 command 內的 placeholder URL 改實際 URL,並手動觸發補回匯率 | 2026-08-26 |
 | scripts/fix-cron-streak-reminder-timeout.sql | 提醒排程的 HTTP 逾時 5 秒放寬為 30 秒(以 alter_job 只覆寫 command,不重建 job) | 2026-08-27 |
 | scripts/add-cron-secret-header.sql | 匯率／提醒兩個排程的 command 加上 `x-cron-secret` header(搭配 Edge Function 驗證) | 2026-08-27 |
+| scripts/fix-split-member-access.sql | 分帳成員存取權收斂:加入群組一律需通過邀請碼驗證,成員查詢範圍限本人相關群組 | 2026-08-31 |
+| scripts/fix-split-avatar-rpc.sql | 批次頭像 RPC 的呼叫者權限檢查 | 2026-08-31 |
+| scripts/fix-cron-auth-and-credit-card-schedule.sql | 訂閱排程的 command 加上 `x-cron-secret` header;補建從未建立的 credit-card-reminder-daily 排程 | 2026-08-31 |
 
 ### 正式定義檔重跑紀錄
 
@@ -78,25 +81,33 @@
 |---|---|---|---|
 | update-exchange-rates | 2026-08-27 | v19 | 加 `x-cron-secret` 驗證(取代 2026-08-26 v17 的陳舊值例外版,該邏輯保留) |
 | send-streak-reminder | 2026-08-27 | v26 | 加 `x-cron-secret` 驗證(取代 2026-07-11 v24 的通知多語化版,該邏輯保留) |
-| send-split-notification | 2026-07-11 | v8 | 同上 |
-| send-credit-card-reminder | 2026-07-11 | v4 | 同上,repo 自 2026-03-26 起僅此次改動 |
-| send-credit-usage-alert | 2026-07-11 | v4 | 同上 |
-| process-subscriptions | 2026-07-11 | v7 | 缺匯率跳過時推播提醒手動記帳 |
+| send-split-notification | 2026-07-11 | v9 | 同上 |
+| send-credit-card-reminder | 2026-08-31 | v6 | 加 `x-cron-secret` 驗證;繳款提醒改為未設定過即視同未啟用 |
+| send-credit-usage-alert | 2026-08-31 | v6 | 額度警告改為未設定過即視同未啟用(呼叫端是前端,不加 cron 密鑰) |
+| process-subscriptions | 2026-08-31 | v9 | 加 `x-cron-secret` 驗證 |
 
-(以 `supabase functions list` 的 updated_at/version 為準;2026-08-27 已核對)
+(以 `supabase functions list` 的 updated_at/version 為準;2026-08-31 已核對)
 
 ### Edge Function 的 cron 密鑰(CRON_SECRET)
 
-2026-08-27 起,`update-exchange-rates` 與 `send-streak-reminder` 只接受帶正確
+2026-08-27 起,`update-exchange-rates` 與 `send-streak-reminder`;2026-08-31 起再加上
+`process-subscriptions` 與 `send-credit-card-reminder`,只接受帶正確
 `x-cron-secret` header 的請求(`supabase/functions/_shared/cronAuth.ts`)。
-兩支的呼叫端都只有 pg_cron,密鑰同時存在兩個地方:
+四支的呼叫端都只有 pg_cron,密鑰同時存在兩個地方:
 
 - Supabase secrets 的 `CRON_SECRET`(函式端比對用)
-- 兩個 cron job 的 command 內(呼叫端夾帶用,見 `scripts/add-cron-secret-header.sql`)
+- 四個 cron job 的 command 內(呼叫端夾帶用,見 `scripts/add-cron-secret-header.sql`
+  與 `scripts/fix-cron-auth-and-credit-card-schedule.sql`)
 
 > **為什麼不是 verify_jwt**:cron 帶的 publishable key 同樣寫在前端 bundle 內人人可得,
-> 改 true 只是把門檻從「知道網址」變成「知道網址＋抄一把公開 key」。兩支的
-> verify_jwt 維持 false 是刻意的,防線在函式內。
+> 改 true 只是把門檻從「知道網址」變成「知道網址＋抄一把公開 key」。防線在函式內,
+> verify_jwt 是什麼值都不影響這個判斷——實際上這四支兩種值都有(前兩支 false、
+> 後兩支 true),2026-08-31 實測後兩支帶上那把公開 key 即可長驅直入,佐證了這一點。
+>
+> ⚠️ **測試時務必帶 `Authorization`/`apikey`**:對 verify_jwt = true 的函式,完全不帶
+> header 會被平台閘道擋在 `{"code":"UNAUTHORIZED_NO_AUTH_HEADER"}`,請求根本進不到
+> 函式。那個 401 是閘道給的,證明不了 guard 有沒有裝上,很容易誤判成驗證通過。
+> 看回應內容分辨:`{"success":false,"error":"unauthorized"}` 才是函式自己的 guard。
 >
 > ⚠️ **fail closed**:`CRON_SECRET` 被刪或改掉而 cron command 沒同步更新時,
 > 兩支函式會回 401 拒絕**所有**請求——匯率停更、提醒信停寄,而 cron.job_run_details
@@ -105,18 +116,19 @@
 > 輪換順序:先改 cron command 內的密鑰,再 `supabase secrets set`(中間有短暫空窗,
 > 詳見 `scripts/add-cron-secret-header.sql` 檔尾)。
 >
-> 已知缺口:`send-split-notification` 同為 verify_jwt = false,但呼叫端是前端,
+> 已知缺口:`send-split-notification` 與 `send-credit-usage-alert` 的呼叫端是前端,
 > 不適用此方案(密鑰放前端等於公開),待另外評估。
 
 ### pg_cron 排程
 
 | jobname | schedule | active |
 |---|---|---|
+| credit-card-reminder-daily | `0 1 * * *` | true |
 | process-subscriptions-daily | `0 1 * * *` | true |
 | send-streak-reminder-hourly | `*/5 * * * *` | true |
 | update-exchange-rates-daily | `0 2 * * *` | true |
 
-> 2026-07-11 核對。注意:`send-streak-reminder-hourly` 命名為 hourly,但實際排程是每 5 分鐘一次——命名與實際排程不符,先如實記錄,是否改名或改頻率待你決定,本次不動它。
+> 2026-08-31 核對。注意:`send-streak-reminder-hourly` 命名為 hourly,但實際排程是每 5 分鐘一次——命名與實際排程不符,先如實記錄,是否改名或改頻率待你決定,本次不動它。
 > command 欄位不記錄於此(內含 anon key)。
 >
 > 2026-08-26:`update-exchange-rates-daily` 的 command 內是未替換的
@@ -135,6 +147,20 @@
 > 必須寫進 command 內)。修的是**訊號可信度**,不是寄信本身。
 > 逐封序列寄信(`send-streak-reminder/index.ts:204-240`)未改;
 > 若日後收件者變多再度逾時,再考慮改平行寄送。
+>
+> 2026-08-31:`credit-card-reminder-daily` 是這次**補建**的——`send-credit-card-reminder`
+> 自 2026-03 上線、2026-07-11 部署到 v4,但它的排程從來沒有被建立過
+> (函式 README 那段 `cron.schedule` 未曾執行),`settings` 表
+> `key='credit_card_reminder_last_sent'` 為 0 筆,佐證這支函式從未成功執行過,
+> 使用者一次繳款提醒都沒收到。
+> 前一則教訓是「只看 active=true 不足以判斷排程有效」,這則更前面一步:
+> **job 根本不在表裡**。沒有任何監控會叫,因為沒東西在跑也就沒東西會失敗;
+> 使用者也不會回報「我沒收到從來不知道存在的通知」。
+> 新增 cron 型函式後,務必回頭 `SELECT * FROM cron.job` 確認排程真的存在——
+> 光是 `functions deploy` 不會讓它跑起來。
+> 建立時已一併設 `CURLOPT_TIMEOUT_MS = 30000`:這支逐張卡序列推播
+> (`send-credit-card-reminder/index.ts:133-147`),與 send-streak-reminder 同樣結構,
+> 預設 5 秒容易逾時,先設好免得一上線就天天留下誤報的 failed。
 
 ### 落後偵測方法
 
