@@ -86,8 +86,8 @@ serve(async (req) => {
       const userEntry = userSettingsMap.get(userId) || {}
       const notifSettings = userEntry.notifSettings || {}
 
-      // 跳過未啟用繳款日提醒的用戶
-      if (notifSettings.payment_reminder_enabled === false) continue
+      // 跳過未啟用繳款日提醒的用戶（未設定過視同未啟用，與前端預設一致）
+      if (notifSettings.payment_reminder_enabled !== true) continue
 
       const daysBefore = notifSettings.payment_days_before ?? 3
       const dueDay = card.payment_due_day as number

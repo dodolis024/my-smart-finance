@@ -90,8 +90,8 @@ serve(async (req) => {
       if (row.key === 'ui_preferences') lang = normalizeLang(row.value)
     }
 
-    // 跳過未啟用使用率警告的用戶
-    if (notifSettings.usage_alert_enabled === false) {
+    // 跳過未啟用使用率警告的用戶（未設定過視同未啟用，與前端預設一致）
+    if (notifSettings.usage_alert_enabled !== true) {
       return new Response(
         JSON.stringify({ success: true, skipped: 'usage_alert_disabled' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
