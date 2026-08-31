@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.24.0] - Aug-31 2026
 - Fixed needing a manual refresh to see updated credit limits and payment methods after editing accounts or categories in settings
 - Added a command line tool: log and review transactions from the terminal, or have an AI assistant do it for you
 - Added a "Command Line Tool" page in settings with setup, sign-in, and common commands (desktop only)
