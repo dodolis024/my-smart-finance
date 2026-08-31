@@ -50,6 +50,33 @@ CREATE POLICY "split_ledger_syncs_update" ON split_ledger_syncs
 CREATE POLICY "split_ledger_syncs_delete" ON split_ledger_syncs
   FOR DELETE USING (user_id = auth.uid());
 
+-- 安全性：上面四條 policy 只檢查「這列是不是自己的」，不檢查 transaction_id
+-- 指向的交易是不是自己的。sync_split_to_ledger 會照著這裡記的 transaction_id
+-- 去更新交易，因此一列被竄改的同步記錄等於一張覆寫他人交易的許可證。
+-- UPDATE policy 缺 WITH CHECK 時 Postgres 沿用 USING，改完 transaction_id 之後
+-- user_id = auth.uid() 仍然成立，policy 天生擋不住，故比照
+-- protect_split_group_ownership 改用 trigger（見 scripts/fix-split-sync-ownership.sql）。
+CREATE OR REPLACE FUNCTION assert_sync_tx_owned()
+RETURNS TRIGGER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM transactions
+    WHERE id = NEW.transaction_id AND user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'SPLIT_SYNC_TX_NOT_OWNED';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS assert_sync_tx_owned ON split_ledger_syncs;
+CREATE TRIGGER assert_sync_tx_owned
+  BEFORE INSERT OR UPDATE ON split_ledger_syncs
+  FOR EACH ROW
+  EXECUTE FUNCTION assert_sync_tx_owned();
+
 -- =============================================================================
 -- 3. RPC: get_split_sync_status
 -- 回傳用戶對指定群組的同步狀態，包含是否有未同步費用
@@ -174,6 +201,14 @@ BEGIN
     RAISE EXCEPTION 'SPLIT_NOT_LINKED_MEMBER';
   END IF;
 
+  -- p_account_id 由前端傳入，且本函式是 SECURITY DEFINER（RLS 擋不住），
+  -- 因此必須自行確認那個帳戶屬於呼叫者，否則交易會掛在別人的帳戶編號下。
+  IF p_account_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM accounts WHERE id = p_account_id AND user_id = v_user_id
+  ) THEN
+    RAISE EXCEPTION 'ACCOUNT_NOT_OWNED';
+  END IF;
+
   -- 取得群組資訊
   SELECT sg.name, sg.currency INTO v_group_name, v_group_currency
   FROM split_groups sg
@@ -273,7 +308,15 @@ BEGIN
       twd_amount    = v_twd_amount,
       item_name     = v_group_name,
       updated_at    = NOW()
-    WHERE id = v_existing_sync.transaction_id;
+    WHERE id = v_existing_sync.transaction_id
+      AND user_id = v_user_id;
+
+    -- transaction_id 對 transactions 是 ON DELETE CASCADE，交易被刪除時這列
+    -- 同步記錄會一併消失，所以「匹配 0 列」在正常流程下不可能發生——只有同步
+    -- 記錄被指到別人的交易時才會走到這裡。不可靜默略過。
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'SPLIT_SYNC_TX_NOT_OWNED';
+    END IF;
 
     -- 更新同步記錄
     UPDATE split_ledger_syncs SET

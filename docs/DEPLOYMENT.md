@@ -61,6 +61,7 @@
 | scripts/fix-split-avatar-rpc.sql | 批次頭像 RPC 的呼叫者權限檢查 | 2026-08-31 |
 | scripts/fix-cron-auth-and-credit-card-schedule.sql | 訂閱排程的 command 加上 `x-cron-secret` header;補建從未建立的 credit-card-reminder-daily 排程 | 2026-08-31 |
 | scripts/fix-invite-code-hardening.sql | 邀請碼查詢加登入檢查;產生器改 10 碼 gen_random_bytes;既有 5 組邀請碼一次性輪換 | 2026-08-31 |
+| scripts/fix-split-sync-ownership.sql | 分帳同步補擁有權檢查:交易 UPDATE 比對 user_id、p_account_id 驗證擁有者,split_ledger_syncs 加 assert_sync_tx_owned trigger | 2026-08-31 |
 
 > 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
 > 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,

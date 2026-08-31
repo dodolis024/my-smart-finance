@@ -755,6 +755,8 @@ const zh = {
     SPLIT_SHARES_EMPTY: '分攤明細不可為空',
     SPLIT_SHARE_MEMBER_INVALID: '分攤成員不屬於此群組',
     SPLIT_NO_ADD_PERMISSION: '你沒有權限在此群組新增費用',
+    SPLIT_SYNC_TX_NOT_OWNED: '同步記錄指向的交易不屬於你',
+    ACCOUNT_NOT_OWNED: '此帳戶不屬於你',
   },
 };
 
