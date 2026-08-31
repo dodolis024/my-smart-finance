@@ -17,6 +17,8 @@
 
 `tests/unit/tools-transactions.test.js` 守著這些行為，改壞了測試會紅。
 
+同步只是第一步：`tools/` 的改動要**發版**才會到已安裝的使用者手上，見下方「發版」。
+
 ## 安裝（使用者）
 
 ```bash
@@ -37,12 +39,41 @@ npm link          # 讓 finance 指令指向工作目錄的版本
 
 ## 發版
 
+改動 `tools/` 底下的程式碼後，已安裝的使用者不會自動拿到，必須 bump 版號重新發布。
+版號與主 App 版號各自獨立，不需對齊。
+
 ```bash
 npm version patch          # 或 minor / major
-npm publish
+npm publish                # ⚠️ 必須在真正的終端機視窗執行，見下方
 ```
 
-`files` 欄位只會打包 `cli/`、`core/`、`mcp/` 與 README，不含 repo 其他內容。
+### `npm publish` 不能在非 TTY 環境跑
+
+Claude Code 的 `!` 指令、Bash 工具、CI 都不行。這個帳號的 npm 2FA 是 passkey（Touch
+ID），而 npm 的 `lib/utils/auth.js` 在處理 2FA 挑戰前會先檢查 `process.stdin.isTTY`，
+不是 TTY 就直接拋 `EOTP`，走不到開瀏覽器做 WebAuthn 的分支。
+
+錯誤訊息會說 `requires a one-time password from your authenticator` 並要你加 `--otp=`，
+那是誤導——沒有 TOTP 可填，npm 也不再提供新增 authenticator app 的選項。
+
+正確做法：開 Terminal.app 或 iTerm2，`cd tools && npm publish`。npm 會印出
+`Authenticate your account at:` 並開瀏覽器，Touch ID 確認即可。
+
+### bin 路徑不能帶 `./` 前綴
+
+npm 11 判定 `./cli/index.js` 無效，發布時會**整個移除 bin 欄位**，使用者裝了卻沒有
+`finance` 指令。`npm pack` 不會顯現，只有 `npm publish` 會警告。
+
+### 打包範圍
+
+`files` 只包含 `cli/`、`core/`、`mcp/` 與 README；npm 另外自動收錄同目錄的 `LICENSE`。
+repo 其他內容不會進套件。
+
+### 發布後驗證
+
+```bash
+npm install -g my-smart-finance-cli && finance whoami
+```
 
 ## 一次性設定：Supabase 回呼網址
 
