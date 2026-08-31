@@ -34,7 +34,10 @@ export function useSplitGroups() {
 
       let avatarMap = {};
       if (linkedGroupIds.length) {
-        const { data: avatars } = await supabase.rpc('get_split_member_avatars_batch', { p_group_ids: linkedGroupIds });
+        const { data: avatars, error: avatarError } = await supabase.rpc('get_split_member_avatars_batch', { p_group_ids: linkedGroupIds });
+        // 頭像是加值資訊，抓不到就退回首字母，不該讓整個群組列表載入失敗。
+        // 但一定要留痕跡：靜默失敗的畫面跟「大家本來就沒設頭像」完全一樣，無從查起。
+        if (avatarError) console.warn('[useSplitGroups] 取得成員頭像失敗:', avatarError.message);
         (avatars || []).forEach(a => { avatarMap[`${a.group_id}:${a.member_id}`] = a.avatar_url; });
       }
 

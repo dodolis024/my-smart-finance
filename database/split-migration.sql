@@ -118,23 +118,37 @@ ALTER TABLE split_settlements ENABLE ROW LEVEL SECURITY;
 -- =============================================================================
 -- 7.5 輔助函數（SECURITY DEFINER 打破 RLS 循環遞迴）
 -- =============================================================================
+-- 安全性：這兩支都是 SECURITY DEFINER 且接受任意 p_user_id，等於「代任何人發問」。
+-- 不能用 REVOKE 關起來——它們被寫在下方十幾條 RLS policy 的判斷式裡，而 policy
+-- 判斷式是以發出查詢的使用者身分執行，收回 authenticated 的執行權會讓每個登入
+-- 用戶一讀分帳表就 permission denied。（calculate_streak_stats 可以 REVOKE 是因為
+-- 它從 SECURITY DEFINER 函式內部被呼叫，情境不同，不可類推。）
+-- 改為在函式內限制「只回答關於呼叫者自己的問題」：所有呼叫點傳的都是 auth.uid()，
+-- 正常流程零影響；匿名或代入他人 user_id 一律得到空集合／false。
+
 -- 查詢用戶所屬的群組 ID（繞過 split_members 的 RLS）
 CREATE OR REPLACE FUNCTION get_user_split_group_ids(p_user_id UUID)
 RETURNS SETOF UUID AS $$
-  SELECT group_id FROM split_members WHERE user_id = p_user_id;
+  SELECT group_id FROM split_members
+  WHERE user_id = p_user_id
+    AND p_user_id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 -- 檢查用戶是否可存取指定群組（owner 或已連結成員）
 CREATE OR REPLACE FUNCTION can_access_split_group(p_group_id UUID, p_user_id UUID)
 RETURNS BOOLEAN AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM split_groups
-    WHERE id = p_group_id AND owner_id = p_user_id
-  )
-  OR EXISTS (
-    SELECT 1 FROM split_members
-    WHERE group_id = p_group_id AND user_id = p_user_id
-  );
+  SELECT p_user_id IS NOT NULL
+     AND p_user_id = auth.uid()
+     AND (
+       EXISTS (
+         SELECT 1 FROM split_groups
+         WHERE id = p_group_id AND owner_id = p_user_id
+       )
+       OR EXISTS (
+         SELECT 1 FROM split_members
+         WHERE group_id = p_group_id AND user_id = p_user_id
+       )
+     );
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 -- =============================================================================
@@ -192,11 +206,13 @@ CREATE POLICY "split_members_select" ON split_members
     can_access_split_group(group_id, auth.uid())
   );
 
--- 群組成員或 owner 可新增成員；加入群組時自己也可新增
+-- 群組成員或 owner 可新增成員
+-- 安全性：不可加上 OR user_id = auth.uid()。那等於只檢查「寫入的列是不是自己」
+-- 而不檢查 group_id，任何登入用戶知道群組 id 就能自行加入，繞過
+-- join_split_group_as_new_member 只收邀請碼的防護（見該函式註解）。
 CREATE POLICY "split_members_insert" ON split_members
   FOR INSERT WITH CHECK (
     can_access_split_group(group_id, auth.uid())
-    OR user_id = auth.uid()
   );
 
 CREATE POLICY "split_members_update" ON split_members
@@ -209,6 +225,48 @@ CREATE POLICY "split_members_delete" ON split_members
   FOR DELETE USING (
     EXISTS (SELECT 1 FROM split_groups WHERE id = group_id AND owner_id = auth.uid())
   );
+
+-- 安全性：UPDATE policy 缺 WITH CHECK 時 Postgres 沿用 USING，而 user_id = auth.uid()
+-- 在改完 group_id 之後仍然成立，等於可把自己那列「搬」進任意群組。補 WITH CHECK
+-- 也無解——它看不到舊值，無法表達「這個欄位不准動」。與 protect_split_group_ownership
+-- 同理，改用 trigger。
+--
+-- user_id 只允許三種變更：owner 調整、認領空位、自行解除連結。
+-- 「認領空位」是 link_self_to_split_member 走的路徑，該函式雖為 SECURITY DEFINER
+-- 但 trigger 一樣會觸發，少了這條會讓「加入既有成員位置」直接壞掉。
+--
+-- auth.uid() IS NULL 放行：那是 service_role 或 SQL Editor 直連（本就有完整權限），
+-- 擋它只會讓日後無法用 SQL 修資料；anon 走不到這裡，已被 USING 擋下。
+CREATE OR REPLACE FUNCTION protect_split_member_identity()
+RETURNS TRIGGER
+SET search_path = public
+AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.group_id IS DISTINCT FROM OLD.group_id THEN
+    RAISE EXCEPTION 'SPLIT_MEMBER_GROUP_IMMUTABLE';
+  END IF;
+
+  IF NEW.user_id IS DISTINCT FROM OLD.user_id AND NOT (
+       EXISTS (SELECT 1 FROM split_groups WHERE id = OLD.group_id AND owner_id = auth.uid())
+    OR (OLD.user_id IS NULL      AND NEW.user_id = auth.uid())
+    OR (OLD.user_id = auth.uid() AND NEW.user_id IS NULL)
+  ) THEN
+    RAISE EXCEPTION 'SPLIT_MEMBER_OWNER_ONLY';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS protect_split_member_identity ON split_members;
+CREATE TRIGGER protect_split_member_identity
+  BEFORE UPDATE ON split_members
+  FOR EACH ROW
+  EXECUTE FUNCTION protect_split_member_identity();
 
 -- =============================================================================
 -- 10. split_expenses RLS policies
@@ -303,33 +361,29 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- 13. 加入群組 RPC（SECURITY DEFINER，繞過 RLS FK 限制）
 -- =============================================================================
 -- 取得群組成員的頭像資訊（從 auth.users metadata 讀取）
-CREATE OR REPLACE FUNCTION get_split_member_avatars(p_group_id UUID)
-RETURNS JSON AS $$
-BEGIN
-  -- 驗證呼叫者是否為群組成員或 owner
-  IF NOT can_access_split_group(p_group_id, auth.uid()) THEN
-    RETURN '[]'::json;
-  END IF;
-
-  RETURN (
-    SELECT COALESCE(json_agg(json_build_object(
-      'member_id', sm.id,
-      'avatar_url', COALESCE(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture')
-    )), '[]'::json)
-    FROM split_members sm
-    JOIN auth.users u ON u.id = sm.user_id
-    WHERE sm.group_id = p_group_id
-      AND sm.user_id IS NOT NULL
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
-
--- =============================================================================
+--
+-- 單筆版 get_split_member_avatars(UUID) 已於 2026-08-31 移除：前端自
+-- scripts/fix-query-optimization.sql 改用下方批次版後就沒有呼叫端，留著只是
+-- 多一支會讀 auth.users 的 SECURITY DEFINER 函式。移除腳本見
+-- scripts/fix-split-avatar-rpc.sql。
+--
 -- 批次取得多個群組成員的頭像資訊（避免前端逐群組 N 次 RPC）
 -- 回傳每筆含 group_id，供前端以 group_id + member_id 對應
+--
+-- 安全性：只取 avatar_url / picture 兩個欄位。raw_user_meta_data 內還有 email、
+-- full_name、Google sub 等個資，日後擴充回傳欄位前務必確認不會一併帶出。
 CREATE OR REPLACE FUNCTION get_split_member_avatars_batch(p_group_ids UUID[])
 RETURNS JSON AS $$
 BEGIN
+  -- 輸入上限：每列都會過 can_access_split_group，不會外洩，但無上限的陣列
+  -- 等於開放任意大小的查詢。前端實際只會帶入自己看得到的群組，200 綽綽有餘。
+  IF p_group_ids IS NULL OR array_length(p_group_ids, 1) IS NULL THEN
+    RETURN '[]'::json;
+  END IF;
+  IF array_length(p_group_ids, 1) > 200 THEN
+    RAISE EXCEPTION 'SPLIT_TOO_MANY_GROUPS';
+  END IF;
+
   RETURN (
     SELECT COALESCE(json_agg(json_build_object(
       'group_id',   sm.group_id,

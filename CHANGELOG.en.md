@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Hardened split security: joining a group now always requires invite code verification, and member lookups are scoped to the caller's own groups
+
 ## [1.24.0] - Aug-31 2026
 - Fixed needing a manual refresh to see updated credit limits and payment methods after editing accounts or categories in settings
 - Added a command line tool: log and review transactions from the terminal, or have an AI assistant do it for you
