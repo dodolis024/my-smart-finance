@@ -60,6 +60,20 @@
 | scripts/fix-split-member-access.sql | 分帳成員存取權收斂:加入群組一律需通過邀請碼驗證,成員查詢範圍限本人相關群組 | 2026-08-31 |
 | scripts/fix-split-avatar-rpc.sql | 批次頭像 RPC 的呼叫者權限檢查 | 2026-08-31 |
 | scripts/fix-cron-auth-and-credit-card-schedule.sql | 訂閱排程的 command 加上 `x-cron-secret` header;補建從未建立的 credit-card-reminder-daily 排程 | 2026-08-31 |
+| scripts/fix-invite-code-hardening.sql | 邀請碼查詢加登入檢查;產生器改 10 碼 gen_random_bytes;既有 5 組邀請碼一次性輪換 | 2026-08-31 |
+
+> 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
+> 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,
+> 請他到群組明細頁重新複製。已加入的成員不受影響(成員資格存在 split_members,
+> 與邀請碼無關)。舊碼刻意未留副本——留一份對照表等於把剛換掉的鑰匙抄在門口。
+>
+> 輪換必須暫停 `protect_split_group_ownership` trigger:該 trigger 在
+> `auth.uid() IS NULL` 時就擋 invite_code 變更,而 SQL Editor 裡 auth.uid() 正是 NULL。
+> 日後任何在 SQL Editor 直接改 split_groups.owner_id 或 invite_code 的操作都會撞到,
+> 記得包在 DO 區塊內停用再還原(單一交易,中途失敗會連同停用一起 rollback)。
+>
+> 另注意 Supabase SQL Editor **執行多段 SQL 時只顯示最後一句的輸出**,
+> 驗證查詢要合併成單一句,否則前面幾項等於沒驗(與 RAISE NOTICE 不顯示同類)。
 
 ### 正式定義檔重跑紀錄
 

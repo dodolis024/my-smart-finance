@@ -11,16 +11,23 @@
 -- =============================================================================
 -- 1. 邀請代碼生成函數
 -- =============================================================================
--- 產生隨機 6 碼邀請代碼（大寫字母 + 數字，排除 0/O/I/1 避免混淆）
+-- 產生隨機 10 碼邀請代碼（大寫字母 + 數字，排除 0/O/I/1 避免混淆）
+-- 邀請碼等同一把不會過期的鑰匙：持碼者加上任一帳號即可經
+-- join_split_group_as_new_member 加入群組，取得該群組全部費用與結算資料。
+-- 因此長度與亂數品質都算安全參數，2026-08-31 由 6 碼 random() 改為
+-- 10 碼 gen_random_bytes()（見 scripts/fix-invite-code-hardening.sql）。
 CREATE OR REPLACE FUNCTION generate_invite_code()
 RETURNS TEXT AS $$
 DECLARE
-  chars TEXT := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  result TEXT := '';
+  chars  TEXT  := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  bytes  BYTEA := extensions.gen_random_bytes(10);
+  result TEXT  := '';
   i INTEGER;
 BEGIN
-  FOR i IN 1..6 LOOP
-    result := result || substr(chars, floor(random() * length(chars) + 1)::int, 1);
+  -- 字母表長度 32，而 256 是 32 的整數倍，故 % 32 不會讓某些字元偏多。
+  -- 日後若增刪字母表字元，務必重新確認這個整除關係，否則會引入偏差。
+  FOR i IN 0..9 LOOP
+    result := result || substr(chars, (get_byte(bytes, i) % 32) + 1, 1);
   END LOOP;
   RETURN result;
 END;
@@ -334,6 +341,13 @@ DECLARE
   g split_groups%ROWTYPE;
   members JSON;
 BEGIN
+  -- 未登入不得查詢。本函式是 SECURITY DEFINER，缺了這道檢查等於任何人持
+  -- 公開的 publishable key 就能無限次試碼，掃出全站群組名稱與成員姓名。
+  -- 前端 /split/join/:code? 本就包在 ProtectedRoute 內，正常流程不受影響。
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'AUTH_REQUIRED';
+  END IF;
+
   SELECT * INTO g FROM split_groups WHERE invite_code = upper(trim(p_code));
   IF NOT FOUND THEN RETURN NULL; END IF;
 

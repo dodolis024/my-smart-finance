@@ -95,7 +95,7 @@ export default function JoinPage() {
             placeholder={t('split.joinPage.codeInputPlaceholder')}
             value={inputCode}
             onChange={e => setInputCode(e.target.value.toUpperCase())}
-            maxLength={6}
+            maxLength={10}
           />
         </div>
         <button type="button" className="split-btn-primary" onClick={() => handleSearch()} disabled={searching || !inputCode.trim()} style={{ marginBottom: '0.75rem' }}>
