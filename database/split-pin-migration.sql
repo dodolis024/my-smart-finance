@@ -34,3 +34,12 @@ CREATE POLICY "split_group_pins_insert" ON split_group_pins
 DROP POLICY IF EXISTS "split_group_pins_delete" ON split_group_pins;
 CREATE POLICY "split_group_pins_delete" ON split_group_pins
   FOR DELETE USING (user_id = auth.uid());
+
+-- 前端以 upsert 寫入（重新置頂時更新 pinned_at），PostgREST 會產生
+-- INSERT ... ON CONFLICT DO UPDATE。Postgres 走到 DO UPDATE 分支時要求 UPDATE
+-- policy，缺了就會被 RLS 擋下。平常 togglePin 已先判斷過置頂狀態不會衝突，
+-- 但置頂跨裝置同步：他機已置頂而本機列表尚未更新時，點下去就會撞上既有列。
+DROP POLICY IF EXISTS "split_group_pins_update" ON split_group_pins;
+CREATE POLICY "split_group_pins_update" ON split_group_pins
+  FOR UPDATE USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
