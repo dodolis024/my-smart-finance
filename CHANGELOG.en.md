@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added pinning for split groups: pin frequently used groups to the top of the list; pins are visible only to you and sync across devices
 - Hardened split security: joining a group now always requires invite code verification, and member lookups are scoped to the caller's own groups
 - Hardened scheduled job security: subscription auto-entry and credit card payment reminders now only accept calls from the system scheduler
 - Hardened split invite codes: codes are longer and now require sign-in to look up; existing codes were regenerated, so old invite links and codes no longer work and need resharing (members who already joined are unaffected)

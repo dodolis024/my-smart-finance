@@ -20,7 +20,7 @@ let cachedCurrencies = null;
 export default function SplitPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { groups, loading, fetchGroups, createGroup, updateGroup, archiveGroup, unarchiveGroup, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
+  const { groups, loading, fetchGroups, createGroup, updateGroup, archiveGroup, unarchiveGroup, togglePin, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -89,7 +89,23 @@ export default function SplitPage() {
     }
   };
 
-  const activeGroups = groups.filter(g => !g.archived_at);
+  const handleTogglePin = async (groupId) => {
+    try {
+      await togglePin(groupId);
+    } catch {
+      toast.error(t('split.pinFailed'));
+    }
+  };
+
+  // 置頂排前面（多個置頂則後置頂的在上），其餘沿用查詢的 created_at 由新到舊。
+  // 封存區不吃置頂：封存的語意就是「收起來不常看」，跟置頂衝突。
+  const activeGroups = groups
+    .filter(g => !g.archived_at)
+    .sort((a, b) => {
+      if (Boolean(a.pinned_at) !== Boolean(b.pinned_at)) return a.pinned_at ? -1 : 1;
+      if (a.pinned_at && b.pinned_at) return b.pinned_at.localeCompare(a.pinned_at);
+      return 0;
+    });
   const archivedGroups = groups.filter(g => g.archived_at);
 
   return (
@@ -165,6 +181,7 @@ export default function SplitPage() {
                       group={g}
                       onClick={() => setSelectedGroup(g)}
                       onDelete={handleDeleteGroup}
+                      onTogglePin={handleTogglePin}
                     />
                   ))}
                 </div>

@@ -32,17 +32,31 @@ export function useSplitGroups() {
         .filter(g => g.split_members?.some(m => m.user_id))
         .map(g => g.id);
 
-      let avatarMap = {};
-      if (linkedGroupIds.length) {
-        const { data: avatars, error: avatarError } = await supabase.rpc('get_split_member_avatars_batch', { p_group_ids: linkedGroupIds });
-        // 頭像是加值資訊，抓不到就退回首字母，不該讓整個群組列表載入失敗。
-        // 但一定要留痕跡：靜默失敗的畫面跟「大家本來就沒設頭像」完全一樣，無從查起。
-        if (avatarError) console.warn('[useSplitGroups] 取得成員頭像失敗:', avatarError.message);
-        (avatars || []).forEach(a => { avatarMap[`${a.group_id}:${a.member_id}`] = a.avatar_url; });
-      }
+      // 頭像與置頂互不相依，一起發出去省一趟往返（置頂由 RLS 限定只回自己的記錄）
+      const [
+        { data: avatars, error: avatarError },
+        { data: pins, error: pinError },
+      ] = await Promise.all([
+        linkedGroupIds.length
+          ? supabase.rpc('get_split_member_avatars_batch', { p_group_ids: linkedGroupIds })
+          : Promise.resolve({ data: [], error: null }),
+        supabase.from('split_group_pins').select('group_id, pinned_at'),
+      ]);
+
+      // 頭像是加值資訊，抓不到就退回首字母，不該讓整個群組列表載入失敗。
+      // 但一定要留痕跡：靜默失敗的畫面跟「大家本來就沒設頭像」完全一樣，無從查起。
+      if (avatarError) console.warn('[useSplitGroups] 取得成員頭像失敗:', avatarError.message);
+      const avatarMap = {};
+      (avatars || []).forEach(a => { avatarMap[`${a.group_id}:${a.member_id}`] = a.avatar_url; });
+
+      // 同理，置頂抓不到就一律當作未置頂，列表照舊呈現
+      if (pinError) console.warn('[useSplitGroups] 取得置頂群組失敗:', pinError.message);
+      const pinMap = {};
+      (pins || []).forEach(p => { pinMap[p.group_id] = p.pinned_at; });
 
       return (data || []).map(g => ({
         ...g,
+        pinned_at: pinMap[g.id] || null,
         split_members: (g.split_members || []).map(m => ({
           ...m,
           avatar_url: avatarMap[`${g.id}:${m.id}`] || null,
@@ -108,6 +122,30 @@ export function useSplitGroups() {
     (groupId) => updateGroup(groupId, { archived_at: null }),
     [updateGroup]
   );
+
+  // 置頂是個人偏好，存在 split_group_pins（每人一份），不會影響同群組的其他成員
+  const togglePin = useCallback(async (groupId) => {
+    if (!user) throw new Error(t('auth.loginRequired'));
+    const isPinned = Boolean(groups.find(g => g.id === groupId)?.pinned_at);
+
+    if (isPinned) {
+      const { error } = await supabase
+        .from('split_group_pins')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('group_id', groupId);
+      if (error) throw error;
+      setGroups(prev => prev.map(g => g.id === groupId ? { ...g, pinned_at: null } : g));
+      return;
+    }
+
+    const pinnedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from('split_group_pins')
+      .upsert({ user_id: user.id, group_id: groupId, pinned_at: pinnedAt });
+    if (error) throw error;
+    setGroups(prev => prev.map(g => g.id === groupId ? { ...g, pinned_at: pinnedAt } : g));
+  }, [groups, user, setGroups, t]);
 
   const deleteGroup = useCallback(async (groupId) => {
     const { error } = await supabase
@@ -217,6 +255,7 @@ export function useSplitGroups() {
     updateGroup,
     archiveGroup,
     unarchiveGroup,
+    togglePin,
     deleteGroup,
     addMember,
     updateMemberName,
