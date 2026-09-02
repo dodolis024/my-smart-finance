@@ -62,6 +62,7 @@
 | scripts/fix-cron-auth-and-credit-card-schedule.sql | 訂閱排程的 command 加上 `x-cron-secret` header;補建從未建立的 credit-card-reminder-daily 排程 | 2026-08-31 |
 | scripts/fix-invite-code-hardening.sql | 邀請碼查詢加登入檢查;產生器改 10 碼 gen_random_bytes;既有 5 組邀請碼一次性輪換 | 2026-08-31 |
 | scripts/fix-split-sync-ownership.sql | 分帳同步補擁有權檢查:交易 UPDATE 比對 user_id、p_account_id 驗證擁有者,split_ledger_syncs 加 assert_sync_tx_owned trigger | 2026-08-31 |
+| database/split-pin-migration.sql | 分帳群組置頂:新增 split_group_pins 表(user_id+group_id),4 條 RLS 均限 user_id = auth.uid();INSERT 另以 can_access_split_group 擋住對他人群組的探測,UPDATE 為前端 upsert 走 ON CONFLICT DO UPDATE 所必需(缺了跨裝置置頂會被擋) | 2026-09-02 |
 
 > 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
 > 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,
