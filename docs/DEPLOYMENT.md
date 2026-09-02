@@ -177,8 +177,29 @@
 > (`send-credit-card-reminder/index.ts:133-147`),與 send-streak-reminder 同樣結構,
 > 預設 5 秒容易逾時,先設好免得一上線就天天留下誤報的 failed。
 
+### 驗收紀錄
+
+改完之後要回頭確認「真的生效」,而不是只確認「腳本跑完沒噴錯」。
+`scripts/check-security-hardening-status.sql` 是 2026-08-31 那批的驗收查詢
+(唯讀、可重複執行,整段貼進 SQL Editor 即可)。
+
+| 日期 | 範圍 | 結果 |
+|---|---|---|
+| 2026-09-02 | 2026-08-31 批次的 5 支 SQL 腳本 + 6 支 Edge Function | 22 項全數通過 |
+
+> 2026-09-02 的重點不在前 19 項設定檢查,而在後 3 項:
+> `credit-card-reminder-daily` 首次成功執行(2026-09-02 01:00 UTC = 台灣 09:00),
+> 信用卡繳款提醒自此才真正開始運作;四個排程近 3 天 0 失敗,
+> 反證 cron 密鑰兩端(secrets 的 `CRON_SECRET` 與 job command 內)確實對得上
+> ——這批最大的風險是 fail closed,密鑰不一致會靜默擋掉全部請求。
+> 另 `split_ledger_syncs` 指向他人交易的筆數為 0,表示修掉的擁有權漏洞未曾被利用。
+>
+> 驗收查詢刻意不輸出邀請碼與密鑰本身:這種結果常被截圖或貼上,
+> 只回報「有沒有」與「對不對」就夠了。
+
 ### 落後偵測方法
 
 懷疑 prod 落後 repo 時:
 - Edge functions:`supabase functions list` 的 updated_at 對照 `git log -- supabase/functions/<name>/` 最後改動日。
 - SQL:本表最後一行對照 `git log -- database/ scripts/`;必要時在 SQL Editor 以 `\df` 或 pg_proc 查函式定義抽查。
+- 分帳安全性與 cron 那批的現況:直接跑 `scripts/check-security-hardening-status.sql`,比逐項抽查快。
