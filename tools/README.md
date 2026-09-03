@@ -15,7 +15,20 @@
 | 簽到規則 | `maybeCheckIn` |
 | 分類或帳戶的解析規則 | `core/categories.js` / `core/accounts.js` |
 
-`tests/unit/tools-transactions.test.js` 守著這些行為，改壞了測試會紅。
+分帳也是一樣的處境，`core/splitExpenses.js` 是 `src/hooks/useSplitExpenses.js` 的第二份實作：
+
+| 變動 | 要改的地方 |
+|---|---|
+| 結算演算法（`src/lib/splitSettlement.js`） | `core/splitSettlement.js`（整份複製，含 `ZERO_DECIMAL_CURRENCIES` 名單） |
+| 均分的零頭規則（`AddExpenseModal.jsx` 的 `calcEqualShares` / `autoShareFirst`） | `core/splitShares.js` |
+| 新增／修改／刪除費用的副作用（通知、簽到） | `core/splitExpenses.js` |
+| `split_expenses` 或分攤明細的欄位 | `core/splitExpenses.js` 的 `EXPENSE_FIELDS` |
+
+零頭歸屬是這裡最容易做錯、也最難被發現的：兩邊若給不同的人，同一筆帳會差一分錢，
+而且只在除不盡時出現。`tests/unit/tools-split-report.test.js` 會直接比對兩份結算演算法的結果。
+
+`tests/unit/tools-transactions.test.js`、`tools-split-shares.test.js`、`tools-split-cli.test.js`
+守著這些行為，改壞了測試會紅。
 
 同步只是第一步：`tools/` 的改動要**發版**才會到已安裝的使用者手上，見下方「發版」。
 
@@ -98,6 +111,22 @@ finance summary
 finance help                                               # 完整指令說明
 ```
 
+分帳：
+
+```bash
+finance split groups                                       # 有哪些群組、成員叫什麼
+finance split show 日本行                                   # 費用明細與結算建議
+finance split add 晚餐 1200 --group 日本行 --split 我,小明,小美 --dry-run
+finance split add 晚餐 1200 --group 日本行 --split "我=200,小明,小美"
+finance split settle --from 小明 --to 我 --amount 500 --group 日本行
+finance split edit <費用id> --amount 1500
+finance split rm <費用id>
+```
+
+`--split` 有等號＝固定金額，沒等號＝分剩下的；省略 `--split` 就是全體成員均分。
+`--dry-run` 會把算好的分攤印出來但不寫入，適合先唸給使用者確認。
+建立群組、用邀請碼加入群組仍然只能在網頁做。
+
 ### 登入方式
 
 | 情境 | 指令 |
@@ -154,9 +183,14 @@ agent 跟人不一樣：它猜錯了會很有自信地寫進去。所以這裡�
 - **修改與刪除必須指定 id**，不支援條件式批次操作，agent 得先查詢才能動手。
 - **刪除會回傳被刪內容**，誤刪時至少留得下重建的依據。
 - 查不到匯率就擋下整筆，絕不退回 1:1。
+- **分帳的群組名與成員名同樣必須完全相符**，同名的群組或成員一律報錯而不是選第一個——選錯了就是把帳記到別團、把錢算到別人頭上。
+- **`split` 的旗標打錯會被擋下**並列出可用參數。`--splt 我,小明` 若被默默忽略，結果會變成全群組均分，而使用者不會看到任何異狀。
+- **`--limit` 只影響印出幾筆，結算一律用全部費用計算**，不會拿截斷過的資料算欠款。
 
 ## 功能範圍
 
-讀取類做滿，寫入類只做交易的新增／修改／刪除。
+讀取類做滿，寫入類做交易與分帳費用的新增／修改／刪除。
 
-訂閱扣款、帳戶與分類的維護、分帳系統**刻意不做**——它們的邏輯改動頻繁或牽涉多人協作，多一份實作就多一個會默默算錯的地方，而這些設定一年動不了幾次，在網頁上做完全不痛。
+訂閱扣款、帳戶與分類的維護**刻意不做**——它們一年動不了幾次，在網頁上做完全不痛，多一份實作就多一個會默默算錯的地方。
+
+分帳只做「記帳與結算」這一段：建立群組、邀請碼加入、成員管理、群組封存與置頂都留在網頁；分帳費用也**不會**寫進個人帳本 `transactions`（網頁的「同步至個人帳本」仍是使用者自己按的動作）。

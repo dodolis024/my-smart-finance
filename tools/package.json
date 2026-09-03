@@ -1,6 +1,6 @@
 {
   "name": "my-smart-finance-cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "My Smart Finance 的命令列工具與 MCP server：在終端機記帳查帳，或讓 AI 助理代勞",
   "type": "module",
   "bin": {

@@ -3,6 +3,7 @@ import { parseArgs } from './args.js';
 import { printError } from './format.js';
 import { callbackUrlCommand, loginCommand, logoutCommand, whoamiCommand } from './commands/auth.js';
 import { addCommand, editCommand, listCommand, removeCommand } from './commands/transactions.js';
+import { splitCommand } from './commands/split.js';
 import {
   accountsCommand,
   categoriesCommand,
@@ -23,6 +24,27 @@ finance — My Smart Finance 命令列工具
   finance edit <id> [--item ...] [--amount ...] [--category ...] [--account ...]
       [--currency ...] [--date ...] [--time ...] [--note ...]
   finance rm <id>
+
+分帳
+  finance split groups                     列出分帳群組與成員
+  finance split show 日本行                 費用明細與結算建議（--limit N 只影響印出幾筆）
+  finance split add 晚餐 1200 --group 日本行 [--paid-by 我]
+      [--split 我,小明,小美]        指定參與者均分（省略＝全體均分）
+      [--split "我=200,小明,小美"]   我固定 200，其餘均分剩下的
+      [--split "我=300,小明=900"]    全部固定，總和須等於金額
+      [--currency JPY] [--date today] [--note 備註] [--dry-run]
+  finance split edit <費用id> [--amount 3500] [--split ...] [--dry-run]
+  finance split settle --from 小明 --to 我 --amount 500 --group 日本行
+  finance split rm <費用id>
+
+  --split 有等號＝固定金額，沒等號＝分剩下的。
+  --split 與 --paid-by 可用 me（或「我」）代表自己。
+  群組名或項目名含空格時要加引號："日本 行"。
+
+  分帳費用不會自動計入個人收支。網頁另有「同步至個人帳本」可一次同步整個群組，
+  所以不要再用 finance add 把同一筆重記一次，那會變成重複記帳。
+  寫入前可加 --dry-run 先算給使用者確認，確認後再執行一次。
+  建立群組、用邀請碼加入群組請到網頁操作。
 
 查詢
   finance summary [--year Y] [--month M]    當月收支與分類排行
@@ -57,6 +79,7 @@ const COMMANDS = {
   edit: editCommand,
   rm: removeCommand,
   delete: removeCommand,
+  split: splitCommand,
   summary: summaryCommand,
   streak: streakCommand,
   year: yearCommand,

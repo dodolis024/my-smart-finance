@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added split expenses to the command line tool: view split groups, add and edit split expenses, log repayments, and see per-member totals with settlement suggestions from the terminal
+
 ## [1.25.0] - Sep-02 2026
 - Added pinning for split groups: pin frequently used groups to the top of the list; pins are visible only to you and sync across devices
 - Hardened split security: joining a group now always requires invite code verification, and member lookups are scoped to the caller's own groups

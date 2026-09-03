@@ -16,7 +16,7 @@ const MAX_AMOUNT = 99999999.99;
 
 const TX_FIELDS = 'id, date, time, type, item_name, category, payment_method, account_id, currency, amount, exchange_rate, twd_amount, note';
 
-function parseAmount(rawAmount) {
+export function parseAmount(rawAmount) {
   if (rawAmount === null || rawAmount === undefined || rawAmount === '') {
     throw smfError(ErrorCode.INVALID_INPUT, '必須指定金額');
   }

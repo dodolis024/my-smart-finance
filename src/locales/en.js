@@ -317,9 +317,9 @@ const en = {
         scope: {
           title: 'What it can and cannot do',
           canTitle: 'Available in the tool',
-          can: 'Log entries, search transactions, edit and delete them, and view monthly summaries and your logging streak.',
+          can: 'Log entries, search transactions, edit and delete them, view monthly summaries and your logging streak, and handle split expenses (view groups, add and edit split expenses, log repayments, see settlement suggestions).',
           cannotTitle: 'Do these on the web',
-          cannot: 'Subscriptions, adding or editing accounts and categories, and split expenses. These are more involved and rarely change, so they stay on the web.',
+          cannot: 'Subscriptions, adding or editing accounts and categories, and creating or joining split groups. These are more involved and rarely change, so they stay on the web.',
           safetyTitle: 'About security',
           safety: 'The tool can only reach your own data, protected by the same rules as the website. It never stores your password — signing in uses the same authorisation flow as the web app.',
         },

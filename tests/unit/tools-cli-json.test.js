@@ -158,3 +158,31 @@ describe('預設輸出（給人看的）', () => {
     expect(output.join('\n')).toContain('現金');
   });
 });
+
+/**
+ * `--key=value` 是 agent 最自然會寫出的形式。
+ * 沒有支援時 `--split=我,小明` 會被存成 flags['split=我,小明']，於是 flags.split 是
+ * undefined，呼叫端當成「沒指定」而套用預設值——不報錯，但算出來的東西是錯的。
+ */
+describe('parseArgs', () => {
+  it('--key=value 與 --key value 解析結果相同', async () => {
+    const { parseArgs } = await import('../../tools/cli/args.js');
+
+    expect(parseArgs(['--split=我,小明']).flags).toEqual({ split: '我,小明' });
+    expect(parseArgs(['--split', '我,小明']).flags).toEqual({ split: '我,小明' });
+  });
+
+  it('值裡本身含等號時只切第一個', async () => {
+    const { parseArgs } = await import('../../tools/cli/args.js');
+
+    expect(parseArgs(['--split=我=200,小明']).flags.split).toBe('我=200,小明');
+  });
+
+  it('既有的 --flag 與位置參數行為不變', async () => {
+    const { parseArgs } = await import('../../tools/cli/args.js');
+
+    const { positional, flags } = parseArgs(['星巴克', '150', '--month', '8', '--json']);
+    expect(positional).toEqual(['星巴克', '150']);
+    expect(flags).toEqual({ month: '8', json: true });
+  });
+});
