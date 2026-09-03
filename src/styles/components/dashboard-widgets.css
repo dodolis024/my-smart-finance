@@ -389,7 +389,8 @@
 .payment-stats-list li.clickable:hover {
   background: var(--color-row-hover);
   border-radius: 6px;
-  padding-left: 0.5rem;
+  /* 底色左右各外擴 0.5rem:用 box-shadow 撐開,不動 padding 才不會推移文字 */
+  box-shadow: -0.5rem 0 0 var(--color-row-hover), 0.5rem 0 0 var(--color-row-hover);
 }
 
 /* 圖例改用 <button>：重置瀏覽器預設樣式，維持原本外觀 */
