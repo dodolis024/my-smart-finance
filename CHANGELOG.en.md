@@ -3,6 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Added edit and delete to the transaction detail view: change or remove an entry from wherever you opened it, instead of having to find its row in the table first
+- Added sorting to the category drill-down: switch between date and amount to spot the largest entries in a category at a glance
 
 ## [1.26.0] - Sep-03 2026
 - Added split expenses to the command line tool: view split groups, add and edit split expenses, log repayments, and see per-member totals with settlement suggestions from the terminal

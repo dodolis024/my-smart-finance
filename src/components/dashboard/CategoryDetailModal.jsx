@@ -13,6 +13,8 @@ export default function CategoryDetailModal({ isOpen, onClose, category, onEdit,
   const { width } = useWindowSize();
   const isMobile = width <= LAYOUT.MOBILE_MAX_WIDTH;
   const [detailTx, setDetailTx] = useState(null);
+  // 排序偏好刻意跨開關保留：選過金額的人多半下一次還想看金額
+  const [sortBy, setSortBy] = useState('date');
   useScrollbarOnScroll(dialogRef, isOpen && !!category);
 
   // 本元件靠 `return null` 隱藏，不會被卸載 → detailTx 會跨越開關存活。
@@ -31,11 +33,19 @@ export default function CategoryDetailModal({ isOpen, onClose, category, onEdit,
   const rows = useMemo(() => {
     if (!category?.txs) return [];
     // 日期新到舊；同日以 id 穩定排序，避免每次 render 順序跳動
-    return [...category.txs].sort((a, b) => {
+    const byDate = (a, b) => {
       if (a.date === b.date) return String(b.id).localeCompare(String(a.id));
       return String(b.date).localeCompare(String(a.date));
-    });
-  }, [category]);
+    };
+    if (sortBy === 'amount') {
+      // 取絕對值，與圓餅圖切片大小的邏輯一致；同額再退回日期序
+      return [...category.txs].sort((a, b) => {
+        const diff = Math.abs(b.twdAmount || 0) - Math.abs(a.twdAmount || 0);
+        return diff !== 0 ? diff : byDate(a, b);
+      });
+    }
+    return [...category.txs].sort(byDate);
+  }, [category, sortBy]);
 
   if (!category) return null;
 
@@ -59,6 +69,23 @@ export default function CategoryDetailModal({ isOpen, onClose, category, onEdit,
               {t('dashboard.categoryDetailShare', { percent: shareText })}
             </span>
           </div>
+
+          {rows.length > 1 && (
+            <div className="category-detail-sort">
+              <span className="category-detail-sort__label">{t('dashboard.categoryDetailSortBy')}</span>
+              {['date', 'amount'].map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`category-detail-sort__btn${sortBy === key ? ' is-active' : ''}`}
+                  aria-pressed={sortBy === key}
+                  onClick={() => setSortBy(key)}
+                >
+                  {key === 'date' ? t('dashboard.categoryDetailSortDate') : t('dashboard.categoryDetailSortAmount')}
+                </button>
+              ))}
+            </div>
+          )}
 
           {rows.length === 0 ? (
             <p className="category-detail-modal__empty">{t('dashboard.categoryDetailEmpty')}</p>
