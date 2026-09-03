@@ -24,7 +24,11 @@ export function useSplitGroups() {
           *,
           split_members ( id, name, user_id )
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        // 成員順序決定均分的零頭給誰（AddExpenseModal 的 participants 就是這個順序）。
+        // 不明講排序就是拿 PostgREST 的預設順序，跟 CLI 的 created_at 可能不一致，
+        // 同一筆除不盡的費用兩邊會差一分錢，且只在除不盡時出現。
+        .order('created_at', { referencedTable: 'split_members', ascending: true });
       if (error) throw error;
 
       // 為所有含已連結成員的群組一次取得頭像（單一批次 RPC，避免逐群組 N 次往返）
