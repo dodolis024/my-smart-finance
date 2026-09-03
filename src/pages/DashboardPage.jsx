@@ -308,12 +308,12 @@ export default function DashboardPage() {
   const handleDeleteTransaction = useCallback(
     async (id) => {
       const confirmed = await confirm(t('dashboard.deleteTransactionConfirm'), { danger: true });
-      if (!confirmed) return;
+      if (!confirmed) return false;
       // 未同步的離線交易:直接從本地佇列移除,不打伺服器
       if (queuedItems.some((item) => item.id === id)) {
         removeQueuedItem(id);
         toast.success(t('dashboard.transactionDeleted'));
-        return;
+        return true;
       }
       // 找到要刪除的交易，記錄其付款帳戶（刪除後無法再查）
       // （history 與 accounts 皆來自 RPC，欄位為駝峰 paymentMethod / accountName）
@@ -329,8 +329,10 @@ export default function DashboardPage() {
         refreshSearch();
         // 刪除後重新計算信用卡使用率
         if (relatedAccount?.type === 'credit_card') checkCreditUsageAlert(relatedAccount);
+        return true;
       } catch (err) {
         toast.error(err.message || t('dashboard.deleteTransactionFailed'));
+        return false;
       }
     },
     [confirm, deleteTransaction, removeTransactionLocally, fetchDashboardData, currentYear, currentMonth, toast, transactionHistoryFull, accounts, checkCreditUsageAlert, queuedItems, removeQueuedItem, refreshSearch, t]
@@ -698,6 +700,8 @@ export default function DashboardPage() {
         isOpen={modals.categoryDetailModal.open}
         onClose={modals.closeCategoryDetailModal}
         category={modals.categoryDetailModal.category}
+        onEdit={handleStartEdit}
+        onDelete={handleDeleteTransaction}
       />
 
       <ExportRangeModal

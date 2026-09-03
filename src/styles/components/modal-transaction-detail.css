@@ -132,3 +132,16 @@
   line-height: 1.6;
   white-space: pre-wrap;
 }
+
+/* 標題列右側的操作鈕（僅在呼叫端有傳 onEdit / onDelete 時渲染）
+   沿用表格列的 .btn-edit / .btn-delete 樣式，不另造一套 */
+.transaction-detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+/* 與關閉鈕拉開距離，避免誤觸刪除 */
+.transaction-detail-header-actions .transaction-detail-close {
+  margin-left: 0.5rem;
+}

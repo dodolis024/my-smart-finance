@@ -7,7 +7,7 @@ import { LAYOUT } from '@/lib/constants';
 import { formatMoney, formatDateForDisplay } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function CategoryDetailModal({ isOpen, onClose, category }) {
+export default function CategoryDetailModal({ isOpen, onClose, category, onEdit, onDelete }) {
   const { t } = useLanguage();
   const dialogRef = useRef(null);
   const { width } = useWindowSize();
@@ -88,6 +88,10 @@ export default function CategoryDetailModal({ isOpen, onClose, category }) {
         transaction={detailTx}
         isOpen={!!detailTx}
         onClose={() => setDetailTx(null)}
+        // 編輯要捲到下方表單，但 body.modal-open 會鎖住捲動 → 兩層彈窗都得先關掉
+        onEdit={onEdit ? (tx) => { setDetailTx(null); onClose(); onEdit(tx); } : undefined}
+        // 刪除後這份明細快照就過期了，跟換月一樣直接關窗
+        onDelete={onDelete ? async (tx) => { if (await onDelete(tx.id)) { setDetailTx(null); onClose(); } } : undefined}
       />
     </>
   );

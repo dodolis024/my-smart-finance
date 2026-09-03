@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import SplitShareDetailModal from '@/components/split/SplitShareDetailModal';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function TransactionDetail({ transaction: tx, isOpen, onClose }) {
+export default function TransactionDetail({ transaction: tx, isOpen, onClose, onEdit, onDelete }) {
   const { t } = useLanguage();
   const bodyRef = useRef(null);
   useScrollbarOnScroll(bodyRef, isOpen && !!tx);
@@ -82,12 +82,28 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose }) 
         <div className="transaction-detail-content">
           <div className="transaction-detail-header">
             <h2 id="transactionDetailTitle" className="transaction-detail-title">{t('transaction.detailTitle')}</h2>
-            <button type="button" className="transaction-detail-close" aria-label={t('common.close')} onClick={onClose}>
-              <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+            <div className="transaction-detail-header-actions">
+              {onEdit && (
+                <button type="button" className="btn-edit" aria-label={t('common.edit')} onClick={() => onEdit(tx)}>
+                  <svg className="icon-edit" aria-hidden="true">
+                    <use href="#icon-edit" />
+                  </svg>
+                </button>
+              )}
+              {onDelete && (
+                <button type="button" className="btn-delete" aria-label={t('common.delete')} onClick={() => onDelete(tx)}>
+                  <svg className="icon-delete" aria-hidden="true">
+                    <use href="#icon-delete" />
+                  </svg>
+                </button>
+              )}
+              <button type="button" className="transaction-detail-close" aria-label={t('common.close')} onClick={onClose}>
+                <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
           </div>
           <div ref={bodyRef} className="transaction-detail-body scrollbar-on-scroll">
             <div className="transaction-detail-item">

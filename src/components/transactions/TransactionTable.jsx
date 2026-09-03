@@ -178,6 +178,8 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
         transaction={detailTx}
         isOpen={!!detailTx}
         onClose={() => setDetailTx(null)}
+        onEdit={onEdit ? (tx) => { setDetailTx(null); onEdit(tx); } : undefined}
+        onDelete={onDelete ? async (tx) => { if (await onDelete(tx.id)) setDetailTx(null); } : undefined}
       />
     </>
   );
