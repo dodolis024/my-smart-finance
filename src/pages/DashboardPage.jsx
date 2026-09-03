@@ -21,6 +21,7 @@ import MonthPicker from '@/components/dashboard/MonthPicker';
 import ExportMenu from '@/components/dashboard/ExportMenu';
 import ExportRangeModal from '@/components/dashboard/ExportRangeModal';
 import CategoryChart from '@/components/dashboard/CategoryChart';
+import CategoryDetailModal from '@/components/dashboard/CategoryDetailModal';
 import PaymentStats from '@/components/dashboard/PaymentStats';
 import TransactionForm from '@/components/transactions/TransactionForm';
 import TransactionTable from '@/components/transactions/TransactionTable';
@@ -96,6 +97,12 @@ export default function DashboardPage() {
     refresh: refreshSearch,
   } = useTransactionSearch(user?.id, searchQuery);
   const searchActive = searchQuery.trim() !== '';
+
+  // 切換月份或進入搜尋模式時，彈窗內的明細已與畫面不一致，直接關閉
+  useEffect(() => {
+    if (modals.categoryDetailModal.open) modals.closeCategoryDetailModal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentYear, currentMonth, searchActive]);
 
   // 點搜尋 icon 展開/收合；收合時清空關鍵字回到當月列表
   const toggleSearch = useCallback(() => {
@@ -554,7 +561,11 @@ export default function DashboardPage() {
               {loading ? (
                 <p className="category-stats-empty">{t('common.loadingDots')}</p>
               ) : (
-                <CategoryChart history={displayHistory} incomeCategories={categoriesIncome} />
+                <CategoryChart
+                  history={displayHistory}
+                  incomeCategories={categoriesIncome}
+                  onSelectCategory={modals.openCategoryDetailModal}
+                />
               )}
             </div>
             <div className="analytics-col payment-breakdown">
@@ -681,6 +692,12 @@ export default function DashboardPage() {
         history={creditHistory}
         viewedYear={currentYear}
         viewedMonth={currentMonth}
+      />
+
+      <CategoryDetailModal
+        isOpen={modals.categoryDetailModal.open}
+        onClose={modals.closeCategoryDetailModal}
+        category={modals.categoryDetailModal.category}
       />
 
       <ExportRangeModal

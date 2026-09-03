@@ -377,6 +377,7 @@
 .category-stats-empty,
 .payment-stats-empty { margin: 0; color: var(--color-text-secondary); font-style: italic; }
 
+.category-stats-list li.clickable,
 .payment-stats-list li.clickable {
   cursor: pointer;
   transition: var(--transition);
@@ -384,8 +385,29 @@
   min-height: 44px;
 }
 
+.category-stats-list li.clickable:hover,
 .payment-stats-list li.clickable:hover {
   background: var(--color-row-hover);
   border-radius: 6px;
   padding-left: 0.5rem;
+}
+
+/* 圖例改用 <button>：重置瀏覽器預設樣式，維持原本外觀 */
+.category-chart-legend .legend-item.is-clickable {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.category-chart-legend .legend-item.is-clickable:hover {
+  color: var(--color-text);
+}
+.category-chart-legend .legend-item.is-clickable:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: 4px;
 }

@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 export function useModalStates() {
   const [streakModal, setStreakModal] = useState({ open: false, title: '', variant: 'neutral' });
   const [creditCardModal, setCreditCardModal] = useState({ open: false, account: null });
+  const [categoryDetailModal, setCategoryDetailModal] = useState({ open: false, category: null });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
 
@@ -22,6 +23,14 @@ export function useModalStates() {
     setCreditCardModal({ open: false, account: null });
   }, []);
 
+  const openCategoryDetailModal = useCallback((category) => {
+    setCategoryDetailModal({ open: true, category });
+  }, []);
+
+  const closeCategoryDetailModal = useCallback(() => {
+    setCategoryDetailModal({ open: false, category: null });
+  }, []);
+
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const openChangelog = useCallback(() => setChangelogOpen(true), []);
@@ -35,6 +44,9 @@ export function useModalStates() {
     creditCardModal,
     openCreditCardModal,
     closeCreditCardModal,
+    categoryDetailModal,
+    openCategoryDetailModal,
+    closeCategoryDetailModal,
     settingsOpen,
     openSettings,
     closeSettings,

@@ -188,6 +188,20 @@
     padding: 0.75rem;
   }
 
+  /* 分類明細彈窗：手機收掉備註欄，避免項目與金額被擠壓 */
+  .category-detail-modal__dialog {
+    padding: 1.5rem 1rem;
+  }
+
+  .category-detail-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+
+  .category-detail-row__note {
+    display: none;
+  }
+
   .app-top-bar {
     background: transparent;
     border-bottom: none;

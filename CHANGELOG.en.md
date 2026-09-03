@@ -3,6 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Added split expenses to the command line tool: view split groups, add and edit split expenses, log repayments, and see per-member totals with settlement suggestions from the terminal
+- Added a category drill-down: click the pie chart, a legend item, or a category row in the category breakdown to see that category's transactions for the month, with the count and share of monthly spending; click any entry for full details
 
 ## [1.25.0] - Sep-02 2026
 - Added pinning for split groups: pin frequently used groups to the top of the list; pins are visible only to you and sync across devices

@@ -1,0 +1,138 @@
+/* Category Drill-down Detail Modal */
+.category-detail-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: var(--z-modal);
+}
+.category-detail-modal.is-open {
+  display: block;
+}
+.category-detail-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--color-backdrop);
+}
+.category-detail-modal__dialog {
+  position: relative;
+  width: min(560px, calc(100% - 2rem));
+  max-height: calc(100dvh - 8dvh);
+  margin: 4dvh auto;
+  padding: 2rem;
+  background: var(--color-card);
+  border-radius: 16px;
+  box-shadow: var(--shadow-modal-sm);
+  border: 1px solid var(--color-border-subtle);
+  overflow-y: auto;
+}
+.category-detail-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  z-index: 1;
+}
+.category-detail-modal__close:hover {
+  background: var(--color-row-hover);
+}
+.category-detail-modal__close:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.category-detail-modal__title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.5rem;
+  color: var(--color-text);
+}
+
+/* 摘要：總金額 + 筆數 + 占本月支出比例 */
+.category-detail-modal__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.category-detail-modal__total {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.category-detail-modal__meta {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+.category-detail-modal__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.category-detail-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.category-detail-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.3fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  min-height: 44px;
+  transition: var(--transition);
+  -webkit-tap-highlight-color: var(--color-primary-tint-focus);
+}
+.category-detail-row:last-child {
+  border-bottom: none;
+}
+.category-detail-row:hover {
+  background: var(--color-row-hover);
+  border-radius: 6px;
+}
+.category-detail-row:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: 6px;
+}
+.category-detail-row__date {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.category-detail-row__item {
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.category-detail-row__note {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.category-detail-row__amount {
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  text-align: right;
+}
