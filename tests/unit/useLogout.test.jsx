@@ -16,6 +16,17 @@ const h = vi.hoisted(() => ({
   },
 }));
 
+// offlineQueue 會 import @/lib/supabase，而那支在載入時就 createClient。
+// CI 沒有 .env.local，少了這個 mock 整個檔案會在 import 階段就爆
+// （本機因為有 .env.local 才看不出來）。
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: () => ({ insert: async () => ({ error: null }), upsert: async () => ({ error: null }) }),
+    rpc: async () => ({ data: null, error: null }),
+    auth: { getSession: async () => ({ data: { session: null } }) },
+  },
+}));
+
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({
     user: { id: 'user-1' },
