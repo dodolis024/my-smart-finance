@@ -350,7 +350,8 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
             await onAddMember(group.id, name);
           }
         }}
-        onRemoveMember={onRemoveMember}
+        // 移除成員限群主（split_members_delete policy）；非群主按了也只會失敗
+        onRemoveMember={isOwner ? onRemoveMember : undefined}
         onUpdateMemberName={onUpdateMemberName}
       />
 

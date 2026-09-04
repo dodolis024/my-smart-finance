@@ -152,11 +152,16 @@ export function useSplitGroups() {
   }, [groups, user, setGroups, t]);
 
   const deleteGroup = useCallback(async (groupId) => {
-    const { error } = await supabase
+    // 刪除限群主（split_groups_delete policy）。RLS 擋下時 PostgREST 回的是
+    // 「成功、0 列」而不是錯誤，少了 .select() 就會樂觀更新成「刪掉了」的假象，
+    // 重新整理才發現群組還在。
+    const { data, error } = await supabase
       .from('split_groups')
       .delete()
-      .eq('id', groupId);
+      .eq('id', groupId)
+      .select('id');
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error('SPLIT_DELETE_GROUP_DENIED');
     setGroups(prev => prev.filter(g => g.id !== groupId));
   }, [setGroups]);
 
@@ -205,11 +210,14 @@ export function useSplitGroups() {
     const currentGroup = groups.find(g => g.id === groupId);
     const memberToRemove = currentGroup?.split_members?.find(m => m.id === memberId);
     const actorMember = currentGroup?.split_members?.find(m => m.user_id === user?.id);
-    const { error } = await supabase
+    // 移除成員同樣限群主（split_members_delete policy），理由同 deleteGroup
+    const { data: removed, error } = await supabase
       .from('split_members')
       .delete()
-      .eq('id', memberId);
+      .eq('id', memberId)
+      .select('id');
     if (error) throw error;
+    if (!removed || removed.length === 0) throw new Error('SPLIT_REMOVE_MEMBER_DENIED');
     setGroups(prev => prev.map(g =>
       g.id === groupId
         ? { ...g, split_members: (g.split_members || []).filter(m => m.id !== memberId) }

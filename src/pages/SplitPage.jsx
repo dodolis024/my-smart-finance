@@ -4,6 +4,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useSplitGroups } from '@/hooks/useSplitGroups';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import SplitGroupCard from '@/components/split/SplitGroupCard';
 import SplitGroupDetail from '@/components/split/SplitGroupDetail';
@@ -20,6 +21,7 @@ let cachedCurrencies = null;
 export default function SplitPage() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { groups, loading, fetchGroups, createGroup, updateGroup, archiveGroup, unarchiveGroup, togglePin, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -180,7 +182,7 @@ export default function SplitPage() {
                       key={g.id}
                       group={g}
                       onClick={() => setSelectedGroup(g)}
-                      onDelete={handleDeleteGroup}
+                      onDelete={g.owner_id === user?.id ? handleDeleteGroup : undefined}
                       onTogglePin={handleTogglePin}
                     />
                   ))}
@@ -215,7 +217,7 @@ export default function SplitPage() {
                           group={g}
                           archived
                           onClick={() => setSelectedGroup(g)}
-                          onDelete={handleDeleteGroup}
+                          onDelete={g.owner_id === user?.id ? handleDeleteGroup : undefined}
                         />
                       ))}
                     </div>

@@ -93,8 +93,8 @@ export default function SplitGroupCard({ group, onClick, onDelete, onTogglePin, 
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick()}
     >
-      {/* 手機版滑動刪除 */}
-      {isMobile && (
+      {/* 手機版滑動刪除（非群主拿不到 onDelete，連滑動選項都不出現）*/}
+      {isMobile && onDelete && (
         <div className="split-group-card__swipe-action">
           <button
             type="button"
