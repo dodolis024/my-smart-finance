@@ -1,6 +1,6 @@
 import readline from 'node:readline';
 import { clearStoredSession, sessionPath } from '../../core/auth.js';
-import { getCurrentUser, login } from '../../core/client.js';
+import { getAuthedClient, getCurrentUser, login } from '../../core/client.js';
 import { callbackUrl, loginWithBrowser } from '../../core/oauth.js';
 import { printJson } from '../format.js';
 
@@ -53,8 +53,29 @@ export async function loginCommand({ flags = {} } = {}) {
 }
 
 export async function logoutCommand() {
+  // 只刪本機檔案的話，登出前已被備份或同步走的 refresh token 仍然有效，
+  // 且 Supabase 會自動輪替續命，等於一把永遠打得開的鑰匙。
+  let revoked = false;
+  try {
+    const client = await getAuthedClient();
+    await client.auth.signOut();
+    revoked = true;
+  } catch {
+    // 本來就沒登入、或 token 早已失效：照樣往下刪本機檔案
+  }
+
   const removed = clearStoredSession();
-  console.log(removed ? '✓ 已登出' : '（本來就沒有登入紀錄）');
+
+  if (!revoked && !removed) {
+    console.log('（本來就沒有登入紀錄）');
+    return;
+  }
+
+  console.log('✓ 已登出');
+  if (revoked) {
+    // supabase-js 的 signOut 預設 scope 為 global，一次撤銷該帳號全部裝置
+    console.log('  伺服器端憑證已撤銷，網頁與其他裝置也需要重新登入');
+  }
 }
 
 export async function whoamiCommand({ flags = {} } = {}) {

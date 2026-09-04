@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { getConfig } from './config.js';
 import { writeStoredSession } from './auth.js';
@@ -44,11 +45,18 @@ function openBrowser(url) {
   // SSH 連線或無桌面環境時開不了瀏覽器，改成只印網址讓使用者自己貼到別台機器
   if (process.env.SMF_NO_BROWSER) return false;
 
-  const command =
-    process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+  // Windows 走 cmd /c start 而不是 shell: true——後者會讓整條字串經過 shell 解析，
+  // 是已知的命令注入形狀。start 的第一個空字串引數是視窗標題的佔位，少了它
+  // 會把網址當成標題而開不了瀏覽器。
+  const [command, args] =
+    process.platform === 'darwin'
+      ? ['open', [url]]
+      : process.platform === 'win32'
+        ? ['cmd', ['/c', 'start', '', url]]
+        : ['xdg-open', [url]];
   try {
     // detached + unref：瀏覽器不該綁著 CLI 的生命週期
-    const child = spawn(command, [url], { stdio: 'ignore', detached: true, shell: process.platform === 'win32' });
+    const child = spawn(command, args, { stdio: 'ignore', detached: true });
     child.unref();
     return true;
   } catch {
@@ -56,10 +64,23 @@ function openBrowser(url) {
   }
 }
 
+/**
+ * 回呼頁的文字有一部分來自網址參數（error_description），直接內插就是反射型 XSS：
+ * 登入進行中，任何網頁都能把使用者導到 /callback?error=<img src=x onerror=...>。
+ */
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function respondPage(res, { title, message, ok }) {
   res.writeHead(ok ? 200 : 400, { 'Content-Type': 'text/html; charset=utf-8' });
   res.end(`<!doctype html>
-<html lang="zh-Hant"><head><meta charset="utf-8"><title>${title}</title>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
 <style>
   body { font-family: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; display: grid;
          place-items: center; height: 100vh; margin: 0; background: #f6f7f9; color: #1f2328; }
@@ -73,11 +94,11 @@ function respondPage(res, { title, message, ok }) {
     p { color: #9aa3ad; }
   }
 </style></head>
-<body><div class="card"><h1>${title}</h1><p>${message}</p></div></body></html>`);
+<body><div class="card"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></div></body></html>`);
 }
 
 /** 起一個只服務一次的本機 server，等 Supabase 把授權碼導回來 */
-function waitForCallback(port, timeoutMs) {
+function waitForCallback(port, timeoutMs, expectedState) {
   return new Promise((resolve, reject) => {
     const server = createServer((req, res) => {
       const url = new URL(req.url, `http://localhost:${port}`);
@@ -89,6 +110,20 @@ function waitForCallback(port, timeoutMs) {
 
       const code = url.searchParams.get('code');
       const error = url.searchParams.get('error_description') || url.searchParams.get('error');
+
+      // state 比對:回呼必須對應到本次自己發出的授權請求。少了這道,登入進行中的
+      // 任何網頁都能往 /callback 丟東西打斷流程。PKCE 已經讓對方換不到 session,
+      // 這裡擋的是干擾,不是竊取。
+      if (url.searchParams.get('state') !== expectedState) {
+        respondPage(res, { title: '登入失敗', message: '回呼來源不符,請重新登入。', ok: false });
+        server.close();
+        reject(smfError(
+          ErrorCode.NOT_AUTHENTICATED,
+          '回呼的 state 與本次登入請求不符',
+          '可能是舊的登入分頁被重新開啟,或有其他網頁干擾。請重新執行 `finance login`'
+        ));
+        return;
+      }
 
       if (error) {
         respondPage(res, { title: '登入失敗', message: error, ok: false });
@@ -144,7 +179,11 @@ function waitForCallback(port, timeoutMs) {
  */
 export async function loginWithBrowser({ provider = 'google', onPrompt, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   const { url: supabaseUrl, anonKey } = getConfig();
-  const redirectTo = callbackUrl();
+  // state 夾在 redirectTo 的 query 裡帶出去,Supabase 導回時會原樣保留。
+  // Supabase 的 Redirect URLs 需含 http://localhost:9876/callback?*(萬用字元)
+  // 才會放行帶 query 的回呼網址。
+  const state = randomUUID();
+  const redirectTo = `${callbackUrl()}?state=${state}`;
 
   const client = createClient(supabaseUrl, anonKey, {
     auth: {
@@ -166,7 +205,7 @@ export async function loginWithBrowser({ provider = 'google', onPrompt, timeoutM
   }
 
   // 先開始監聽再開瀏覽器，避免使用者手速太快時回呼撲空
-  const codePromise = waitForCallback(callbackPort(), timeoutMs);
+  const codePromise = waitForCallback(callbackPort(), timeoutMs, state);
   const opened = openBrowser(data.url);
   if (onPrompt) onPrompt(data.url, opened);
 

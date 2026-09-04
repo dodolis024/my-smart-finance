@@ -8,6 +8,7 @@ This file records version updates for Smart Finance Tracker.
 - Fixed a crafted link being able to send you to an off-site address after login; you now always land back inside the app
 - Logging out now also clears the offline data kept in the browser, so the next person on a shared device cannot see your entries; if any transactions have not synced yet, you are warned how many before they go
 - Hardened split notifications: their text is now built from the expense and member records in the database, so a group member can no longer put their own wording into everyone’s notifications
+- Logging out of the command line tool now also revokes the session on the server; revocation covers the whole account, so the web app and other devices need to sign in again
 
 ## [1.26.0] - Sep-03 2026
 - Added split expenses to the command line tool: view split groups, add and edit split expenses, log repayments, and see per-member totals with settlement suggestions from the terminal
