@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { isSafeReturnPath } from '@/lib/utils';
 import LoginForm from '@/components/auth/LoginForm';
 import SignupForm from '@/components/auth/SignupForm';
 import '@/styles/auth.css';
@@ -36,7 +37,8 @@ export default function AuthPage() {
     const returnUrl = sessionStorage.getItem('returnUrl');
     if (returnUrl) {
       sessionStorage.removeItem('returnUrl');
-      return <Navigate to={returnUrl} replace />;
+      // 白名單過濾：sessionStorage 可被攻擊者以連結誘導寫入，不能直接拿來轉址
+      if (isSafeReturnPath(returnUrl)) return <Navigate to={returnUrl} replace />;
     }
     return <Navigate to="/" replace />;
   }

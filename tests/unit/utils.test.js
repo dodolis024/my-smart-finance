@@ -12,6 +12,7 @@ import {
   parseChangelogMarkdown,
   isYearLocked,
   isYearlyReviewAnnounceWindow,
+  isSafeReturnPath,
 } from '@/lib/utils';
 
 describe('utils - formatMoney', () => {
@@ -182,5 +183,29 @@ describe('utils - parseChangelogMarkdown', () => {
 
   it('空字串應回傳空陣列', () => {
     expect(parseChangelogMarkdown('')).toEqual([]);
+  });
+});
+
+describe('utils - isSafeReturnPath', () => {
+  it('應放行單一斜線開頭的站內路徑', () => {
+    expect(isSafeReturnPath('/settings')).toBe(true);
+    expect(isSafeReturnPath('/my-smart-finance/settings')).toBe(true);
+    expect(isSafeReturnPath('/split?group=abc')).toBe(true);
+  });
+
+  it('應擋掉協定相對 URL（雙斜線與反斜線開放轉址）', () => {
+    expect(isSafeReturnPath('//evil.com')).toBe(false);
+    expect(isSafeReturnPath('/\\evil.com')).toBe(false);
+    expect(isSafeReturnPath('///evil.com')).toBe(false);
+  });
+
+  it('應擋掉絕對網址與非路徑輸入', () => {
+    expect(isSafeReturnPath('https://evil.com')).toBe(false);
+    expect(isSafeReturnPath('javascript:alert(1)')).toBe(false);
+    expect(isSafeReturnPath('settings')).toBe(false);
+    expect(isSafeReturnPath('/')).toBe(false);
+    expect(isSafeReturnPath('')).toBe(false);
+    expect(isSafeReturnPath(null)).toBe(false);
+    expect(isSafeReturnPath(undefined)).toBe(false);
   });
 });

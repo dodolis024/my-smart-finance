@@ -71,6 +71,15 @@ export function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * 登入後轉址的白名單：只放行「單一斜線開頭的站內路徑」。
+ * 擋掉 `//evil.com` 與 `/\evil.com` — 這兩種會被瀏覽器（與 react-router）
+ * 重新解讀成協定相對 URL，讓登入流程變成開放轉址的釣魚跳板。
+ */
+export function isSafeReturnPath(path) {
+  return typeof path === 'string' && /^\/[^/\\]/.test(path);
+}
+
 export function formatNumberWithCommas(value) {
   const cleaned = value.replace(/[^\d.]/g, '');
   const parts = cleaned.split('.');
