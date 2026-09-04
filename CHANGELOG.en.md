@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.27.0] - Sep-04 2026
 - Added edit and delete to the transaction detail view: change or remove an entry from wherever you opened it, instead of having to find its row in the table first
 - Added sorting to the category drill-down: switch between date and amount to spot the largest entries in a category at a glance
 - Improved hover on the category and payment breakdown lists: the text no longer shifts, and the highlight now extends slightly to each side instead of hugging the text
