@@ -349,11 +349,6 @@
   position: relative;
 }
 
-/* 覆蓋 MoreMenu 在 right-actions 內的 flex:1，避免撐開把分帳按鈕推遠 */
-.form-column__right-actions .more-menu-wrapper--desktop {
-  flex: none;
-}
-
 /* ── 加入群組頁面 ─────────────────────────────────────────────────────────── */
 
 .split-join-page {
