@@ -53,7 +53,12 @@ if ! docker info >/dev/null 2>&1; then
   fi
 fi
 
+# 備份是全體使用者的個資明文。~/Documents 本身已是 700、磁碟有 FileVault,
+# 這裡再收一層:目錄只有自己能進、dump 檔只有自己能讀。
+# umask 要在 dump 產生前設,否則 supabase db dump 會依預設 022 建出 644 的檔案。
+umask 077
 mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 STAMP="$(date +%Y-%m-%d_%H%M%S)"
 SCHEMA_FILE="$BACKUP_DIR/${STAMP}_schema.sql"
 DATA_FILE="$BACKUP_DIR/${STAMP}_data.sql"
@@ -72,6 +77,7 @@ for f in "$SCHEMA_FILE" "$DATA_FILE"; do
     echo "[備份失敗] 產出檔為空:$f" >&2
     exit 1
   fi
+  chmod 600 "$f"
 done
 
 echo "[備份] 完成:"

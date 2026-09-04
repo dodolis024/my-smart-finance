@@ -43,7 +43,7 @@ const en = {
     signupSuccess: 'Signed up! Redirecting...',
     signupFailed: 'Sign-up failed, please try again',
     passwordMismatch: 'Passwords do not match',
-    passwordTooShort: 'Password must be at least 6 characters',
+    passwordTooShort: 'Password must be at least {count} characters',
     invalidCredential: 'Invalid email or password, please try again',
     emailNotConfirmed: 'Please check your inbox and confirm your email first',
     tooManyAttempts: 'Too many attempts, please try again later',

@@ -15,6 +15,14 @@
     })();
   </script>
   <meta charset="UTF-8" />
+  <!--
+    CSP 刻意只放這三條「不需要 hash、不影響現有資源」的指令：
+    GitHub Pages 只能用 meta 設 CSP，而 meta 版沒有 Report-Only 可以先觀察，
+    設錯就是白畫面。限制 script-src 得為兩段 inline script 算 hash，日後改動漏算就壞站；
+    style-src 也必須開 unsafe-inline（React 的 style prop）。收益不抵風險，故不設。
+    frame-ancestors 在 meta 版無效，防點擊劫持需要伺服器端標頭。
+  -->
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="My Smart Finance — Personal finance tracker with multi-currency support, analytics, and streak calendar. / 個人記帳與財務追蹤工具，支援多幣別、圖表分析、簽到與記帳日曆。" />
   <meta property="og:title" content="My Smart Finance" />

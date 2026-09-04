@@ -43,7 +43,7 @@ const zh = {
     signupSuccess: '註冊成功！正在跳轉...',
     signupFailed: '註冊失敗，請稍後再試',
     passwordMismatch: '兩次輸入的密碼不一致',
-    passwordTooShort: '密碼長度至少需要6個字元',
+    passwordTooShort: '密碼長度至少需要 {count} 個字元',
     invalidCredential: '帳號或密碼錯誤，請再試一次',
     emailNotConfirmed: '請先到信箱收取驗證信並完成驗證',
     tooManyAttempts: '嘗試次數過多，請稍後再試',

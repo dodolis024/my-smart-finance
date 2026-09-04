@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 import GoogleAuthButton from './GoogleAuthButton';
 
 export default function SignupForm() {
@@ -24,8 +25,8 @@ export default function SignupForm() {
       setError(t('auth.passwordMismatch'));
       return;
     }
-    if (password.length < 6) {
-      setError(t('auth.passwordTooShort'));
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(t('auth.passwordTooShort', { count: MIN_PASSWORD_LENGTH }));
       return;
     }
 
@@ -60,7 +61,7 @@ export default function SignupForm() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
-        minLength="6"
+        minLength={MIN_PASSWORD_LENGTH}
       />
       <label htmlFor="signup-password-confirm" className="sr-only">{t('auth.confirmPassword')}</label>
       <input

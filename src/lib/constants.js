@@ -10,6 +10,10 @@ export const SWIPE = {
   MAX_RIGHT: 90,
 };
 
+// 密碼長度下限。Supabase 後端的下限另設在 Dashboard → Authentication → Policies，
+// 這裡只擋 UI 這條路徑，兩邊要一起調才算數。
+export const MIN_PASSWORD_LENGTH = 8;
+
 export const STREAK_MILESTONES = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
 
 export const TIMING = {
