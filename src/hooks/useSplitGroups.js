@@ -180,6 +180,7 @@ export function useSplitGroups() {
       group_name: currentGroup?.name ?? '',
       actor_name: actorMember?.name ?? '',
       actor_user_id: user?.id,
+      member_id: data?.id,
       member_name: name.trim(),
     });
     return data;

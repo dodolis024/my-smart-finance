@@ -77,6 +77,7 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
       group_name: groupName,
       actor_name: actorName,
       actor_user_id: actorUserId,
+      expense_id: expense?.id,
       expense_title: title,
       expense_amount: amount,
       currency: currency || 'TWD',
@@ -105,6 +106,7 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
       group_name: groupName,
       actor_name: actorName,
       actor_user_id: actorUserId,
+      expense_id: expenseId,
       expense_title: title,
     });
   }, [groupId, groupName, actorName, actorUserId, fetchExpenses]);
@@ -148,6 +150,8 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
       actor_user_id: actorUserId,
       expense_amount: amount,
       currency: currency || 'TWD',
+      from_member: fromMember,
+      to_member: toMember,
       from_name: fromName,
       to_name: toName,
     });

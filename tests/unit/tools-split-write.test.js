@@ -158,6 +158,8 @@ describe('addExpense', () => {
       group_name: '日本行',
       actor_name: 'Doris',
       actor_user_id: 'user-doris',
+      // 後端據此查回真實標題與金額，不採信下面的顯示字串（見 send-split-notification）
+      expense_id: 'expense-new',
       expense_title: '吃飯',
       expense_amount: 3000,
       currency: 'TWD',

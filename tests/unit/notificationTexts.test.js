@@ -6,6 +6,8 @@ import {
   subscriptionRateSkipBody,
   streakEmailSubject,
   streakEmailHtml,
+  sanitizeNotifyText,
+  NOTIFY_TEXT_MAX,
 } from '../../supabase/functions/_shared/notificationTexts.ts';
 import { normalizeLang } from '../../supabase/functions/_shared/userLang.ts';
 
@@ -136,5 +138,44 @@ describe('normalizeLang', () => {
     expect(normalizeLang({})).toBe('zh');
     expect(normalizeLang(null)).toBe('zh');
     expect(normalizeLang({ lang: 'fr' })).toBe('zh');
+  });
+});
+
+describe('sanitizeNotifyText', () => {
+  it('一般文字原樣通過', () => {
+    expect(sanitizeNotifyText('晚餐')).toBe('晚餐');
+    expect(sanitizeNotifyText('Team dinner')).toBe('Team dinner');
+  });
+
+  it('換行與 Tab 壓成單一空白，擋掉偽造的多行系統訊息', () => {
+    expect(sanitizeNotifyText('晚餐\n\n您的帳號異常')).toBe('晚餐 您的帳號異常');
+    expect(sanitizeNotifyText('a\tb')).toBe('a b');
+  });
+
+  it('清掉控制字元與行分隔符號', () => {
+    expect(sanitizeNotifyText('晚餐\u0000\u007F\u2028後')).toBe('晚餐 後');
+  });
+
+  it('超過上限截斷並加省略號', () => {
+    const long = 'x'.repeat(NOTIFY_TEXT_MAX + 20);
+    const out = sanitizeNotifyText(long);
+    expect(out).toHaveLength(NOTIFY_TEXT_MAX + 1);
+    expect(out.endsWith('…')).toBe(true);
+  });
+
+  it('剛好等於上限不截斷', () => {
+    const exact = 'x'.repeat(NOTIFY_TEXT_MAX);
+    expect(sanitizeNotifyText(exact)).toBe(exact);
+  });
+
+  it('非字串一律回空字串', () => {
+    expect(sanitizeNotifyText(null)).toBe('');
+    expect(sanitizeNotifyText(undefined)).toBe('');
+    expect(sanitizeNotifyText(123)).toBe('');
+    expect(sanitizeNotifyText({ toString: () => 'evil' })).toBe('');
+  });
+
+  it('前後空白去掉', () => {
+    expect(sanitizeNotifyText('  晚餐  ')).toBe('晚餐');
   });
 });

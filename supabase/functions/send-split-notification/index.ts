@@ -6,7 +6,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import webpush from 'npm:web-push'
-import { splitNotifyBody } from '../_shared/notificationTexts.ts'
+import { splitNotifyBody, sanitizeNotifyText } from '../_shared/notificationTexts.ts'
 import { getUserLangs } from '../_shared/userLang.ts'
 
 const corsHeaders = {
@@ -50,13 +50,20 @@ serve(async (req) => {
     const {
       event,
       group_id,
-      expense_title,
-      expense_amount,
-      currency,
-      member_name,
-      from_name,
-      to_name,
+      expense_id,
+      member_id,
+      from_member,
+      to_member,
     } = body
+
+    // 呼叫端給的顯示字串一律先消毒:這些欄位只在查不到來源時才會被用上
+    // (刪除類事件的名稱,以及尚未帶識別碼的舊版前端/CLI)
+    const expense_title = sanitizeNotifyText(body.expense_title)
+    const member_name = sanitizeNotifyText(body.member_name)
+    const from_name = sanitizeNotifyText(body.from_name)
+    const to_name = sanitizeNotifyText(body.to_name)
+    const currency = sanitizeNotifyText(body.currency)
+    const expense_amount = typeof body.expense_amount === 'number' ? body.expense_amount : null
 
     if (!event || !group_id) {
       return new Response(
@@ -92,21 +99,59 @@ serve(async (req) => {
         )
       }
       group_name = ownedGroup.name
-      actor_name = body.actor_name ?? ''
+      // 擁有者已退出成員名單時資料庫查不到名字,只能用傳入值,同樣要消毒
+      actor_name = sanitizeNotifyText(body.actor_name)
+    }
+
+    // 能查證的一律以資料庫為準,呼叫端傳的同名欄位只在查不到時才頂上。
+    // 刪除類事件(expense_deleted/member_removed)的來源列已不存在,只能沿用消毒後的傳入值。
+    // 每次查詢都綁 group_id,否則可拿別的群組的名稱來組通知。
+    let resolvedTitle = expense_title
+    let resolvedAmount = expense_amount
+    let resolvedCurrency = currency
+    let resolvedMemberName = member_name
+    let resolvedFromName = from_name
+    let resolvedToName = to_name
+
+    if (expense_id) {
+      const { data: expense } = await supabase
+        .from('split_expenses')
+        .select('title, amount, currency')
+        .eq('id', expense_id)
+        .eq('group_id', group_id)
+        .maybeSingle()
+      if (expense) {
+        resolvedTitle = sanitizeNotifyText(expense.title)
+        resolvedAmount = expense.amount
+        resolvedCurrency = sanitizeNotifyText(expense.currency)
+      }
+    }
+
+    const memberIds = [member_id, from_member, to_member].filter(Boolean)
+    if (memberIds.length > 0) {
+      const { data: namedMembers } = await supabase
+        .from('split_members')
+        .select('id, name')
+        .eq('group_id', group_id)
+        .in('id', memberIds)
+      const nameById = new Map((namedMembers ?? []).map((m) => [m.id, sanitizeNotifyText(m.name)]))
+      if (nameById.has(member_id)) resolvedMemberName = nameById.get(member_id)
+      if (nameById.has(from_member)) resolvedFromName = nameById.get(from_member)
+      if (nameById.has(to_member)) resolvedToName = nameById.get(to_member)
     }
 
     // 組合通知文字（依收件者語言，預組兩份）
-    const amountStr = expense_amount != null ? ` ${currency || 'TWD'} ${expense_amount}` : ''
+    const amountStr = resolvedAmount != null ? ` ${resolvedCurrency || 'TWD'} ${resolvedAmount}` : ''
     const textParams = {
       actorName: actor_name,
       groupName: group_name,
-      expenseTitle: expense_title,
-      memberName: member_name,
-      fromName: from_name,
-      toName: to_name,
+      expenseTitle: resolvedTitle,
+      memberName: resolvedMemberName,
+      fromName: resolvedFromName,
+      toName: resolvedToName,
       amountStr,
-      currency,
-      expenseAmount: expense_amount,
+      currency: resolvedCurrency,
+      expenseAmount: resolvedAmount,
     }
     const bodyByLang = {
       zh: splitNotifyBody(event, 'zh', textParams),

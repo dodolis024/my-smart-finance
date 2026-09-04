@@ -17,6 +17,19 @@ export interface SplitTextParams {
   expenseAmount?: number | string | null
 }
 
+// 呼叫端傳入、後端無從查證的欄位（刪除類事件的名稱）在進文案前一律過這關。
+// 通知標題固定是 Smart Finance，內文會被當成官方訊息讀，所以不能讓同群組的人
+// 塞進換行或一整段誘導文字。
+export const NOTIFY_TEXT_MAX = 60
+
+export function sanitizeNotifyText(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  // 換行、Tab 與各類控制字元(含 U+2028/2029 行分隔)一律壓成空白,避免偽造多行系統訊息
+  const flattened = value.replace(/[\u0000-\u001F\u007F-\u009F\u2028\u2029]/g, ' ')
+  const collapsed = flattened.replace(/\s+/g, ' ').trim()
+  return collapsed.length > NOTIFY_TEXT_MAX ? collapsed.slice(0, NOTIFY_TEXT_MAX) + '…' : collapsed
+}
+
 export function splitNotifyBody(event: string, lang: Lang, p: SplitTextParams): string {
   const amountStr = p.amountStr ?? ''
   if (lang === 'en') {

@@ -221,6 +221,7 @@ export async function addExpense({ group, title, amount, currency, date, note, p
     group_name: group.name,
     actor_name: actorName,
     actor_user_id: actorUserId,
+    expense_id: data?.id,
     expense_title: title,
     expense_amount: amount,
     currency: currency || 'TWD',
@@ -268,6 +269,7 @@ export async function updateExpense({ group, expenseId, title, amount, currency,
     group_name: group.name,
     actor_name: actorName,
     actor_user_id: actorUserId,
+    expense_id: expenseId,
     expense_title: title,
   });
 
@@ -329,6 +331,8 @@ export async function addSettlement({ group, fromMember, toMember, amount, curre
     actor_user_id: actorUserId,
     expense_amount: amount,
     currency: currency || 'TWD',
+    from_member: fromMember.id,
+    to_member: toMember.id,
     from_name: fromMember.name,
     to_name: toMember.name,
   });
