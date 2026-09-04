@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useConfirm } from '@/contexts/ConfirmContext';
+import { useLogout } from '@/hooks/useLogout';
 import { useNavActions } from '@/contexts/NavActionsContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import YearReviewIcon from '@/components/yearly-review/YearReviewIcon';
@@ -18,8 +18,7 @@ const STORAGE_KEY = 'sidebar-collapsed';
 export default function Sidebar({ hasChangelogUnread = false, changelogOpen = false, settingsOpen = false }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userInfo, signOut } = useAuth();
-  const { confirm } = useConfirm();
+  const { userInfo } = useAuth();
   const { dispatch } = useNavActions();
   const { t, lang, toggleLang } = useLanguage();
   const [collapsed, setCollapsed] = useState(() => {
@@ -34,11 +33,7 @@ export default function Sidebar({ hasChangelogUnread = false, changelogOpen = fa
   const currentPath = location.pathname;
   const modalOpen = changelogOpen || settingsOpen;
 
-  const handleLogout = async () => {
-    const confirmed = await confirm(t('auth.logoutConfirm'));
-    if (!confirmed) return;
-    await signOut();
-  };
+  const handleLogout = useLogout();
 
   const isGoogle = userInfo?.provider === 'google' && userInfo?.avatarUrl;
   const initial = userInfo?.email ? userInfo.email[0].toUpperCase() : '?';

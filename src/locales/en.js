@@ -50,6 +50,7 @@ const en = {
     loginFailed: 'Login failed, please check your credentials',
     logout: 'Log out',
     logoutConfirm: 'Are you sure you want to log out?',
+    logoutConfirmPending: '{count} transaction(s) have not synced yet. Logging out clears them for good. Log out anyway?',
     loginRequired: 'Please log in first',
     forgotPassword: 'Forgot password?',
     forgotTitle: 'Forgot password',

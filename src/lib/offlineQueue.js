@@ -66,6 +66,17 @@ export function enqueueTransaction(userId, tx, enqueuedOn) {
   return writeQueue(userId, items);
 }
 
+/** 登出時整批丟棄佇列(呼叫端須先向使用者確認,佇列內容一旦清掉就救不回來)。 */
+export function clearQueue(userId) {
+  if (!userId) return;
+  try {
+    localStorage.removeItem(queueKey(userId));
+  } catch {
+    // 同 writeQueue:localStorage 不可用時靜默略過,不擋登出
+  }
+  notify();
+}
+
 export function removeQueued(userId, id) {
   const items = listQueue(userId).filter((item) => item.id !== id);
   writeQueue(userId, items);

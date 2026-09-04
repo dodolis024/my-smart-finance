@@ -50,6 +50,7 @@ const zh = {
     loginFailed: '登入失敗，請檢查帳號密碼',
     logout: '登出',
     logoutConfirm: '確定要登出嗎？',
+    logoutConfirmPending: '還有 {count} 筆記帳尚未同步，登出會一併清除且無法復原。確定要登出嗎？',
     loginRequired: '請先登入',
     forgotPassword: '忘記密碼？',
     forgotTitle: '忘記密碼',

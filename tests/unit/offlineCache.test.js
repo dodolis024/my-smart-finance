@@ -6,6 +6,7 @@ import {
   loadRates,
   saveAccounts,
   loadAccounts,
+  clearUserCache,
   isOfflineError,
 } from '@/lib/offlineCache';
 
@@ -91,5 +92,41 @@ describe('offlineCache', () => {
     expect(isOfflineError(new Error('Load failed'))).toBe(true);
     expect(isOfflineError(new Error('duplicate key value'))).toBe(false);
     expect(isOfflineError(null)).toBe(false);
+  });
+});
+
+describe('offlineCache - clearUserCache（登出清除）', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('清掉該使用者的月份快照與帳戶清單', () => {
+    saveSnapshot(USER, 2026, 7, { a: 1 });
+    saveAccounts(USER, [{ id: 'acc-1' }]);
+    clearUserCache(USER);
+    expect(loadSnapshot(USER, 2026, 7)).toBe(null);
+    expect(loadAccounts(USER)).toEqual([]);
+  });
+
+  it('不動其他使用者的快取', () => {
+    saveSnapshot(USER, 2026, 7, { a: 1 });
+    saveSnapshot('user-b', 2026, 7, { b: 2 });
+    saveAccounts('user-b', [{ id: 'acc-b' }]);
+    clearUserCache(USER);
+    expect(loadSnapshot('user-b', 2026, 7).data).toEqual({ b: 2 });
+    expect(loadAccounts('user-b')).toEqual([{ id: 'acc-b' }]);
+  });
+
+  it('保留匯率等非個資的全站共用快取', () => {
+    saveRates({ USD: 31.5 });
+    saveSnapshot(USER, 2026, 7, { a: 1 });
+    clearUserCache(USER);
+    expect(loadRates()).toEqual({ USD: 31.5 });
+  });
+
+  it('沒有 userId 時不動任何東西', () => {
+    saveSnapshot(USER, 2026, 7, { a: 1 });
+    clearUserCache(null);
+    expect(loadSnapshot(USER, 2026, 7).data).toEqual({ a: 1 });
   });
 });

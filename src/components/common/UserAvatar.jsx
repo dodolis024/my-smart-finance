@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useConfirm } from '@/contexts/ConfirmContext';
+import { useLogout } from '@/hooks/useLogout';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function UserAvatar({ variant = 'desktop', isOpen: controlledOpen, onOpenChange }) {
-  const { userInfo, signOut } = useAuth();
-  const { confirm } = useConfirm();
+  const { userInfo } = useAuth();
+  const handleLogout = useLogout();
   const { t } = useLanguage();
   const [internalOpen, setInternalOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -32,12 +32,6 @@ export default function UserAvatar({ variant = 'desktop', isOpen: controlledOpen
 
   const isGoogle = userInfo.provider === 'google' && userInfo.avatarUrl;
   const initial = userInfo.email ? userInfo.email[0].toUpperCase() : '?';
-
-  const handleLogout = async () => {
-    const confirmed = await confirm(t('auth.logoutConfirm'));
-    if (!confirmed) return;
-    await signOut();
-  };
 
   return (
     <div ref={wrapperRef} className={`user-avatar-wrapper--${variant}`}>

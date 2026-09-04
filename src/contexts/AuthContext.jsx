@@ -1,6 +1,8 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
 import { supabase, createDefaultData } from '@/lib/supabase';
 import { clearAllCaches } from '@/lib/resourceCache';
+import { clearUserCache } from '@/lib/offlineCache';
+import { clearQueue } from '@/lib/offlineQueue';
 
 export const AuthContext = createContext(null);
 
@@ -94,9 +96,17 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, []);
 
+  // 只清「使用者主動登出」這條路徑:共用裝置上,下一個人不該在離線快取裡
+  // 看到上一位的帳目。session 過期造成的 SIGNED_OUT 刻意不清,那時佇列要留著
+  // 等重新登入補送(見 offlineQueue 的 needsLogin 分支)。
+  // 未同步佇列會一併丟棄,呼叫端(useLogout)負責先向使用者確認筆數。
   const signOut = useCallback(async () => {
+    if (user?.id) {
+      clearQueue(user.id);
+      clearUserCache(user.id);
+    }
     await supabase.auth.signOut();
-  }, []);
+  }, [user]);
 
   const ensureDefaultDataForOAuth = useCallback(async (userId) => {
     const { data: accounts } = await supabase

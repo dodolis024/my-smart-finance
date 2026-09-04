@@ -19,7 +19,7 @@ vi.mock('@/lib/supabase', () => ({
   },
 }));
 
-import { enqueueTransaction, listQueue, removeQueued, flushQueue } from '@/lib/offlineQueue';
+import { enqueueTransaction, listQueue, removeQueued, clearQueue, flushQueue } from '@/lib/offlineQueue';
 
 const USER_ID = 'user-1';
 
@@ -223,5 +223,28 @@ describe('offlineQueue - flush', () => {
     const result = await p1;
     expect(result.synced).toBe(1);
     expect(mocks.insert).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('offlineQueue - clearQueue（登出清除）', () => {
+  it('整批丟棄該使用者的佇列', () => {
+    enqueueTransaction(USER_ID, makeTx({ id: 'a' }), '2026-07-08');
+    enqueueTransaction(USER_ID, makeTx({ id: 'b' }), '2026-07-08');
+    expect(listQueue(USER_ID)).toHaveLength(2);
+    clearQueue(USER_ID);
+    expect(listQueue(USER_ID)).toEqual([]);
+  });
+
+  it('不動其他使用者的佇列', () => {
+    enqueueTransaction(USER_ID, makeTx({ id: 'a' }), '2026-07-08');
+    enqueueTransaction('user-2', makeTx({ id: 'b' }), '2026-07-08');
+    clearQueue(USER_ID);
+    expect(listQueue('user-2')).toHaveLength(1);
+  });
+
+  it('沒有 userId 時不動任何東西', () => {
+    enqueueTransaction(USER_ID, makeTx({ id: 'a' }), '2026-07-08');
+    clearQueue(null);
+    expect(listQueue(USER_ID)).toHaveLength(1);
   });
 });

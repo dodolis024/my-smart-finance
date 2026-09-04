@@ -95,6 +95,27 @@ export function loadAccounts(userId) {
 
 // 判斷錯誤是否為「斷網」而非伺服器/資料錯誤:
 // supabase-js 會把 fetch 失敗包成 message 含 Failed to fetch(Chrome)/Load failed(Safari)
+/**
+ * 登出時清掉這位使用者的離線個資快取(月份快照與帳戶清單)。
+ * 匯率與幣別清單是全站共用的非個資,刻意保留,下次登入還能直接用。
+ */
+export function clearUserCache(userId) {
+  if (!userId) return;
+  try {
+    // 快照 key 後面還接年月故用前綴比對;帳戶只有一把 key,精確比對免得誤刪別人的
+    const snapshotPrefix = `${SNAPSHOT_PREFIX}:${userId}:`;
+    const accountsKey = `${ACCOUNTS_PREFIX}:${userId}`;
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith(snapshotPrefix) || key === accountsKey)) keys.push(key);
+    }
+    keys.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // 隱私模式下 localStorage 可能整個不能存取;清不掉不該擋住登出
+  }
+}
+
 export function isOfflineError(error) {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
   const message = error?.message || '';
