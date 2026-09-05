@@ -63,6 +63,7 @@
 | scripts/fix-invite-code-hardening.sql | 邀請碼查詢加登入檢查;產生器改 10 碼 gen_random_bytes;既有 5 組邀請碼一次性輪換 | 2026-08-31 |
 | scripts/fix-split-sync-ownership.sql | 分帳同步補擁有權檢查:交易 UPDATE 比對 user_id、p_account_id 驗證擁有者,split_ledger_syncs 加 assert_sync_tx_owned trigger | 2026-08-31 |
 | database/split-pin-migration.sql | 分帳群組置頂:新增 split_group_pins 表(user_id+group_id),4 條 RLS 均限 user_id = auth.uid();INSERT 另以 can_access_split_group 擋住對他人群組的探測,UPDATE 為前端 upsert 走 ON CONFLICT DO UPDATE 所必需(缺了跨裝置置頂會被擋) | 2026-09-02 |
+| database/split-member-delete-guard-migration.sql | 移除成員的守門:split_expense_shares.member_id 與 split_settlements 的 from/to_member 三個外鍵由 ON DELETE CASCADE 改為 ON DELETE RESTRICT。原本刪成員會連分攤與還款紀錄一起消失,那些費用的分攤加總不再等於金額,代墊者永遠少收且畫面看不出來。前端已擋,這層是防漏。已以 pg_constraint 驗證三列 confdeltype = r | 2026-09-05 |
 
 > 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
 > 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,
