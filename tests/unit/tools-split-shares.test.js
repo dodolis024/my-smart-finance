@@ -100,10 +100,25 @@ describe('parseSplitSpec', () => {
     });
   });
 
-  it('全部固定且差在 0.02 內視為相符', async () => {
-    const result = await parseSplitSpec({ spec: 'Doris=333.33,小明=333.33,小美=333.33', amount: 1000, group: GROUP });
+  it('全部固定但總和差一分錢要擋下', async () => {
+    // 333.33 * 3 = 999.99。舊的 0.02 容差會放行，讓分攤加總與費用金額對不起來；
+    // split_expense_shares 沒有 CHECK 約束，這裡放行就沒有人擋了。
+    await expect(
+      parseSplitSpec({ spec: 'Doris=333.33,小明=333.33,小美=333.33', amount: 1000, group: GROUP })
+    ).rejects.toMatchObject({
+      code: 'INVALID_INPUT',
+      message: expect.stringContaining('999.99'),
+    });
+  });
 
-    expect(result).toHaveLength(3);
+  it('全部固定且剛好等於總額才通過', async () => {
+    const result = await parseSplitSpec({ spec: 'Doris=333.34,小明=333.33,小美=333.33', amount: 1000, group: GROUP });
+
+    expect(result).toEqual([
+      { member_id: 'm1', share: 333.34 },
+      { member_id: 'm2', share: 333.33 },
+      { member_id: 'm3', share: 333.33 },
+    ]);
   });
 
   it('固定金額超過總額要報錯', async () => {

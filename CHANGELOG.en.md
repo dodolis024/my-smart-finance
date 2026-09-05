@@ -3,6 +3,8 @@
 This file records version updates for Smart Finance Tracker.
 
 - Renamed “Group Notifications” to “Device Push” in notification settings: it is the master push switch for the device, so turning it off also stops credit card reminders; the credit card section now warns when push is off
+- Fixed custom splits being saved when the shares added up to a cent more or less than the expense; they must now match exactly, and the CLI's fixed-amount syntax was tightened to match
+- Fixed the auto-allocated amounts for other members showing the wrong figure while an arithmetic expression was being typed into a share field, which then failed the total check on save
 
 ## [1.27.0] - Sep-04 2026
 - Added edit and delete to the transaction detail view: change or remove an entry from wherever you opened it, instead of having to find its row in the table first

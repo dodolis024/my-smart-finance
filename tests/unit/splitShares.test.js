@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { equalShares, autoShares, isEqualSplit } from '@/lib/splitShares';
+import { equalShares, autoShares, isEqualSplit, sumMatchesAmount, SHARE_SUM_TOLERANCE } from '@/lib/splitShares';
 
 /**
  * 均分的零頭規則。
@@ -60,6 +60,27 @@ describe('isEqualSplit', () => {
   });
 });
 
+describe('sumMatchesAmount', () => {
+  it('剛好相等要通過', () => {
+    expect(sumMatchesAmount(100, 100)).toBe(true);
+  });
+
+  it('浮點加總的雜訊要吸收掉', () => {
+    // 小額分攤才碰得到：0.1 + 0.1 + 0.1 在 JS 裡是 0.30000000000000004
+    const total = 0.1 + 0.1 + 0.1;
+    expect(total).not.toBe(0.3);
+    expect(sumMatchesAmount(total, 0.3)).toBe(true);
+  });
+
+  it('差一分錢就要擋下來', () => {
+    // 舊的 0.02 容差會放行這種輸入，讓分攤加總與費用金額對不起來，
+    // 而資料庫的 split_expense_shares 沒有 CHECK 約束不會攔
+    expect(sumMatchesAmount(99.99, 100)).toBe(false);
+    expect(sumMatchesAmount(100.01, 100)).toBe(false);
+    expect(sumMatchesAmount(100.02, 100)).toBe(false);
+  });
+});
+
 // --- 與 CLI 的第二份實作對答案 ---
 
 vi.mock('../../tools/core/client.js', () => ({
@@ -67,7 +88,11 @@ vi.mock('../../tools/core/client.js', () => ({
   getCurrentUser: async () => ({ id: 'user-doris' }),
 }));
 
-const { equalSharesFor, isEqualSplit: cliIsEqualSplit } = await import('../../tools/core/splitShares.js');
+const {
+  equalSharesFor,
+  isEqualSplit: cliIsEqualSplit,
+  SHARE_SUM_TOLERANCE: CLI_SHARE_SUM_TOLERANCE,
+} = await import('../../tools/core/splitShares.js');
 
 const GROUP = {
   id: 'g1',
@@ -89,6 +114,10 @@ describe('與 tools/core/splitShares.js 保持一致', () => {
     const web = ALL.map((id, i) => ({ member_id: id, share: i === 0 ? first : base }));
 
     expect(equalSharesFor(GROUP, ALL, amount)).toEqual(web);
+  });
+
+  it('總和容差兩邊必須同值，否則同一組固定金額網頁收得下、CLI 收不下', () => {
+    expect(CLI_SHARE_SUM_TOLERANCE).toBe(SHARE_SUM_TOLERANCE);
   });
 
   it.each(AMOUNTS)('金額 %s 的均分結果，兩邊都要判為均分', (amount) => {

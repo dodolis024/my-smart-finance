@@ -2,8 +2,8 @@ import { ErrorCode, smfError } from './errors.js';
 import { memberNameList, resolveMember } from './splitGroups.js';
 
 /**
- * ⚠️ 均分的零頭規則（equalShares / autoShares / isEqualSplit）是
- * src/lib/splitShares.js 的第二份實作，三個函式都必須逐字對齊，
+ * ⚠️ 均分的零頭規則（equalShares / autoShares / isEqualSplit）與總和容差
+ * （SHARE_SUM_TOLERANCE）是 src/lib/splitShares.js 的第二份實作，都必須逐字對齊，
  * 否則同一筆除不盡的費用在網頁與 CLI 會差一分錢。
  * 修改前請先看 tools/README.md 的「同步義務」一節。
  */
@@ -23,6 +23,13 @@ function parseShareAmount(raw, name) {
   }
   return value;
 }
+
+/**
+ * 全固定金額時，總和與費用金額的容許誤差（對齊 src/lib/splitShares.js 的 SHARE_SUM_TOLERANCE）。
+ * 分攤都已收斂到分，這裡只吸收浮點雜訊，不放行真的差一分錢。
+ * 與下方 isEqualSplit 的 0.02 是兩回事，那個是辨識既有資料像不像均分。
+ */
+export const SHARE_SUM_TOLERANCE = 0.001;
 
 /** 均分模式：無條件捨去到分，零頭全部補給第一位參與者（對齊 calcEqualShares） */
 function equalShares(amount, count) {
@@ -165,8 +172,8 @@ export async function parseSplitSpec({ spec, amount, group }) {
       shares.set(m.id, i === 0 ? first : base);
     });
   } else {
-    // 全部都是固定金額：總和必須等於總額，容忍誤差 0.02（與網頁 customMismatch 同值）
-    if (Math.abs(fixedTotal - total) > 0.02) {
+    // 全部都是固定金額：總和必須等於總額（容差與網頁 customMismatch 同值）
+    if (Math.abs(fixedTotal - total) > SHARE_SUM_TOLERANCE) {
       throw smfError(
         ErrorCode.INVALID_INPUT,
         `分攤總和與費用金額不符（總和 ${fixedTotal.toFixed(2)}，應為 ${total.toFixed(2)}）`,

@@ -8,6 +8,21 @@
  * 也就是這裡的 equalShares / autoShares / isEqualSplit。
  */
 
+/**
+ * 自訂分攤送出前，總和與費用金額的容許誤差。
+ * 所有分攤都已收斂到分（parseExpression / equalShares 都是 2 位小數），
+ * 所以這裡只需要吸收浮點加總的雜訊，不該放行真的差一分錢——
+ * 資料庫的 split_expense_shares 沒有 CHECK 約束，這裡放行就沒有人擋了。
+ * 注意：這與 isEqualSplit 的 0.02 是兩回事，那個是用來辨識既有資料像不像均分，
+ * 收緊它會讓舊費用在編輯時被改判成自訂模式。
+ */
+export const SHARE_SUM_TOLERANCE = 0.001;
+
+/** 自訂分攤的總和是否等於費用金額 */
+export function sumMatchesAmount(total, amount) {
+  return Math.abs(Number(total) - Number(amount)) <= SHARE_SUM_TOLERANCE;
+}
+
 /** 均分模式：無條件捨去到分，零頭全部補給第一位參與者 */
 export function equalShares(amount, count) {
   const base = Math.floor((amount / count) * 100) / 100;

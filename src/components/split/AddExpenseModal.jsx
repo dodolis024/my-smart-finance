@@ -4,7 +4,7 @@ import CalcKeypad from './CalcKeypad';
 import { parseExpression, getTodayYmd } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { resolveRpcError } from '@/lib/splitErrors';
-import { equalShares, autoShares, isEqualSplit } from '@/lib/splitShares';
+import { equalShares, autoShares, isEqualSplit, sumMatchesAmount } from '@/lib/splitShares';
 
 export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', defaultExpenseCurrency, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
   const { t } = useLanguage();
@@ -68,8 +68,11 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   const totalAmt = parseExpression(amount) || 0;
   const manualTotal = participants.reduce((s, id) => {
     const v = customShares[id];
-    // 有值且非空字串才算「已手動輸入」
-    return (v !== undefined && v !== '') ? s + (parseFloat(v) || 0) : s;
+    // 有值且非空字串才算「已手動輸入」。
+    // 這裡必須與 buildCustomShares 一樣用 parseExpression：計算機還沒按確認時，
+    // 欄位裡放的是「10+5」這種算式字串，用 parseFloat 會讀成 10，
+    // 其他成員的自動分配就會顯示錯的數字，按下儲存還會跳總和不符。
+    return (v !== undefined && v !== '') ? s + (parseExpression(v) || 0) : s;
   }, 0);
   const unfilledIds = participants.filter(id => customShares[id] === undefined || customShares[id] === '');
   const remaining = totalAmt - manualTotal;
@@ -99,7 +102,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     if (shareMode !== 'custom' || amountManualRef.current || isEditing) return;
     const sum = participants.reduce((s, id) => {
       const v = customShares[id];
-      return v !== undefined && v !== '' ? s + (parseFloat(v) || 0) : s;
+      return v !== undefined && v !== '' ? s + (parseExpression(v) || 0) : s;
     }, 0);
     setAmount(sum > 0 ? String(sum) : '');
   }, [customShares, shareMode, participants, isEditing]);
@@ -276,7 +279,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         return;
       }
       const total = Object.values(shares).reduce((s, v) => s + v, 0);
-      if (Math.abs(total - amt) > 0.02) {
+      if (!sumMatchesAmount(total, amt)) {
         setError(t('split.addExpenseModal.customMismatch', { total: total.toFixed(2), amount: amt.toFixed(2) }));
         return;
       }
