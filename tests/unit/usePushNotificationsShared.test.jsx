@@ -12,6 +12,11 @@ import { createRoot } from 'react-dom/client';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
+// hook 在載入時就讀 VITE_VAPID_PUBLIC_KEY，沒有值會直接判定「瀏覽器不支援推播」。
+// 本機的 .env.local 有這個變數、CI 沒有，所以不 stub 就會本機過、CI 掛。
+// 必須在 import hook 之前 stub，因為那是模組層級的常數。
+vi.stubEnv('VITE_VAPID_PUBLIC_KEY', 'BOTest0123456789abcdefghijklmnopqrstuvwxyz-_');
+
 const h = vi.hoisted(() => ({
   subscription: null,
   upsertCalls: [],
@@ -44,9 +49,12 @@ beforeEach(() => {
       subscribe: async () => { h.subscription = fakeSub; return fakeSub; },
     },
   };
-  global.navigator.serviceWorker = { ready: Promise.resolve(registration), register: async () => registration };
+  // 不改動宿主的 navigator（不同 Node 版本上唯讀行為不一致），直接換成測試用的
+  vi.stubGlobal('navigator', {
+    serviceWorker: { ready: Promise.resolve(registration), register: async () => registration },
+  });
   window.PushManager = function PushManager() {};
-  global.PushManager = window.PushManager;
+  vi.stubGlobal('PushManager', window.PushManager);
 });
 
 const { usePushNotifications } = await import('@/hooks/usePushNotifications');
