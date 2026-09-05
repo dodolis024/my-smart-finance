@@ -506,6 +506,8 @@ const en = {
     currentMembers: 'Current Members',
     addNewMemberLabel: 'Add Members',
     memberLinked: 'Linked',
+    removeMemberHasRecords: '{name} already appears in {expenses} expense(s) and {settlements} repayment(s). Removing them would leave those records unbalanced, so they cannot be removed.',
+    removeMemberConfirm: 'Remove {name}? They have no expenses or repayments yet, and would need to be added again.',
     confirmAdd: 'Confirm Add',
     adding: 'Adding...',
     memberNameShortPlaceholder: 'Member name',

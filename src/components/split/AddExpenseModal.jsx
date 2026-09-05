@@ -30,6 +30,8 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   const amountManualRef = useRef(false);
   // 讓鍵盤監聽器可以讀取當前 keypadValue，而不需要重新掛載 effect
   const keypadValueRef = useRef('');
+  // 計算機打開前的欄位值，輸入被拒絕時用來還原
+  const keypadInitialRef = useRef('');
 
   // 穩定化 members 引用，避免父層 re-render 時不必要地重設表單
   const memberIds = useMemo(() => (members || []).map(m => m.id).join(','), [members]);
@@ -161,6 +163,9 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   // 當計算機鍵盤開啟時，讓輸入欄位維持在可視範圍內
   const openKeypadFor = (field, targetEl) => {
     if (field === 'amount') amountManualRef.current = true;
+    // 記下打開前的值，輸入被拒絕時要還原——不然「已取消這次輸入」只是嘴上說說，
+    // 畫面上那個無效的數字還留著，按儲存又會跳另一個錯誤
+    keypadInitialRef.current = field === 'amount' ? amount : (customShares[field] ?? '');
     setActiveField(field);
     // 等 body class + padding-bottom 生效後再捲動
     setTimeout(() => scrollFieldAboveKeypad(targetEl), 50);
@@ -216,11 +221,14 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     setActiveField(null);
   };
 
-  /** 計算機拒絕輸入（負數或算不出來）時，明確告知而不是把欄位默默清空 */
+  /** 計算機拒絕輸入（負數或算不出來）時，還原成打開前的值並明確告知 */
   const handleKeypadReject = useCallback(() => {
-    setError(t('split.addExpenseModal.invalidKeypadValue'));
+    const restored = keypadInitialRef.current;
+    if (activeField === 'amount') setAmount(restored);
+    else if (activeField != null) setCustomShares((prev) => ({ ...prev, [activeField]: restored }));
     setActiveField(null);
-  }, [t]);
+    setError(t('split.addExpenseModal.invalidKeypadValue'));
+  }, [activeField, t]);
 
   // 實體鍵盤支援：CalcKeypad 開啟時，攔截鍵盤輸入並路由進計算機
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import { countMemberRecords } from '@/lib/splitMembers';
 import { useSplitExpenses } from '@/hooks/useSplitExpenses';
 import { useSplitSync } from '@/hooks/useSplitSync';
 import { useAuth } from '@/hooks/useAuth';
@@ -141,6 +142,33 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
     } catch {
       toast.error(t('split.deleteSettlementFailed'));
     }
+  };
+
+  /**
+   * 移除成員前先擋下「已經有帳目」的人。
+   *
+   * split_expense_shares 與 split_settlements 的 member 外鍵都是 ON DELETE CASCADE，
+   * 刪掉成員會連他的分攤與還款紀錄一起消失——那些費用的分攤加總就不再等於金額，
+   * 代墊的人會永遠少收，而且畫面上完全看不出來。
+   * 已還清也一樣不行：還款紀錄同樣會被刪掉，等於那筆錢沒還過。
+   */
+  const handleRemoveMember = async (memberId) => {
+    const member = members.find((m) => m.id === memberId);
+    const { expenseCount, settlementCount, hasRecords } =
+      countMemberRecords(memberId, expenses, settlements);
+
+    if (hasRecords) {
+      toast.error(t('split.removeMemberHasRecords', {
+        name: member?.name ?? '',
+        expenses: expenseCount,
+        settlements: settlementCount,
+      }));
+      return;
+    }
+
+    const ok = await confirm(t('split.removeMemberConfirm', { name: member?.name ?? '' }));
+    if (!ok) return;
+    await onRemoveMember(group.id, memberId);
   };
 
   const handleCopyLink = () => {
@@ -351,7 +379,7 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
           }
         }}
         // 移除成員限群主（split_members_delete policy）；非群主按了也只會失敗
-        onRemoveMember={isOwner ? onRemoveMember : undefined}
+        onRemoveMember={isOwner ? handleRemoveMember : undefined}
         onUpdateMemberName={onUpdateMemberName}
       />
 

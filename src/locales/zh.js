@@ -506,6 +506,8 @@ const zh = {
     currentMembers: '目前成員',
     addNewMemberLabel: '新增成員',
     memberLinked: '已連結',
+    removeMemberHasRecords: '「{name}」已經有 {expenses} 筆費用、{settlements} 筆還款紀錄，移除他會讓那些帳目對不起來，因此無法移除',
+    removeMemberConfirm: '確定要移除「{name}」嗎？他目前沒有任何費用或還款紀錄，移除後需要重新加入。',
     confirmAdd: '確認新增',
     adding: '新增中...',
     memberNameShortPlaceholder: '成員名稱',

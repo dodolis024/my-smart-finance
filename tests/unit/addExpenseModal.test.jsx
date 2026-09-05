@@ -216,15 +216,29 @@ describe('AddExpenseModal — 送出的分攤必須與費用金額相等', () =>
     expect(errorText()).toBe('split.addExpenseModal.amountTooLarge');
   });
 
-  it('輸入負數算式會明確提示，不是把欄位默默清空', async () => {
+  it('輸入負數算式會明確提示，並還原成輸入前的值', async () => {
     const onAdd = render();
     setTitle('晚餐');
     typeIntoKeypad('#expense-amount', ['1', '0', '0', 'Enter']);
     toCustomMode();
+    typeIntoKeypad(shareInput(0), ['4', '0', 'Enter']);
     typeIntoKeypad(shareInput(0), ['0', '-', '5', '0', '0', 'Enter']);
 
     expect(errorText()).toBe('split.addExpenseModal.invalidKeypadValue');
+    // 說「已取消這次輸入」就要真的取消：欄位回到 40，而不是留著 0-500
+    expect(shareInput(0).value).toBe('40');
     expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it('金額欄輸入負數被拒絕後也要還原，不會把原本的金額弄丟', async () => {
+    render();
+    setTitle('晚餐');
+    typeIntoKeypad('#expense-amount', ['1', '0', '0', 'Enter']);
+    // 計算機是接續既有值輸入，所以這裡算的是 100-500 = -400
+    typeIntoKeypad('#expense-amount', ['-', '5', '0', '0', 'Enter']);
+
+    expect(errorText()).toBe('split.addExpenseModal.invalidKeypadValue');
+    expect($('#expense-amount').value).toBe('100');
   });
 
   it('沒有名稱不能送出', async () => {

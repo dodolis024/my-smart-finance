@@ -9,7 +9,8 @@ This file records version updates for Smart Finance Tracker.
 - Fixed the expense amount and the individual shares being able to disagree: an equal split saved straight from an unconfirmed expression in the amount field stored the wrong shares silently (off by up to half the amount), and a custom split let a cent of drift through; both modes now verify the shares add up before saving, and the CLI's fixed-amount syntax was tightened to match
 - Fixed the auto-allocated amounts for other members showing the wrong figure while an arithmetic expression was being typed into a share field, which then failed the total check on save
 - Fixed entering too many digits for a split amount surfacing a raw database error; it now tells you the amount is over the recordable limit
-- Fixed a negative arithmetic expression in a split amount field silently clearing the field with no explanation
+- Fixed a negative arithmetic expression in a split amount field silently clearing the field with no explanation; it now restores the previous amount and says why
+- Fixed removing a split group member also deleting their shares and repayments from existing expenses, leaving those records unbalanced and the person who fronted the money short; only members with no records can be removed now, and removal asks for confirmation first
 
 ## [1.27.0] - Sep-04 2026
 - Added edit and delete to the transaction detail view: change or remove an entry from wherever you opened it, instead of having to find its row in the table first
