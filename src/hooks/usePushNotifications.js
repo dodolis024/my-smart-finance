@@ -12,12 +12,27 @@ function urlBase64ToUint8Array(base64String) {
 const SW_PATH = import.meta.env.BASE_URL + 'sw.js';
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
+// 訂閱狀態的跨實例同步：設定面板的「裝置推播」與「信用卡通知」兩區各自呼叫這個 hook，
+// 若各持一份 state，按下開關後另一區的提示不會更新，要重開設定才對得上。
+// 與 useDashboard 的 defaultCurrencyListeners、offlineQueue 的 subscribeQueue 同一模式。
+let subscribedState = false;
+const subscribedListeners = new Set();
+function setSubscribedShared(value) {
+  subscribedState = value;
+  subscribedListeners.forEach((l) => l(value));
+}
+
 export function usePushNotifications() {
   const { user } = useAuth();
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState('default');
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(subscribedState);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    subscribedListeners.add(setIsSubscribed);
+    return () => subscribedListeners.delete(setIsSubscribed);
+  }, []);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -33,7 +48,7 @@ export function usePushNotifications() {
       : navigator.serviceWorker.register(SW_PATH);
     regPromise.then((reg) => {
       reg.pushManager.getSubscription().then((sub) => {
-        setIsSubscribed(!!sub);
+        setSubscribedShared(!!sub);
       });
     }).catch(() => {});
   }, []);
@@ -57,7 +72,7 @@ export function usePushNotifications() {
 
       if (error) throw error;
 
-      setIsSubscribed(true);
+      setSubscribedShared(true);
       setPermission(Notification.permission);
     } catch (err) {
       console.error('[PushNotifications] subscribe failed:', err);
@@ -81,7 +96,7 @@ export function usePushNotifications() {
           .eq('user_id', user.id)
           .eq('endpoint', sub.endpoint);
       }
-      setIsSubscribed(false);
+      setSubscribedShared(false);
     } catch (err) {
       console.error('[PushNotifications] unsubscribe failed:', err);
     } finally {
