@@ -42,21 +42,27 @@ describe('parseSplitSpec', () => {
     ]);
   });
 
-  it('除不盡時零頭給成員順序中的第一位', async () => {
+  it('台幣除不盡時分成整數，加總等於金額且任兩人最多差 1 元', async () => {
     const result = await parseSplitSpec({ spec: '', amount: 1000, group: GROUP });
+    const shares = result.map((s) => s.share);
 
-    expect(shareOf(result, 'm1')).toBeCloseTo(333.34, 10);
-    expect(shareOf(result, 'm2')).toBeCloseTo(333.33, 10);
-    expect(shareOf(result, 'm3')).toBeCloseTo(333.33, 10);
+    expect(shares.every((v) => Number.isInteger(v))).toBe(true);
+    expect(shares.reduce((a, b) => a + b, 0)).toBe(1000);
+    expect(Math.max(...shares) - Math.min(...shares)).toBe(1);
   });
 
-  it('打亂 --split 的書寫順序，零頭歸屬不變', async () => {
+  it('打亂 --split 的書寫順序，結果完全不變', async () => {
+    // agent 換個寫法不該換人多付一元，也不該改變回傳順序
     const written = await parseSplitSpec({ spec: '小美,小明,Doris', amount: 1000, group: GROUP });
+    const ordered = await parseSplitSpec({ spec: 'Doris,小明,小美', amount: 1000, group: GROUP });
 
-    // 依成員順序回傳，且拿到零頭的仍是 Doris——agent 換個寫法不該換人多付一分錢
     expect(written.map((s) => s.member_id)).toEqual(['m1', 'm2', 'm3']);
-    expect(shareOf(written, 'm1')).toBeCloseTo(333.34, 10);
-    expect(shareOf(written, 'm3')).toBeCloseTo(333.33, 10);
+    expect(written).toEqual(ordered);
+  });
+
+  it('同一筆費用重算兩次，零頭一定落在同一個人身上', async () => {
+    const args = { spec: '', amount: 1000, group: GROUP, date: '2026-09-05', title: '晚餐' };
+    expect(await parseSplitSpec(args)).toEqual(await parseSplitSpec(args));
   });
 
   it('指定部分成員時只有他們均分', async () => {
@@ -76,12 +82,20 @@ describe('parseSplitSpec', () => {
     expect(shareOf(result, 'm3')).toBeCloseTo(400, 10);
   });
 
-  it('混合寫法除不盡時，零頭給第一位待分配的成員', async () => {
-    const result = await parseSplitSpec({ spec: 'Doris=100,小明,小美', amount: 1000.01, group: GROUP });
+  it('混合寫法除不盡時，剩餘金額分完且加總等於費用金額', async () => {
+    const result = await parseSplitSpec({ spec: 'Doris=100,小明,小美', amount: 1001, group: GROUP });
+    const auto = [shareOf(result, 'm2'), shareOf(result, 'm3')];
 
     expect(shareOf(result, 'm1')).toBe(100);
-    expect(shareOf(result, 'm2')).toBeCloseTo(450.01, 10);
-    expect(shareOf(result, 'm3')).toBeCloseTo(450, 10);
+    expect(auto.reduce((a, b) => a + b, 0)).toBe(901);
+    expect(Math.abs(auto[0] - auto[1])).toBe(1);
+    expect(result.reduce((sum, s) => sum + s.share, 0)).toBe(1001);
+  });
+
+  it('台幣金額帶小數時會先收成整數，分攤才湊得回去', async () => {
+    const result = await parseSplitSpec({ spec: '', amount: 1000.4, group: GROUP });
+
+    expect(result.reduce((sum, s) => sum + s.share, 0)).toBe(1000);
   });
 
   it('固定金額容許千分位逗號', async () => {
@@ -100,25 +114,32 @@ describe('parseSplitSpec', () => {
     });
   });
 
-  it('全部固定但總和差一分錢要擋下', async () => {
-    // 333.33 * 3 = 999.99。舊的 0.02 容差會放行，讓分攤加總與費用金額對不起來；
+  it('全部固定但總和差一元要擋下', async () => {
+    // 台幣的固定金額會先收成整數：333.33 → 333，三人共 999，差 1 元。
     // split_expense_shares 沒有 CHECK 約束，這裡放行就沒有人擋了。
     await expect(
       parseSplitSpec({ spec: 'Doris=333.33,小明=333.33,小美=333.33', amount: 1000, group: GROUP })
     ).rejects.toMatchObject({
       code: 'INVALID_INPUT',
-      message: expect.stringContaining('999.99'),
+      message: expect.stringContaining('999'),
     });
   });
 
   it('全部固定且剛好等於總額才通過', async () => {
-    const result = await parseSplitSpec({ spec: 'Doris=333.34,小明=333.33,小美=333.33', amount: 1000, group: GROUP });
+    const result = await parseSplitSpec({ spec: 'Doris=334,小明=333,小美=333', amount: 1000, group: GROUP });
 
     expect(result).toEqual([
-      { member_id: 'm1', share: 333.34 },
-      { member_id: 'm2', share: 333.33 },
-      { member_id: 'm3', share: 333.33 },
+      { member_id: 'm1', share: 334 },
+      { member_id: 'm2', share: 333 },
+      { member_id: 'm3', share: 333 },
     ]);
+  });
+
+  it('外幣群組仍然分到分', async () => {
+    const result = await parseSplitSpec({ spec: '', amount: 100, group: GROUP, currency: 'USD' });
+    const shares = result.map((s) => s.share).sort((a, b) => a - b);
+
+    expect(shares).toEqual([33.33, 33.33, 33.34]);
   });
 
   it('固定金額超過總額要報錯', async () => {

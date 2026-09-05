@@ -19,8 +19,9 @@
 
 | 變動 | 要改的地方 |
 |---|---|
-| 結算演算法（`src/lib/splitSettlement.js`） | `core/splitSettlement.js`（整份複製，含 `ZERO_DECIMAL_CURRENCIES` 名單） |
-| 均分的零頭規則（`src/lib/splitShares.js`） | `core/splitShares.js`（`equalShares` / `autoShares` / `isEqualSplit` 三個函式） |
+| 結算演算法（`src/lib/splitSettlement.js`） | `core/splitSettlement.js`（整份複製，含 `ZERO_DECIMAL_CURRENCIES` 名單、湊整與 `forgiveRoundingResidue`） |
+| 分攤規則（`src/lib/splitShares.js`） | `core/splitShares.js`（`splitEqually` / `isEqualSplit` / `normalizeShares` / `remainderOffset` / `shareDecimals` / `roundToCurrencyUnit`） |
+| 零小數幣別名單（`src/lib/constants.js` 的 `ZERO_DECIMAL_CURRENCIES`） | `core/splitSettlement.js`（`core/splitShares.js` 由此匯入，CLI 內只留一份） |
 | 新增／修改／刪除費用的副作用（通知、簽到） | `core/splitExpenses.js` |
 | `split_expenses` 或分攤明細的欄位 | `core/splitExpenses.js` 的 `EXPENSE_FIELDS` |
 

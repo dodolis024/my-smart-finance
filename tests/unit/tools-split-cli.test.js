@@ -176,9 +176,11 @@ describe('--dry-run', () => {
     const data = parsed();
     expect(data.dryRun).toBe(true);
     expect(splitExpenses.addExpense).not.toHaveBeenCalled();
-    // 零頭給成員順序中的第一位
-    expect(data.shares[0].share).toBeCloseTo(333.34, 10);
-    expect(data.shares[1].share).toBeCloseTo(333.33, 10);
+    // 預覽必須就是實際會寫入的結果：台幣分到整數、加總等於金額、最多差 1 元
+    const shares = data.shares.map((s) => s.share);
+    expect(shares.every((v) => Number.isInteger(v))).toBe(true);
+    expect(shares.reduce((a, b) => a + b, 0)).toBe(1000);
+    expect(Math.max(...shares) - Math.min(...shares)).toBe(1);
   });
 
   it('edit 的 dry-run 印出之前與之後，且不呼叫更新', async () => {

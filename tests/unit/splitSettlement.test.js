@@ -203,3 +203,125 @@ describe('formatSplitAmount', () => {
     expect(formatSplitAmount(99.4, '')).toBe('99');
   });
 });
+
+describe('零小數幣別的結算：收斂到付得出來的面額', () => {
+  const rates = { USD: 31.5, TWD: 1 };
+  // 美金費用、台幣結算：換匯後每人 1049.895 元，付不出來的零頭要進位
+  const usdExpense = [
+    { paid_by: 'A', amount: 100, currency: 'USD', split_expense_shares: [
+      { member_id: 'A', share: 33.34 },
+      { member_id: 'B', share: 33.33 },
+      { member_id: 'C', share: 33.33 },
+    ] },
+  ];
+
+  it('轉帳金額是可以實際交付的整數，且一律往上進位', () => {
+    // 每人實欠 1049.895 元，兩位都被要求付到 1050
+    const result = calcSettlement(members, usdExpense, [], rates, 'TWD');
+
+    expect(result.map((t) => t.amount)).toEqual([1050, 1050]);
+    expect(result.every((t) => Number.isInteger(t.amount))).toBe(true);
+  });
+
+  it('代墊的人不可以少收，零頭一律由欠款人吸收', () => {
+    const result = calcSettlement(members, usdExpense, [], rates, 'TWD');
+    const received = result.reduce((sum, t) => sum + t.amount, 0);
+    const owed = (100 - 33.34) * 31.5;
+
+    expect(received).toBeGreaterThanOrEqual(owed);
+  });
+
+  it('平了就是平了：多付的不會回頭變成代墊者欠人', () => {
+    const suggested = calcSettlement(members, usdExpense, [], rates, 'TWD');
+    const paid = suggested.map((t) => ({
+      from_member: t.fromId, to_member: t.toId, amount: t.amount, currency: 'TWD',
+    }));
+
+    expect(calcSettlement(members, usdExpense, paid, rates, 'TWD')).toEqual([]);
+  });
+
+  it('金額被誤記成十倍時仍然要追，不可以被當成湊整的零頭吃掉', () => {
+    const paid = [{ from_member: 'B', to_member: 'A', amount: 10500, currency: 'TWD' }];
+    const result = calcSettlement(members, usdExpense, paid, rates, 'TWD');
+
+    expect(result.some((t) => t.fromId === 'A' && t.toId === 'B')).toBe(true);
+  });
+
+  it('照建議金額付完就全部結清，不會回頭跟人要零頭', () => {
+    const suggested = calcSettlement(members, usdExpense, [], rates, 'TWD');
+    const paid = suggested.map((t) => ({
+      from_member: t.fromId, to_member: t.toId, amount: t.amount, currency: 'TWD',
+    }));
+
+    // 多付的 0.21 元當作送給對方——不放寬門檻的話這裡會冒出一筆結不完的零頭
+    expect(calcSettlement(members, usdExpense, paid, rates, 'TWD')).toEqual([]);
+  });
+
+  it('外幣結算仍然算到分，不進位', () => {
+    const result = calcSettlement(members, usdExpense, [], { USD: 1, TWD: 1 }, 'USD');
+
+    expect(result.map((t) => t.amount)).toEqual([33.33, 33.33]);
+  });
+
+  it('台幣整數分攤不受進位影響', () => {
+    const twd = [
+      { paid_by: 'A', amount: 100, currency: 'TWD', split_expense_shares: [
+        { member_id: 'A', share: 34 },
+        { member_id: 'B', share: 33 },
+        { member_id: 'C', share: 33 },
+      ] },
+    ];
+
+    expect(calcSettlement(members, twd, [], { TWD: 1 }, 'TWD').map((t) => t.amount)).toEqual([33, 33]);
+  });
+
+  it('不到 1 元的真實欠款會被進位成 1 元，代墊者不會白做工', () => {
+    const tiny = [
+      { paid_by: 'A', amount: 1, currency: 'USD', split_expense_shares: [
+        { member_id: 'A', share: 0.5 },
+        { member_id: 'B', share: 0.5 },
+      ] },
+    ];
+
+    // 換匯後 B 只欠 0.01 元，仍然進位成 1 元付給 A
+    expect(calcSettlement(members, tiny, [], { USD: 0.02, TWD: 1 }, 'TWD'))
+      .toEqual([{ fromId: 'B', toId: 'A', from: 'Bob', to: 'Alice', amount: 1 }]);
+  });
+});
+
+// --- 與 CLI 的第二份實作對答案 ---
+
+const cliSettlement = await import('../../tools/core/splitSettlement.js');
+
+describe('與 tools/core/splitSettlement.js 保持一致', () => {
+  const cases = [
+    { label: '台幣整數分攤', currency: 'TWD', rates: { TWD: 1 }, expenses: [
+      { paid_by: 'A', amount: 100, currency: 'TWD', split_expense_shares: [
+        { member_id: 'A', share: 34 }, { member_id: 'B', share: 33 }, { member_id: 'C', share: 33 },
+      ] },
+    ] },
+    { label: '美金費用換台幣結算', currency: 'TWD', rates: { USD: 31.5, TWD: 1 }, expenses: [
+      { paid_by: 'A', amount: 100, currency: 'USD', split_expense_shares: [
+        { member_id: 'A', share: 33.34 }, { member_id: 'B', share: 33.33 }, { member_id: 'C', share: 33.33 },
+      ] },
+    ] },
+    { label: '多筆多付款人', currency: 'TWD', rates: { USD: 31.5, TWD: 1 }, expenses: [
+      { paid_by: 'A', amount: 1000, currency: 'TWD', split_expense_shares: [
+        { member_id: 'A', share: 334 }, { member_id: 'B', share: 333 }, { member_id: 'C', share: 333 },
+      ] },
+      { paid_by: 'B', amount: 55, currency: 'USD', split_expense_shares: [
+        { member_id: 'B', share: 27.5 }, { member_id: 'C', share: 27.5 },
+      ] },
+    ] },
+  ];
+
+  it.each(cases)('$label：網頁與 CLI 要算出同樣的結算方案', ({ currency, rates, expenses }) => {
+    expect(cliSettlement.calcSettlement(members, expenses, [], rates, currency))
+      .toEqual(calcSettlement(members, expenses, [], rates, currency));
+  });
+
+  it.each(cases)('$label：每人總支出兩邊也要一致', ({ currency, rates, expenses }) => {
+    expect(cliSettlement.calcMemberTotals(members, expenses, rates, currency))
+      .toEqual(calcMemberTotals(members, expenses, rates, currency));
+  });
+});

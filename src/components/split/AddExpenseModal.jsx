@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Modal from '@/components/common/Modal';
 import CalcKeypad from './CalcKeypad';
 import { parseExpression, getTodayYmd } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { resolveRpcError } from '@/lib/splitErrors';
-import { equalShares, autoShares, isEqualSplit, sumMatchesAmount } from '@/lib/splitShares';
+import { splitEqually, isEqualSplit, sumMatchesAmount, remainderOffset, roundToCurrencyUnit, normalizeShares, MAX_SPLIT_AMOUNT } from '@/lib/splitShares';
 
 export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', defaultExpenseCurrency, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
   const { t } = useLanguage();
@@ -53,13 +53,16 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     const participantIds = shares.map(s => s.member_id);
     setParticipants(participantIds);
     // 判斷是否為平均分攤
-    if (isEqualSplit(shares, editingExpense.amount)) {
+    if (isEqualSplit(shares, editingExpense.amount, editingExpense.currency || initialCurrency)) {
       setShareMode('equal');
       setCustomShares({});
     } else {
       setShareMode('custom');
       const cs = {};
-      shares.forEach(s => { cs[s.member_id] = String(s.share); });
+      // 舊資料可能存著該幣別不支援的小數（改制前的台幣），直接載入會過不了
+      // 送出前的總和檢查，使用者連改個標題都存不回去
+      normalizeShares(shares, editingExpense.amount, editingExpense.currency || initialCurrency)
+        .forEach(s => { cs[s.member_id] = String(s.share); });
       setCustomShares(cs);
     }
   }, [editingExpense, groupCurrency]); // eslint-disable-line react-hooks/exhaustive-deps -- 僅在編輯項目變動時載入表單，initialCurrency 為 fallback 不應觸發重載
@@ -78,9 +81,38 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   const remaining = totalAmt - manualTotal;
   // 無條件捨去的零頭補給第一位未填成員（unfilledIds[0]），
   // 提升到這一層讓 placeholder 顯示與 buildCustomShares 送出永遠同源，避免所見即所得跑掉
-  const auto = unfilledIds.length > 0 ? autoShares(remaining, unfilledIds.length) : { base: 0, first: 0 };
-  const autoShare = auto.base;
-  const autoShareFirst = auto.first;
+  // 零頭的輪替起點只依這筆費用自己的欄位算，網頁與 CLI 才會分給同一個人
+  const offsetSeed = { date, title: title.trim(), amount: totalAmt };
+  const autoValues = unfilledIds.length > 0
+    ? splitEqually(remaining, unfilledIds.length, {
+        currency,
+        offset: remainderOffset(offsetSeed, unfilledIds.length),
+      })
+    : [];
+  /** 未填金額的成員在畫面上會看到的自動分配金額（與送出時同源） */
+  const autoShareOf = (memberId) => autoValues[unfilledIds.indexOf(memberId)] ?? 0;
+
+  // 換幣別時把已經輸入的金額與分攤重新收斂到新幣別的單位。
+  // 少了這段，在美金輸入 100.5 後改成台幣，畫面會停在 100.5 卻存入 101——
+  // 使用者看到的和實際存下去的不是同一個數字。
+  // 只在幣別「真的被改動」時處理：載入既有費用時不動它，
+  // 免得使用者只想改個標題，卻被舊資料的小數擋著存不了。
+  const prevCurrencyRef = useRef(currency);
+  useEffect(() => {
+    if (prevCurrencyRef.current === currency) return;
+    prevCurrencyRef.current = currency;
+    const normalize = (v) => {
+      if (v === undefined || v === '') return v;
+      const n = Number(v);
+      // 計算機還開著時值可能是「10+5」這種算式，交給確認時再收
+      if (!Number.isFinite(n)) return v;
+      return String(roundToCurrencyUnit(n, currency));
+    };
+    setAmount((prev) => normalize(prev));
+    setCustomShares((prev) =>
+      Object.fromEntries(Object.entries(prev).map(([id, v]) => [id, normalize(v)]))
+    );
+  }, [currency]);
 
   const handleClose = () => {
     setTitle(''); setAmount(''); setNote(''); setError('');
@@ -171,7 +203,11 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     else if (activeField != null) setCustomShares(prev => ({ ...prev, [activeField]: val }));
   };
 
-  const handleKeypadConfirm = (result) => {
+  const handleKeypadConfirm = (rawResult) => {
+    // 零小數幣別不接受小數：在這裡就收乾淨，使用者看到的即是會被存下的數字
+    const result = rawResult === '' || rawResult == null
+      ? rawResult
+      : String(roundToCurrencyUnit(Number(rawResult), currency));
     // 若用戶清空了總金額，重新允許自動加總
     if (activeField === 'amount' && (!result || result === '')) {
       amountManualRef.current = false;
@@ -179,6 +215,12 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     handleKeypadInput(result);
     setActiveField(null);
   };
+
+  /** 計算機拒絕輸入（負數或算不出來）時，明確告知而不是把欄位默默清空 */
+  const handleKeypadReject = useCallback(() => {
+    setError(t('split.addExpenseModal.invalidKeypadValue'));
+    setActiveField(null);
+  }, [t]);
 
   // 實體鍵盤支援：CalcKeypad 開啟時，攔截鍵盤輸入並路由進計算機
   useEffect(() => {
@@ -203,7 +245,11 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
       } else if (key === 'Enter' || key === '=') {
         e.preventDefault();
         const parsed = parseExpression(cur);
-        const result = !isNaN(parsed) && parsed >= 0 ? String(parsed) : '';
+        if (cur !== '' && (isNaN(parsed) || parsed < 0)) { handleKeypadReject(); return; }
+        // 與 handleKeypadConfirm 同一套收斂，零小數幣別不留小數
+        const result = !isNaN(parsed) && parsed >= 0
+          ? String(roundToCurrencyUnit(parsed, currency))
+          : '';
         if (activeField === 'amount') {
           if (!result) amountManualRef.current = false;
           setAmount(result);
@@ -217,7 +263,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [activeField]);
+  }, [activeField, currency, handleKeypadReject]);
 
   const toggleParticipant = (id) => {
     setParticipants(prev =>
@@ -233,28 +279,30 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   };
 
   const calcEqualShares = () => {
-    const amt = parseFloat(amount) || 0;
+    // 必須與 handleSubmit 的 amt 同源：計算機還沒按確認時金額欄是「50+50」，
+    // 用 parseFloat 會讀成 50，於是費用存成 100 但分攤只加總到 50
+    const amt = roundToCurrencyUnit(parseExpression(amount) || 0, currency);
     const n = participants.length;
     if (!n) return {};
-    const { base, first } = equalShares(amt, n);
-    const shares = {};
-    participants.forEach((id, i) => {
-      shares[id] = i === 0 ? first : base;
+    const values = splitEqually(amt, n, {
+      currency,
+      offset: remainderOffset({ date, title: title.trim(), amount: amt }, n),
     });
+    const shares = {};
+    participants.forEach((id, i) => { shares[id] = values[i]; });
     return shares;
   };
 
-  // 自訂模式送出時，將自動分配的金額也納入；
-  // 比照 calcEqualShares，把無條件捨去產生的零頭補給第一位自動分配的成員，避免總和與總額不符
-  // base/remainder 已提升到 autoShare/autoShareFirst，與 placeholder 顯示同源
+  // 自訂模式送出時，將自動分配的金額也納入。
+  // 自動分配一律走 autoShareOf，與 placeholder 顯示同源，避免所見與所存不一致
   const buildCustomShares = () => {
     const shares = {};
     participants.forEach(id => {
       const v = customShares[id];
       if (v !== undefined && v !== '') {
-        shares[id] = parseExpression(v) || 0;
+        shares[id] = roundToCurrencyUnit(parseExpression(v) || 0, currency);
       } else {
-        shares[id] = id === unfilledIds[0] ? autoShareFirst : autoShare;
+        shares[id] = autoShareOf(id);
       }
     });
     return shares;
@@ -262,8 +310,11 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
 
   const handleSubmit = async () => {
     if (!title.trim()) { setError(t('split.addExpenseModal.nameRequired')); return; }
-    const amt = parseExpression(amount);
-    if (!amount || isNaN(amt) || amt <= 0) { setError(t('split.addExpenseModal.invalidAmount')); return; }
+    const parsedAmt = parseExpression(amount);
+    if (!amount || isNaN(parsedAmt) || parsedAmt <= 0) { setError(t('split.addExpenseModal.invalidAmount')); return; }
+    if (parsedAmt > MAX_SPLIT_AMOUNT) { setError(t('split.addExpenseModal.amountTooLarge')); return; }
+    // 零小數幣別的金額也要是整數，否則分攤怎麼分都湊不回這個數字
+    const amt = roundToCurrencyUnit(parsedAmt, currency);
     if (!paidBy) { setError(t('split.addExpenseModal.noPayerSelected')); return; }
     if (!participants.length) { setError(t('split.addExpenseModal.noParticipants')); return; }
 
@@ -273,16 +324,19 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     } else {
       shares = buildCustomShares();
       // 手動金額超過總額時，未填成員的自動分配為負數，總和仍等於總額而能通過
-      // customMismatch 檢查——先擋下，避免負的分攤被寫入資料庫
+      // 下面的總和檢查——先擋下，避免負的分攤被寫入資料庫
       if (Object.values(shares).some(v => v < 0)) {
         setError(t('split.addExpenseModal.customNegative'));
         return;
       }
-      const total = Object.values(shares).reduce((s, v) => s + v, 0);
-      if (!sumMatchesAmount(total, amt)) {
-        setError(t('split.addExpenseModal.customMismatch', { total: total.toFixed(2), amount: amt.toFixed(2) }));
-        return;
-      }
+    }
+
+    // 兩種模式都要檢查：split_expense_shares 沒有 CHECK 約束，這裡是最後一道關卡。
+    // 均分模式在金額同源後理論上必然相等，留著是為了擋住往後任何一種算錯的改動。
+    const total = Object.values(shares).reduce((s, v) => s + v, 0);
+    if (!sumMatchesAmount(total, amt)) {
+      setError(t('split.addExpenseModal.sharesMismatch', { total: total.toFixed(2), amount: amt.toFixed(2) }));
+      return;
     }
 
     const sharesArr = Object.entries(shares)
@@ -390,7 +444,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
                       type="text"
                       inputMode="none"
                       className={`split-modal__participant-share is-calc${isAutoFilled ? ' is-auto' : ''}`}
-                      placeholder={isAutoFilled ? (m.id === unfilledIds[0] ? autoShareFirst : autoShare).toLocaleString() : '0'}
+                      placeholder={isAutoFilled ? autoShareOf(m.id).toLocaleString() : '0'}
                       value={customShares[m.id] ?? ''}
                       readOnly
                       ref={(el) => {
@@ -428,6 +482,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
         value={keypadValue}
         onInput={handleKeypadInput}
         onConfirm={handleKeypadConfirm}
+        onReject={handleKeypadReject}
         onClose={() => setActiveField(null)}
       />
     )}

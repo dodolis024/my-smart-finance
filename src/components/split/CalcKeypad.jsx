@@ -10,7 +10,7 @@ const ROWS = [
 const OP_MAP = { '÷': '/', '×': '*' };
 const OP_KEYS = new Set(['÷', '×', '-', '+']);
 
-export default function CalcKeypad({ value, onInput, onConfirm, onClose }) {
+export default function CalcKeypad({ value, onInput, onConfirm, onClose, onReject }) {
   const evaluated = useMemo(() => parseExpression(value), [value]);
   const showPreview = !isNaN(evaluated) && value && value !== String(evaluated);
 
@@ -27,6 +27,9 @@ export default function CalcKeypad({ value, onInput, onConfirm, onClose }) {
     if (!isNaN(v) && v >= 0) {
       onConfirm(String(v));
     } else {
+      // 負數或算不出來的算式：以前是直接關掉、欄位被清空又不說明，
+      // 使用者會以為自己填好了
+      onReject?.(value);
       onClose();
     }
   };

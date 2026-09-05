@@ -10,7 +10,15 @@ import {
   resolveMember,
   resolveSelf,
 } from '../../core/splitGroups.js';
-import { equalSharesFor, isEqualSplit, parseSplitSpec } from '../../core/splitShares.js';
+import {
+  equalSharesFor,
+  isEqualSplit,
+  parseSplitSpec,
+  MAX_SPLIT_AMOUNT,
+  normalizeShares,
+  remainderOffset,
+  roundToCurrencyUnit,
+} from '../../core/splitShares.js';
 import {
   addExpense,
   addSettlement,
@@ -111,6 +119,17 @@ function withNames(group, shares) {
 
 function normalizeCurrency(value, fallback) {
   return String(value || fallback || 'TWD').trim().toUpperCase();
+}
+
+/** 資料庫欄位是 NUMERIC(12,2)，超過會拿到看不懂的 numeric field overflow */
+function assertAmountInRange(amount) {
+  if (Number(amount) > MAX_SPLIT_AMOUNT) {
+    throw smfError(
+      ErrorCode.INVALID_INPUT,
+      `金額超過可記錄的上限（${MAX_SPLIT_AMOUNT}）`,
+      '請確認金額是否多打了位數'
+    );
+  }
 }
 
 function requireDate(value) {
@@ -224,6 +243,7 @@ async function addSubcommand({ positional, flags }) {
     );
   }
   const amount = parseAmount(rawAmount);
+  assertAmountInRange(amount);
 
   const group = await resolveGroup(valueOf(flags, 'group'));
   assertNotArchived(group, '新增費用');
@@ -237,7 +257,14 @@ async function addSubcommand({ positional, flags }) {
   );
   const date = requireDate(valueOf(flags, 'date'));
   const note = valueOf(flags, 'note') || null;
-  const shares = await parseSplitSpec({ spec: valueOf(flags, 'split'), amount, group });
+  const shares = await parseSplitSpec({
+    spec: valueOf(flags, 'split'),
+    amount: roundToCurrencyUnit(amount, currency),
+    group,
+    currency,
+    date,
+    title: String(title).trim(),
+  });
 
   // dry-run 擺在所有驗證跑完之後：agent 拿到的預覽必須就是真正會寫入的結果
   if (flags['dry-run']) {
@@ -246,7 +273,7 @@ async function addSubcommand({ positional, flags }) {
       group_id: group.id,
       group_name: group.name,
       title: String(title).trim(),
-      amount,
+      amount: roundToCurrencyUnit(amount, currency),
       currency,
       date,
       note,
@@ -266,7 +293,7 @@ async function addSubcommand({ positional, flags }) {
   const result = await addExpense({
     group,
     title: String(title).trim(),
-    amount,
+    amount: roundToCurrencyUnit(amount, currency),
     currency,
     date,
     note,
@@ -304,8 +331,11 @@ async function editSubcommand({ positional, flags }) {
   if (!title) throw smfError(ErrorCode.INVALID_INPUT, '項目名稱不可為空');
 
   const amountChanged = valueOf(flags, 'amount') !== undefined;
-  const amount = amountChanged ? parseAmount(flags.amount) : Number(expense.amount);
+  const rawAmount = amountChanged ? parseAmount(flags.amount) : Number(expense.amount);
+  assertAmountInRange(rawAmount);
   const currency = normalizeCurrency(valueOf(flags, 'currency'), expense.currency);
+  // 與 parseSplitSpec 用同一個收斂後的金額，否則分攤加總會對不回費用金額
+  const amount = roundToCurrencyUnit(rawAmount, currency);
   const date = flags.date === undefined ? expense.date : requireDate(valueOf(flags, 'date'));
   const rawNote = valueOf(flags, 'note');
   const note = rawNote === undefined ? expense.note : rawNote || null;
@@ -316,12 +346,16 @@ async function editSubcommand({ positional, flags }) {
   const spec = valueOf(flags, 'split');
   let shares;
   if (spec !== undefined) {
-    shares = await parseSplitSpec({ spec, amount, group });
+    shares = await parseSplitSpec({ spec, amount, group, currency, date, title });
   } else if (!amountChanged) {
-    // update_split_expense 要求 p_shares 非空，只改標題時也得把原分攤原樣送回去
-    shares = originalShares;
-  } else if (isEqualSplit(originalShares, Number(expense.amount))) {
-    shares = equalSharesFor(group, originalShares.map((s) => s.member_id), amount);
+    // update_split_expense 要求 p_shares 非空，只改標題時也得把原分攤送回去。
+    // 順手收斂到幣別單位：舊資料可能存著台幣小數，與網頁的處理保持一致。
+    shares = normalizeShares(originalShares, amount, currency);
+  } else if (isEqualSplit(originalShares, Number(expense.amount), expense.currency)) {
+    shares = equalSharesFor(group, originalShares.map((s) => s.member_id), amount, {
+      currency,
+      offset: remainderOffset({ date, title, amount }, originalShares.length),
+    });
   } else {
     // 自訂分攤是使用者一個一個喬出來的數字，靜默沖掉重新均分他不會發現，
     // 但每個人該付多少全變了——所以直接擋下，並把原數字列出來讓 agent 據以重算
@@ -394,6 +428,7 @@ async function settleSubcommand({ flags }) {
     );
   }
   const amount = parseAmount(rawAmount);
+  assertAmountInRange(amount);
 
   const group = await resolveGroup(valueOf(flags, 'group'));
   assertNotArchived(group, '記錄還款');

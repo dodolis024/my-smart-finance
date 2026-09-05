@@ -2,9 +2,14 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Improved splitting for currencies without decimals, such as TWD and JPY: shares are now whole numbers (100 split three ways is 34/33/33), so the individual shares in an expense always add back up to the total
+- Improved who absorbs the leftover when an amount does not divide evenly: it is now spread one unit each and rotates between expenses, instead of always falling on whoever created the group
+- Improved settlement amounts: for currencies without decimals the suggested transfers are now whole amounts you can actually hand over, always rounded up on the payer's side so whoever fronted the money is never left short; paying them settles the group, and the few cents overpaid are not turned back into a new debt
 - Renamed “Group Notifications” to “Device Push” in notification settings: it is the master push switch for the device, so turning it off also stops credit card reminders; the credit card section now warns when push is off
-- Fixed custom splits being saved when the shares added up to a cent more or less than the expense; they must now match exactly, and the CLI's fixed-amount syntax was tightened to match
+- Fixed the expense amount and the individual shares being able to disagree: an equal split saved straight from an unconfirmed expression in the amount field stored the wrong shares silently (off by up to half the amount), and a custom split let a cent of drift through; both modes now verify the shares add up before saving, and the CLI's fixed-amount syntax was tightened to match
 - Fixed the auto-allocated amounts for other members showing the wrong figure while an arithmetic expression was being typed into a share field, which then failed the total check on save
+- Fixed entering too many digits for a split amount surfacing a raw database error; it now tells you the amount is over the recordable limit
+- Fixed a negative arithmetic expression in a split amount field silently clearing the field with no explanation
 
 ## [1.27.0] - Sep-04 2026
 - Added edit and delete to the transaction detail view: change or remove an entry from wherever you opened it, instead of having to find its row in the table first
