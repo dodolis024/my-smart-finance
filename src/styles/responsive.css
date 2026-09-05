@@ -261,6 +261,19 @@
     font-size: 1.25rem;
   }
 
+  /* 收緊記帳卡片的垂直留白，讓整張卡片在一個畫面內看得完（輸入框高度不動） */
+  .transaction-form-header {
+    margin-bottom: 1rem;
+  }
+
+  .transaction-form-section .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .transaction-form-section .form-group label {
+    margin-bottom: 0.25rem;
+  }
+
   .form-group input[type="text"],
   .form-group input[type="number"],
   .form-group input[type="date"],
@@ -271,6 +284,57 @@
     min-height: 44px;
     max-width: 100%;
     box-sizing: border-box;
+  }
+
+  /* 備註是選填，預設收合；點標題列的小箭頭可自由展開或收起 */
+  .form-group--note .note-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.3rem;
+    width: 100%;
+    padding: 0;
+    /* 字級、行高與下邊距都對齊其他欄位的 label：展開後高度與沒有摺疊時完全相同 */
+    margin-bottom: 0.25rem;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.6;
+    text-align: left;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .form-group--note .note-toggle:hover {
+    color: var(--color-text);
+  }
+
+  .form-group--note .note-toggle:focus-visible {
+    outline: none;
+    border-radius: 6px;
+    box-shadow: var(--shadow-focus);
+  }
+
+  .note-toggle__chevron {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s;
+  }
+
+  .note-toggle__chevron.is-open {
+    transform: rotate(180deg);
+  }
+
+  /* 標題列取代原本的 label；收合時連輸入框一起藏起來 */
+  .form-group--note > label {
+    display: none;
+  }
+
+  .form-group--note:not(.is-open) > textarea {
+    display: none;
   }
 
   .transaction-form-section button[type="submit"],

@@ -3,6 +3,12 @@ import { getTodayYmd, getNowHm, formatNumberWithCommas } from '@/lib/utils';
 import { useAmountInput } from '@/hooks/useAmountInput';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+// 備註展開與否記在本機：手動開合才會寫入，自動展開（編輯有備註的交易）不算數
+const NOTE_OPEN_KEY = 'transaction-form-note-open';
+const readNoteOpenPref = () => {
+  try { return localStorage.getItem(NOTE_OPEN_KEY) === 'true'; } catch { return false; }
+};
+
 const makeInitialForm = (defaultCurrency = 'TWD') => ({
   date: getTodayYmd(),
   time: getNowHm(),
@@ -32,6 +38,8 @@ export default function TransactionForm({
   const { t } = useLanguage();
   const [form, setForm] = useState(() => makeInitialForm(defaultCurrency));
   const [submitting, setSubmitting] = useState(false);
+  // 備註是選填，手機版預設收合成一列標題；編輯本來就有備註的交易時自動展開
+  const [noteOpen, setNoteOpen] = useState(readNoteOpenPref);
   const amountRef = useRef(null);
   // 記錄使用者是否手動選過幣別：手動選過就不再被預設幣別覆蓋
   const currencyTouchedRef = useRef(false);
@@ -61,9 +69,11 @@ export default function TransactionForm({
         amount: amountValue ? formatNumberWithCommas(String(amountValue)) : '',
         note: editingTransaction.note || '',
       });
+      setNoteOpen(Boolean(editingTransaction.note) || readNoteOpenPref());
     } else {
       currencyTouchedRef.current = false;
       setForm(makeInitialForm(defaultCurrency));
+      setNoteOpen(readNoteOpenPref());
     }
   }, [editingTransaction]); // eslint-disable-line react-hooks/exhaustive-deps -- 僅在切換編輯對象時重設表單，defaultCurrency 不應觸發重設
 
@@ -97,11 +107,19 @@ export default function TransactionForm({
       await onSubmit(form, editingTransaction?.id ?? null);
       currencyTouchedRef.current = false;
       setForm(makeInitialForm(defaultCurrency));
+      setNoteOpen(readNoteOpenPref());
     } catch {
       // Error is handled and displayed by the parent
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // 只有使用者親手開合才記住；自動展開不覆寫偏好
+  const handleNoteToggle = () => {
+    const next = !noteOpen;
+    setNoteOpen(next);
+    try { localStorage.setItem(NOTE_OPEN_KEY, String(next)); } catch { /* 無痕模式等寫不進去就算了 */ }
   };
 
   const isEditing = !!editingTransaction;
@@ -274,7 +292,28 @@ export default function TransactionForm({
           </div>
         </div>
 
-        <div className="form-group">
+        <div className={`form-group form-group--note${noteOpen ? ' is-open' : ''}`}>
+          <button
+            type="button"
+            className="note-toggle"
+            onClick={handleNoteToggle}
+            aria-expanded={noteOpen}
+            aria-controls="note"
+            disabled={isFormDisabled}
+          >
+            {t('transaction.note')}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="1.5"
+              stroke="currentColor"
+              className={`note-toggle__chevron${noteOpen ? ' is-open' : ''}`}
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
           <label htmlFor="note">{t('transaction.note')}</label>
           <textarea
             id="note"
@@ -283,6 +322,7 @@ export default function TransactionForm({
             onChange={handleChange}
             rows={3}
             placeholder={t('transaction.noteOptional')}
+            aria-label={t('transaction.note')}
             disabled={isFormDisabled}
           />
         </div>

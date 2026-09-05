@@ -158,6 +158,11 @@
   box-shadow: var(--shadow-focus);
 }
 
+/* 備註的摺疊標題列只在手機版出現（見 responsive.css），其餘尺寸維持備註一律展開 */
+.note-toggle {
+  display: none;
+}
+
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
