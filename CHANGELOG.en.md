@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.27.1] - Sep-05 2026
 - Improved splitting for currencies without decimals, such as TWD and JPY: shares are now whole numbers (100 split three ways is 34/33/33), so the individual shares in an expense always add back up to the total
 - Improved who absorbs the leftover when an amount does not divide evenly: it is now spread one unit each and rotates between expenses, instead of always falling on whoever created the group
 - Improved settlement amounts: for currencies without decimals the suggested transfers are now whole amounts you can actually hand over, always rounded up on the payer's side so whoever fronted the money is never left short; paying them settles the group, and the few cents overpaid are not turned back into a new debt
