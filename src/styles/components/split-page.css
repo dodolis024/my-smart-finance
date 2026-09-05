@@ -155,6 +155,8 @@
   z-index: 1;
   background: var(--color-card);
   padding: 1rem 1.25rem;
+  /* 獨立圖層：側滑時文字才不會每幀重新描邊 */
+  will-change: transform;
 }
 
 .split-group-card__top {

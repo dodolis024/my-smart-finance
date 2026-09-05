@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Fixed a transaction row flickering nonstop while a swipe was held halfway on mobile; split expenses and group cards are fixed the same way, and a swipe cut short by the system no longer sticks half-open
+
 ## [1.27.1] - Sep-05 2026
 - Improved splitting for currencies without decimals, such as TWD and JPY: shares are now whole numbers (100 split three ways is 34/33/33), so the individual shares in an expense always add back up to the total
 - Improved who absorbs the leftover when an amount does not divide evenly: it is now spread one unit each and rotates between expenses, instead of always falling on whoever created the group

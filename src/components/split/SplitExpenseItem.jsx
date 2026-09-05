@@ -17,9 +17,11 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete, r
 
   const {
     translateX,
+    swipeTransition,
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    handleTouchCancel,
     handleRowClick,
     handleSwipeEdit,
     handleSwipeDelete,
@@ -37,7 +39,6 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete, r
     return () => el.removeEventListener('touchmove', handleTouchMove);
   }, [isMobile, handleTouchMove]);
 
-  const transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
   const swipedRight = isMobile && translateX > 20;
   const swipedLeft = isMobile && translateX < -20;
 
@@ -47,6 +48,7 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete, r
       className={`split-expense-item${expanded ? ' is-expanded' : ''}${swipedRight ? ' swiped-right' : ''}${swipedLeft ? ' swiped-left' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
       onClick={handleRowClick}
       role="button"
       tabIndex={0}
@@ -74,7 +76,7 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete, r
 
       <div
         className="split-expense-item__content"
-        style={isMobile ? { transform: `translateX(${translateX}px)`, transition } : undefined}
+        style={isMobile ? { transform: `translateX(${translateX}px)`, transition: swipeTransition } : undefined}
       >
         <div className="split-expense-item__header">
           <div className="split-expense-item__info">

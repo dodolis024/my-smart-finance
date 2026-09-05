@@ -15,9 +15,11 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
 
   const {
     translateX,
+    swipeTransition,
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    handleTouchCancel,
     handleRowClick,
     handleSwipeEdit,
     handleSwipeDelete,
@@ -36,7 +38,6 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
     return () => el.removeEventListener('touchmove', handleTouchMove);
   }, [isMobile, handleTouchMove]);
 
-  const transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
   const swipedRight = isMobile && translateX > 20;
   const swipedLeft = isMobile && translateX < -20;
   const rowClass = [
@@ -70,13 +71,14 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
         data-id={String(tx.id || '')}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         onClick={handleRowClick}
       >
         <td className="cell-slider-wrap" colSpan={6}>
           <div className="row-slider-container">
             <div
               className="row-slider"
-              style={{ transform: `translateX(${translateX}px)`, transition }}
+              style={{ transform: `translateX(${translateX}px)`, transition: swipeTransition }}
             >
               <div className="slider-cell cell-date">{displayDate}</div>
               <div className="slider-cell cell-category">
@@ -123,6 +125,7 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
       data-id={String(tx.id || '')}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
       onClick={handleRowClick}
     >
       <td className="cell-date" headers="col-date">

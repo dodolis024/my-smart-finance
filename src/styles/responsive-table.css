@@ -134,6 +134,8 @@
     gap: 0.375rem;
     position: relative;
     z-index: 2;
+    /* 獨立圖層：側滑時文字才不會每幀重新描邊 */
+    will-change: transform;
   }
 
   .row-slider .slider-cell {
