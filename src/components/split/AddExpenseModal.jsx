@@ -4,6 +4,7 @@ import CalcKeypad from './CalcKeypad';
 import { parseExpression, getTodayYmd } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { resolveRpcError } from '@/lib/splitErrors';
+import { equalShares, autoShares, isEqualSplit } from '@/lib/splitShares';
 
 export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', defaultExpenseCurrency, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
   const { t } = useLanguage();
@@ -52,12 +53,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     const participantIds = shares.map(s => s.member_id);
     setParticipants(participantIds);
     // 判斷是否為平均分攤
-    const amt = Number(editingExpense.amount);
-    const isEqual = participantIds.length > 0 && shares.every(s => {
-      const equalShare = Math.floor((amt / participantIds.length) * 100) / 100;
-      return Math.abs(Number(s.share) - equalShare) < 0.02 || Math.abs(Number(s.share) - (equalShare + (Math.round((amt - equalShare * participantIds.length) * 100) / 100))) < 0.02;
-    });
-    if (isEqual) {
+    if (isEqualSplit(shares, editingExpense.amount)) {
       setShareMode('equal');
       setCustomShares({});
     } else {
@@ -79,9 +75,9 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
   const remaining = totalAmt - manualTotal;
   // 無條件捨去的零頭補給第一位未填成員（unfilledIds[0]），
   // 提升到這一層讓 placeholder 顯示與 buildCustomShares 送出永遠同源，避免所見即所得跑掉
-  const autoShare = unfilledIds.length > 0 ? Math.floor((remaining / unfilledIds.length) * 100) / 100 : 0;
-  const autoShareRemainder = unfilledIds.length > 0 ? Math.round((remaining - autoShare * unfilledIds.length) * 100) / 100 : 0;
-  const autoShareFirst = Math.round((autoShare + autoShareRemainder) * 100) / 100;
+  const auto = unfilledIds.length > 0 ? autoShares(remaining, unfilledIds.length) : { base: 0, first: 0 };
+  const autoShare = auto.base;
+  const autoShareFirst = auto.first;
 
   const handleClose = () => {
     setTitle(''); setAmount(''); setNote(''); setError('');
@@ -237,11 +233,10 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     const amt = parseFloat(amount) || 0;
     const n = participants.length;
     if (!n) return {};
-    const base = Math.floor((amt / n) * 100) / 100;
-    const remainder = Math.round((amt - base * n) * 100) / 100;
+    const { base, first } = equalShares(amt, n);
     const shares = {};
     participants.forEach((id, i) => {
-      shares[id] = i === 0 ? base + remainder : base;
+      shares[id] = i === 0 ? first : base;
     });
     return shares;
   };

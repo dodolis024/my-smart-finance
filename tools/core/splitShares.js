@@ -2,8 +2,8 @@ import { ErrorCode, smfError } from './errors.js';
 import { memberNameList, resolveMember } from './splitGroups.js';
 
 /**
- * ⚠️ 均分的零頭規則是 src/components/split/AddExpenseModal.jsx 的第二份實作。
- * calcEqualShares（均分模式）與 autoShareFirst（自訂模式的自動分配）兩段都必須逐字對齊，
+ * ⚠️ 均分的零頭規則（equalShares / autoShares / isEqualSplit）是
+ * src/lib/splitShares.js 的第二份實作，三個函式都必須逐字對齊，
  * 否則同一筆除不盡的費用在網頁與 CLI 會差一分錢。
  * 修改前請先看 tools/README.md 的「同步義務」一節。
  */
@@ -58,7 +58,7 @@ export function equalSharesFor(group, memberIds, amount) {
 
 /**
  * 判斷既有分攤是不是「均分」。
- * 逐字對齊 AddExpenseModal 載入既有費用時的 isEqual：每個人的分攤不是 base 就是 base + 零頭。
+ * 逐字對齊 src/lib/splitShares.js 的 isEqualSplit：每個人的分攤不是 base 就是 base + 零頭。
  * edit 改金額時靠這個判斷能不能自動重算——判錯會把使用者一個一個喬出來的自訂金額沖掉。
  */
 export function isEqualSplit(shares, amount) {

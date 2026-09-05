@@ -20,7 +20,7 @@
 | 變動 | 要改的地方 |
 |---|---|
 | 結算演算法（`src/lib/splitSettlement.js`） | `core/splitSettlement.js`（整份複製，含 `ZERO_DECIMAL_CURRENCIES` 名單） |
-| 均分的零頭規則（`AddExpenseModal.jsx` 的 `calcEqualShares` / `autoShareFirst`） | `core/splitShares.js` |
+| 均分的零頭規則（`src/lib/splitShares.js`） | `core/splitShares.js`（`equalShares` / `autoShares` / `isEqualSplit` 三個函式） |
 | 新增／修改／刪除費用的副作用（通知、簽到） | `core/splitExpenses.js` |
 | `split_expenses` 或分攤明細的欄位 | `core/splitExpenses.js` 的 `EXPENSE_FIELDS` |
 
