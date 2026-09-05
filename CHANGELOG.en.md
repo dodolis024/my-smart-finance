@@ -3,6 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Fixed a transaction row flickering nonstop while a swipe was held halfway on mobile; split expenses and group cards are fixed the same way, and a swipe cut short by the system no longer sticks half-open
+- Improved the account area in the desktop sidebar: hovering the avatar when collapsed, or the email when expanded, shows the full address, so you can tell which account you are signed in as either way and a truncated email is still readable; clicking the avatar now opens a logout menu instead of going straight to logging out
 
 ## [1.27.1] - Sep-05 2026
 - Improved splitting for currencies without decimals, such as TWD and JPY: shares are now whole numbers (100 split three ways is 34/33/33), so the individual shares in an expense always add back up to the total

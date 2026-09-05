@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useLogout } from '@/hooks/useLogout';
 import { useNavActions } from '@/contexts/NavActionsContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import UserAvatar from '@/components/common/UserAvatar';
 import YearReviewIcon from '@/components/yearly-review/YearReviewIcon';
 import '@/styles/yearly-review.css';
 
@@ -24,19 +24,12 @@ export default function Sidebar({ hasChangelogUnread = false, changelogOpen = fa
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) === 'true'; } catch { return false; }
   });
-  const [imgError, setImgError] = useState(false);
-
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, collapsed); } catch {}
   }, [collapsed]);
 
   const currentPath = location.pathname;
   const modalOpen = changelogOpen || settingsOpen;
-
-  const handleLogout = useLogout();
-
-  const isGoogle = userInfo?.provider === 'google' && userInfo?.avatarUrl;
-  const initial = userInfo?.email ? userInfo.email[0].toUpperCase() : '?';
 
   return (
     <nav className={`app-sidebar${collapsed ? ' is-collapsed' : ''}`} aria-label={t('layout.mainNav')}>
@@ -139,19 +132,14 @@ export default function Sidebar({ hasChangelogUnread = false, changelogOpen = fa
             {!collapsed && <span>{lang === 'zh' ? t('settings.language.zh') : t('settings.language.en')}</span>}
           </button>
           <div className="app-sidebar__divider" />
-          <div className="app-sidebar__user">
-            <button className="app-sidebar__avatar" onClick={handleLogout} title={t('auth.logout')}>
-              <span className="user-avatar-inner">
-                {isGoogle && !imgError ? (
-                  <img src={userInfo.avatarUrl} alt="User Avatar" onError={() => setImgError(true)} />
-                ) : (
-                  initial
-                )}
-              </span>
-            </button>
+          {/* email 靠 hover 預覽（收合時停在頭像上、展開時停在信箱上），點頭像則是登出選單 */}
+          <div className="app-sidebar__user" data-tooltip={userInfo.email || '—'}>
+            <UserAvatar variant="desktop" />
             {!collapsed && (
               <div className="app-sidebar__user-info">
-                <span className="app-sidebar__user-email">{userInfo.email || '—'}</span>
+                <span className="app-sidebar__user-email" data-tooltip={userInfo.email || '—'}>
+                  {userInfo.email || '—'}
+                </span>
               </div>
             )}
           </div>

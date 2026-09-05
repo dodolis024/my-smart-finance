@@ -171,46 +171,6 @@
   padding: 0.5rem 0.25rem;
 }
 
-.app-sidebar__avatar {
-  width: 2.05rem;
-  height: 2.05rem;
-  min-width: 2.05rem;
-  min-height: 2.05rem;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  transition: var(--transition);
-  flex-shrink: 0;
-}
-
-.app-sidebar__avatar:hover {
-  opacity: 0.85;
-}
-
-.app-sidebar__avatar .user-avatar-inner {
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.app-sidebar__avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .app-sidebar__user-info {
   display: flex;
   flex-direction: column;
@@ -242,6 +202,59 @@
 
 .app-sidebar.is-collapsed .app-sidebar__user {
   justify-content: center;
+}
+
+/* 頭像選單：.app-sidebar 有 overflow: hidden，absolute 會被裁掉，改用 fixed；
+   選單在側邊欄底部，也必須往上開才不會跑到畫面外 */
+.app-sidebar .user-avatar-dropdown--desktop {
+  position: fixed;
+  top: auto;
+  bottom: 4rem;
+  left: 0.75rem;
+}
+
+/* email 改由 hover 預覽，選單只留登出：內容不隨收合狀態改變，也少蓋住一截側邊欄 */
+.app-sidebar .user-avatar-dropdown__email {
+  display: none;
+}
+
+/* email 的 hover 提示：同樣因為 overflow: hidden 要用 fixed，浮到側邊欄右側。
+   left 值綁著側邊欄寬度（收合 60px、展開 220px），改寬度時這裡要一起改 */
+.app-sidebar.is-collapsed .app-sidebar__user::after,
+.app-sidebar:not(.is-collapsed) .app-sidebar__user-email::after {
+  content: attr(data-tooltip);
+  position: fixed;
+  bottom: 1.75rem;
+  z-index: var(--z-dropdown);
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.app-sidebar.is-collapsed .app-sidebar__user::after {
+  left: 4.25rem;
+}
+
+/* 展開時提示框留在側邊欄內、浮在信箱上方；寬度限在側邊欄內寬，太長就折行 */
+.app-sidebar:not(.is-collapsed) .app-sidebar__user-email::after {
+  left: 0.75rem;
+  bottom: 4rem;
+  max-width: 12.25rem;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.app-sidebar.is-collapsed .app-sidebar__user:hover::after,
+.app-sidebar:not(.is-collapsed) .app-sidebar__user-email:hover::after {
+  opacity: 1;
 }
 
 /* --------------------------------------------
