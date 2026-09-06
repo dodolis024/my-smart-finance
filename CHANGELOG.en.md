@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.28.0] - Sep-06 2026
 - Added a month/year toggle to the overview: see a whole year of income, spending, categories and payment methods at once, with exports following the same period; the app remembers which view you were last using
 - Added paging to the transaction list: 50 rows per page instead of one long scroll, and changing a column filter takes you back to page 1
 - Added payment method details: every row in the payment breakdown opens — credit cards show this period's transactions below the credit limit, other methods open their own detail view
