@@ -2,6 +2,12 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added a balance for cash and other non-credit accounts: it counts down with spending and never resets automatically, and can be corrected any time from the account's balance view
+- Added day grouping to the transaction list: each day's date and total now sit outside the card as a heading instead of being a table row; year view still lists every transaction in order, ungrouped
+- Added a "Subscription" badge on auto-billed transactions
+- Improved the category dot color in the transaction list to match the pie chart's palette instead of using a separate one
+- Fixed the streak reminder modal showing once per device instead of once per day across all devices
+
 ## [1.28.0] - Sep-06 2026
 - Added a month/year toggle to the overview: see a whole year of income, spending, categories and payment methods at once, with exports following the same period; the app remembers which view you were last using
 - Added paging to the transaction list: 50 rows per page instead of one long scroll, and changing a column filter takes you back to page 1
