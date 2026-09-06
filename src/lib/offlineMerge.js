@@ -3,14 +3,20 @@
  */
 
 /**
- * 把佇列項目轉成交易列格式（僅保留指定年月），標記 pending 供 UI 顯示。
+ * 把佇列項目轉成交易列格式（僅保留日期區間內、含端點），標記 pending 供 UI 顯示。
  * failed = 補送失敗需手動重試，UI 以危險色標記並顯示失敗原因。
+ * @param {Array} queuedItems
+ * @param {string} startDate 'YYYY-MM-DD'
+ * @param {string} endDate   'YYYY-MM-DD'
  */
-export function buildQueuedRows(queuedItems, year, month) {
+export function buildQueuedRows(queuedItems, startDate, endDate) {
   if (queuedItems.length === 0) return [];
-  const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
   return queuedItems
-    .filter((item) => String(item.tx?.date || '').startsWith(monthPrefix))
+    .filter((item) => {
+      // 'YYYY-MM-DD' 是定長格式，字串比較即等同日期比較
+      const d = String(item.tx?.date || '');
+      return d >= startDate && d <= endDate;
+    })
     .map((item) => ({
       id: item.tx.id,
       date: item.tx.date,

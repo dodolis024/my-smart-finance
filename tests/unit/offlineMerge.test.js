@@ -22,24 +22,36 @@ const makeItem = (over = {}) => ({
 
 describe('buildQueuedRows', () => {
   it('空佇列回傳空陣列', () => {
-    expect(buildQueuedRows([], 2026, 7)).toEqual([]);
+    expect(buildQueuedRows([], '2026-07-01', '2026-07-31')).toEqual([]);
   });
 
-  it('只保留指定年月的項目（月份補零比對）', () => {
+  it('只保留區間內的項目（含頭尾端點）', () => {
     const items = [
       makeItem({ id: 'a', tx: { date: '2026-07-31' } }),
       makeItem({ id: 'b', tx: { date: '2026-06-30' } }),
       makeItem({ id: 'c', tx: { date: '2025-07-08' } }),
     ];
-    const rows = buildQueuedRows(items, 2026, 7);
+    const rows = buildQueuedRows(items, '2026-07-01', '2026-07-31');
     expect(rows.map((r) => r.id)).toEqual(['a']);
+  });
+
+  it('跨月區間（年檢視）撈得到整年的佇列項目', () => {
+    const items = [
+      makeItem({ id: 'a', tx: { date: '2026-01-01' } }),
+      makeItem({ id: 'b', tx: { date: '2026-06-30' } }),
+      makeItem({ id: 'c', tx: { date: '2026-09-06' } }),
+      makeItem({ id: 'd', tx: { date: '2026-09-07' } }),   // 超過迄日（年模式以今天為上限）
+      makeItem({ id: 'e', tx: { date: '2025-12-31' } }),   // 前一年
+    ];
+    const rows = buildQueuedRows(items, '2026-01-01', '2026-09-06');
+    expect(rows.map((r) => r.id)).toEqual(['a', 'b', 'c']);
   });
 
   it('欄位映射成駝峰列格式並標記 pending 與佇列狀態', () => {
     const [row] = buildQueuedRows(
       [makeItem({ status: 'failed', errorMessage: '網路逾時' })],
-      2026,
-      7
+      '2026-07-01',
+      '2026-07-31'
     );
     expect(row).toEqual({
       id: 'q1',
@@ -59,7 +71,7 @@ describe('buildQueuedRows', () => {
   });
 
   it('tx 缺 date 時不進列表也不崩潰', () => {
-    expect(buildQueuedRows([{ id: 'x', status: 'pending', tx: {} }], 2026, 7)).toEqual([]);
+    expect(buildQueuedRows([{ id: 'x', status: 'pending', tx: {} }], '2026-07-01', '2026-07-31')).toEqual([]);
   });
 });
 

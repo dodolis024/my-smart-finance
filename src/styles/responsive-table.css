@@ -32,11 +32,24 @@
     row-gap: var(--space-sm);
   }
 
+  /* 電腦版把標題與翻頁組包成一組（靠左並排）；手機版要讓 h2 回到 grid 中間欄才會真正置中，
+     所以這層包裝在手機版視為不存在，兩個子元素各自站進自己的格 */
+  .transaction-history-header__title {
+    display: contents;
+  }
+
   /* 標題置於中間欄（兩側等寬 → 真正置中，取消電腦版靠左的 auto margin） */
   .transaction-history-header h2 {
     grid-column: 2;
     grid-row: 1;
     margin-right: 0;
+  }
+
+  /* 翻頁組釘在第一列左側，與右側的搜尋/匯出 icon 對稱 */
+  .transaction-pager {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
   }
 
   /* icon 群固定在第一列右側 */

@@ -4,7 +4,18 @@ import FilterPopover from './FilterPopover';
 import TransactionDetail from './TransactionDetail';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function TransactionTable({ transactions = [], onEdit, onDelete, loading, emptyMessage, onVisibleCountChange }) {
+export default function TransactionTable({
+  transactions = [],
+  onEdit,
+  onDelete,
+  loading,
+  emptyMessage,
+  onVisibleCountChange,
+  onFilterChange,
+  periodName,
+  page = 1,
+  pageSize,
+}) {
   const { t } = useLanguage();
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedPayments, setSelectedPayments] = useState([]);
@@ -34,10 +45,27 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
     });
   }, [transactions, selectedCategories, selectedPayments, t]);
 
-  // 把套完表頭篩選後的實際列數回報給上層（讓搜尋提示筆數與畫面一致）
+  // 分頁必須套在表頭篩選之後：先切片再篩選會讓「篩選 + 翻頁」出現空白頁
+  const pagedTransactions = useMemo(
+    () => (pageSize ? filteredTransactions.slice((page - 1) * pageSize, page * pageSize) : filteredTransactions),
+    [filteredTransactions, page, pageSize]
+  );
+
+  // 把套完表頭篩選後的實際列數回報給上層
+  //（搜尋提示筆數要與畫面一致，上層也用它算總頁數，所以刻意不是當頁筆數）
   useEffect(() => {
     onVisibleCountChange?.(filteredTransactions.length);
   }, [filteredTransactions.length, onVisibleCountChange]);
+
+  // 使用者主動改表頭篩選時通知上層回到第 1 頁（掛載那次不算）
+  const filtersTouchedRef = useRef(false);
+  useEffect(() => {
+    if (!filtersTouchedRef.current) {
+      filtersTouchedRef.current = true;
+      return;
+    }
+    onFilterChange?.();
+  }, [selectedCategories, selectedPayments, onFilterChange]);
 
   const toggleFilter = useCallback((kind) => {
     setActiveFilter((prev) => (prev === kind ? null : kind));
@@ -72,7 +100,7 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
     return (
       <div className="table-wrapper">
         <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
-          {emptyMessage || t('transaction.noTransactions')}
+          {emptyMessage || t('transaction.noTransactions', { period: periodName })}
         </div>
       </div>
     );
@@ -131,7 +159,7 @@ export default function TransactionTable({ transactions = [], onEdit, onDelete, 
             </tr>
           </thead>
           <tbody>
-            {filteredTransactions.map((tx) => (
+            {pagedTransactions.map((tx) => (
               <TransactionRow
                 key={tx.id}
                 transaction={tx}

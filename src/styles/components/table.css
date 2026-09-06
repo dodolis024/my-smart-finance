@@ -373,10 +373,67 @@
   margin-bottom: var(--space-sm);
 }
 
-/* 標題靠左、把搜尋框與 icon 推到同一列右側（電腦版並排） */
+/* 標題靠左、把搜尋框與 icon 推到同一列右側（電腦版並排）；
+   推開右側的 auto 由 __title 承擔，讓翻頁組能跟標題綁在一起 */
+.transaction-history-header__title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-right: auto;
+}
+
 .transaction-history-header h2 {
   margin-bottom: 0;
-  margin-right: auto;
+  margin-right: 0;
+}
+
+/* 交易紀錄翻頁：icon-only，無底色無邊框，hover 才有 tint */
+.transaction-pager {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.transaction-pager__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.transaction-pager__btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.transaction-pager__btn:hover:not(:disabled) {
+  background: var(--color-primary-tint-hover);
+  color: var(--color-primary);
+}
+
+.transaction-pager__btn:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.transaction-pager__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.transaction-pager__label {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .transaction-history-header__controls {

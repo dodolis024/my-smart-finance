@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useStreak } from '@/hooks/useStreak';
@@ -6,8 +6,13 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useOfflineMergedView } from '@/hooks/useOfflineMergedView';
 import { useCreditCardNotifications } from '@/hooks/useCreditCardNotifications';
 import { useModalStates } from '@/hooks/useModalStates';
-import { useTransactionSearch, fetchTransactionMatches, fetchTransactionsByDateRange, SEARCH_LIMIT } from '@/hooks/useTransactionSearch';
+import { useTransactionSearch, fetchTransactionMatches, fetchTransactionsByDateRange, sumTransactions, SEARCH_LIMIT, RANGE_FETCH_LIMIT } from '@/hooks/useTransactionSearch';
+import { useTransactionYearRange } from '@/hooks/useTransactionYearRange';
+import { useTransactionMonthsInYear, invalidateTransactionMonths } from '@/hooks/useTransactionMonthsInYear';
+import { useWindowSize } from '@/hooks/useWindowSize';
 import { supabase } from '@/lib/supabase';
+import { getPeriodRange, getPeriodFileLabel, getPeriodNameKey } from '@/lib/period';
+import { isOfflineError } from '@/lib/offlineCache';
 import { buildTransactionsCsv, downloadCsv } from '@/lib/csvExport';
 import { subscribeDataChanged } from '@/lib/dataEvents';
 import { useToast } from '@/contexts/ToastContext';
@@ -17,7 +22,7 @@ import TopBar from '@/components/layout/TopBar';
 import FormColumn from '@/components/layout/FormColumn';
 import DashboardColumn from '@/components/layout/DashboardColumn';
 import StatCards from '@/components/dashboard/StatCards';
-import MonthPicker from '@/components/dashboard/MonthPicker';
+import PeriodPicker from '@/components/dashboard/PeriodPicker';
 import ExportMenu from '@/components/dashboard/ExportMenu';
 import ExportRangeModal from '@/components/dashboard/ExportRangeModal';
 import CategoryChart from '@/components/dashboard/CategoryChart';
@@ -29,6 +34,21 @@ import CreditCardModal from '@/components/common/CreditCardModal';
 import StreakBadge from '@/components/streak/StreakBadge';
 import StreakModal from '@/components/streak/StreakModal';
 import YearlyReviewBanner from '@/components/dashboard/YearlyReviewBanner';
+
+// 交易紀錄每頁筆數：約 3 個手機螢幕，是可以一頁看完的單位
+const PAGE_SIZE = 50;
+// 外顯切換器只在夠寬的視窗出現。門檻取自實測：768px 以下、離線徽章與待同步藥丸
+// 同時在時，收支概覽那一列會被擠到換行；768px 起四種組合都維持單列
+const GRANULARITY_TOGGLE_MIN_WIDTH = 768;
+// 粒度記在本機，重整後保留；錨點刻意不記（重整代表「重新開始看」）
+const GRANULARITY_KEY = 'dashboard-granularity';
+const readGranularity = () => {
+  try {
+    return localStorage.getItem(GRANULARITY_KEY) === 'year' ? 'year' : 'month';
+  } catch {
+    return 'month';
+  }
+};
 
 export default function DashboardPage() {
   const { user, ensureDefaultDataForOAuth } = useAuth();
@@ -75,8 +95,30 @@ export default function DashboardPage() {
 
 
 
-  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
+  const [granularity, setGranularity] = useState(readGranularity);
+  // 月與年各自記住自己的錨點：切粒度不會把使用者從原本看的位置彈走
+  const [monthAnchor, setMonthAnchor] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  });
+  const [yearAnchor, setYearAnchor] = useState(() => ({ year: new Date().getFullYear() }));
+  const isYearMode = granularity === 'year';
+  const period = useMemo(
+    () => (granularity === 'year'
+      ? { granularity: 'year', year: yearAnchor.year }
+      : { granularity: 'month', year: monthAnchor.year, month: monthAnchor.month }),
+    [granularity, yearAnchor.year, monthAnchor.year, monthAnchor.month]
+  );
+  // 期間 → 查詢用日期區間；年模式的迄日是「今天」（見 lib/period.js）
+  const periodRange = useMemo(() => getPeriodRange(period), [period]);
+  const periodName = t(getPeriodNameKey(granularity));
+  const yearRange = useTransactionYearRange(user?.id);
+  // 期間選擇器面板上正在看的年份（可與檢視中的期間不同：翻年份不等於已選定）
+  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
+  const monthsWithData = useTransactionMonthsInYear(user?.id, pickerYear);
+  // 夠寬時把月／年切換器直接放在畫面上（發現性）；窄視窗收進面板，避免頂列換行
+  const { width: viewportWidth } = useWindowSize();
+  const showInlineToggle = viewportWidth >= GRANULARITY_TOGGLE_MIN_WIDTH;
   const [editingTransaction, setEditingTransaction] = useState(null);
   // 凍結卡對帳若實際橋接了缺口，就 +1 觸發 dashboard 重抓，讓 streak 反映補上的凍結日
   const [streakRefreshTick, setStreakRefreshTick] = useState(0);
@@ -85,8 +127,9 @@ export default function DashboardPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   // 自訂區間匯出彈窗開關
   const [exportRangeOpen, setExportRangeOpen] = useState(false);
-  // 表格套完表頭篩選後的實際列數（由 TransactionTable 回報），供搜尋提示顯示一致的筆數
+  // 表格套完表頭篩選後的實際列數（由 TransactionTable 回報），供搜尋提示顯示一致的筆數與總頁數計算
   const [visibleRowCount, setVisibleRowCount] = useState(0);
+  const [page, setPage] = useState(1);
   const searchInputRef = useRef(null);
   const {
     results: searchResults,
@@ -98,11 +141,12 @@ export default function DashboardPage() {
   } = useTransactionSearch(user?.id, searchQuery);
   const searchActive = searchQuery.trim() !== '';
 
-  // 切換月份或進入搜尋模式時，彈窗內的明細已與畫面不一致，直接關閉
+  // 切換期間/粒度或進入搜尋模式時，彈窗內的明細已與畫面不一致，直接關閉
   useEffect(() => {
     if (modals.categoryDetailModal.open) modals.closeCategoryDetailModal();
+    if (modals.creditCardModal.open) modals.closeCreditCardModal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentYear, currentMonth, searchActive]);
+  }, [granularity, monthAnchor.year, monthAnchor.month, yearAnchor.year, searchActive]);
 
   // 點搜尋 icon 展開/收合；收合時清空關鍵字回到當月列表
   const toggleSearch = useCallback(() => {
@@ -122,7 +166,90 @@ export default function DashboardPage() {
     if (searchOpen) searchInputRef.current?.focus();
   }, [searchOpen]);
 
-  // 離線記帳佇列:自動補送(掛載 + 恢復連線)並把未同步交易併入當月列表與彙總,結果以 toast 通知
+  // 用 ref 讀取 toast/t，讓它們不必進 reconcile effect 的 deps（否則切換語言會重打對帳 RPC）
+  const toastRef = useRef(toast);
+  const tRef = useRef(t);
+  useEffect(() => {
+    toastRef.current = toast;
+    tRef.current = t;
+  });
+
+  // 粒度切換：兩個錨點都不動，只換 granularity（並記進 localStorage）
+  const changeGranularity = useCallback((next) => {
+    setGranularity(next);
+    try {
+      localStorage.setItem(GRANULARITY_KEY, next);
+    } catch {
+      // 隱私模式等寫入失敗時忽略，粒度只是不跨重整保留
+    }
+  }, []);
+
+  // 年模式的交易列：月 RPC 只回當月，年檢視改走區間查詢（不動資料庫函式，CLI 也在用）
+  const [yearData, setYearData] = useState(null); // { rows, total } | { rows: [], total: 0, failed: true }
+  const [yearLoading, setYearLoading] = useState(false);
+  // 快速連點不同年份時擋掉晚回來的舊請求（StrictMode 下 effect 跑兩次也一併擋掉）
+  const yearReqIdRef = useRef(0);
+
+  const loadYearData = useCallback(async ({ silent = false } = {}) => {
+    if (!user?.id) return;
+    const reqId = ++yearReqIdRef.current;
+    if (!silent) setYearLoading(true);
+    const { startDate, endDate } = getPeriodRange({ granularity: 'year', year: yearAnchor.year });
+    try {
+      const { rows, count, error } = await fetchTransactionsByDateRange(user.id, startDate, endDate, {
+        limit: RANGE_FETCH_LIMIT,
+        count: true,
+      });
+      if (reqId !== yearReqIdRef.current) return;
+      if (error) throw error;
+      // 區間查詢是舊→新（匯出的 CSV 依賴那個順序），表格要與月模式一致改成新→舊
+      const sorted = [...rows].sort((a, b) =>
+        (b.date + (b.time || '')).localeCompare(a.date + (a.time || ''))
+      );
+      setYearData({ rows: sorted, total: count });
+    } catch (err) {
+      if (reqId !== yearReqIdRef.current) return;
+      if (isOfflineError(err)) {
+        // 離線沒有年度快照，停在空白畫面只會更困惑：退回月模式（月有快照可看）
+        setYearData(null);
+        changeGranularity('month');
+        toastRef.current.info(tRef.current('dashboard.yearOfflineFallback'));
+      } else {
+        // 非離線錯誤停在年模式並顯示錯誤，不自動切走，避免使用者搞不清楚發生什麼事
+        setYearData({ rows: [], total: 0, failed: true });
+      }
+    } finally {
+      if (reqId === yearReqIdRef.current) setYearLoading(false);
+    }
+  }, [user?.id, yearAnchor.year, changeGranularity]);
+
+  useEffect(() => {
+    if (!isYearMode) {
+      setYearData(null);
+      return;
+    }
+    loadYearData().catch((err) => console.error('[Dashboard] fetch year data failed:', err));
+  }, [isYearMode, loadYearData]);
+
+  // 畫面資料來源：統計卡/圓餅圖/支付統計/明細表都只吃「一個交易陣列 + 一個 summary」，與粒度無關。
+  // 年資料還沒回來時沿用上一份（月列表或前一年），圓餅圖才不會被卸載再重掛——
+  // 那會變成「整個消失再跳出來」，而不是 Chart.js 的比例過渡動畫
+  const yearRows = useMemo(() => yearData?.rows ?? [], [yearData]);
+  const periodHistory = isYearMode && yearData ? yearRows : transactionHistoryFull;
+  const periodSummary = useMemo(
+    () => (isYearMode && yearData ? sumTransactions(yearRows) : summary),
+    [isYearMode, yearData, yearRows, summary]
+  );
+
+  // 寫入後重抓：月 RPC 一定要抓（accounts / categories / streak 只有它回傳），
+  // 年模式還要一併重抓年區間，否則畫面數字不會更新
+  const refetchPeriod = useCallback(async () => {
+    const data = await fetchDashboardData(monthAnchor.year, monthAnchor.month, { silent: true });
+    if (isYearMode) loadYearData({ silent: true });
+    return data;
+  }, [fetchDashboardData, monthAnchor.year, monthAnchor.month, isYearMode, loadYearData]);
+
+  // 離線記帳佇列:自動補送(掛載 + 恢復連線)並把未同步交易併入目前期間的列表與彙總,結果以 toast 通知
   const {
     queuedItems,
     pendingCount,
@@ -131,13 +258,13 @@ export default function DashboardPage() {
     displayHistory,
     displaySummary,
   } = useOfflineMergedView({
-    history: transactionHistoryFull,
-    summary,
-    year: currentYear,
-    month: currentMonth,
+    history: periodHistory,
+    summary: periodSummary,
+    startDate: periodRange.startDate,
+    endDate: periodRange.endDate,
     onSynced: (result) => {
       toast.success(t('dashboard.syncSuccess', { count: result.synced }));
-      fetchDashboardData(currentYear, currentMonth, { silent: true });
+      refetchPeriod().catch((err) => console.error('[Dashboard] refetch after sync failed:', err));
     },
     onFailed: (result) => toast.error(t('dashboard.syncFailed', { count: result.failed })),
     onNeedsLogin: () => toast.error(t('dashboard.syncNeedsLogin')),
@@ -146,22 +273,15 @@ export default function DashboardPage() {
   const formRef = useRef(null);
   const historyRef = useRef(null);
 
-  const handleOpenCreditCard = useCallback((account) => {
-    modals.openCreditCardModal(account);
+  // stat 來自支付方式統計，直接沿用它算好的本期紀錄，明細與上方金額必然一致
+  const handleOpenCreditCard = useCallback((account, stat) => {
+    modals.openCreditCardModal(account, stat?.txs || []);
     fetchCreditHistory(account);
   }, [fetchCreditHistory, modals]);
 
   useEffect(() => {
     if (user) ensureDefaultDataForOAuth(user.id);
   }, [user, ensureDefaultDataForOAuth]);
-
-  // 用 ref 讀取 toast/t，讓它們不必進 reconcile effect 的 deps（否則切換語言會重打對帳 RPC）
-  const toastRef = useRef(toast);
-  const tRef = useRef(t);
-  useEffect(() => {
-    toastRef.current = toast;
-    tRef.current = t;
-  });
 
   // 開 App 對帳：呼叫 reconcile_streak_freezes 補橋接漏記的缺口並發卡。
   // 與 dashboard 抓取平行進行（不擋首載）；只有實際橋接了缺口（consumedThisCall>0）
@@ -183,17 +303,18 @@ export default function DashboardPage() {
     return () => { cancelled = true; };
   }, [user?.id, reconcileStreakFreezes, shouldShowFreezeConsumedToast]);
 
+  // 月 RPC 永遠要打（即使目前是年模式）：記帳表單的分類下拉、支付統計的信用卡、簽到徽章都靠它
   useEffect(() => {
-    fetchDashboardData(currentYear, currentMonth).catch(err => console.error('[Dashboard] fetch failed:', err));
-  }, [currentYear, currentMonth, fetchDashboardData, streakRefreshTick]);
+    fetchDashboardData(monthAnchor.year, monthAnchor.month).catch(err => console.error('[Dashboard] fetch failed:', err));
+  }, [monthAnchor.year, monthAnchor.month, fetchDashboardData, streakRefreshTick]);
 
   // 設定面板等外部入口寫入資料後（訂閱的當日扣款、帳戶額度、類別改名…），靜默重抓當月資料
   useEffect(() => {
     return subscribeDataChanged(() => {
-      fetchDashboardData(currentYear, currentMonth, { silent: true })
+      refetchPeriod()
         .catch(err => console.error('[Dashboard] refetch after external change failed:', err));
     });
-  }, [currentYear, currentMonth, fetchDashboardData]);
+  }, [refetchPeriod]);
 
   useEffect(() => {
     fetchCurrencies().catch(err => console.error('[Dashboard] fetchCurrencies failed:', err));
@@ -213,9 +334,9 @@ export default function DashboardPage() {
     }
   }, [dashboardData, streakInitialHandled, setStreakInitialHandled, shouldShowBrokenModal, openStreakModal, t]);
 
-  const handleMonthChange = useCallback((year, month) => {
-    setCurrentYear(year);
-    setCurrentMonth(month);
+  const handlePeriodChange = useCallback((next) => {
+    if (next.granularity === 'year') setYearAnchor({ year: next.year });
+    else setMonthAnchor({ year: next.year, month: next.month });
   }, []);
 
   const resolveSplitSynced = useCallback(async (transaction) => {
@@ -251,7 +372,8 @@ export default function DashboardPage() {
 
         setEditingTransaction(null);
         toast.success(result.isEdit ? t('dashboard.transactionUpdated') : t('dashboard.transactionAdded'));
-        fetchDashboardData(currentYear, currentMonth, { silent: true });
+        invalidateTransactionMonths(user?.id);
+        refetchPeriod().catch((err) => console.error('[Dashboard] refetch after write failed:', err));
         refreshSearch();
 
         if (!result.isEdit && shouldShowPositiveModal(result.date)) {
@@ -270,9 +392,8 @@ export default function DashboardPage() {
     },
     [
       submitTransaction,
-      fetchDashboardData,
-      currentYear,
-      currentMonth,
+      refetchPeriod,
+      user?.id,
       toast,
       shouldShowPositiveModal,
       getPositiveModalContent,
@@ -317,7 +438,7 @@ export default function DashboardPage() {
       }
       // 找到要刪除的交易，記錄其付款帳戶（刪除後無法再查）
       // （history 與 accounts 皆來自 RPC，欄位為駝峰 paymentMethod / accountName）
-      const txToDelete = transactionHistoryFull.find((tx) => tx.id === id);
+      const txToDelete = displayHistory.find((tx) => tx.id === id);
       const relatedAccount = txToDelete
         ? accounts.find((a) => (a.accountName || a.name) === txToDelete.paymentMethod)
         : null;
@@ -325,7 +446,8 @@ export default function DashboardPage() {
         await deleteTransaction(id);
         removeTransactionLocally(id);
         toast.success(t('dashboard.transactionDeleted'));
-        fetchDashboardData(currentYear, currentMonth, { silent: true });
+        invalidateTransactionMonths(user?.id);
+        refetchPeriod().catch((err) => console.error('[Dashboard] refetch after write failed:', err));
         refreshSearch();
         // 刪除後重新計算信用卡使用率
         if (relatedAccount?.type === 'credit_card') checkCreditUsageAlert(relatedAccount);
@@ -335,13 +457,13 @@ export default function DashboardPage() {
         return false;
       }
     },
-    [confirm, deleteTransaction, removeTransactionLocally, fetchDashboardData, currentYear, currentMonth, toast, transactionHistoryFull, accounts, checkCreditUsageAlert, queuedItems, removeQueuedItem, refreshSearch, t]
+    [confirm, deleteTransaction, removeTransactionLocally, refetchPeriod, user?.id, toast, displayHistory, accounts, checkCreditUsageAlert, queuedItems, removeQueuedItem, refreshSearch, t]
   );
 
   const handleCheckin = useCallback(async () => {
     try {
       await submitDailyCheckin();
-      const data = await fetchDashboardData(currentYear, currentMonth, { silent: true });
+      const data = await refetchPeriod();
       if (data) {
         updateStreakFromServer(data);
         const content = getCurrentModalContentFromData(data);
@@ -354,7 +476,7 @@ export default function DashboardPage() {
     } catch (err) {
       toast.error(err.message || t('dashboard.checkinFailed'));
     }
-  }, [submitDailyCheckin, fetchDashboardData, updateStreakFromServer, currentYear, currentMonth, toast, getCurrentModalContentFromData, getCurrentModalContent, openStreakModal, t]);
+  }, [submitDailyCheckin, refetchPeriod, updateStreakFromServer, toast, getCurrentModalContentFromData, getCurrentModalContent, openStreakModal, t]);
 
   const handleStreakBadgeClick = useCallback(() => {
     const content = getCurrentModalContent();
@@ -372,14 +494,39 @@ export default function DashboardPage() {
   );
 
   const tableRows = searchActive ? searchResults : displayHistory;
-  const currentMonthLabel = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+  const periodFileLabel = getPeriodFileLabel(period);
+  // 只有真的沒東西可顯示時才換成載入佔位；有舊資料就讓它留著等新資料進來（見 periodHistory）
+  const viewLoading = loading || (isYearMode && yearLoading && periodHistory.length === 0);
+  // 年資料被筆數上限截斷 / 載入失敗（非離線）時要明講，不可靜默
+  const yearCapped = isYearMode && !!yearData && !yearData.failed && yearData.total > yearData.rows.length;
+  const yearFailed = isYearMode && !!yearData?.failed;
 
-  // 匯出本月（一般模式下的匯出鈕主選項）：保留原本的確認訊息與檔名，行為不變
-  const exportCurrentMonth = useCallback(async () => {
+  const totalPages = Math.max(1, Math.ceil(visibleRowCount / PAGE_SIZE));
+
+  // 換期間 / 換粒度 / 搜尋字改變 / 進出搜尋模式 → 一律回第 1 頁
+  useEffect(() => {
+    setPage(1);
+  }, [granularity, monthAnchor.year, monthAnchor.month, yearAnchor.year, searchQuery]);
+
+  // 表頭篩選讓筆數變少、或刪掉當頁最後一筆時頁碼會越界 → 被動退到最後一頁
+  useEffect(() => {
+    setPage((p) => (p > totalPages ? totalPages : p));
+  }, [totalPages]);
+
+  const goToPage = useCallback((next) => {
+    setPage(next);
+    historyRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, []);
+
+  // 使用者主動改表頭篩選（由 TransactionTable 回報）→ 回第 1 頁
+  const resetPage = useCallback(() => setPage(1), []);
+
+  // 匯出目前期間（一般模式下的匯出鈕主選項）：tableRows 是整個期間的完整陣列，不是畫面上那一頁
+  const exportCurrentPeriod = useCallback(async () => {
     if (tableRows.length === 0) return;
 
     const confirmed = await confirm(
-      t('dashboard.exportConfirmMonth', { count: tableRows.length, month: currentMonthLabel })
+      t('dashboard.exportConfirmPeriod', { count: tableRows.length, label: periodFileLabel })
     );
     if (!confirmed) return;
 
@@ -400,8 +547,8 @@ export default function DashboardPage() {
         income: t('transaction.incomeGroup'),
       },
     });
-    downloadCsv(`my-smart-finance-${currentMonthLabel}.csv`, csv);
-  }, [tableRows, currentMonthLabel, t, confirm]);
+    downloadCsv(`my-smart-finance-${periodFileLabel}.csv`, csv);
+  }, [tableRows, periodFileLabel, t, confirm]);
 
   // 匯出搜尋結果（搜尋模式下的匯出鈕主選項）：保留原本 capped/一般確認、完整抓取、錯誤 toast 與檔名，行為不變
   const exportSearchResults = useCallback(async () => {
@@ -521,13 +668,36 @@ export default function DashboardPage() {
           <div className="stats-section-header">
             <div className="stats-section-header__title-group">
               <h2>{t('dashboard.overview')}</h2>
-              <MonthPicker
-                year={currentYear}
-                month={currentMonth}
-                onChange={handleMonthChange}
+              <PeriodPicker
+                period={period}
+                onChange={handlePeriodChange}
+                onGranularityChange={showInlineToggle ? undefined : changeGranularity}
+                yearRange={yearRange}
+                monthsWithData={monthsWithData}
+                onDisplayYearChange={setPickerYear}
+                yearDisabled={!!offlineSnapshot}
                 disabled={loading}
               />
-              {offlineSnapshot && (
+              {showInlineToggle && (
+                <div className="period-toggle" role="tablist" aria-label={t('periodPicker.granularityAria')}>
+                  {['month', 'year'].map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      role="tab"
+                      aria-selected={granularity === g}
+                      className={`period-toggle__btn${granularity === g ? ' is-active' : ''}`}
+                      disabled={g === 'year' && !!offlineSnapshot}
+                      title={g === 'year' && offlineSnapshot ? t('periodPicker.yearOfflineHint') : undefined}
+                      onClick={() => changeGranularity(g)}
+                    >
+                      {g === 'year' ? t('periodPicker.tabYear') : t('periodPicker.tabMonth')}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* 年模式沒有離線快照，顯示徽章會誤導 */}
+              {!isYearMode && offlineSnapshot && (
                 <span className="offline-badge">
                   {t('dashboard.offlineData', {
                     time: new Date(offlineSnapshot.savedAt).toLocaleString([], {
@@ -551,7 +721,7 @@ export default function DashboardPage() {
             </div>
             {streakBadge}
           </div>
-          <StatCards summary={searchActive ? searchSummary : displaySummary} loading={loading} />
+          <StatCards summary={searchActive ? searchSummary : displaySummary} loading={viewLoading} />
         </section>
 
         {!searchActive && (
@@ -560,25 +730,28 @@ export default function DashboardPage() {
           <div className="analytics-grid">
             <div className="analytics-col category-breakdown">
               <h3>{t('dashboard.categoryBreakdown')}</h3>
-              {loading ? (
+              {viewLoading ? (
                 <p className="category-stats-empty">{t('common.loadingDots')}</p>
               ) : (
                 <CategoryChart
                   history={displayHistory}
                   incomeCategories={categoriesIncome}
                   onSelectCategory={modals.openCategoryDetailModal}
+                  periodName={periodName}
                 />
               )}
             </div>
             <div className="analytics-col payment-breakdown">
               <h3>{t('dashboard.paymentBreakdown')}</h3>
-              {loading ? (
+              {viewLoading ? (
                 <p className="payment-stats-empty">{t('common.loadingDots')}</p>
               ) : (
                 <PaymentStats
                   history={displayHistory}
                   accounts={accounts}
                   onOpenCreditCard={handleOpenCreditCard}
+                  onSelectMethod={modals.openCategoryDetailModal}
+                  periodName={periodName}
                 />
               )}
             </div>
@@ -588,7 +761,36 @@ export default function DashboardPage() {
 
         <section className="transaction-history-section" ref={historyRef}>
           <div className="transaction-history-header">
-            <h2>{t('dashboard.transactions')}</h2>
+            <div className="transaction-history-header__title">
+              <h2>{t('dashboard.transactions')}</h2>
+              {totalPages > 1 && (
+                <div className="transaction-pager">
+                  <button
+                    type="button"
+                    className="transaction-pager__btn"
+                    onClick={() => goToPage(page - 1)}
+                    disabled={page <= 1}
+                    aria-label={t('dashboard.pagerPrev')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                  </button>
+                  <span className="transaction-pager__label">{page} / {totalPages}</span>
+                  <button
+                    type="button"
+                    className="transaction-pager__btn"
+                    onClick={() => goToPage(page + 1)}
+                    disabled={page >= totalPages}
+                    aria-label={t('dashboard.pagerNext')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
             {searchOpen && (
               <div className="transaction-search-box">
                 <input
@@ -638,10 +840,10 @@ export default function DashboardPage() {
                 primaryLabel={
                   searchActive
                     ? t('dashboard.exportMenuSearch', { count: searchTotalCount })
-                    : t('dashboard.exportMenuMonth', { month: currentMonthLabel })
+                    : t('dashboard.exportMenuPeriod', { period: periodName, label: periodFileLabel })
                 }
                 primaryDisabled={searchActive ? searchResults.length === 0 : tableRows.length === 0}
-                onExportPrimary={searchActive ? exportSearchResults : exportCurrentMonth}
+                onExportPrimary={searchActive ? exportSearchResults : exportCurrentPeriod}
                 rangeLabel={t('dashboard.exportMenuRange')}
                 onExportRange={() => setExportRangeOpen(true)}
               />
@@ -661,12 +863,26 @@ export default function DashboardPage() {
                 : t('dashboard.searchResultCount', { count: visibleRowCount })}
             </p>
           )}
+          {!searchActive && yearFailed && (
+            <p className="transaction-search-hint transaction-search-hint--error" role="status">
+              {t('dashboard.yearLoadFailed')}
+            </p>
+          )}
+          {!searchActive && yearCapped && (
+            <p className="transaction-search-hint" role="status">
+              {t('dashboard.yearRowsCapped', { count: yearData.total, limit: RANGE_FETCH_LIMIT })}
+            </p>
+          )}
           <TransactionTable
             transactions={tableRows}
             onEdit={handleStartEdit}
             onDelete={handleDeleteTransaction}
             onVisibleCountChange={setVisibleRowCount}
-            loading={loading}
+            onFilterChange={resetPage}
+            periodName={periodName}
+            page={page}
+            pageSize={PAGE_SIZE}
+            loading={viewLoading}
             emptyMessage={
               searchActive
                 ? searchLoading
@@ -692,8 +908,13 @@ export default function DashboardPage() {
         onClose={modals.closeCreditCardModal}
         account={modals.creditCardModal.account}
         history={creditHistory}
-        viewedYear={currentYear}
-        viewedMonth={currentMonth}
+        txs={modals.creditCardModal.txs}
+        onEdit={handleStartEdit}
+        onDelete={handleDeleteTransaction}
+        periodName={periodName}
+        viewedYear={period.year}
+        viewedMonth={isYearMode ? null : period.month}
+        otherPeriod={isYearMode ? true : undefined}
       />
 
       <CategoryDetailModal
@@ -702,13 +923,14 @@ export default function DashboardPage() {
         category={modals.categoryDetailModal.category}
         onEdit={handleStartEdit}
         onDelete={handleDeleteTransaction}
+        periodName={periodName}
       />
 
       <ExportRangeModal
         isOpen={exportRangeOpen}
         onClose={() => setExportRangeOpen(false)}
-        initialYear={currentYear}
-        initialMonth={currentMonth}
+        initialYear={period.year}
+        initialMonth={isYearMode ? 1 : period.month}
         onExport={(s, e) => exportRange(s, e)}
       />
 

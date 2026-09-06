@@ -1,4 +1,4 @@
-import { MONTH_ABBREVS, ZERO_DECIMAL_CURRENCIES } from './constants';
+import { ZERO_DECIMAL_CURRENCIES } from './constants';
 
 export function debounce(func, wait) {
   let timeout;
@@ -93,10 +93,6 @@ export function formatNumberWithCommas(value) {
 
 export function parseFormattedNumber(value) {
   return value.replace(/,/g, '');
-}
-
-export function formatMonthLabel(year, month) {
-  return MONTH_ABBREVS[month - 1] + ' ' + year;
 }
 
 /** 年度回顧鎖定規則：當年度（含網址帶未來年份）在年底跨年前都不開放查看 */

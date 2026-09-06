@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from '@/components/common/Modal';
-import MonthPicker from './MonthPicker';
+import PeriodPicker from './PeriodPicker';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
@@ -39,19 +39,17 @@ export default function ExportRangeModal({ isOpen, onClose, initialYear, initial
 
         <div className="split-modal__field">
           <label className="split-modal__label">{t('dashboard.exportRangeStart')}</label>
-          <MonthPicker
-            year={startYear}
-            month={startMonth}
-            onChange={(y, m) => { setStartYear(y); setStartMonth(m); }}
+          <PeriodPicker
+            period={{ granularity: 'month', year: startYear, month: startMonth }}
+            onChange={(next) => { setStartYear(next.year); setStartMonth(next.month); }}
           />
         </div>
 
         <div className="split-modal__field">
           <label className="split-modal__label">{t('dashboard.exportRangeEnd')}</label>
-          <MonthPicker
-            year={endYear}
-            month={endMonth}
-            onChange={(y, m) => { setEndYear(y); setEndMonth(m); }}
+          <PeriodPicker
+            period={{ granularity: 'month', year: endYear, month: endMonth }}
+            onChange={(next) => { setEndYear(next.year); setEndMonth(next.month); }}
           />
         </div>
 

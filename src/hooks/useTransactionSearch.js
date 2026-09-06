@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 
 const SEARCH_DEBOUNCE_MS = 300;
 export const SEARCH_LIMIT = 200;
+// 區間查詢的明確筆數上限：行為由我們定義，而不是由 Supabase 專案的預設值決定（避免靜默截斷）
+export const RANGE_FETCH_LIMIT = 5000;
 const EMPTY_SUMMARY = { totalIncome: 0, totalExpense: 0, balance: 0 };
 
 /** 加總一批交易的 TWD 收入/支出/結餘（結餘 = 收入 − 支出），與 get_dashboard_data 的彙總同義。 */
@@ -87,26 +89,33 @@ export async function fetchTransactionMatches(userId, rawQuery, { limit, count =
 }
 
 /**
- * 依日期區間（含端點）查詢交易，供「自訂區間匯出 CSV」使用。
- * 不限筆數、日期舊→新排序，與跨月搜尋共用同一份欄位定義（SELECT_COLUMNS）。
+ * 依日期區間（含端點）查詢交易，供「自訂區間匯出 CSV」與主畫面年檢視使用。
+ * 日期舊→新排序（匯出的 CSV 順序依賴這個排序，年檢視在呼叫端自行排成新→舊），
+ * 與跨月搜尋共用同一份欄位定義（SELECT_COLUMNS）。
  * @param {string} userId
  * @param {string} startDate 'YYYY-MM-DD'
  * @param {string} endDate 'YYYY-MM-DD'
- * @returns {Promise<{ rows: object[], error: object|null }>}
+ * @param {{ limit?: number, count?: boolean }} [options] limit 為 null/undefined 時不限筆數；count 為 true 時向 PostgREST 要精確總數
+ * @returns {Promise<{ rows: object[], count: number, error: object|null }>}
  */
-export async function fetchTransactionsByDateRange(userId, startDate, endDate) {
+export async function fetchTransactionsByDateRange(userId, startDate, endDate, { limit, count = false } = {}) {
   if (!userId || !startDate || !endDate) {
-    return { rows: [], error: null };
+    return { rows: [], count: 0, error: null };
   }
-  const { data, error } = await supabase
+  let queryBuilder = supabase
     .from('transactions')
-    .select(SELECT_COLUMNS)
+    .select(SELECT_COLUMNS, count ? { count: 'exact' } : undefined)
     .eq('user_id', userId)
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date', { ascending: true })
     .order('time', { ascending: true });
-  return { rows: (data || []).map(mapSearchRow), error };
+  if (limit != null) {
+    queryBuilder = queryBuilder.limit(limit);
+  }
+  const { data, count: total, error } = await queryBuilder;
+  const rows = (data || []).map(mapSearchRow);
+  return { rows, count: total ?? rows.length, error };
 }
 
 /**
