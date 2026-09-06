@@ -10,6 +10,7 @@ import { useTransactionSearch, fetchTransactionMatches, fetchTransactionsByDateR
 import { useTransactionYearRange } from '@/hooks/useTransactionYearRange';
 import { useTransactionMonthsInYear, invalidateTransactionMonths } from '@/hooks/useTransactionMonthsInYear';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { useTheme } from '@/hooks/useTheme';
 import { supabase } from '@/lib/supabase';
 import { getPeriodRange, getPeriodFileLabel, getPeriodNameKey } from '@/lib/period';
 import { isOfflineError } from '@/lib/offlineCache';
@@ -30,6 +31,9 @@ import CategoryDetailModal from '@/components/dashboard/CategoryDetailModal';
 import PaymentStats from '@/components/dashboard/PaymentStats';
 import TransactionForm from '@/components/transactions/TransactionForm';
 import TransactionTable from '@/components/transactions/TransactionTable';
+import FilterPopover from '@/components/transactions/FilterPopover';
+import { useTransactionFilters } from '@/hooks/useTransactionFilters';
+import { getChartPalette, buildCategoryColorMap } from '@/lib/categoryColor';
 import CreditCardModal from '@/components/common/CreditCardModal';
 import StreakBadge from '@/components/streak/StreakBadge';
 import StreakModal from '@/components/streak/StreakModal';
@@ -90,6 +94,7 @@ export default function DashboardPage() {
   const toast = useToast();
   const { confirm } = useConfirm();
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const modals = useModalStates();
   const { openStreakModal } = modals;
 
@@ -127,10 +132,9 @@ export default function DashboardPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   // 自訂區間匯出彈窗開關
   const [exportRangeOpen, setExportRangeOpen] = useState(false);
-  // 表格套完表頭篩選後的實際列數（由 TransactionTable 回報），供搜尋提示顯示一致的筆數與總頁數計算
-  const [visibleRowCount, setVisibleRowCount] = useState(0);
   const [page, setPage] = useState(1);
   const searchInputRef = useRef(null);
+  const filterBtnRef = useRef(null);
   const {
     results: searchResults,
     totalCount: searchTotalCount,
@@ -499,6 +503,19 @@ export default function DashboardPage() {
   );
 
   const tableRows = searchActive ? searchResults : displayHistory;
+
+  // 改篩選會讓筆數變少，一律回第 1 頁
+  const { filteredRows, sections: filterSections, activeFilter, toggleFilter, closeFilter, isFiltered } =
+    useTransactionFilters(tableRows, useCallback(() => setPage(1), []));
+  const visibleRowCount = filteredRows.length;
+
+  // 交易列表的分類色點與每日佔比帶，跟旁邊的圓餅圖共用同一份顏色對應。
+  // 一定要用未篩選的期間資料算：拿篩選後的資料會改變分類排名，顏色就跟圓餅圖對不起來。
+  const categoryColors = useMemo(
+    () => buildCategoryColorMap(displayHistory, categoriesIncome, getChartPalette(theme), t('transaction.uncategorized')),
+    [displayHistory, categoriesIncome, theme, t]
+  );
+
   const periodFileLabel = getPeriodFileLabel(period);
   // 只有真的沒東西可顯示時才換成載入佔位；有舊資料就讓它留著等新資料進來（見 periodHistory）
   const viewLoading = loading || (isYearMode && yearLoading && periodHistory.length === 0);
@@ -523,8 +540,6 @@ export default function DashboardPage() {
     historyRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, []);
 
-  // 使用者主動改表頭篩選（由 TransactionTable 回報）→ 回第 1 頁
-  const resetPage = useCallback(() => setPage(1), []);
 
   // 匯出目前期間（一般模式下的匯出鈕主選項）：tableRows 是整個期間的完整陣列，不是畫面上那一頁
   const exportCurrentPeriod = useCallback(async () => {
@@ -829,6 +844,18 @@ export default function DashboardPage() {
             )}
             <div className="transaction-history-header__controls">
               <button
+                ref={filterBtnRef}
+                type="button"
+                className={`btn-search-toggle${activeFilter || isFiltered ? ' btn-search-toggle--active' : ''}`}
+                onClick={toggleFilter}
+                aria-label={t('transaction.filterOptionsAria')}
+                aria-expanded={activeFilter === 'all'}
+              >
+                <svg className="icon-filter" aria-hidden="true">
+                  <use href="#icon-filter" />
+                </svg>
+              </button>
+              <button
                 type="button"
                 className={`btn-search-toggle${searchOpen ? ' btn-search-toggle--active' : ''}`}
                 onMouseDown={(e) => { if (searchOpen) e.preventDefault(); }}
@@ -879,22 +906,31 @@ export default function DashboardPage() {
             </p>
           )}
           <TransactionTable
-            transactions={tableRows}
+            transactions={filteredRows}
             onEdit={handleStartEdit}
             onDelete={handleDeleteTransaction}
-            onVisibleCountChange={setVisibleRowCount}
-            onFilterChange={resetPage}
             periodName={periodName}
             page={page}
             pageSize={PAGE_SIZE}
+            groupByDate={!isYearMode}
+            categoryColors={categoryColors}
             loading={viewLoading}
             emptyMessage={
               searchActive
                 ? searchLoading
                   ? t('common.loadingDots')
                   : t('dashboard.searchNoResults')
+                : tableRows.length > 0
+                ? t('transaction.noFilterResults')
                 : undefined
             }
+          />
+
+          <FilterPopover
+            anchorRef={filterBtnRef}
+            isOpen={activeFilter === 'all'}
+            onClose={closeFilter}
+            sections={filterSections}
           />
         </section>
       </DashboardColumn>

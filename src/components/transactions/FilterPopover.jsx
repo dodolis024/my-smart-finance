@@ -4,6 +4,14 @@ import { debounce } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+/**
+ * 篩選面板。單區用法傳 items/selected/onSelect...；
+ * 傳 sections 則一個面板同時列出多組（分類、支付方式），
+ * 讓標題列只需要一顆漏斗鈕，不必並排兩顆一模一樣的 icon。
+ *
+ * @param {{ key: string, title: string, items: string[], selected: string[],
+ *           onSelect: Function, onSelectAll: Function, onClearAll: Function }[]} [sections]
+ */
 export default function FilterPopover({
   isOpen,
   anchorRef,
@@ -13,6 +21,7 @@ export default function FilterPopover({
   onSelectAll,
   onClearAll,
   onClose,
+  sections,
 }) {
   const { t } = useLanguage();
   const popoverRef = useRef(null);
@@ -87,27 +96,32 @@ export default function FilterPopover({
       role="dialog"
       aria-label={t('transaction.filterOptionsAria')}
     >
-      <div className="filter-popover__actions">
-        <button type="button" className="filter-popover__action" onClick={onSelectAll}>
-          {t('transaction.selectAll')}
-        </button>
-        <button type="button" className="filter-popover__action" onClick={onClearAll}>
-          {t('transaction.clearFilter')}
-        </button>
-      </div>
-      <div className="filter-popover__list">
-        {items.map((item) => (
-          <label key={item}>
-            <input
-              type="checkbox"
-              value={item}
-              checked={selected.includes(item)}
-              onChange={() => onSelect(item)}
-            />
-            {item}
-          </label>
-        ))}
-      </div>
+      {(sections ?? [{ key: 'single', items, selected, onSelect, onSelectAll, onClearAll }]).map((section) => (
+        <div key={section.key} className="filter-popover__section">
+          {section.title && <p className="filter-popover__title">{section.title}</p>}
+          <div className="filter-popover__actions">
+            <button type="button" className="filter-popover__action" onClick={section.onSelectAll}>
+              {t('transaction.selectAll')}
+            </button>
+            <button type="button" className="filter-popover__action" onClick={section.onClearAll}>
+              {t('transaction.clearFilter')}
+            </button>
+          </div>
+          <div className="filter-popover__list">
+            {section.items.map((item) => (
+              <label key={item}>
+                <input
+                  type="checkbox"
+                  value={item}
+                  checked={section.selected.includes(item)}
+                  onChange={() => section.onSelect(item)}
+                />
+                {item}
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

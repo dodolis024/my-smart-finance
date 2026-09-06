@@ -1,19 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip } from 'chart.js';
-import { CHART_COLORS, CHART_COLORS_ROSE, CHART_COLORS_GRAY, CHART_COLORS_DAWN, CHART_COLORS_SODA, CHART_COLORS_LAVENDER, CHART_COLORS_SORBET, CHART_COLORS_PEACH, CHART_COLORS_LIME } from '@/lib/constants';
+import { getChartPalette, buildCategoryColorMap } from '@/lib/categoryColor';
 import { useTheme } from '@/hooks/useTheme';
 import { formatMoney } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 ChartJS.register(ArcElement, Tooltip);
 
-const THEME_PALETTES = { rose: CHART_COLORS_ROSE, graphite: CHART_COLORS_GRAY, dawn: CHART_COLORS_DAWN, soda: CHART_COLORS_SODA, lavender: CHART_COLORS_LAVENDER, sorbet: CHART_COLORS_SORBET, peach: CHART_COLORS_PEACH, lime: CHART_COLORS_LIME };
-
 export default function CategoryChart({ history = [], incomeCategories = [], onSelectCategory, periodName }) {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const palette = THEME_PALETTES[theme] || CHART_COLORS;
+  const palette = getChartPalette(theme);
 
   const pairs = useMemo(() => {
     const incomeSet = new Set(incomeCategories);
@@ -42,16 +40,22 @@ export default function CategoryChart({ history = [], incomeCategories = [], onS
     onSelectCategory({ ...pair, totalExpense });
   }, [onSelectCategory, totalExpense]);
 
+  // 與交易列表共用同一份對應，同一個分類在兩邊必定同色
+  const colorMap = useMemo(
+    () => buildCategoryColorMap(history, incomeCategories, palette, t('transaction.uncategorized')),
+    [history, incomeCategories, palette, t]
+  );
+
   const chartData = useMemo(() => ({
     labels: pairs.map((p) => p.label),
     datasets: [{
       data: pairs.map((p) => Math.abs(p.value)),
-      backgroundColor: pairs.map((_, i) => palette[i % palette.length]),
+      backgroundColor: pairs.map((p) => colorMap.get(p.label) ?? palette[0]),
       borderColor: '#fff',
       borderWidth: 2,
       hoverOffset: 6,
     }],
-  }), [pairs, palette]);
+  }), [pairs, colorMap, palette]);
 
   const chartOptions = useMemo(() => ({
     responsive: true,

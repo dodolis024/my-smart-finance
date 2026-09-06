@@ -5,13 +5,14 @@ import { useWindowSize } from '@/hooks/useWindowSize';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function TransactionRow({ transaction: tx, onEdit, onDelete, onShowDetail }) {
+export default function TransactionRow({ transaction: tx, isAlt, showDate = false, categoryColors, onEdit, onDelete, onShowDetail }) {
   const { t } = useLanguage();
   const rowRef = useRef(null);
   const { width } = useWindowSize();
   const isMobile = width <= LAYOUT.MOBILE_MAX_WIDTH;
-  const displayDate = formatDateForDisplay(tx.date, isMobile);
   const displayAmount = isMobile ? formatMoneyInteger(tx.twdAmount) : formatMoney(tx.twdAmount);
+  // 日期平常由分組列統一標示，只有不分組（年檢視）時才逐列印出
+  const displayDate = showDate ? formatDateForDisplay(tx.date, isMobile) : '';
 
   const {
     translateX,
@@ -43,6 +44,7 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
   const rowClass = [
     'transaction-row',
     'transaction-row--semantic',
+    isAlt && 'transaction-row--alt',
     tx.subscriptionId && 'transaction-row--subscription',
     tx.pending && 'transaction-row--pending',
     swipedRight && 'swiped-right',
@@ -50,6 +52,20 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
   ]
     .filter(Boolean)
     .join(' ');
+
+  // 分類色點:顏色取自圓餅圖那份對應表,同一個分類兩邊同色。
+  // 收入分類不在圓餅圖裡、也就沒有顏色,留一個透明的佔位讓欄位仍然對齊。
+  const dotColor = categoryColors?.get(tx.category);
+  const categoryDot = (
+    <span className="cat-dot" style={dotColor ? { background: dotColor } : undefined} aria-hidden="true" />
+  );
+
+  // 訂閱自動記帳:手機版空間有限,英文改用短字(中文兩者都是「訂閱」)
+  const subscriptionBadge = tx.subscriptionId ? (
+    <span className="badge badge--subscription">
+      {isMobile ? t('transaction.subscriptionBadgeShort') : t('transaction.subscriptionBadge')}
+    </span>
+  ) : null;
 
   // 離線佇列中的交易(尚未同步至伺服器);failed = 補送失敗,等待手動重試
   const isSyncFailed = tx.pending && tx.queueStatus === 'failed';
@@ -74,17 +90,19 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
         onTouchCancel={handleTouchCancel}
         onClick={handleRowClick}
       >
-        <td className="cell-slider-wrap" colSpan={6}>
+        <td className="cell-slider-wrap" colSpan={showDate ? 6 : 5}>
           <div className="row-slider-container">
             <div
               className="row-slider"
               style={{ transform: `translateX(${translateX}px)`, transition: swipeTransition }}
             >
-              <div className="slider-cell cell-date">{displayDate}</div>
+              {showDate && <div className="slider-cell cell-date">{displayDate}</div>}
               <div className="slider-cell cell-category">
-                <span className="badge">{tx.category}</span>
+                {categoryDot}<span className="badge">{tx.category}</span>
               </div>
-              <div className="slider-cell cell-item">{tx.itemName}{pendingBadge}</div>
+              <div className="slider-cell cell-item">
+                <span className="cell-item-name">{tx.itemName}</span>{subscriptionBadge}{pendingBadge}
+              </div>
               <div className="slider-cell cell-amount">{displayAmount}</div>
             </div>
             <div className="swipe-action swipe-action--edit">
@@ -128,24 +146,28 @@ export default function TransactionRow({ transaction: tx, onEdit, onDelete, onSh
       onTouchCancel={handleTouchCancel}
       onClick={handleRowClick}
     >
-      <td className="cell-date" headers="col-date">
-        <div className="cell-date-inner">{displayDate}</div>
-      </td>
-      <td className="cell-category" headers="col-category">
+      {showDate && (
+        <td className="cell-date">
+          <div className="cell-date-inner">{displayDate}</div>
+        </td>
+      )}
+      <td className="cell-category">
         <div className="cell-category-inner">
-          <span className="badge">{tx.category}</span>
+          {categoryDot}<span className="badge">{tx.category}</span>
         </div>
       </td>
-      <td className="cell-item" headers="col-item">
-        <div className="cell-item-inner">{tx.itemName}{pendingBadge}</div>
+      <td className="cell-item">
+        <div className="cell-item-inner">
+          <span className="cell-item-name">{tx.itemName}</span>{subscriptionBadge}{pendingBadge}
+        </div>
       </td>
-      <td className="cell-payment" headers="col-payment">
+      <td className="cell-payment">
         <div className="cell-payment-inner">{tx.paymentMethod}</div>
       </td>
-      <td className="cell-amount" headers="col-amount">
+      <td className="cell-amount">
         <div className="cell-amount-inner">{formatMoney(tx.twdAmount)}</div>
       </td>
-      <td className="cell-actions" headers="col-actions">
+      <td className="cell-actions">
         <div className="cell-actions-inner">
           <div className="row-actions">
             <button

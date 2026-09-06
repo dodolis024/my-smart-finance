@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 
@@ -40,6 +40,8 @@ vi.mock('@/lib/supabase', () => ({
 
 const PeriodPicker = (await import('@/components/dashboard/PeriodPicker')).default;
 const TransactionTable = (await import('@/components/transactions/TransactionTable')).default;
+const FilterPopover = (await import('@/components/transactions/FilterPopover')).default;
+const { useTransactionFilters } = await import('@/hooks/useTransactionFilters');
 const { getPeriodRange, getPeriodLabel, getPeriodFileLabel, isCurrentPeriod, getCurrentPeriod } =
   await import('@/lib/period');
 const { buildQueuedRows } = await import('@/lib/offlineMerge');
@@ -337,26 +339,29 @@ const makeRows = (n) => Array.from({ length: n }, (_, i) => ({
   note: null,
 }));
 
-/** 完整重現 DashboardPage 的分頁接線 */
+/** 完整重現 DashboardPage 的接線：頁碼與篩選都在上層，表格只收已篩選的資料 */
 function TableHarness({ transactions }) {
-  const [visibleRowCount, setVisibleRowCount] = useState(0);
   const [page, setPage] = useState(1);
+  const filterBtnRef = useRef(null);
+  const { filteredRows, sections, activeFilter, toggleFilter, closeFilter } =
+    useTransactionFilters(transactions, useCallback(() => setPage(1), []));
+  const visibleRowCount = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(visibleRowCount / PAGE_SIZE));
 
   useEffect(() => { setPage((p) => (p > totalPages ? totalPages : p)); }, [totalPages]);
-  const resetPage = useCallback(() => setPage(1), []);
 
   return (
     <div>
       <i className="state" data-state={JSON.stringify({ page, totalPages, visibleRowCount })} />
       <button className="go-prev" onClick={() => setPage((p) => Math.max(1, p - 1))}>prev</button>
       <button className="go-next" onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>next</button>
-      <TransactionTable
-        transactions={transactions}
-        page={page}
-        pageSize={PAGE_SIZE}
-        onVisibleCountChange={setVisibleRowCount}
-        onFilterChange={resetPage}
+      <button className="open-filter" ref={filterBtnRef} onClick={toggleFilter}>filter</button>
+      <TransactionTable transactions={filteredRows} page={page} pageSize={PAGE_SIZE} />
+      <FilterPopover
+        anchorRef={filterBtnRef}
+        isOpen={activeFilter === 'all'}
+        onClose={closeFilter}
+        sections={sections}
       />
     </div>
   );
@@ -372,15 +377,15 @@ describe('暴力亂搞：交易紀錄分頁', () => {
 
     const bad = [];
     const hit = { 翻到第二頁以後: 0, 改篩選: 0, 換資料: 0, 篩到空: 0 };
-    const openFilter = (kind) => click($(`button[data-filter="${kind}"]`));
+    const openFilter = () => { if (!$('.filter-popover__list')) click($('.open-filter')); };
 
     for (let round = 0; round < 400; round++) {
       const action = int(7);
       if (action === 0) click($('.go-next'));
       else if (action === 1) click($('.go-prev'));
-      else if (action === 2) { openFilter(pick(['category', 'payment'])); click(pick($$('.filter-popover__list input'))); }
-      else if (action === 3) { openFilter(pick(['category', 'payment'])); click($$('.filter-popover__action')[0]); }
-      else if (action === 4) { openFilter(pick(['category', 'payment'])); click($$('.filter-popover__action')[1]); }
+      else if (action === 2) { openFilter(); click(pick($$('.filter-popover__list input'))); }
+      else if (action === 3) { openFilter(); click(pick($$('.filter-popover__action'))); }
+      else if (action === 4) { openFilter(); click(pick($$('.filter-popover__action'))); }
       else if (action === 5) {
         // 專挑分頁邊界值：0/1 筆、剛好一頁、多一筆、剛好兩頁…
         // 小筆數也順便製造「原本選的分類在新資料裡不存在」→ 篩選後 0 筆的狀態

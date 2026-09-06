@@ -1,14 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createElement, act, useState, useEffect, useCallback } from 'react';
+import { createElement, act, useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 
 /**
  * 交易紀錄分頁。
  *
- * 這裡守的是最容易寫錯的一件事：切片必須套在「表頭篩選之後」。
- * 若在上層先切片再傳進來，「篩選某分類 + 第 3 頁」就會出現空白頁。
- * 另外守 onVisibleCountChange 的語意——它回報的是篩選後的總數（上層用它算總頁數），
- * 不是當頁筆數；回報成當頁筆數會讓總頁數永遠是 1。
+ * 這裡守的是最容易寫錯的一件事：切片必須套在「篩選之後」。
+ * 篩選住在區塊標題列（useTransactionFilters），表格只收已篩選的資料再切片；
+ * 若上層先切片再篩選，「篩選某分類 + 第 3 頁」就會出現空白頁。
+ *
+ * harness 直接用正式的 useTransactionFilters + FilterPopover，
+ * 才不會測試自己寫一套篩選、跟實作各走各的。
  */
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -33,6 +35,8 @@ vi.mock('@/lib/supabase', () => ({
 }));
 
 const TransactionTable = (await import('@/components/transactions/TransactionTable')).default;
+const FilterPopover = (await import('@/components/transactions/FilterPopover')).default;
+const { useTransactionFilters } = await import('@/hooks/useTransactionFilters');
 
 const PAGE_SIZE = 50;
 
@@ -67,9 +71,9 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-const dataRowCount = () => container.querySelectorAll('tbody tr[data-tx-id], tbody tr').length;
+const dataRowCount = () => container.querySelectorAll('tbody tr.transaction-row').length;
 const itemTexts = () =>
-  [...container.querySelectorAll('tbody tr')].map((tr) => tr.textContent);
+  [...container.querySelectorAll('tbody tr.transaction-row')].map((tr) => tr.textContent);
 
 function renderTable(props = {}) {
   act(() => {
@@ -94,25 +98,6 @@ describe('TransactionTable 分頁', () => {
     expect(dataRowCount()).toBe(120);
   });
 
-  it('onVisibleCountChange 回報篩選後的總數，不是當頁筆數', () => {
-    const counts = [];
-    renderTable({ page: 1, onVisibleCountChange: (n) => counts.push(n) });
-    expect(counts.at(-1)).toBe(120);
-
-    // 套上分類篩選：只留「飲食」的 30 筆
-    act(() => {
-      container.querySelector('button[data-filter="category"]').click();
-    });
-    const box = [...container.querySelectorAll('.filter-popover__list input')]
-      .find((el) => el.value === '飲食');
-    act(() => {
-      box.click();
-    });
-
-    expect(counts.at(-1)).toBe(30);
-    expect(dataRowCount()).toBe(30); // 篩選後只有 30 筆，第 1 頁就放得下
-  });
-
   it('切片套在篩選之後：篩選 + 第 2 頁不會變成空白頁', () => {
     // 120 筆全部符合篩選時第 2 頁有 50 筆；先切片再篩選的寫法這裡會拿到空陣列
     renderTable({ page: 2 });
@@ -120,45 +105,30 @@ describe('TransactionTable 分頁', () => {
     expect(itemTexts()[0]).toContain('項目50');
   });
 
-  it('使用者改表頭篩選時會通知上層（回第 1 頁用），掛載那次不通知', () => {
-    const onFilterChange = vi.fn();
-    renderTable({ page: 1, onFilterChange });
-    expect(onFilterChange).not.toHaveBeenCalled();
-
-    act(() => {
-      container.querySelector('button[data-filter="category"]').click();
-    });
-    const box = [...container.querySelectorAll('.filter-popover__list input')]
-      .find((el) => el.value === '飲食');
-    act(() => {
-      box.click();
-    });
-
-    expect(onFilterChange).toHaveBeenCalled();
-  });
 });
 
-/** 重現 DashboardPage 的接線：頁碼在上層、總頁數由 onVisibleCountChange 算 */
+/** 重現 DashboardPage 的接線：頁碼與篩選都在上層，表格只收已篩選的資料 */
 function PagedTable({ transactions }) {
-  const [visibleRowCount, setVisibleRowCount] = useState(0);
   const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(visibleRowCount / PAGE_SIZE));
+  const filterBtnRef = useRef(null);
+  const { filteredRows, sections, activeFilter, toggleFilter, closeFilter } =
+    useTransactionFilters(transactions, useCallback(() => setPage(1), []));
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
 
   useEffect(() => {
     setPage((p) => (p > totalPages ? totalPages : p));
   }, [totalPages]);
 
-  const resetPage = useCallback(() => setPage(1), []);
-
   return createElement('div', null,
     createElement('span', { className: 'pager-label' }, `${page} / ${totalPages}`),
     createElement('button', { className: 'pager-next', onClick: () => setPage((p) => p + 1) }, 'next'),
-    createElement(TransactionTable, {
-      transactions,
-      page,
-      pageSize: PAGE_SIZE,
-      onVisibleCountChange: setVisibleRowCount,
-      onFilterChange: resetPage,
+    createElement('button', { className: 'open-filter', ref: filterBtnRef, onClick: toggleFilter }, 'filter'),
+    createElement(TransactionTable, { transactions: filteredRows, page, pageSize: PAGE_SIZE }),
+    createElement(FilterPopover, {
+      anchorRef: filterBtnRef,
+      isOpen: activeFilter === 'all',
+      onClose: closeFilter,
+      sections,
     })
   );
 }
@@ -186,7 +156,7 @@ describe('頁碼越界修正（上層接線）', () => {
     expect(dataRowCount()).toBe(10);
   });
 
-  it('改表頭篩選一律回第 1 頁（與越界修正不衝突）', () => {
+  it('改篩選一律回第 1 頁（與越界修正不衝突）', () => {
     act(() => {
       root.render(createElement(PagedTable, { transactions: makeRows(120) }));
     });
@@ -194,7 +164,7 @@ describe('頁碼越界修正（上層接線）', () => {
     expect(label()).toBe('2 / 3');
 
     act(() => {
-      container.querySelector('button[data-filter="category"]').click();
+      container.querySelector('.open-filter').click();
     });
     const box = [...container.querySelectorAll('.filter-popover__list input')]
       .find((el) => el.value === '交通');

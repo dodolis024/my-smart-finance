@@ -16,55 +16,7 @@
   background: var(--color-card);
 }
 
-.transaction-history-section .table-wrapper thead {
-  background: var(--color-table-header);
-}
 
-.transaction-history-section .table-wrapper thead tr {
-  background: var(--color-table-header);
-  padding: 0 0.45rem;
-}
-
-.transaction-history-section .table-wrapper th {
-  background: var(--color-table-header);
-  padding: 0.75rem 0.5rem;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.transaction-history-section .table-wrapper th:nth-child(1) { text-align: left; }
-.transaction-history-section .table-wrapper th:nth-child(2) { text-align: left; }
-.transaction-history-section .table-wrapper th:nth-child(3) { text-align: left; }
-.transaction-history-section .table-wrapper th:nth-child(4) { text-align: left; }
-.transaction-history-section .table-wrapper th:nth-child(5) { text-align: right; }
-.transaction-history-section .table-wrapper th:nth-child(6) { text-align: center; }
-
-.transaction-history-section .table-wrapper th .th-filter-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 0.25rem;
-  padding: 0.2rem;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  border-radius: 4px;
-  vertical-align: middle;
-}
-.transaction-history-section .table-wrapper th .th-filter-btn:hover {
-  color: var(--color-primary);
-  background: var(--color-primary-tint-light);
-}
-.transaction-history-section .table-wrapper th .th-filter-btn:focus {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-}
 .icon-filter {
   width: 1rem;
   height: 1rem;
@@ -87,6 +39,19 @@
 .filter-popover.is-open {
   display: block;
 }
+.filter-popover__section + .filter-popover__section {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.filter-popover__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
 .filter-popover__actions {
   display: flex;
   gap: 0.5rem;
@@ -134,8 +99,9 @@
   font-size: 0.9375rem;
 }
 
-.transaction-history-section .table-wrapper tbody tr:nth-child(even) .swipe-content,
-.transaction-history-section .table-wrapper tbody tr:nth-child(even).transaction-row--semantic td {
+/* 交錯底色改由 --alt class 指定：日期分組列插在 tbody 裡，nth-child 的奇偶會被打亂 */
+.transaction-history-section .table-wrapper tbody tr.transaction-row--alt .swipe-content,
+.transaction-history-section .table-wrapper tbody tr.transaction-row--alt.transaction-row--semantic td {
   background: var(--color-row-alt);
 }
 
@@ -164,11 +130,6 @@
 
 .transaction-row {
   position: relative;
-}
-
-/* 訂閱自動新增：左側細線（不影響排版） */
-.transaction-row--subscription td:first-child {
-  box-shadow: inset 3px 0 0 var(--color-subscription);
 }
 
 .transaction-row--semantic td {
@@ -241,6 +202,27 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 品項名稱與標記並排：名稱先被截斷，標記永遠留在畫面上
+   （沒有這層，長品項名會把標記整個推出可視範圍） */
+.transaction-row--semantic .cell-item-inner,
+.row-slider .slider-cell.cell-item {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.cell-item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-item-inner .badge,
+.slider-cell.cell-item .badge {
+  flex: 0 0 auto;
 }
 
 .cell-payment {
@@ -601,4 +583,61 @@
   .transaction-search-box {
     animation: none;
   }
+}
+
+/* 每一天：卡片外的標題（日期／筆數／收支／分類佔比帶）＋ 卡片內的交易列。
+   標題刻意不是表格列，才不會沾到底色、框線與交錯底色。 */
+.tx-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.tx-day__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0.25rem 0.4rem;
+}
+
+.tx-day__date {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.tx-day__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.tx-day__count {
+  color: var(--color-text-secondary);
+}
+
+/* 分類色點：與圓餅圖共用同一份對應表（見 lib/categoryColor.js） */
+.cat-dot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.5rem;
+  border-radius: 999px;
+  vertical-align: 0;
+}
+
+.transaction-list-placeholder {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.transaction-list-placeholder--empty {
+  font-style: italic;
 }

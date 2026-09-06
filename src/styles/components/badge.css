@@ -67,6 +67,20 @@
   opacity: 0.75;
 }
 
+/* 訂閱自動記帳:同型小標記,用訂閱色實線與「待同步」的虛線區分 */
+.badge--subscription {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--color-subscription);
+  border-radius: 999px;
+  background: var(--color-card);
+  color: var(--color-subscription);
+  font-size: 0.7rem;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 /* 待同步數量 pill(儀表板標頭,點擊立即補送) */
 .pending-sync-pill {
   display: inline-flex;

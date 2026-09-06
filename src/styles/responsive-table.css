@@ -68,13 +68,7 @@
     max-width: 22rem;
   }
 
-  /* 隱藏支付方式、操作表頭 */
-  .transaction-history-section .table-wrapper thead th:nth-child(4),
-  .transaction-history-section .table-wrapper thead th:nth-child(6) {
-    display: none !important;
-  }
-
-  /* 手機版 table 改為 block + flex，表頭與 slider 對齊 */
+  /* 手機版 table 改為 block + flex */
   .transaction-history-section .table-wrapper table {
     display: block;
   }
@@ -83,47 +77,24 @@
     display: none;
   }
 
-  .transaction-history-section .table-wrapper thead,
   .transaction-history-section .table-wrapper tbody {
     display: block;
   }
 
-  .transaction-history-section .table-wrapper thead tr,
   .transaction-history-section .table-wrapper tbody tr {
     display: flex;
     width: 100%;
     box-sizing: border-box;
   }
 
-  .transaction-history-section .table-wrapper thead th,
   .transaction-history-section .table-wrapper td {
     box-sizing: border-box;
   }
 
-  /* 表頭 4 欄 flex（與 slider-cell 一致） */
-  .transaction-history-section .table-wrapper thead tr {
-    /* stretch 讓各欄 th 等高，底線對齊成一條連續線
-       （避免英文縮字時，含篩選鈕的 Category 欄比純文字欄高、底線斷開） */
-    align-items: stretch;
-    padding: 0 0.5rem;
-  }
-
-  .transaction-history-section .table-wrapper thead th {
-    padding: 0.625rem 0.375rem;
-    display: flex;
-    font-size: 0.885rem;
-    align-items: center;
-    justify-content: flex-start;
-  }
-
-  .transaction-history-section .table-wrapper thead th:nth-child(5) {
-    justify-content: flex-end;
-  }
-
-  .transaction-history-section .table-wrapper thead th:nth-child(1) { flex: 0 0 74px; min-width: 74px; }
-  .transaction-history-section .table-wrapper thead th:nth-child(2) { flex: 0 0 78px; min-width: 78px; }
-  .transaction-history-section .table-wrapper thead th:nth-child(3) { flex: 1; min-width: 0; }
-  .transaction-history-section .table-wrapper thead th:nth-child(5) { flex: 0 0 85px; min-width: 85px; text-align: right; }
+  /* 每日標題在卡片外，手機版縮一點邊距 */
+  .tx-day-list { gap: 0.9rem; }
+  .tx-day__head { padding: 0 0.1rem 0.35rem; }
+  .tx-day__date { font-size: 0.9rem; }
 
   /* Slider 結構 */
   .cell-slider-wrap {
@@ -167,6 +138,7 @@
     padding-left: 0.675rem;
   }
 
+
   .row-slider .slider-cell.cell-category {
     flex: 0 0 78px;
     min-width: 78px;
@@ -199,7 +171,7 @@
   }
 
   /* 行背景 */
-  .transaction-row--semantic:nth-child(even) .row-slider {
+  .transaction-row--semantic.transaction-row--alt .row-slider {
     background: var(--color-row-alt);
   }
 
@@ -248,9 +220,6 @@
   .transaction-row--semantic td.cell-item { flex: 1; min-width: 0; }
   .transaction-row--semantic td.cell-amount { flex: 0 0 85px; }
 
-  .transaction-history-section .table-wrapper thead th:nth-child(1) { flex: 0 0 68px; min-width: 68px; }
-  .transaction-history-section .table-wrapper thead th:nth-child(2) { flex: 0 0 72px; min-width: 72px; }
-  .transaction-history-section .table-wrapper thead th:nth-child(5) { flex: 0 0 85px; min-width: 85px; }
 
   .row-slider .slider-cell.cell-date { flex: 0 0 68px; min-width: 68px; }
   .row-slider .slider-cell.cell-category { flex: 0 0 72px; min-width: 72px; }
@@ -264,9 +233,6 @@
   .transaction-row--semantic td.cell-item { flex: 1; min-width: 0; font-size: 0.8125rem; }
   .transaction-row--semantic td.cell-amount { flex: 0 0 85px; font-size: 0.8125rem; }
 
-  .transaction-history-section .table-wrapper thead th:nth-child(1) { flex: 0 0 62px; min-width: 62px; }
-  .transaction-history-section .table-wrapper thead th:nth-child(2) { flex: 0 0 66px; min-width: 66px; }
-  .transaction-history-section .table-wrapper thead th:nth-child(5) { flex: 0 0 85px; min-width: 85px; }
 
   .row-slider .slider-cell.cell-date { flex: 0 0 62px; min-width: 62px; font-size: 0.75rem; }
   .row-slider .slider-cell.cell-category { flex: 0 0 66px; min-width: 66px; }
