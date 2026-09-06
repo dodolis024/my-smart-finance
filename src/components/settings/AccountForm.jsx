@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const ACCOUNT_TYPE_KEYS = ['cash', 'credit_card', 'debit_card', 'digital_wallet', 'bank'];
-const EMPTY_FORM = { name: '', type: '', creditLimit: '', billingDay: '', paymentDueDay: '', error: '' };
+const EMPTY_FORM = { name: '', type: '', creditLimit: '', billingDay: '', paymentDueDay: '', balanceAmount: '', error: '' };
 
 export default function AccountForm({ account, onSave, onCancel, loading }) {
   const { t } = useLanguage();
@@ -16,6 +16,7 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
         creditLimit: account.credit_limit != null ? String(account.credit_limit) : '',
         billingDay: account.billing_day != null ? String(account.billing_day) : '',
         paymentDueDay: account.payment_due_day != null ? String(account.payment_due_day) : '',
+        balanceAmount: account.balance_amount != null ? String(account.balance_amount) : '',
       });
     } else {
       setForm(EMPTY_FORM);
@@ -31,12 +32,26 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
       return;
     }
     setForm((f) => ({ ...f, error: '' }));
+    // 餘額只給非信用卡帳戶：信用卡看的是額度，跟著帳單週期走（見 lib/creditCard.js）
+    const balanceAmount = form.type !== 'credit_card' && form.balanceAmount !== ''
+      ? parseFloat(form.balanceAmount)
+      : null;
+    const prevAmount = account?.balance_amount != null ? parseFloat(account.balance_amount) : null;
+    // 金額沒動就保留原本的設定時間；改過（或第一次設）才蓋上現在這一刻。
+    // 蓋錯的話餘額會從錯的時間點開始重算，等於把已經扣過的帳再扣一次。
+    const balanceChanged = balanceAmount !== prevAmount;
     const payload = {
       name: form.name.trim(),
       type: form.type,
       credit_limit: form.creditLimit ? parseFloat(form.creditLimit) : null,
       billing_day: form.billingDay ? parseInt(form.billingDay, 10) : null,
       payment_due_day: form.paymentDueDay ? parseInt(form.paymentDueDay, 10) : null,
+      balance_amount: balanceAmount,
+      balance_as_of: balanceAmount == null
+        ? null
+        : balanceChanged
+          ? new Date().toISOString()
+          : (account?.balance_as_of ?? new Date().toISOString()),
     };
     await onSave(payload, account?.id || null);
   };
@@ -58,6 +73,13 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
             ))}
           </select>
         </div>
+        {form.type && form.type !== 'credit_card' && (
+          <div className="form-group">
+            <label className="form-group__label">{t('settings.account.balanceLabel')}</label>
+            <input className="form-group__input" type="number" step="0.01" value={form.balanceAmount} onChange={set('balanceAmount')} disabled={loading} />
+            <p className="account-form__hint">{t('settings.account.balanceHint')}</p>
+          </div>
+        )}
         {form.type === 'credit_card' && (
           <>
             <div className="form-group">

@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd } from '@/lib/utils';
 import { getBillingCycleRange } from '@/lib/creditCard';
+import { getBalanceSettings } from '@/lib/accountBalance';
 import {
   saveSnapshot,
   loadSnapshot,
@@ -36,6 +37,7 @@ export function useDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [transactionHistoryFull, setTransactionHistoryFull] = useState([]);
   const [creditHistory, setCreditHistory] = useState([]);
+  const [balanceHistory, setBalanceHistory] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [categoriesExpense, setCategoriesExpense] = useState([]);
   const [categoriesIncome, setCategoriesIncome] = useState([]);
@@ -162,6 +164,46 @@ export function useDashboard() {
     );
   }, []);
 
+  /**
+   * 餘額要從「使用者設定金額的那一刻」算到今天，可能跨好幾個月，
+   * 儀表板手上只有正在看的那一個月，所以另外抓一段（比照 fetchCreditHistory）。
+   * time 一起帶回來：同一天要分得出交易在設定之前還是之後。
+   */
+  const fetchBalanceHistory = useCallback(async (account) => {
+    const settings = getBalanceSettings(account);
+    if (!settings) {
+      setBalanceHistory([]);
+      return;
+    }
+    const asOfDate = new Date(settings.asOf);
+    const pad = (n) => String(n).padStart(2, '0');
+    const fromDate = `${asOfDate.getFullYear()}-${pad(asOfDate.getMonth() + 1)}-${pad(asOfDate.getDate())}`;
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, type, date, time, account_id, payment_method, twd_amount')
+      .gte('date', fromDate);
+
+    if (error) return;
+
+    setBalanceHistory(
+      (data || []).map((tx) => ({
+        ...tx,
+        paymentMethod: tx.payment_method,
+        twdAmount: tx.twd_amount,
+      }))
+    );
+  }, []);
+
+  /** 在餘額彈窗裡直接把金額改掉：時間點一併蓋成現在，之後從新數字往下扣 */
+  const updateAccountBalance = useCallback(async (account, amount) => {
+    const { error } = await supabase
+      .from('accounts')
+      .update({ balance_amount: amount, balance_as_of: new Date().toISOString() })
+      .eq('id', account.id);
+    if (error) throw error;
+  }, []);
+
   const fetchCurrencies = useCallback(async () => {
     // 幣別清單：以快取即時顯示，同時每次載入都向後端要最新清單（stale-while-revalidate）。
     // 舊版「有快取就整段跳過」會讓 exchange_rates 之後新增的幣別永遠到不了已載入過的裝置；
@@ -254,6 +296,9 @@ export function useDashboard() {
     transactionHistoryFull,
     creditHistory,
     fetchCreditHistory,
+    balanceHistory,
+    fetchBalanceHistory,
+    updateAccountBalance,
     accounts,
     categoriesExpense,
     categoriesIncome,

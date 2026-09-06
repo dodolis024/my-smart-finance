@@ -135,6 +135,12 @@
   box-shadow: var(--shadow-focus);
 }
 
+.account-form__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
 .account-form .form-actions {
   display: flex;
   justify-content: flex-end;

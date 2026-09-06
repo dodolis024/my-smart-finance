@@ -4,6 +4,7 @@ export function useModalStates() {
   const [streakModal, setStreakModal] = useState({ open: false, title: '', variant: 'neutral' });
   // txs：目前檢視期間、這張卡的紀錄（彈窗下半的明細清單用）
   const [creditCardModal, setCreditCardModal] = useState({ open: false, account: null, txs: [] });
+  const [accountBalanceModal, setAccountBalanceModal] = useState({ open: false, account: null, txs: [] });
   // 分類明細，也用於支付方式明細（category.kind === 'payment'）
   const [categoryDetailModal, setCategoryDetailModal] = useState({ open: false, category: null });
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -23,6 +24,14 @@ export function useModalStates() {
 
   const closeCreditCardModal = useCallback(() => {
     setCreditCardModal({ open: false, account: null, txs: [] });
+  }, []);
+
+  const openAccountBalanceModal = useCallback((account, txs = []) => {
+    setAccountBalanceModal({ open: true, account, txs });
+  }, []);
+
+  const closeAccountBalanceModal = useCallback(() => {
+    setAccountBalanceModal({ open: false, account: null, txs: [] });
   }, []);
 
   const openCategoryDetailModal = useCallback((category) => {
@@ -46,6 +55,9 @@ export function useModalStates() {
     creditCardModal,
     openCreditCardModal,
     closeCreditCardModal,
+    accountBalanceModal,
+    openAccountBalanceModal,
+    closeAccountBalanceModal,
     categoryDetailModal,
     openCategoryDetailModal,
     closeCategoryDetailModal,

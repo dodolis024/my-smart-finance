@@ -224,6 +224,21 @@ const zh = {
     recordsEmpty: '這張卡{period}沒有交易紀錄',
   },
 
+  accountBalance: {
+    current: '目前餘額',
+    setAmount: '設定時：',
+    spent: '已花：',
+    overdrawn: '已經超過設定的金額了，記得更新錢包裡的實際金額',
+    notTracked: '未設定餘額',
+    updateBtn: '更新餘額',
+    updateHint: '直接數一次錢包，把實際金額填進去，之後從這個數字開始扣。',
+    asOf: '{date} 設定',
+    liveDataHint: '以下為即時餘額，非 {year} 年 {month} 月的資料',
+    liveDataHintYear: '以下為即時餘額，非 {year} 年的資料',
+    records: '{period}的紀錄',
+    recordsEmpty: '這個帳戶{period}沒有交易紀錄',
+  },
+
   streak: {
     badgeAria: '查看連續記錄狀態',
     unit: '天',
@@ -408,6 +423,8 @@ const zh = {
       nameLabel: '帳戶名稱 *',
       typeLabel: '帳戶類型 *',
       selectType: '選擇類型',
+      balanceLabel: '目前餘額',
+      balanceHint: '填了就會在面板上顯示餘額，之後每筆消費往下扣。留空表示不追蹤。',
       creditLimitLabel: '信用額度',
       billingDayLabel: '帳單日（每月幾日）',
       paymentDueDayLabel: '繳款日（每月幾日）',

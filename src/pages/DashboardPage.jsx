@@ -26,6 +26,7 @@ import StatCards from '@/components/dashboard/StatCards';
 import PeriodPicker from '@/components/dashboard/PeriodPicker';
 import ExportMenu from '@/components/dashboard/ExportMenu';
 import ExportRangeModal from '@/components/dashboard/ExportRangeModal';
+import AccountBalanceModal from '@/components/common/AccountBalanceModal';
 import CategoryChart from '@/components/dashboard/CategoryChart';
 import CategoryDetailModal from '@/components/dashboard/CategoryDetailModal';
 import PaymentStats from '@/components/dashboard/PaymentStats';
@@ -61,6 +62,9 @@ export default function DashboardPage() {
     transactionHistoryFull,
     creditHistory,
     fetchCreditHistory,
+    balanceHistory,
+    fetchBalanceHistory,
+    updateAccountBalance,
     summary,
     accounts,
     categoriesExpense,
@@ -149,6 +153,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (modals.categoryDetailModal.open) modals.closeCategoryDetailModal();
     if (modals.creditCardModal.open) modals.closeCreditCardModal();
+    if (modals.accountBalanceModal.open) modals.closeAccountBalanceModal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [granularity, monthAnchor.year, monthAnchor.month, yearAnchor.year, searchActive]);
 
@@ -282,6 +287,27 @@ export default function DashboardPage() {
     modals.openCreditCardModal(account, stat?.txs || []);
     fetchCreditHistory(account);
   }, [fetchCreditHistory, modals]);
+
+  const handleOpenAccountBalance = useCallback((account, stat) => {
+    modals.openAccountBalanceModal(account, stat?.txs || []);
+    fetchBalanceHistory(account);
+  }, [fetchBalanceHistory, modals]);
+
+  // 彈窗開著時存了新餘額，重抓後要吃到新的帳戶資料。
+  // 彈窗自己存的是「點下去那一刻」的帳戶，會停在舊金額
+  const balanceModalAccount = useMemo(() => {
+    const opened = modals.accountBalanceModal.account;
+    if (!opened) return null;
+    return accounts.find((a) => a.id === opened.id) || opened;
+  }, [accounts, modals.accountBalanceModal.account]);
+
+  // 存完要重抓：帳戶餘額只有月 RPC 會回傳（refetchPeriod 已經處理年模式）。
+  // 餘額期間的交易也要重抓——設定時間換成現在，該扣的範圍跟著往後移
+  const handleUpdateBalance = useCallback(async (account, amount) => {
+    await updateAccountBalance(account, amount);
+    const updated = { ...account, balance_amount: amount, balance_as_of: new Date().toISOString() };
+    await Promise.all([refetchPeriod(), fetchBalanceHistory(updated)]);
+  }, [updateAccountBalance, refetchPeriod, fetchBalanceHistory]);
 
   useEffect(() => {
     if (user) ensureDefaultDataForOAuth(user.id);
@@ -770,6 +796,7 @@ export default function DashboardPage() {
                   history={displayHistory}
                   accounts={accounts}
                   onOpenCreditCard={handleOpenCreditCard}
+                  onOpenAccountBalance={handleOpenAccountBalance}
                   onSelectMethod={modals.openCategoryDetailModal}
                   periodName={periodName}
                 />
@@ -952,6 +979,21 @@ export default function DashboardPage() {
         txs={modals.creditCardModal.txs}
         onEdit={handleStartEdit}
         onDelete={handleDeleteTransaction}
+        periodName={periodName}
+        viewedYear={period.year}
+        viewedMonth={isYearMode ? null : period.month}
+        otherPeriod={isYearMode ? true : undefined}
+      />
+
+      <AccountBalanceModal
+        isOpen={modals.accountBalanceModal.open}
+        onClose={modals.closeAccountBalanceModal}
+        account={balanceModalAccount}
+        history={balanceHistory}
+        txs={modals.accountBalanceModal.txs}
+        onEdit={handleStartEdit}
+        onDelete={handleDeleteTransaction}
+        onUpdateBalance={handleUpdateBalance}
         periodName={periodName}
         viewedYear={period.year}
         viewedMonth={isYearMode ? null : period.month}

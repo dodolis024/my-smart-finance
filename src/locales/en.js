@@ -224,6 +224,21 @@ const en = {
     recordsEmpty: 'No transactions with this card {period}',
   },
 
+  accountBalance: {
+    current: 'Current Balance',
+    setAmount: 'Set to: ',
+    spent: 'Spent: ',
+    overdrawn: 'You have spent past the amount you set. Update it with what is actually in your wallet.',
+    notTracked: 'Balance not set',
+    updateBtn: 'Update Balance',
+    updateHint: 'Count what is actually in your wallet and enter it. The balance counts down from there.',
+    asOf: 'Set on {date}',
+    liveDataHint: 'Showing live balance, not data for {month}/{year}',
+    liveDataHintYear: 'Showing live balance, not data for {year}',
+    records: 'Records {period}',
+    recordsEmpty: 'No transactions for this account {period}',
+  },
+
   streak: {
     badgeAria: 'View streak status',
     unit: ' days',
@@ -408,6 +423,8 @@ const en = {
       nameLabel: 'Account Name *',
       typeLabel: 'Account Type *',
       selectType: 'Select type',
+      balanceLabel: 'Current Balance',
+      balanceHint: 'Enter an amount to track this account\'s balance on the dashboard. It counts down with each expense. Leave blank to skip.',
       creditLimitLabel: 'Credit Limit',
       billingDayLabel: 'Billing Day (day of month)',
       paymentDueDayLabel: 'Due Day (day of month)',

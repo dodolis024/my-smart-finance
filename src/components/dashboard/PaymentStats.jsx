@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { formatMoney } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { hasBalanceTracking } from '@/lib/accountBalance';
 
-export default function PaymentStats({ history = [], accounts = [], onOpenCreditCard, onSelectMethod, periodName }) {
+export default function PaymentStats({ history = [], accounts = [], onOpenCreditCard, onOpenAccountBalance, onSelectMethod, periodName }) {
   const { t } = useLanguage();
   const pairs = useMemo(() => {
     const byMethod = {};
@@ -33,12 +34,15 @@ export default function PaymentStats({ history = [], accounts = [], onOpenCredit
       {pairs.map((p) => {
         const account = accounts.find((a) => (a.name || a.accountName) === p.label);
         const isCreditCard = account?.type === 'credit_card';
-        // 信用卡走額度管理彈窗（明細接在額度下方），其餘走一般明細彈窗
+        // 信用卡走額度管理彈窗、有設餘額的帳戶走餘額彈窗（明細都接在上方數字下面），
+        // 兩者都沒有的走一般明細彈窗——沒設餘額的帳戶行為完全不變
         const select = isCreditCard && account
           ? () => onOpenCreditCard?.(account, p)
-          : onSelectMethod
-            ? () => onSelectMethod({ ...p, kind: 'payment', totalExpense: totalPayment })
-            : null;
+          : account && hasBalanceTracking(account)
+            ? () => onOpenAccountBalance?.(account, p)
+            : onSelectMethod
+              ? () => onSelectMethod({ ...p, kind: 'payment', totalExpense: totalPayment })
+              : null;
         return (
           <li
             key={p.label}
