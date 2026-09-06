@@ -139,25 +139,46 @@
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   min-height: 44px;
-  transition: var(--transition);
+  position: relative;
+  /* 只過渡底色與焦點框：用 all 會連 :last-child 換人時的框線變化一起動畫化，
+     切換排序時看起來就像列與列之間的分隔線忽深忽淺 */
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
   -webkit-tap-highlight-color: var(--color-primary-tint-focus);
 }
 .category-detail-row:last-child {
   border-bottom: none;
 }
-.category-detail-row:hover {
-  background: var(--color-row-hover);
+/* hover 底色與焦點框都畫在偽元素上：圓角只作用在那個色塊，
+   列自己的分隔線維持完整的直線 */
+.category-detail-row:hover::before,
+.category-detail-row:focus-visible::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   border-radius: 6px;
+}
+.category-detail-row:hover::before {
+  background: var(--color-row-hover);
+}
+.category-detail-row:focus-visible::before {
+  box-shadow: var(--shadow-focus);
+}
+/* 內容要疊在底色之上（定位後代預設會蓋住未定位的內容） */
+.category-detail-row > span {
+  position: relative;
 }
 .category-detail-row:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus);
-  border-radius: 6px;
 }
+
 .category-detail-row__date {
   font-size: 0.8125rem;
   color: var(--color-text-secondary);
   white-space: nowrap;
+  /* 每一列各自是一個 grid，日期字寬一變，後面的品項起點就跟著飄。
+     等寬數字 + 固定欄寬讓所有列的品項都從同一個位置開始 */
+  font-variant-numeric: tabular-nums;
+  min-width: 10ch;
 }
 .category-detail-row__item {
   font-weight: 500;
@@ -178,4 +199,21 @@
   color: var(--color-text);
   white-space: nowrap;
   text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 開窗與換排序時整份清單淡入一次，蓋掉逐列重排的閃動 */
+@media (prefers-reduced-motion: no-preference) {
+  .category-detail-list {
+    animation: category-detail-list-fade 0.16s ease-out;
+  }
+}
+
+@keyframes category-detail-list-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

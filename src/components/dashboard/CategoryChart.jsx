@@ -10,7 +10,7 @@ ChartJS.register(ArcElement, Tooltip);
 
 const THEME_PALETTES = { rose: CHART_COLORS_ROSE, graphite: CHART_COLORS_GRAY, dawn: CHART_COLORS_DAWN, soda: CHART_COLORS_SODA, lavender: CHART_COLORS_LAVENDER, sorbet: CHART_COLORS_SORBET, peach: CHART_COLORS_PEACH, lime: CHART_COLORS_LIME };
 
-export default function CategoryChart({ history = [], incomeCategories = [], onSelectCategory }) {
+export default function CategoryChart({ history = [], incomeCategories = [], onSelectCategory, periodName }) {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const palette = THEME_PALETTES[theme] || CHART_COLORS;
@@ -83,7 +83,7 @@ export default function CategoryChart({ history = [], incomeCategories = [], onS
   }), [handleSelect, pairs]);
 
   if (pairs.length === 0) {
-    return <p className="category-stats-empty">{t('dashboard.noExpenseData')}</p>;
+    return <p className="category-stats-empty">{t('dashboard.noExpenseData', { period: periodName })}</p>;
   }
 
   const colors = pairs.map((_, i) => palette[i % palette.length]);
@@ -92,28 +92,8 @@ export default function CategoryChart({ history = [], incomeCategories = [], onS
   return (
     <>
       <Doughnut data={chartData} options={chartOptions} style={{ maxWidth: 'var(--chart-max-width)', margin: '0.5rem auto', display: 'block' }} />
-      <div className="category-chart-legend" id="categoryChartLegend">
-        {pairs.map((p, i) => (
-          clickable ? (
-            <button
-              key={p.label}
-              type="button"
-              className="legend-item is-clickable"
-              onClick={() => handleSelect(p)}
-            >
-              <span className="legend-color" style={{ background: colors[i] }} />
-              {p.label}
-            </button>
-          ) : (
-            <span key={p.label} className="legend-item">
-              <span className="legend-color" style={{ background: colors[i] }} />
-              {p.label}
-            </span>
-          )
-        ))}
-      </div>
       <ul className="category-stats-list" id="categoryStats">
-        {pairs.map((p) => (
+        {pairs.map((p, i) => (
           <li
             key={p.label}
             className={clickable ? 'clickable' : ''}
@@ -122,7 +102,10 @@ export default function CategoryChart({ history = [], incomeCategories = [], onS
             onClick={clickable ? () => handleSelect(p) : undefined}
             onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(p); } } : undefined}
           >
-            <span className="cat-name">{p.label}</span>
+            <span className="cat-name">
+              <span className="cat-color" style={{ background: colors[i] }} />
+              {p.label}
+            </span>
             <span className="cat-amount">{formatMoney(p.value)}</span>
           </li>
         ))}

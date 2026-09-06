@@ -189,6 +189,19 @@
   }
 
   /* 分類明細彈窗：手機收掉備註欄，避免項目與金額被擠壓 */
+  /* 手機上內容少時置中，長到撐滿才貼頂捲動——短彈窗貼在畫面上緣會像半張卡浮空。
+     用 flex + margin:auto 而不是 align-items:center：後者在內容超過螢幕高時
+     會把上半截裁掉而且捲不回去。 */
+  .category-detail-modal.is-open,
+  .credit-card-modal.is-open {
+    display: flex;
+  }
+
+  .category-detail-modal__dialog,
+  .credit-card-modal__dialog {
+    margin: auto;
+  }
+
   .category-detail-modal__dialog {
     padding: 1.5rem 1rem;
   }
@@ -200,6 +213,10 @@
 
   .category-detail-row__note {
     display: none;
+  }
+
+  .category-detail-row__date {
+    min-width: 5ch;
   }
 
   .app-top-bar {
@@ -411,6 +428,10 @@
   .month-picker-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 0.3rem;
+  }
+  /* 年份維持 5 欄：手機的彈窗上限是 calc(100vw - 2rem)，放得下十年一列五個 */
+  .month-picker-grid--years {
+    grid-template-columns: repeat(5, 1fr);
   }
   .month-picker-item {
     padding: 0.4rem 0.4rem;

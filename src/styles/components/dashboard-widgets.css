@@ -161,6 +161,15 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 0.25rem;
 }
+/* 年份格狀：十年一組排成 5 欄 2 列，剛好填滿不留空格。
+   4 位數年份比月份縮寫寬，左右內距收窄才塞得進彈窗的 16rem 上限 */
+.month-picker-grid--years {
+  grid-template-columns: repeat(5, 1fr);
+}
+.month-picker-grid--years .month-picker-item {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
 .month-picker-item {
   padding: 0.4rem 0.5rem;
   border: none;
@@ -186,6 +195,94 @@
 .month-picker-trigger[disabled] {
   opacity: 0.6;
   cursor: default;
+}
+/* 期間粒度切換（月／年）：電腦版直接放在收支概覽標題列，與期間選擇器成對 */
+.period-toggle {
+  display: inline-flex;
+  gap: 0.15rem;
+  padding: 0.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-card);
+}
+.period-toggle__btn {
+  padding: 0.25rem 0.6rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.period-toggle__btn:hover:not(:disabled) {
+  background: var(--color-primary-tint-light);
+  color: var(--color-primary);
+}
+.period-toggle__btn.is-active {
+  background: var(--color-primary-tint-focus);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.period-toggle__btn:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.period-toggle__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 期間粒度頁籤（月／年）：手機版收在面板頂部，不佔用外層那一列的寬度 */
+.period-picker-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.period-picker-tab {
+  flex: 1;
+  padding: 0.35rem 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.period-picker-tab:hover:not(:disabled) {
+  background: var(--color-primary-tint-light);
+  color: var(--color-primary);
+}
+.period-picker-tab.is-active {
+  background: var(--color-primary-tint-focus);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.period-picker-tab:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+.period-picker-tab:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* 沒有交易資料（或未來）的年份 */
+.month-picker-item.is-empty {
+  opacity: 0.35;
+  cursor: default;
+}
+.month-picker-item.is-empty:hover {
+  background: transparent;
+}
+
+/* 沒有紀錄的月份：只淡化當提示，仍然點得下去（跟停用的 is-empty 不同） */
+.month-picker-item.is-no-data:not(.is-selected) {
+  opacity: 0.4;
 }
 
 .stat-card {
@@ -335,27 +432,6 @@
   color: var(--color-text-secondary);
 }
 
-.category-chart-legend {
-  display: grid;
-  grid-template-columns: repeat(4, max-content);
-  justify-content: center;
-  gap: 0.35rem 0.75rem;
-  margin-top: var(--space-sm);
-  font-size: 0.8125rem;
-  color: var(--color-text-secondary);
-}
-.category-chart-legend .legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.category-chart-legend .legend-color {
-  flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-}
-
 .category-stats-list,
 .payment-stats-list {
   list-style: none;
@@ -373,6 +449,19 @@
 .category-stats-list li:last-child,
 .payment-stats-list li:last-child { border-bottom: none; }
 .cat-name, .pay-name { font-weight: 500; color: var(--color-text); }
+/* 分類名左側的色塊：對應圓餅圖切片，取代原本獨立的一排圖例 */
+.cat-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.cat-color {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
 .cat-amount, .pay-amount { font-weight: 600; color: var(--color-text); }
 .category-stats-empty,
 .payment-stats-empty { margin: 0; color: var(--color-text-secondary); font-style: italic; }
@@ -385,30 +474,26 @@
   min-height: 44px;
 }
 
-.category-stats-list li.clickable:hover,
-.payment-stats-list li.clickable:hover {
-  background: var(--color-row-hover);
-  border-radius: 6px;
-  /* 底色左右各外擴 0.5rem:用 box-shadow 撐開,不動 padding 才不會推移文字 */
-  box-shadow: -0.5rem 0 0 var(--color-row-hover), 0.5rem 0 0 var(--color-row-hover);
+/* hover 底色畫在偽元素上：圓角只作用在色塊，列自己的分隔線才不會被圓角帶著翹起來。
+   左右各外擴 0.5rem，不動 padding 就不會推移文字 */
+.category-stats-list li.clickable,
+.payment-stats-list li.clickable {
+  position: relative;
 }
 
-/* 圖例改用 <button>：重置瀏覽器預設樣式，維持原本外觀 */
-.category-chart-legend .legend-item.is-clickable {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: var(--transition);
+.category-stats-list li.clickable:hover::before,
+.payment-stats-list li.clickable:hover::before {
+  content: '';
+  position: absolute;
+  inset: 0 -0.5rem;
+  background: var(--color-row-hover);
+  border-radius: 6px;
 }
-.category-chart-legend .legend-item.is-clickable:hover {
-  color: var(--color-text);
+
+/* 內容要疊在底色之上（定位後代預設會蓋住未定位的內容） */
+.category-stats-list li.clickable > span,
+.payment-stats-list li.clickable > span {
+  position: relative;
 }
-.category-chart-legend .legend-item.is-clickable:focus-visible {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-  border-radius: 4px;
-}
+
+
