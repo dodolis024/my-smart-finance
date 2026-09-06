@@ -290,9 +290,10 @@ export default function DashboardPage() {
     if (!user?.id) return;
     let cancelled = false;
     reconcileStreakFreezes()
-      .then((data) => {
+      .then(async (data) => {
         if (cancelled || !data) return;
-        if (shouldShowFreezeConsumedToast(data)) {
+        if (await shouldShowFreezeConsumedToast(data)) {
+          if (cancelled) return;
           toastRef.current.info(tRef.current('streak.freezeConsumedToast', { count: data.consumedThisCall }));
         }
         if ((data.consumedThisCall ?? 0) > 0) {
@@ -329,9 +330,13 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!dashboardData || streakInitialHandled) return;
     setStreakInitialHandled(true);
-    if (shouldShowBrokenModal(dashboardData.streakBroken)) {
-      openStreakModal(t('streak.brokenTitle'), 'broken');
-    }
+    let cancelled = false;
+    shouldShowBrokenModal(dashboardData.streakBroken)
+      .then((show) => {
+        if (!cancelled && show) openStreakModal(t('streak.brokenTitle'), 'broken');
+      })
+      .catch((err) => console.error('[Dashboard] broken streak modal check failed:', err));
+    return () => { cancelled = true; };
   }, [dashboardData, streakInitialHandled, setStreakInitialHandled, shouldShowBrokenModal, openStreakModal, t]);
 
   const handlePeriodChange = useCallback((next) => {
@@ -376,7 +381,7 @@ export default function DashboardPage() {
         refetchPeriod().catch((err) => console.error('[Dashboard] refetch after write failed:', err));
         refreshSearch();
 
-        if (!result.isEdit && shouldShowPositiveModal(result.date)) {
+        if (!result.isEdit && (await shouldShowPositiveModal(result.date))) {
           const content = getPositiveModalContent();
           openStreakModal(content.title, 'positive');
         }

@@ -1,8 +1,45 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getTodayYmd } from '@/lib/utils';
 import { STREAK_MILESTONES } from '@/lib/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+/**
+ * 每日提醒（連續紀錄彈窗 / 凍結卡提示）的「今天已顯示過」記號。
+ *
+ * 記號同時寫在兩個地方：
+ * - localStorage：本機快取，讓最常見的「同一台裝置今天已看過」不必等網路。
+ * - Supabase settings 表：跨裝置的事實來源，讓電腦看過之後手機不再重跳。
+ *
+ * 讀不到伺服器（離線、請求失敗）時退回只看本機，寧可重複顯示一次也不要整個消失。
+ */
+const NOTICE_SETTINGS_KEY = 'streak_notices';
+
+const NOTICE_LOCAL_KEYS = {
+  positive: 'streakPositiveShownDate',
+  broken: 'streakBrokenShownDate',
+  freezeConsumed: 'streakFreezeConsumedShownDate',
+};
+
+function readLocalNotice(kind, userId) {
+  const base = NOTICE_LOCAL_KEYS[kind];
+  const key = userId ? `${base}:${userId}` : base;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalNotice(kind, userId, date) {
+  const base = NOTICE_LOCAL_KEYS[kind];
+  const key = userId ? `${base}:${userId}` : base;
+  try {
+    window.localStorage.setItem(key, date);
+  } catch {
+    // 私密模式 / 配額用盡：伺服器那份仍會寫入，只是本機少一層快取
+  }
+}
 
 export function useStreak(userId) {
   const { t } = useLanguage();
@@ -78,64 +115,108 @@ export function useStreak(userId) {
     return data;
   }, []);
 
-  /**
-   * 判斷本次是否該跳「用掉凍結卡」的簡單提示：本次有消耗、使用者曾獲得過卡，
-   * 且今天 localStorage 尚未顯示過（比照 shouldShowBrokenModal 的去重寫法）。
-   * @param {{ earnedTotal?: number, consumedThisCall?: number }} [data]
-   */
-  const shouldShowFreezeConsumedToast = useCallback((data) => {
-    const earnedTotal = data?.earnedTotal ?? 0;
-    const consumedThisCall = data?.consumedThisCall ?? 0;
-    if (earnedTotal <= 0 || consumedThisCall <= 0) return false;
+  // 本次 session 已認領的記號，寫回伺服器時一併帶上，
+  // 避免同時認領的兩個提醒互相覆蓋彼此的日期。
+  const claimedNoticesRef = useRef({});
+  // 同一輪多個提醒同時判斷時共用一次讀取
+  const noticesInflightRef = useRef(null);
 
-    const today = getTodayYmd();
-    const key = userId ? `streakFreezeConsumedShownDate:${userId}` : 'streakFreezeConsumedShownDate';
+  const loadRemoteNotices = useCallback(async () => {
+    if (!userId) return null;
+    if (noticesInflightRef.current) return noticesInflightRef.current;
+
+    const request = (async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('user_id', userId)
+        .eq('key', NOTICE_SETTINGS_KEY)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.value ?? {};
+    })();
+
+    noticesInflightRef.current = request;
     try {
-      const shownFor = window.localStorage.getItem(key);
-      if (shownFor === today) return false;
-      window.localStorage.setItem(key, today);
-      return true;
-    } catch {
-      return true;
+      return await request;
+    } finally {
+      noticesInflightRef.current = null;
     }
   }, [userId]);
 
   /**
+   * 認領某個提醒的「今天」：回傳 true 代表這次該顯示，同時把記號寫進本機與伺服器。
+   *
+   * 先看本機（命中就不必等網路），本機沒有才問伺服器另一台裝置是否已顯示過。
+   * 伺服器讀不到就當作沒顯示過——離線時寧可重複跳一次，也不要整個不跳。
+   *
+   * @param {'positive'|'broken'|'freezeConsumed'} kind
+   */
+  const claimNoticeForToday = useCallback(
+    async (kind) => {
+      const today = getTodayYmd();
+      if (readLocalNotice(kind, userId) === today) return false;
+
+      let remote = null;
+      try {
+        remote = await loadRemoteNotices();
+      } catch (err) {
+        console.error('[useStreak] load notice flags failed:', err);
+      }
+
+      writeLocalNotice(kind, userId, today);
+      if (remote?.[kind] === today) return false;
+
+      claimedNoticesRef.current = { ...claimedNoticesRef.current, [kind]: today };
+      if (userId) {
+        const value = { ...(remote ?? {}), ...claimedNoticesRef.current };
+        supabase
+          .from('settings')
+          .upsert({ user_id: userId, key: NOTICE_SETTINGS_KEY, value }, { onConflict: 'user_id,key' })
+          .then(({ error }) => {
+            if (error) console.error('[useStreak] persist notice flag failed:', error);
+          });
+      }
+      return true;
+    },
+    [userId, loadRemoteNotices]
+  );
+
+  /**
+   * 判斷本次是否該跳「用掉凍結卡」的簡單提示：本次有消耗、使用者曾獲得過卡，且今天尚未顯示過。
+   * @param {{ earnedTotal?: number, consumedThisCall?: number }} [data]
+   */
+  const shouldShowFreezeConsumedToast = useCallback(
+    async (data) => {
+      const earnedTotal = data?.earnedTotal ?? 0;
+      const consumedThisCall = data?.consumedThisCall ?? 0;
+      if (earnedTotal <= 0 || consumedThisCall <= 0) return false;
+      return claimNoticeForToday('freezeConsumed');
+    },
+    [claimNoticeForToday]
+  );
+
+  /**
    * @param {boolean} [brokenFromServer]
    */
-  const shouldShowBrokenModal = useCallback((brokenFromServer) => {
-    const broken = brokenFromServer ?? streakState.broken;
-    if (!broken) return false;
-    const today = getTodayYmd();
-    const key = userId ? `streakBrokenShownDate:${userId}` : 'streakBrokenShownDate';
-    try {
-      const shownFor = window.localStorage.getItem(key);
-      if (shownFor === today) return false;
-      window.localStorage.setItem(key, today);
-      return true;
-    } catch {
-      return true;
-    }
-  }, [streakState.broken, userId]);
+  const shouldShowBrokenModal = useCallback(
+    async (brokenFromServer) => {
+      const broken = brokenFromServer ?? streakState.broken;
+      if (!broken) return false;
+      return claimNoticeForToday('broken');
+    },
+    [streakState.broken, claimNoticeForToday]
+  );
 
   const shouldShowPositiveModal = useCallback(
-    (submittedDate) => {
+    async (submittedDate) => {
       const today = getTodayYmd();
       if (!submittedDate || submittedDate !== today) return false;
       if (streakState.broken) return false;
       if (!streakState.count || streakState.count <= 0) return false;
-
-      const key = userId ? `streakPositiveShownDate:${userId}` : 'streakPositiveShownDate';
-      try {
-        const shownFor = window.localStorage.getItem(key);
-        if (shownFor === today) return false;
-        window.localStorage.setItem(key, today);
-        return true;
-      } catch {
-        return true;
-      }
+      return claimNoticeForToday('positive');
     },
-    [streakState.broken, streakState.count, userId]
+    [streakState.broken, streakState.count, claimNoticeForToday]
   );
 
   const getPositiveModalContent = useCallback(() => {
