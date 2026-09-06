@@ -2,7 +2,9 @@ import { useState, useCallback } from 'react';
 
 export function useModalStates() {
   const [streakModal, setStreakModal] = useState({ open: false, title: '', variant: 'neutral' });
-  const [creditCardModal, setCreditCardModal] = useState({ open: false, account: null });
+  // txs：目前檢視期間、這張卡的紀錄（彈窗下半的明細清單用）
+  const [creditCardModal, setCreditCardModal] = useState({ open: false, account: null, txs: [] });
+  // 分類明細，也用於支付方式明細（category.kind === 'payment'）
   const [categoryDetailModal, setCategoryDetailModal] = useState({ open: false, category: null });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
@@ -15,12 +17,12 @@ export function useModalStates() {
     setStreakModal((s) => ({ ...s, open: false }));
   }, []);
 
-  const openCreditCardModal = useCallback((account) => {
-    setCreditCardModal({ open: true, account });
+  const openCreditCardModal = useCallback((account, txs = []) => {
+    setCreditCardModal({ open: true, account, txs });
   }, []);
 
   const closeCreditCardModal = useCallback(() => {
-    setCreditCardModal({ open: false, account: null });
+    setCreditCardModal({ open: false, account: null, txs: [] });
   }, []);
 
   const openCategoryDetailModal = useCallback((category) => {

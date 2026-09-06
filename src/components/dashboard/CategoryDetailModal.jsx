@@ -1,125 +1,55 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Modal from '@/components/common/Modal';
-import TransactionDetail from '@/components/transactions/TransactionDetail';
+import TransactionListPanel from '@/components/transactions/TransactionListPanel';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
-import { useWindowSize } from '@/hooks/useWindowSize';
-import { LAYOUT } from '@/lib/constants';
-import { formatMoney, formatDateForDisplay } from '@/lib/utils';
+import { formatMoney } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function CategoryDetailModal({ isOpen, onClose, category, onEdit, onDelete }) {
+// 分類明細，也服務支付方式明細（category.kind === 'payment'）：
+// 兩者結構一樣（標題 + 總額 + 清單），只有占比那句文案不同。
+export default function CategoryDetailModal({ isOpen, onClose, category, onEdit, onDelete, periodName }) {
   const { t } = useLanguage();
   const dialogRef = useRef(null);
-  const { width } = useWindowSize();
-  const isMobile = width <= LAYOUT.MOBILE_MAX_WIDTH;
-  const [detailTx, setDetailTx] = useState(null);
   // 排序偏好刻意跨開關保留：選過金額的人多半下一次還想看金額
   const [sortBy, setSortBy] = useState('date');
   useScrollbarOnScroll(dialogRef, isOpen && !!category);
 
-  // 本元件靠 `return null` 隱藏，不會被卸載 → detailTx 會跨越開關存活。
-  // 關窗/換分類時清掉，否則下次開窗會把上一筆的詳情一起帶出來。
-  useEffect(() => {
-    setDetailTx(null);
-  }, [isOpen, category]);
-
-  // 開/關內層 TransactionDetail 時，Modal 會無條件移除 body.modal-open
-  //（它內部的 SplitShareDetailModal 以 isOpen=false 掛載也會觸發 else 分支），
-  // 外層彈窗還開著時要補回，否則背景會變成可捲動。
-  useEffect(() => {
-    if (isOpen && category) document.body.classList.add('modal-open');
-  }, [isOpen, category, detailTx]);
-
-  const rows = useMemo(() => {
-    if (!category?.txs) return [];
-    // 日期新到舊；同日以 id 穩定排序，避免每次 render 順序跳動
-    const byDate = (a, b) => {
-      if (a.date === b.date) return String(b.id).localeCompare(String(a.id));
-      return String(b.date).localeCompare(String(a.date));
-    };
-    if (sortBy === 'amount') {
-      // 取絕對值，與圓餅圖切片大小的邏輯一致；同額再退回日期序
-      return [...category.txs].sort((a, b) => {
-        const diff = Math.abs(b.twdAmount || 0) - Math.abs(a.twdAmount || 0);
-        return diff !== 0 ? diff : byDate(a, b);
-      });
-    }
-    return [...category.txs].sort(byDate);
-  }, [category, sortBy]);
-
   if (!category) return null;
 
+  const isPayment = category.kind === 'payment';
+  const rows = category.txs || [];
   const total = Math.abs(category.value);
   const share = category.totalExpense > 0 ? (total / category.totalExpense) * 100 : 0;
   const shareText = share % 1 === 0 ? String(Math.round(share)) : share.toFixed(1);
 
   return (
-    <>
-      <Modal isOpen={isOpen} onClose={onClose} className="category-detail-modal" titleId="category-detail-modal-title">
-        <div className="category-detail-modal__backdrop" onClick={onClose} />
-        <div ref={dialogRef} className="category-detail-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
-          <button type="button" className="category-detail-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
-          <h2 id="category-detail-modal-title" className="category-detail-modal__title">{category.label}</h2>
+    <Modal isOpen={isOpen} onClose={onClose} className="category-detail-modal" titleId="category-detail-modal-title">
+      <div className="category-detail-modal__backdrop" onClick={onClose} />
+      <div ref={dialogRef} className="category-detail-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="category-detail-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
+        <h2 id="category-detail-modal-title" className="category-detail-modal__title">{category.label}</h2>
 
-          <div className="category-detail-modal__summary">
-            <span className="category-detail-modal__total">{formatMoney(category.value)}</span>
-            <span className="category-detail-modal__meta">
-              {t('dashboard.categoryDetailCount', { count: rows.length })}
-              {' · '}
-              {t('dashboard.categoryDetailShare', { percent: shareText })}
-            </span>
-          </div>
-
-          {rows.length > 1 && (
-            <div className="category-detail-sort">
-              <span className="category-detail-sort__label">{t('dashboard.categoryDetailSortBy')}</span>
-              {['date', 'amount'].map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`category-detail-sort__btn${sortBy === key ? ' is-active' : ''}`}
-                  aria-pressed={sortBy === key}
-                  onClick={() => setSortBy(key)}
-                >
-                  {key === 'date' ? t('dashboard.categoryDetailSortDate') : t('dashboard.categoryDetailSortAmount')}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {rows.length === 0 ? (
-            <p className="category-detail-modal__empty">{t('dashboard.categoryDetailEmpty')}</p>
-          ) : (
-            <ul className="category-detail-list">
-              {rows.map((tx) => (
-                <li
-                  key={tx.id}
-                  className="category-detail-row"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setDetailTx(tx)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailTx(tx); } }}
-                >
-                  <span className="category-detail-row__date">{formatDateForDisplay(tx.date, isMobile)}</span>
-                  <span className="category-detail-row__item">{tx.itemName}</span>
-                  <span className="category-detail-row__note">{tx.note}</span>
-                  <span className="category-detail-row__amount">{formatMoney(tx.twdAmount)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="category-detail-modal__summary">
+          <span className="category-detail-modal__total">{formatMoney(category.value)}</span>
+          <span className="category-detail-modal__meta">
+            {t('dashboard.categoryDetailCount', { count: rows.length })}
+            {' · '}
+            {t(isPayment ? 'dashboard.paymentDetailShare' : 'dashboard.categoryDetailShare', { percent: shareText, period: periodName })}
+          </span>
         </div>
-      </Modal>
 
-      <TransactionDetail
-        transaction={detailTx}
-        isOpen={!!detailTx}
-        onClose={() => setDetailTx(null)}
-        // 編輯要捲到下方表單，但 body.modal-open 會鎖住捲動 → 兩層彈窗都得先關掉
-        onEdit={onEdit ? (tx) => { setDetailTx(null); onClose(); onEdit(tx); } : undefined}
-        // 刪除後這份明細快照就過期了，跟換月一樣直接關窗
-        onDelete={onDelete ? async (tx) => { if (await onDelete(tx.id)) { setDetailTx(null); onClose(); } } : undefined}
-      />
-    </>
+        <TransactionListPanel
+          txs={rows}
+          isOpen={isOpen}
+          resetKey={category}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          emptyText={t(isPayment ? 'dashboard.paymentDetailEmpty' : 'dashboard.categoryDetailEmpty', { period: periodName })}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onCloseParent={onClose}
+        />
+      </div>
+    </Modal>
   );
 }

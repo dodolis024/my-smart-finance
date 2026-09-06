@@ -1,15 +1,24 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Modal from './Modal';
+import TransactionListPanel from '@/components/transactions/TransactionListPanel';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { formatMoney, getDaysUntilDay } from '@/lib/utils';
 import { calculateCreditUsage } from '@/lib/creditCard';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function CreditCardModal({ isOpen, onClose, account, history = [], viewedYear, viewedMonth }) {
+// 額度管理是這個彈窗的主角：額度／帳單日永遠在最上方，本期紀錄接在下方。
+// 額度用 history（帳單週期、即時），紀錄用 txs（目前檢視的月／年），兩者期間本就不同。
+export default function CreditCardModal({
+  isOpen, onClose, account, history = [], viewedYear, viewedMonth, otherPeriod,
+  txs, onEdit, onDelete, periodName,
+}) {
   const now = new Date();
-  const isViewingOtherMonth =
-    (viewedYear != null && viewedYear !== now.getFullYear()) ||
-    (viewedMonth != null && viewedMonth !== now.getMonth() + 1);
+  // otherPeriod 由上層明確指定（年檢視一律視為「非當月」：只傳 viewedYear 且剛好是今年會被誤判成當月）；
+  // 未指定時維持原本的年月比對，月檢視行為不變
+  const isViewingOtherMonth = otherPeriod != null
+    ? otherPeriod
+    : (viewedYear != null && viewedYear !== now.getFullYear()) ||
+      (viewedMonth != null && viewedMonth !== now.getMonth() + 1);
 
   const data = useMemo(() => {
     if (!account) return null;
@@ -45,7 +54,12 @@ export default function CreditCardModal({ isOpen, onClose, account, history = []
 
   const { t } = useLanguage();
   const dialogRef = useRef(null);
+  // 排序偏好刻意跨開關保留：選過金額的人多半下一次還想看金額
+  const [sortBy, setSortBy] = useState('date');
   useScrollbarOnScroll(dialogRef, isOpen && !!account);
+
+  const rows = txs || [];
+  const rowsTotal = rows.reduce((sum, tx) => sum + (typeof tx.twdAmount === 'number' ? tx.twdAmount : 0), 0);
 
   if (!account || !data) return null;
   const accountName = account.name || account.accountName || t('creditCard.defaultName');
@@ -58,7 +72,9 @@ export default function CreditCardModal({ isOpen, onClose, account, history = []
         <h2 id="credit-card-modal-title" className="credit-card-modal__title">{accountName}</h2>
         {isViewingOtherMonth && (
           <p className="credit-card-modal__live-hint">
-            {t('creditCard.liveDataHint', { year: viewedYear, month: viewedMonth })}
+            {viewedMonth == null
+              ? t('creditCard.liveDataHintYear', { year: viewedYear })
+              : t('creditCard.liveDataHint', { year: viewedYear, month: viewedMonth })}
           </p>
         )}
         <div className="credit-card-info">
@@ -112,6 +128,29 @@ export default function CreditCardModal({ isOpen, onClose, account, history = []
             </div>
           </div>
         </div>
+
+        {txs && (
+          <section className="credit-card-records">
+            <div className="credit-card-records__header">
+              <h3 className="credit-card-records__title">{t('creditCard.records', { period: periodName })}</h3>
+              <span className="credit-card-records__meta">
+                {t('dashboard.categoryDetailCount', { count: rows.length })}
+                {rows.length > 0 && ` · ${formatMoney(rowsTotal)}`}
+              </span>
+            </div>
+            <TransactionListPanel
+              txs={rows}
+              isOpen={isOpen}
+              resetKey={account}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              emptyText={t('creditCard.recordsEmpty', { period: periodName })}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onCloseParent={onClose}
+            />
+          </section>
+        )}
       </div>
     </Modal>
   );

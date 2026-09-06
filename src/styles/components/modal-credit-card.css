@@ -174,3 +174,38 @@
 .credit-countdown-num.credit-countdown-urgent {
   color: var(--color-danger);
 }
+
+/* 本期紀錄：額度管理仍是第一眼，清單接在下方 */
+.credit-card-records {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.credit-card-records__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.credit-card-records__title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.credit-card-records__meta {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+/* 卡片彈窗比分類明細窄，備註欄讓位給品項與金額 */
+.credit-card-records .category-detail-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.credit-card-records .category-detail-row__note {
+  display: none;
+}
