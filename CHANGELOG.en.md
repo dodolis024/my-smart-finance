@@ -2,9 +2,17 @@
 
 This file records version updates for Smart Finance Tracker.
 
-- Fixed a transaction row flickering nonstop while a swipe was held halfway on mobile; split expenses and group cards are fixed the same way, and a swipe cut short by the system no longer sticks half-open
+- Added a month/year toggle to the overview: see a whole year of income, spending, categories and payment methods at once, with exports following the same period; the app remembers which view you were last using
+- Added paging to the transaction list: 50 rows per page instead of one long scroll, and changing a column filter takes you back to page 1
+- Added payment method details: every row in the payment breakdown opens — credit cards show this period's transactions below the credit limit, other methods open their own detail view
+- Added data hints to the period picker: years with no transactions are dimmed and disabled, months with no spending are dimmed but still open so you can check whether you forgot to record something
+- Improved the category breakdown: the chart colors now sit next to the amounts and the duplicate legend row is gone
+- Improved the detail lists: dates use tabular figures so item names line up, and switching the sort slides each row to its new place instead of flashing the whole list
 - Improved the account area in the desktop sidebar: hovering the avatar when collapsed, or the email when expanded, shows the full address, so you can tell which account you are signed in as either way and a truncated email is still readable; clicking the avatar now opens a logout menu instead of going straight to logging out
+- Improved the category and credit card modals on mobile: short ones are now centered instead of floating against the top edge
 - Improved the add-transaction card on mobile: tighter spacing between fields and the note field is now collapsible, starts collapsed and remembers how you last left it, so the whole card including the save button fits on one screen
+- Fixed the row divider curling up at both ends when hovering a breakdown row
+- Fixed a transaction row flickering nonstop while a swipe was held halfway on mobile; split expenses and group cards are fixed the same way, and a swipe cut short by the system no longer sticks half-open
 
 ## [1.27.1] - Sep-05 2026
 - Improved splitting for currencies without decimals, such as TWD and JPY: shares are now whole numbers (100 split three ways is 34/33/33), so the individual shares in an expense always add back up to the total
