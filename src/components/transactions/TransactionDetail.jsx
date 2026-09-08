@@ -4,6 +4,7 @@ import { formatMoney, formatCurrencyAmount } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { supabase } from '@/lib/supabase';
 import SplitShareDetailModal from '@/components/split/SplitShareDetailModal';
+import LinkifiedText from '@/components/common/LinkifiedText';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function TransactionDetail({ transaction: tx, isOpen, onClose, onEdit, onDelete }) {
@@ -52,7 +53,6 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
   const currency = tx.currency || 'TWD';
   const exchangeRate = tx.exchangeRate || tx.exchange_rate || 1.0;
   const twdAmount = tx.twdAmount || tx.twd_amount || 0;
-  const note = tx.note || t('common.notSet');
   const isSplitSynced =
     typeof tx.isSplitSynced === 'boolean'
       ? tx.isSplitSynced
@@ -146,7 +146,9 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
             )}
             <div className="transaction-detail-item transaction-detail-item--note">
               <div className="transaction-detail-label">{t('transaction.note')}</div>
-              <div className="transaction-detail-value transaction-detail-note">{note}</div>
+              <div className="transaction-detail-value transaction-detail-note">
+                {tx.note ? <LinkifiedText text={tx.note} /> : t('common.notSet')}
+              </div>
             </div>
             {isSplitSynced && (
               <div className="transaction-detail-item">

@@ -28,6 +28,7 @@
 @import url('./components/modal-transaction-detail.css');
 @import url('./components/modal-category-detail.css');
 @import url('./components/badge.css');
+@import url('./components/linkified-text.css');
 @import url('./components/split-page.css');
 @import url('./components/split-detail-header.css');
 @import url('./components/split-detail-expenses.css');

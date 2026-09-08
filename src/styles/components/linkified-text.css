@@ -1,0 +1,11 @@
+/* 備註等純文字裡自動辨識出來的連結 */
+.linkified-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  /* 長網址要能從中間斷行,否則會把彈窗撐寬 */
+  overflow-wrap: anywhere;
+}
+
+.linkified-link:hover {
+  color: var(--color-primary-hover);
+}
