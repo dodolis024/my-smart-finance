@@ -2,6 +2,12 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added automatic syncing of offline entries when the app returns to the foreground, with no need to reopen it or tap "Pending sync"
+- Improved offline syncing to work from any page, so a reconnect while you are on the split page still sends them
+- Improved the category detail view on desktop so a note shows about twice as much text
+- Improved spacing in the category and payment breakdown lists so the color dot no longer sits flush against the card edge
+- Fixed the note column drifting out of line when an amount ran to four or five digits
+
 ## [1.29.0] - Sep-09 2026
 - Added a balance for cash and other non-credit accounts: it counts down with spending and never resets automatically, and can be corrected any time from the account's balance view
 - Added day grouping to the transaction list: each day's date and total now sit outside the card as a heading instead of being a table row; year view still lists every transaction in order, ungrouped

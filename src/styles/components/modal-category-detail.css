@@ -15,7 +15,10 @@
 }
 .category-detail-modal__dialog {
   position: relative;
-  width: min(560px, calc(100% - 2rem));
+  /* 560px 時備註欄只分到約 160px（12 個中文字），日常長度的備註就被截斷；
+     820px 讓備註欄拿到約 306px（23 字），再寬下去品項與金額會被拉得太開反而難讀。
+     手機仍由 calc(100% - 2rem) 收斂，不受影響 */
+  width: min(820px, calc(100% - 2rem));
   max-height: calc(100dvh - 8dvh);
   margin: 4dvh auto;
   padding: 2rem;
@@ -132,7 +135,14 @@
 }
 .category-detail-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.3fr) auto;
+  /* 品項欄固定寬（不用 fr）：金額位數一多，auto 的金額欄就會變寬並吃掉前面
+     彈性欄的空間，備註起點便逐列飄移（四位數金額差 6px、五位數差 15px），
+     看起來像有些列的備註被縮排。品項欄寫死後，金額變寬只會壓縮備註的寬度，
+     起點固定不動。
+     11rem 的來源：實測現有交易最長的品項名約 130px，留 46px（約 35%）餘裕給
+     日後更長的名稱，可容 11 個中文字或 19 個英文字母；備註欄仍有約 384px，
+     高於實測 p95 的 276px。品項超過此寬度會截斷，不會破壞版面。 */
+  grid-template-columns: auto 11rem minmax(0, 1fr) auto;
   gap: 0.75rem;
   align-items: center;
   padding: 0.6rem 0.5rem;
@@ -200,6 +210,9 @@
   white-space: nowrap;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  /* 備註起點已由固定寬的品項欄保證對齊（見 .category-detail-row），
+     這裡的最小寬度只是不讓金額欄在小額時窄到跟備註擠在一起 */
+  min-width: 6ch;
 }
 
 /* 開窗與換排序時整份清單淡入一次，蓋掉逐列重排的閃動 */

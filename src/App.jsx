@@ -9,6 +9,7 @@ import { ThemeProvider } from '@/hooks/useTheme';
 import { useTimezoneSync } from '@/hooks/useTimezoneSync';
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
 import PreferenceSync from '@/components/PreferenceSync';
+import OfflineSyncWatcher from '@/components/OfflineSyncWatcher';
 import ToastContainer from '@/components/common/ToastContainer';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
@@ -66,6 +67,8 @@ function AppShell() {
 
   return (
     <>
+      {/* 離線佇列補送不綁單一頁面：停在分帳頁時恢復連線／回到前景也要送出 */}
+      <OfflineSyncWatcher />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/auth" element={<AuthPage />} />

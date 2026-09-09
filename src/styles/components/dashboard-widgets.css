@@ -443,7 +443,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.35rem 0;
+  /* 左右內距讓色點不要貼著卡片內緣，也讓 hover 底色在文字外圍留白
+     （分隔線畫在 border 上，仍是整列寬度，不會跟著縮） */
+  padding: 0.35rem 0.5rem;
   border-bottom: 1px solid var(--color-border);
 }
 .category-stats-list li:last-child,
@@ -475,7 +477,7 @@
 }
 
 /* hover 底色畫在偽元素上：圓角只作用在色塊，列自己的分隔線才不會被圓角帶著翹起來。
-   左右各外擴 0.5rem，不動 padding 就不會推移文字 */
+   底色與列同寬，留白由列自己的左右 padding 撐出來 */
 .category-stats-list li.clickable,
 .payment-stats-list li.clickable {
   position: relative;
@@ -485,7 +487,7 @@
 .payment-stats-list li.clickable:hover::before {
   content: '';
   position: absolute;
-  inset: 0 -0.5rem;
+  inset: 0;
   background: var(--color-row-hover);
   border-radius: 6px;
 }
