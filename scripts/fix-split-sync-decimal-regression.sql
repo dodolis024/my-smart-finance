@@ -1,66 +1,45 @@
 -- =============================================================================
--- Smart Finance Tracker - 分帳同步至帳本的擁有權檢查（一次性腳本）
+-- Smart Finance Tracker - 補回 sync_split_to_ledger 被覆寫掉的兩處修正（一次性腳本）
 -- 在 Supabase Dashboard > SQL Editor 中執行
 -- =============================================================================
 --
--- ⚠️ 已被 scripts/fix-split-sync-decimal-regression.sql 取代（2026-09-09）：
---    本腳本的底稿是 fix-split-error-codes.sql，漏掉同日更後面才執行的
---    fix-split-join-auth-and-decimal-list.sql，把零小數幣別清單與 DETAIL
---    分隔符洗回舊版。下方定義僅供對照，勿再直接執行。
+-- 背景：2026-09-09 發現 prod 的 sync_split_to_ledger 比 repo 落後兩處。
 --
--- 背景：2026-08-31 資安健檢 M-3 / M-4。兩者都在 sync_split_to_ledger 這一支
--- SECURITY DEFINER 函式裡，同一種病：信任呼叫端給的識別碼，沒確認那個東西
--- 是不是呼叫者自己的。
+-- 成因是同一天三支腳本的執行順序，加上八月底照抄了中間那一支：
+--   2026-07-11 ① fix-split-atomic-add-and-rate-guard.sql  匯率守門、重同步更新日期
+--   2026-07-11 ② fix-split-error-codes.sql                RAISE 訊息改錯誤碼
+--   2026-07-11 ③ fix-split-join-auth-and-decimal-list.sql 零小數幣別清單、DETAIL 分隔符
+--   2026-08-31 ④ fix-split-sync-ownership.sql             擁有權檢查（底稿是 ②，不是 ③）
+-- ④ 是最後一次覆寫這支函式，於是 ③ 的兩處改動被一起洗掉。
 --
--- 這支函式的用途：把使用者在某個分帳群組的分攤總額，同步成他個人帳本裡的
--- 一筆支出。再次同步時要更新「上次建立的那一筆」，而不是重複新增，因此
--- split_ledger_syncs 記著「某人在某群組的分攤 → 對應到哪一筆 transaction」。
+-- 被洗掉的兩處：
+--   ① 零小數幣別清單退回 ('TWD','JPY','KRW','VND','HUF','ISK','IDR')
+--      正確清單是 ISO 4217 零小數名單 + TWD（本專案慣例），定義在
+--      src/lib/constants.js 的 ZERO_DECIMAL_CURRENCIES。
+--      影響：群組幣別若是 CLP、XOF 等被漏掉的幣別，寫進帳本的金額會多帶兩位小數；
+--      HUF、IDR 則反過來被當成零小數。更麻煩的是 get_split_sync_status 仍是正確清單
+--      （③ 也改了它，但 ④ 沒動到它），兩邊四捨五入結果不同時，needs_update 會恆真
+--      ——按了「更新同步」金額卻對不上，狀態盒一直停在「有新費用」。
+--   ② SPLIT_RATE_UNAVAILABLE 的 DETAIL 分隔符退回頓號 '、'
+--      src/lib/splitErrors.js 會把 DETAIL 原樣插進錯誤文案，英文介面下會出現
+--      "USD、GBP exchange rate is currently unavailable"。③ 當初就是為此改成 ', '。
 --
--- ① M-3：更新交易時沒有比對擁有者
---    UPDATE transactions ... WHERE id = v_existing_sync.transaction_id
---    缺 AND user_id = v_user_id。transaction_id 是從 split_ledger_syncs 讀出來的，
---    而那張表的內容使用者可以自己寫：
---      split_ledger_syncs_insert 的 WITH CHECK 只有 user_id = auth.uid()，
---      不檢查 transaction_id 是不是自己的交易。
---    因此把該欄位填成別人的交易編號再觸發同步，那筆交易的日期、金額、幣別、
---    匯率、品項名稱就會被整個蓋掉。
+-- 實務影響：使用者目前的群組幣別是 TWD／GBP／JPY，三者在新舊清單下結果相同，
+-- 所以尚未實際受害。這支腳本是把 prod 拉回 repo 的正確定義，不是在救火。
 --
---    健檢報告只提到 INSERT 路徑，但 UPDATE 路徑更好走：
---    split_ledger_syncs_update 是 USING (user_id = auth.uid()) 且沒有 WITH CHECK，
---    Postgres 缺 WITH CHECK 時沿用 USING，而改完 transaction_id 之後
---    user_id = auth.uid() 依然成立 → 放行。加上表上有 UNIQUE (user_id, group_id)，
---    攻擊者通常本來就有一列，連 INSERT 都不必。這與 S-1 的 split_members
---    是同一個洞型（見 scripts/fix-split-member-access.sql 第 ② 段）。
+-- 函式定義來源：scripts/fix-split-sync-ownership.sql 第 1 節（prod 現況），
+-- 除上述兩處外逐字照抄，簽章、LANGUAGE、SECURITY DEFINER、SET search_path 不變。
+-- 結果與 database/split-sync-migration.sql 的定義一致（該檔已是合併後的正確版本）。
 --
---    實際難度：transaction_id 是隨機 UUID，且目前沒有已知的洩漏管道，
---    所以報告歸類為「中」。本腳本補的是那一道缺席的檢查，不是在救火。
+-- 擁有權檢查（ACCOUNT_NOT_OWNED、UPDATE 的 AND user_id、IF NOT FOUND）全部保留，
+-- 本腳本不碰 assert_sync_tx_owned trigger，也不碰 get_split_sync_status。
 --
--- ② M-4：p_account_id 沒有驗證擁有者
---    由前端傳入後直接寫進 transactions.account_id，SECURITY DEFINER 讓 RLS
---    擋不住。目前傷害有限（產生的仍是自己的交易列，只是外鍵指向別人的帳戶），
---    但日後任何「用 account_id 去 join 帳戶資訊」的新功能，都會瞬間變成
---    跨用戶資料外洩。
---
--- 修法是一前一後兩道，缺一不可：
---   前：trigger 在寫入 split_ledger_syncs 時就擋掉不屬於自己的 transaction_id
---   後：函式動手改交易前再確認一次，改不到就明確報錯
---   （單靠 trigger，既有的錯誤資料仍會被沿用；單靠函式，壞資料還是寫得進表。）
---
--- 函式定義來源：scripts/fix-split-error-codes.sql 第 1 節（目前最新定義），
--- 除下列三處外逐字照抄，簽章、LANGUAGE、SECURITY DEFINER、SET search_path 不變：
---   - 新增 p_account_id 擁有權檢查
---   - UPDATE transactions 補 AND user_id = v_user_id
---   - 該 UPDATE 之後補 IF NOT FOUND 的明確報錯
---
--- 新增錯誤碼（已同步至 src/lib/splitErrors.js 與 locales/{zh,en}.js）：
---   ACCOUNT_NOT_OWNED        → 此帳戶不屬於你
---   SPLIT_SYNC_TX_NOT_OWNED  → 同步記錄指向的交易不屬於你
---
--- 重要：本腳本須在 Supabase prod 執行，並在部署後記入 docs/DEPLOYMENT.md。
+-- 重要：本腳本須在 Supabase prod 執行，並在部署後記入 docs/DEPLOYMENT.md
+-- 的「一次性 SQL 腳本執行紀錄」表格。
 -- =============================================================================
 
 -- =============================================================================
--- 1. sync_split_to_ledger：補上兩處擁有權檢查
+-- 1. sync_split_to_ledger：補回零小數幣別清單與 DETAIL 分隔符
 -- =============================================================================
 CREATE OR REPLACE FUNCTION sync_split_to_ledger(
   p_group_id       UUID,
@@ -111,7 +90,7 @@ BEGIN
 
   -- 匯率前置檢查：寫入路徑查無匯率時直接報錯，避免以 1:1 匯率寫入錯誤金額
   -- （SUM 表達式內無法 RAISE，故在計算前先檢查所有涉及的幣別）
-  SELECT string_agg(DISTINCT se.currency, '、')
+  SELECT string_agg(DISTINCT se.currency, ', ')
   INTO v_missing
   FROM split_expense_shares ses
   JOIN split_expenses se ON se.id = ses.expense_id
@@ -151,9 +130,13 @@ BEGIN
   JOIN split_expenses se ON se.id = ses.expense_id
   WHERE se.group_id = p_group_id AND ses.member_id = v_member_id;
 
-  -- 依幣別決定小數位數（TWD/JPY/KRW/VND 等無小數）
+  -- 依幣別決定小數位數（此清單須與 src/lib/constants.js 的 ZERO_DECIMAL_CURRENCIES 保持一致）
   v_decimal_places := CASE
-    WHEN v_group_currency IN ('TWD', 'JPY', 'KRW', 'VND', 'HUF', 'ISK', 'IDR') THEN 0
+    WHEN v_group_currency IN (
+      'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW',
+      'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+      'TWD'
+    ) THEN 0
     ELSE 2
   END;
   v_total_share := ROUND(v_total_share, v_decimal_places);
@@ -204,7 +187,7 @@ BEGIN
 
     -- transaction_id 對 transactions 是 ON DELETE CASCADE，交易被刪除時這列
     -- 同步記錄會一併消失，所以「匹配 0 列」在正常流程下不可能發生——只有同步
-    -- 記錄被指到別人的交易時才會走到這裡。原本會靜默回傳成功，改為明確擋下。
+    -- 記錄被指到別人的交易時才會走到這裡。不可靜默略過。
     IF NOT FOUND THEN
       RAISE EXCEPTION 'SPLIT_SYNC_TX_NOT_OWNED';
     END IF;
@@ -260,94 +243,70 @@ BEGIN
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
 -- =============================================================================
--- 2. split_ledger_syncs：從源頭擋掉指向別人交易的同步記錄
--- =============================================================================
--- 為什麼用 trigger 而不是 CHECK 約束或 policy：
---   - CHECK 不能跨表查詢，無法表達「transaction_id 必須存在於 transactions
---     且該列的 user_id 等於本列的 user_id」。
---   - policy 的 WITH CHECK 雖然看得到新值，但 UPDATE 缺 WITH CHECK 時會沿用
---     USING，補 policy 得同時處理 INSERT 與 UPDATE 兩條、且日後容易再漏。
---     trigger 一次蓋住兩條路徑，與 protect_split_group_ownership、
---     protect_split_member_identity 沿用同一模式。
-CREATE OR REPLACE FUNCTION assert_sync_tx_owned()
-RETURNS TRIGGER
-SET search_path = public
-AS $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM transactions
-    WHERE id = NEW.transaction_id AND user_id = NEW.user_id
-  ) THEN
-    RAISE EXCEPTION 'SPLIT_SYNC_TX_NOT_OWNED';
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS assert_sync_tx_owned ON split_ledger_syncs;
-CREATE TRIGGER assert_sync_tx_owned
-  BEFORE INSERT OR UPDATE ON split_ledger_syncs
-  FOR EACH ROW
-  EXECUTE FUNCTION assert_sync_tx_owned();
-
--- =============================================================================
--- 3. 驗證
+-- 2. 驗證
 -- =============================================================================
 -- 寫成單一查詢：Supabase SQL Editor 執行多段 SQL 時只顯示最後一句的輸出，
 -- 分開寫等於前面幾項白驗（RAISE NOTICE 同樣不顯示，別用）。
 --
 -- 預期：每一列的「結果」都等於「預期」。
 SELECT * FROM (
-  SELECT 1 AS 序, '同步函式有 account 擁有權檢查' AS 檢查項目,
-    (SELECT (pg_get_functiondef(oid) LIKE '%ACCOUNT_NOT_OWNED%')::text FROM pg_proc
+  SELECT 1 AS 序, '同步函式已含完整零小數清單（抽驗 XOF）' AS 檢查項目,
+    (SELECT (pg_get_functiondef(oid) LIKE '%XOF%')::text FROM pg_proc
       WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace) AS 結果,
     'true' AS 預期
-  UNION ALL SELECT 2, '同步函式的交易 UPDATE 有比對擁有者',
+  UNION ALL SELECT 2, '同步函式已無舊清單殘留（HUF 不該出現）',
+    (SELECT (pg_get_functiondef(oid) LIKE '%HUF%')::text FROM pg_proc
+      WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace),
+    'false'
+  UNION ALL SELECT 3, '同步函式與狀態函式的清單一致（兩邊都有 XOF）',
+    (SELECT (pg_get_functiondef(oid) LIKE '%XOF%')::text FROM pg_proc
+      WHERE proname = 'get_split_sync_status' AND pronamespace = 'public'::regnamespace),
+    'true'
+  UNION ALL SELECT 4, 'DETAIL 分隔符已改回中性的逗號',
+    (SELECT (pg_get_functiondef(oid) LIKE '%se.currency, '', ''%')::text FROM pg_proc
+      WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace),
+    'true'
+  UNION ALL SELECT 5, '擁有權檢查未被洗掉：account 檢查',
+    (SELECT (pg_get_functiondef(oid) LIKE '%ACCOUNT_NOT_OWNED%')::text FROM pg_proc
+      WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace),
+    'true'
+  UNION ALL SELECT 6, '擁有權檢查未被洗掉：交易 UPDATE 比對擁有者',
     (SELECT (pg_get_functiondef(oid) LIKE '%AND user_id = v_user_id%')::text FROM pg_proc
       WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace),
     'true'
-  UNION ALL SELECT 3, '同步函式仍是 SECURITY DEFINER',
+  UNION ALL SELECT 7, '擁有權檢查未被洗掉：改不到列時明確報錯',
+    (SELECT (pg_get_functiondef(oid) LIKE '%SPLIT_SYNC_TX_NOT_OWNED%')::text FROM pg_proc
+      WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace),
+    'true'
+  UNION ALL SELECT 8, '匯率守門未被洗掉',
+    (SELECT (pg_get_functiondef(oid) LIKE '%SPLIT_RATE_UNAVAILABLE%')::text FROM pg_proc
+      WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace),
+    'true'
+  UNION ALL SELECT 9, '同步函式仍是 SECURITY DEFINER',
     (SELECT prosecdef::text FROM pg_proc
       WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace),
     'true'
-  UNION ALL SELECT 4, '同步函式的 search_path 未掉',
+  UNION ALL SELECT 10, '同步函式的 search_path 未掉',
     (SELECT array_to_string(proconfig, ',') FROM pg_proc
       WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace),
     'search_path=public'
-  UNION ALL SELECT 5, 'trigger 已建立且啟用',
+  UNION ALL SELECT 11, 'trigger 仍在（本腳本不該動到它）',
     (SELECT tgenabled::text FROM pg_trigger
       WHERE tgrelid = 'split_ledger_syncs'::regclass AND tgname = 'assert_sync_tx_owned'),
     'O'
-  UNION ALL SELECT 6, 'trigger 涵蓋 INSERT 與 UPDATE',
-    (SELECT ((tgtype & 4) > 0 AND (tgtype & 16) > 0)::text FROM pg_trigger
-      WHERE tgrelid = 'split_ledger_syncs'::regclass AND tgname = 'assert_sync_tx_owned'),
-    'true'
-  UNION ALL SELECT 7, '既有同步記錄指向他人交易的筆數',
-    (SELECT count(*)::text FROM split_ledger_syncs s
-      WHERE NOT EXISTS (SELECT 1 FROM transactions t
-                        WHERE t.id = s.transaction_id AND t.user_id = s.user_id)),
-    '0'
 ) v ORDER BY 序;
 
 -- -----------------------------------------------------------------------------
 -- 執行後必須實測（SQL 驗不出來的部分）：
---   1) 對一個尚未同步的群組按「同步到個人帳本」→ 應成功建立交易
---   2) 群組再新增一筆費用後按「重新同步」→ 應更新同一筆交易，金額改變
---   3) 同步時指定不同的付款方式／帳戶 → 應成功且記在指定帳戶
---   4) 刪除同步產生的交易後再按同步 → 應重新建立（同步記錄隨 CASCADE 消失）
---   5) 第 7 項驗證若不是 0，先別上線：表示 prod 已有指向他人交易的同步記錄，
---      需要先查清成因（正常使用不會產生），再決定清理方式
+--   1) 對一個尚未同步的群組按「同步至帳本」→ 應成功建立交易，金額小數位正確
+--   2) 群組再新增一筆費用後按「更新同步」→ 同一筆交易金額更新，且狀態盒
+--      隨即回到「已同步」（不再卡在「有新費用」）
+--   3) 幣別為 TWD 的群組同步後金額應為整數，幣別為 GBP 的應保留兩位小數
 -- -----------------------------------------------------------------------------
 
 -- =============================================================================
 -- Rollback（僅在上述實測失敗時使用）
 -- =============================================================================
--- 第 1 段還原：照 scripts/fix-split-error-codes.sql 第 1 節原樣重建函式。
---   ⚠️ 這會把 M-3／M-4 重新打開，只應作為緊急止血。
---
--- 第 2 段還原：
---   DROP TRIGGER IF EXISTS assert_sync_tx_owned ON split_ledger_syncs;
---   DROP FUNCTION IF EXISTS assert_sync_tx_owned();
--- =============================================================================
+-- 整段重跑 scripts/fix-split-sync-ownership.sql 的第 1 節即可退回本次修改前的定義
+-- （該版本除本腳本改的兩處外完全相同）。

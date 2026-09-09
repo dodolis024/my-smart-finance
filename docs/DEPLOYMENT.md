@@ -64,6 +64,7 @@
 | scripts/fix-split-sync-ownership.sql | 分帳同步補擁有權檢查:交易 UPDATE 比對 user_id、p_account_id 驗證擁有者,split_ledger_syncs 加 assert_sync_tx_owned trigger | 2026-08-31 |
 | database/split-pin-migration.sql | 分帳群組置頂:新增 split_group_pins 表(user_id+group_id),4 條 RLS 均限 user_id = auth.uid();INSERT 另以 can_access_split_group 擋住對他人群組的探測,UPDATE 為前端 upsert 走 ON CONFLICT DO UPDATE 所必需(缺了跨裝置置頂會被擋) | 2026-09-02 |
 | database/split-member-delete-guard-migration.sql | 移除成員的守門:split_expense_shares.member_id 與 split_settlements 的 from/to_member 三個外鍵由 ON DELETE CASCADE 改為 ON DELETE RESTRICT。原本刪成員會連分攤與還款紀錄一起消失,那些費用的分攤加總不再等於金額,代墊者永遠少收且畫面看不出來。前端已擋,這層是防漏。已以 pg_constraint 驗證三列 confdeltype = r | 2026-09-05 |
+| scripts/fix-split-sync-decimal-regression.sql | sync_split_to_ledger 補回被 fix-split-sync-ownership.sql 洗掉的兩處:零小數幣別清單對齊 src/lib/constants.js 的 ZERO_DECIMAL_CURRENCIES、SPLIT_RATE_UNAVAILABLE 的 DETAIL 分隔符改回 ", "。擁有權檢查與匯率守門原樣保留,定義已與 database/split-sync-migration.sql 逐字一致 | 2026-09-09 |
 
 > 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
 > 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,
@@ -77,6 +78,22 @@
 >
 > 另注意 Supabase SQL Editor **執行多段 SQL 時只顯示最後一句的輸出**,
 > 驗證查詢要合併成單一句,否則前面幾項等於沒驗(與 RAISE NOTICE 不顯示同類)。
+>
+> 2026-09-09:`fix-split-sync-decimal-regression.sql` 修的不是新 bug,是
+> **2026-08-31 那批自己造成的回歸**。`sync_split_to_ledger` 前後被 5 份檔案
+> `CREATE OR REPLACE` 過,`fix-split-sync-ownership.sql` 照抄的底稿是同一天三支腳本
+> 的中間那支(`fix-split-error-codes.sql`),漏掉更後面才執行的
+> `fix-split-join-auth-and-decimal-list.sql`,於是把零小數幣別清單與 DETAIL 分隔符
+> 一起洗回舊版。腳本跑完不會噴錯,兩個表格也都記得好好的——**執行紀錄只證明腳本跑過,
+> 證明不了它帶的是最新定義**。
+>
+> 因此:改任何被重複定義過的函式時,底稿一律取**本表最後一次動到它的那份**,
+> 改完把函式本體與 `database/` 的正規定義檔逐字 diff 一次再送。
+> 本次已用同樣方式核對其餘 8 支被多份腳本重複定義的函式
+> (`get_dashboard_data`、`get_split_member_avatars_batch`、`add_split_expense`、
+> `update_split_expense`、`protect_split_group_ownership`、
+> `join_split_group_as_new_member`、`link_self_to_split_member`、
+> `get_group_by_invite_code`),後版都是前版的嚴格超集,沒有同類問題。
 
 ### 正式定義檔重跑紀錄
 
@@ -188,6 +205,7 @@
 | 日期 | 範圍 | 結果 |
 |---|---|---|
 | 2026-09-02 | 2026-08-31 批次的 5 支 SQL 腳本 + 6 支 Edge Function | 22 項全數通過 |
+| 2026-09-09 | scripts/fix-split-sync-decimal-regression.sql | 11 項全數通過 |
 
 > 2026-09-02 的重點不在前 19 項設定檢查,而在後 3 項:
 > `credit-card-reminder-daily` 首次成功執行(2026-09-02 01:00 UTC = 台灣 09:00),

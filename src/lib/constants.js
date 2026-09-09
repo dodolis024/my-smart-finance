@@ -39,6 +39,9 @@ export const DEFAULT_ACCOUNT = {
 // convention (Taiwan practice treats NT$ as whole dollars despite ISO allowing 2).
 // database/split-sync-migration.sql (sync_split_to_ledger) keeps a SQL copy of
 // this list for v_decimal_places — keep both in sync when changing this set.
+// Any one-off script that re-declares sync_split_to_ledger must carry the list
+// over too: scripts/fix-split-sync-ownership.sql copied an older definition and
+// silently reverted it (fixed by scripts/fix-split-sync-decimal-regression.sql).
 export const ZERO_DECIMAL_CURRENCIES = new Set([
   'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW',
   'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
