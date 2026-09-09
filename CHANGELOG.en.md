@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.29.0] - Sep-09 2026
 - Added a balance for cash and other non-credit accounts: it counts down with spending and never resets automatically, and can be corrected any time from the account's balance view
 - Added day grouping to the transaction list: each day's date and total now sit outside the card as a heading instead of being a table row; year view still lists every transaction in order, ungrouped
 - Added a "Subscription" badge on auto-billed transactions
