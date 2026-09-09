@@ -11,6 +11,7 @@ This file records version updates for Smart Finance Tracker.
 - Improved the browser back button inside a split group to return to the group list instead of leaving the split page
 - Fixed the note column drifting out of line when an amount ran to four or five digits
 - Fixed a device still receiving an account's notifications after it logged out, including for whoever logs in next; signing back in restores them automatically
+- Fixed removing a member from a split group always failing
 
 ## [1.29.0] - Sep-09 2026
 - Added a balance for cash and other non-credit accounts: it counts down with spending and never resets automatically, and can be corrected any time from the account's balance view

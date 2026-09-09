@@ -168,7 +168,7 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
 
     const ok = await confirm(t('split.removeMemberConfirm', { name: member?.name ?? '' }));
     if (!ok) return;
-    await onRemoveMember(group.id, memberId);
+    await onRemoveMember(memberId);
   };
 
   const handleCopyLink = () => {
