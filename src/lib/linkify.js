@@ -80,3 +80,13 @@ export function linkifyParts(text) {
 export function hasLink(text) {
   return linkifyParts(text).some((part) => part.type === 'link');
 }
+
+// 給「要離開網站了」的確認訊息用:只秀網域,不秀整串網址,
+// 使用者才看得出真正會去哪個網站(長網址容易把關鍵資訊擠到看不見)。
+export function linkDomain(url) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}

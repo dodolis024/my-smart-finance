@@ -12,12 +12,24 @@ export default function ConfirmDialog({ state, onConfirm, onCancel }) {
           <button className="confirm-dialog__btn" onClick={onCancel}>
             {t('common.cancel')}
           </button>
-          <button
-            className={`confirm-dialog__btn ${state.danger ? 'confirm-dialog__btn--danger' : 'confirm-dialog__btn--confirm'}`}
-            onClick={onConfirm}
-          >
-            {t('common.confirm')}
-          </button>
+          {state.href ? (
+            <a
+              className="confirm-dialog__btn confirm-dialog__btn--confirm"
+              href={state.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onConfirm}
+            >
+              {t('common.confirm')}
+            </a>
+          ) : (
+            <button
+              className={`confirm-dialog__btn ${state.danger ? 'confirm-dialog__btn--danger' : 'confirm-dialog__btn--confirm'}`}
+              onClick={onConfirm}
+            >
+              {t('common.confirm')}
+            </button>
+          )}
         </div>
       </div>
     </div>

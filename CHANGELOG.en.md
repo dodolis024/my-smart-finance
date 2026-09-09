@@ -5,7 +5,7 @@ This file records version updates for Smart Finance Tracker.
 - Added a balance for cash and other non-credit accounts: it counts down with spending and never resets automatically, and can be corrected any time from the account's balance view
 - Added day grouping to the transaction list: each day's date and total now sit outside the card as a heading instead of being a table row; year view still lists every transaction in order, ungrouped
 - Added a "Subscription" badge on auto-billed transactions
-- Added automatic links for URLs in a note: open one from the transaction detail in a new tab, or in your default browser when running the app from the home screen
+- Added automatic links for URLs in a note: open one from the transaction detail in a new tab, or in your default browser when running the app from the home screen; links in a split expense note are written by group members, so opening one asks you to confirm the destination first
 - Improved the category dot color in the transaction list to match the pie chart's palette instead of using a separate one
 - Fixed the streak reminder modal showing once per device instead of once per day across all devices
 

@@ -622,6 +622,7 @@ const en = {
     expenseAdded: 'Expense added!',
     expenseUpdated: 'Expense updated!',
     deleteExpenseConfirm: 'Are you sure you want to delete this expense?',
+    externalLinkConfirm: 'You are about to leave Smart Finance and open {domain}. This link was written in a note by a group member — open it?',
     expenseDeleted: 'Deleted.',
     deleteExpenseFailed: 'Failed to delete, please try again.',
     settingsUpdated: 'Group settings updated!',

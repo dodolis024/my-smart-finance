@@ -3,9 +3,13 @@ import { LAYOUT } from '@/lib/constants';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
+import LinkifiedText from '@/components/common/LinkifiedText';
+import { linkDomain } from '@/lib/linkify';
 
 export default function SplitExpenseItem({ expense, members, onEdit, onDelete, readOnly = false }) {
   const { t } = useLanguage();
+  const { confirm } = useConfirm();
   const [expanded, setExpanded] = useState(false);
   const rowRef = useRef(null);
   const { width } = useWindowSize();
@@ -120,7 +124,16 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete, r
         {expanded && (
           <div className="split-expense-item__detail">
             {expense.note && (
-              <p className="split-expense-item__note">{expense.note}</p>
+              <p className="split-expense-item__note">
+                <LinkifiedText
+                  text={expense.note}
+                  // 分帳的備註是群組裡任何人寫的,離開網站前先讓使用者看清楚要去哪
+                  onLinkClick={(url) => confirm(
+                    t('split.externalLinkConfirm', { domain: linkDomain(url) }),
+                    { href: url }
+                  )}
+                />
+              </p>
             )}
             <div className="split-expense-item__shares">
               <p className="split-expense-item__shares-label">{t('split.shareDetails')}</p>

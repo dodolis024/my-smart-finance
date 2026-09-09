@@ -6,10 +6,12 @@ export function ConfirmProvider({ children }) {
   const [confirmState, setConfirmState] = useState(null);
   const resolveRef = useRef(null);
 
-  const confirm = useCallback((message, { danger = false } = {}) => {
+  // href 有給的時候,確認鍵會渲染成真的 <a>:瀏覽器原生導航不會被彈出視窗
+  // 阻擋器攔下來,await 之後才呼叫 window.open 就會有這個風險。
+  const confirm = useCallback((message, { danger = false, href = null } = {}) => {
     return new Promise((resolve) => {
       resolveRef.current = resolve;
-      setConfirmState({ message, danger });
+      setConfirmState({ message, danger, href });
     });
   }, []);
 

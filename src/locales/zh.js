@@ -622,6 +622,7 @@ const zh = {
     expenseAdded: '費用已新增！',
     expenseUpdated: '費用已更新！',
     deleteExpenseConfirm: '確定要刪除這筆費用嗎？',
+    externalLinkConfirm: '即將離開 Smart Finance，前往 {domain}。這個連結是群組成員寫在備註裡的，確認要開啟嗎？',
     expenseDeleted: '已刪除。',
     deleteExpenseFailed: '刪除失敗，請稍後再試。',
     settingsUpdated: '群組設定已更新！',

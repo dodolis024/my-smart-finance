@@ -246,6 +246,13 @@ button {
   background: var(--color-row-hover);
 }
 
+/* 「即將離開網站」的確認鍵是真的 <a>(避開彈出視窗阻擋),外觀要跟按鈕一致 */
+a.confirm-dialog__btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 .confirm-dialog__btn--confirm {
   background: var(--color-primary);
   color: var(--color-on-primary);
