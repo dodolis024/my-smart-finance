@@ -359,4 +359,18 @@ describe('AddExpenseModal — 編輯既有費用', () => {
     const customBtn = container.querySelectorAll('.split-modal__share-mode-btn')[1];
     expect(customBtn.className).toContain('is-active');
   });
+
+  it('預設付款人是登入者自己，不是成員清單的第一位', () => {
+    // 群組是共用的：小明登入時預設若是建群組的 Doris，
+    // 他每筆都得手動改，漏改就把自己付的錢記到別人頭上
+    render({ selfMemberId: 'm2' });
+
+    expect($('#expense-paidby').value).toBe('m2');
+  });
+
+  it('沒把自己連結到成員時，付款人退回第一位成員', () => {
+    render({ selfMemberId: undefined });
+
+    expect($('#expense-paidby').value).toBe('m1');
+  });
 });

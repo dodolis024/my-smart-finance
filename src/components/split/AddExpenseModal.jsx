@@ -6,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { resolveRpcError } from '@/lib/splitErrors';
 import { splitEqually, isEqualSplit, sumMatchesAmount, remainderOffset, roundToCurrencyUnit, normalizeShares, MAX_SPLIT_AMOUNT } from '@/lib/splitShares';
 
-export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, groupCurrency = 'TWD', defaultExpenseCurrency, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
+export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, editingExpense, members, selfMemberId, groupCurrency = 'TWD', defaultExpenseCurrency, currencies = ['TWD', 'USD', 'JPY', 'EUR', 'GBP'] }) {
   const { t } = useLanguage();
   const isEditing = !!editingExpense;
   const initialCurrency = defaultExpenseCurrency || groupCurrency;
@@ -35,12 +35,18 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
 
   // 穩定化 members 引用，避免父層 re-render 時不必要地重設表單
   const memberIds = useMemo(() => (members || []).map(m => m.id).join(','), [members]);
+
+  // 預設付款人＝登入者自己：群組是共用的，記帳的人多半就是付錢的那個，
+  // 一律預設第一位成員（＝建群組的人）會讓其他成員每筆都要手動改，漏改就把錢記到別人頭上。
+  // 與 CLI 的 --paid-by 預設同一套邏輯。沒把自己連結到成員時才退回第一位。
+  const defaultPaidBy = (members || []).find(m => m.id === selfMemberId)?.id || members?.[0]?.id || '';
+
   useEffect(() => {
     if (members?.length && !editingExpense) {
       setParticipants(members.map(m => m.id));
-      setPaidBy(members[0]?.id || '');
+      setPaidBy(defaultPaidBy);
     }
-  }, [memberIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [memberIds, selfMemberId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 編輯模式：預填表單
   useEffect(() => {
@@ -125,7 +131,7 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
     amountManualRef.current = false;
     if (members?.length) {
       setParticipants(members.map(m => m.id));
-      setPaidBy(members[0]?.id || '');
+      setPaidBy(defaultPaidBy);
       setDate(getTodayYmd());
     }
     onClose();

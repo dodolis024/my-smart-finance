@@ -6,6 +6,7 @@ This file records version updates for Smart Finance Tracker.
 - Improved offline syncing to work from any page, so a reconnect while you are on the split page still sends them
 - Improved the category detail view on desktop so a note shows about twice as much text
 - Improved spacing in the category and payment breakdown lists so the color dot no longer sits flush against the card edge
+- Improved the default payer when adding a split expense to be you instead of always the group's creator
 - Fixed the note column drifting out of line when an amount ran to four or five digits
 
 ## [1.29.0] - Sep-09 2026

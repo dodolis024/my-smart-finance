@@ -363,6 +363,7 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
         onUpdate={handleUpdateExpense}
         editingExpense={editingExpense}
         members={members}
+        selfMemberId={actorMember?.id}
         groupCurrency={group.currency || 'TWD'}
         defaultExpenseCurrency={group.default_expense_currency || group.currency || 'TWD'}
         currencies={currencies}
