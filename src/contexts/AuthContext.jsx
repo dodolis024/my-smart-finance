@@ -3,6 +3,7 @@ import { supabase, createDefaultData } from '@/lib/supabase';
 import { clearAllCaches } from '@/lib/resourceCache';
 import { clearUserCache } from '@/lib/offlineCache';
 import { clearQueue } from '@/lib/offlineQueue';
+import { clearPushSubscription, restorePushSubscription } from '@/lib/pushSubscription';
 
 export const AuthContext = createContext(null);
 
@@ -49,6 +50,12 @@ export function AuthProvider({ children }) {
 
     return () => subscription.unsubscribe();
   }, [extractUserInfo]);
+
+  // 登入後把這台裝置的推播訂閱接回這個帳號：登出時只解除了資料庫那筆歸屬，
+  // 瀏覽器訂閱刻意留著，同一個人回來就自動恢復，不必再去設定裡開一次
+  useEffect(() => {
+    if (user?.id) restorePushSubscription(user.id);
+  }, [user?.id]);
 
   const signInWithPassword = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -104,6 +111,9 @@ export function AuthProvider({ children }) {
     if (user?.id) {
       clearQueue(user.id);
       clearUserCache(user.id);
+      // 必須趕在 signOut 之前：刪 push_subscriptions 要通過 RLS，
+      // session 一沒了就刪不動，那筆訂閱會留著繼續把通知推到這台裝置
+      await clearPushSubscription(user.id);
     }
     await supabase.auth.signOut();
   }, [user]);

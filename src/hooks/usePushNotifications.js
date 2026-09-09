@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { getPushSubscribed, setPushSubscribed, subscribeToPushState, rememberPushEnabled, forgetPushEnabled } from '@/lib/pushSubscription';
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -12,27 +13,14 @@ function urlBase64ToUint8Array(base64String) {
 const SW_PATH = import.meta.env.BASE_URL + 'sw.js';
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
-// 訂閱狀態的跨實例同步：設定面板的「裝置推播」與「信用卡通知」兩區各自呼叫這個 hook，
-// 若各持一份 state，按下開關後另一區的提示不會更新，要重開設定才對得上。
-// 與 useDashboard 的 defaultCurrencyListeners、offlineQueue 的 subscribeQueue 同一模式。
-let subscribedState = false;
-const subscribedListeners = new Set();
-function setSubscribedShared(value) {
-  subscribedState = value;
-  subscribedListeners.forEach((l) => l(value));
-}
-
 export function usePushNotifications() {
   const { user } = useAuth();
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState('default');
-  const [isSubscribed, setIsSubscribed] = useState(subscribedState);
+  const [isSubscribed, setIsSubscribed] = useState(getPushSubscribed);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    subscribedListeners.add(setIsSubscribed);
-    return () => subscribedListeners.delete(setIsSubscribed);
-  }, []);
+  useEffect(() => subscribeToPushState(setIsSubscribed), []);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -48,7 +36,7 @@ export function usePushNotifications() {
       : navigator.serviceWorker.register(SW_PATH);
     regPromise.then((reg) => {
       reg.pushManager.getSubscription().then((sub) => {
-        setSubscribedShared(!!sub);
+        setPushSubscribed(!!sub);
       });
     }).catch(() => {});
   }, []);
@@ -72,7 +60,9 @@ export function usePushNotifications() {
 
       if (error) throw error;
 
-      setSubscribedShared(true);
+      // 記住這個帳號在這台裝置開過通知，登出再登入時才接得回去
+      rememberPushEnabled(user.id);
+      setPushSubscribed(true);
       setPermission(Notification.permission);
     } catch (err) {
       console.error('[PushNotifications] subscribe failed:', err);
@@ -89,14 +79,19 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await sub.unsubscribe();
-        await supabase
+        // 先刪資料庫再解除瀏覽器訂閱：反過來的話，刪除失敗就會留下一筆
+        // 對不到任何裝置的訂閱，通知照送但誰也收不到，且沒有依據能再刪
+        const { error } = await supabase
           .from('push_subscriptions')
           .delete()
           .eq('user_id', user.id)
           .eq('endpoint', sub.endpoint);
+        if (error) throw error;
+        await sub.unsubscribe();
       }
-      setSubscribedShared(false);
+      // 主動關閉才清旗標：登出走的是 clearPushSubscription，那條路要留著旗標
+      forgetPushEnabled(user.id);
+      setPushSubscribed(false);
     } catch (err) {
       console.error('[PushNotifications] unsubscribe failed:', err);
     } finally {
