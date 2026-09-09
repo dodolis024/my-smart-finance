@@ -102,6 +102,18 @@ function AppShell() {
               </ProtectedRoute>
             }
           />
+          {/* 群組帶進網址，重新整理／分享連結都能直接回到同一個群組。
+              放在 join 之後，靜態的 /split/join 才不會被當成群組 id。 */}
+          <Route
+            path="/split/:groupId"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <SplitPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/yearly-review"
             element={

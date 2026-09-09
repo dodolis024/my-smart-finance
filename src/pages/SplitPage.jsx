@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useSplitGroups } from '@/hooks/useSplitGroups';
@@ -20,10 +20,10 @@ let cachedCurrencies = null;
 // ── 分帳主頁（/split）────────────────────────────────────────────────────────
 export default function SplitPage() {
   const navigate = useNavigate();
+  const { groupId } = useParams();
   const { t } = useLanguage();
   const { user } = useAuth();
   const { groups, loading, fetchGroups, createGroup, updateGroup, archiveGroup, unarchiveGroup, togglePin, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
-  const [selectedGroup, setSelectedGroup] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [rates, setRates] = useState(() => cachedRates || { TWD: 1 });
@@ -31,14 +31,19 @@ export default function SplitPage() {
   const toast = useToast();
   const { confirm } = useConfirm();
 
+  // 開啟中的群組由網址推導，而非元件狀態：重新整理後才會留在原本的群組。
+  // 順帶讓群組資料更新（改名、成員異動）自動反映，不必再手動同步一份 state。
+  const selectedGroup = groupId ? groups.find(g => g.id === groupId) || null : null;
+
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
+  // 網址指向的群組不存在（連結失效、群組已被刪除或退出）就退回總覽，
+  // 否則畫面會卡在永遠等不到資料的載入中。
   useEffect(() => {
-    if (selectedGroup) {
-      const updated = groups.find(g => g.id === selectedGroup.id);
-      if (updated && updated !== selectedGroup) setSelectedGroup(updated);
+    if (groupId && !loading && !groups.some(g => g.id === groupId)) {
+      navigate('/split', { replace: true });
     }
-  }, [groups, selectedGroup]);
+  }, [groupId, loading, groups, navigate]);
 
   useEffect(() => {
     if (cachedRates) return;
@@ -110,27 +115,38 @@ export default function SplitPage() {
     });
   const archivedGroups = groups.filter(g => g.archived_at);
 
+  // 群組內的返回鍵回到總覽，總覽的返回鍵離開分帳頁
+  const header = (
+    <div className="split-page__header">
+      <button type="button" className="split-page__back-btn" onClick={() => navigate(groupId ? '/split' : '/')}>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+        {t('split.back')}
+      </button>
+      <h1 className="split-page__title">{t('layout.split')}</h1>
+    </div>
+  );
+
   return (
     <div className="split-page">
-      {selectedGroup ? (
+      {groupId && !selectedGroup ? (
+        // 直接開網址時群組清單還沒回來，先顯示載入中，別閃一下總覽
         <>
-          <div className="split-page__header">
-            <button type="button" className="split-page__back-btn" onClick={() => setSelectedGroup(null)}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-              </svg>
-              {t('split.back')}
-            </button>
-            <h1 className="split-page__title">{t('layout.split')}</h1>
-          </div>
+          {header}
+          <p className="split-loading">{t('split.loading')}</p>
+        </>
+      ) : selectedGroup ? (
+        <>
+          {header}
           <SplitGroupDetail
             group={selectedGroup}
-            onBack={() => setSelectedGroup(null)}
+            onBack={() => navigate('/split')}
             rates={rates}
             currencies={currencies}
-            onAddMember={async (groupId, name) => {
+            onAddMember={async (id, name) => {
               try {
-                await addMember(groupId, name);
+                await addMember(id, name);
                 toast.success(t('split.memberAdded'));
               } catch {
                 toast.error(t('split.addMemberFailed'));
@@ -159,15 +175,7 @@ export default function SplitPage() {
         </>
       ) : (
         <>
-          <div className="split-page__header">
-            <button type="button" className="split-page__back-btn" onClick={() => navigate('/')}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-              </svg>
-              {t('split.back')}
-            </button>
-            <h1 className="split-page__title">{t('layout.split')}</h1>
-          </div>
+          {header}
 
           {loading ? (
             <p className="split-loading">{t('split.loading')}</p>
@@ -181,7 +189,7 @@ export default function SplitPage() {
                     <SplitGroupCard
                       key={g.id}
                       group={g}
-                      onClick={() => setSelectedGroup(g)}
+                      onClick={() => navigate(`/split/${g.id}`)}
                       onDelete={g.owner_id === user?.id ? handleDeleteGroup : undefined}
                       onTogglePin={handleTogglePin}
                     />
@@ -216,7 +224,7 @@ export default function SplitPage() {
                           key={g.id}
                           group={g}
                           archived
-                          onClick={() => setSelectedGroup(g)}
+                          onClick={() => navigate(`/split/${g.id}`)}
                           onDelete={g.owner_id === user?.id ? handleDeleteGroup : undefined}
                         />
                       ))}

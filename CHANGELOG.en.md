@@ -7,6 +7,8 @@ This file records version updates for Smart Finance Tracker.
 - Improved the category detail view on desktop so a note shows about twice as much text
 - Improved spacing in the category and payment breakdown lists so the color dot no longer sits flush against the card edge
 - Improved the default payer when adding a split expense to be you instead of always the group's creator
+- Improved a refresh inside a split group to stay on that group instead of going back to the group list
+- Improved the browser back button inside a split group to return to the group list instead of leaving the split page
 - Fixed the note column drifting out of line when an amount ran to four or five digits
 - Fixed a device still receiving an account's notifications after it logged out, including for whoever logs in next; signing back in restores them automatically
 
