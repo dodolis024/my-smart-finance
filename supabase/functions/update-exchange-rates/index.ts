@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { cronSecretGuard } from '../_shared/cronAuth.ts'
+import { RETENTION_DAYS, retentionCutoff, utcDateString } from './rateHistory.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -231,6 +232,39 @@ serve(async (req) => {
       }
     }
 
+    // 歷史匯率：一天一列，供事後查詢「當時到底是多少」。
+    // 存的是 validatedRates 而不是 API 原始的 newRates——±20% 防呆擋下異常值時，
+    // 系統當天實際採用的是舊匯率。歷史表要跟系統的真相一致，不是跟 API 一致，
+    // 否則回頭對帳會發現歷史說的跟當時算出來的金額兜不起來。
+    const historyDate = utcDateString(new Date())
+    const { error: historyError } = await supabase
+      .from('exchange_rate_history')
+      .upsert(
+        Object.entries(validatedRates).map(([currency_code, rate]) => ({
+          currency_code,
+          date: historyDate,
+          rate,
+        })),
+        { onConflict: 'currency_code,date' }
+      )
+
+    // 歷史寫入失敗不該讓整趟失敗：現值已經更新成功，記帳照常運作。
+    // 但一定要留痕跡，否則歷史悄悄斷了好幾天完全看不出來。
+    if (historyError) {
+      console.error('Failed to record exchange rate history:', historyError.message)
+    }
+
+    // 清理超過保留期的歷史。放在這裡而不是另開一個 cron：少一個要維護的排程，
+    // 而且清理本來就該跟著寫入一起發生，不會出現「有寫沒清」的漂移。
+    const { error: pruneError } = await supabase
+      .from('exchange_rate_history')
+      .delete()
+      .lt('date', retentionCutoff(new Date(), RETENTION_DAYS))
+
+    if (pruneError) {
+      console.error('Failed to prune exchange rate history:', pruneError.message)
+    }
+
     const rejected = anomalies.filter(a => a.action === 'rejected')
 
     return new Response(
@@ -241,6 +275,11 @@ serve(async (req) => {
           : 'Exchange rates updated successfully',
         timestamp: new Date().toISOString(),
         updates,
+        history: {
+          date: historyDate,
+          recorded: !historyError,
+          retention_days: RETENTION_DAYS,
+        },
         anomalies: anomalies.length > 0 ? anomalies : undefined,
         warning: rejected.length > 0
           ? 'Some rates changed more than 20% and were rejected. Last known good rates were kept.'

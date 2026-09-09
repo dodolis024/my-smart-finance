@@ -65,6 +65,7 @@
 | database/split-pin-migration.sql | 分帳群組置頂:新增 split_group_pins 表(user_id+group_id),4 條 RLS 均限 user_id = auth.uid();INSERT 另以 can_access_split_group 擋住對他人群組的探測,UPDATE 為前端 upsert 走 ON CONFLICT DO UPDATE 所必需(缺了跨裝置置頂會被擋) | 2026-09-02 |
 | database/split-member-delete-guard-migration.sql | 移除成員的守門:split_expense_shares.member_id 與 split_settlements 的 from/to_member 三個外鍵由 ON DELETE CASCADE 改為 ON DELETE RESTRICT。原本刪成員會連分攤與還款紀錄一起消失,那些費用的分攤加總不再等於金額,代墊者永遠少收且畫面看不出來。前端已擋,這層是防漏。已以 pg_constraint 驗證三列 confdeltype = r | 2026-09-05 |
 | scripts/fix-split-sync-decimal-regression.sql | sync_split_to_ledger 補回被 fix-split-sync-ownership.sql 洗掉的兩處:零小數幣別清單對齊 src/lib/constants.js 的 ZERO_DECIMAL_CURRENCIES、SPLIT_RATE_UNAVAILABLE 的 DETAIL 分隔符改回 ", "。擁有權檢查與匯率守門原樣保留,定義已與 database/split-sync-migration.sql 逐字一致 | 2026-09-09 |
+| database/exchange-rate-history-migration.sql | 匯率歷史:新增 exchange_rate_history 表(主鍵 currency_code+date,故不另建索引),RLS 只給 authenticated SELECT、不開寫入 policy(寫入走 update-exchange-rates 的 service role);建表時以現值種一列今日;新增 get_exchange_rate_on(p_currency, p_date) RPC,查「<= 該日期的最新一筆」而非精準比對(週末與排程停擺會留洞),查無回 NULL 以區分「真的 1:1」。**只能從此日起累積,過去補不回來** | 2026-09-09 |
 
 > 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
 > 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,
@@ -113,7 +114,7 @@
 
 | 函式 | 最後部署 | version | 備註 |
 |---|---|---|---|
-| update-exchange-rates | 2026-08-27 | v19 | 加 `x-cron-secret` 驗證(取代 2026-08-26 v17 的陳舊值例外版,該邏輯保留) |
+| update-exchange-rates | 2026-09-09 | v20 | 每日更新後多寫一筆 exchange_rate_history(存 validatedRates 即實際採用值,非 API 原始值),並清理超過 400 天者;歷史寫入失敗只記 log 不中斷主線。搭配 database/exchange-rate-history-migration.sql。x-cron-secret 驗證原樣保留 |
 | send-streak-reminder | 2026-08-27 | v26 | 加 `x-cron-secret` 驗證(取代 2026-07-11 v24 的通知多語化版,該邏輯保留) |
 | send-split-notification | 2026-07-11 | v9 | 同上 |
 | send-credit-card-reminder | 2026-08-31 | v6 | 加 `x-cron-secret` 驗證;繳款提醒改為未設定過即視同未啟用 |
