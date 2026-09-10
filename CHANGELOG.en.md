@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.30.0] - Sep-10 2026
 - Added automatic syncing of offline entries when the app returns to the foreground, with no need to reopen it or tap "Pending sync"
 - Added the exchange rate to foreign-currency split expenses when expanded; older expenses got their rate from this update and are marked "estimated"
 - Improved offline syncing to work from any page, so a reconnect while you are on the split page still sends them
