@@ -35,10 +35,16 @@ const TABLES = {
   exchange_rates: [{ currency_code: 'JPY', rate: 0.21 }],
 };
 
+// 記下每張表被 select 了哪些欄位
+globalThis.__splitReportSelects = {};
+
 vi.mock('../../tools/core/client.js', () => {
-  const query = (rows) => {
+  const query = (rows, tableName) => {
     const q = {
-      select: () => q,
+      select: (fields) => {
+        globalThis.__splitReportSelects[tableName] = fields;
+        return q;
+      },
       eq: () => q,
       order: () => q,
       then: (resolve) => resolve({ data: rows, error: null }),
@@ -46,7 +52,7 @@ vi.mock('../../tools/core/client.js', () => {
     return q;
   };
   return {
-    getAuthedClient: async () => ({ from: (tableName) => query(TABLES[tableName]) }),
+    getAuthedClient: async () => ({ from: (tableName) => query(TABLES[tableName], tableName) }),
     getCurrentUser: async () => ({ id: 'user-doris' }),
   };
 });
@@ -67,6 +73,12 @@ describe('getGroupReport', () => {
       expect(s.to).toBe('Doris');
       expect(s.amount).toBeCloseTo(2500, 6);
     });
+  });
+
+  it('讀取費用時帶上凍結匯率欄位，漏了結算會默默退回即時匯率', async () => {
+    await getGroupReport(GROUP);
+    expect(globalThis.__splitReportSelects.split_expenses).toMatch(/\bexchange_rate\b/);
+    expect(globalThis.__splitReportSelects.split_expenses).toMatch(/\bexchange_rate_estimated\b/);
   });
 
   it('limit 有上限 200，預設 20', async () => {
@@ -103,6 +115,34 @@ describe('與前端結算演算法的一致性', () => {
     expect(cli.calcMemberTotals(MEMBERS, expenses, rates, 'TWD')).toEqual(
       web.calcMemberTotals(MEMBERS, expenses, rates, 'TWD')
     );
+  });
+
+  it('凍結匯率：兩邊都用凍結值，而且同幣別都不換算', async () => {
+    const cli = await import('../../tools/core/splitSettlement.js');
+    const web = await import('../../src/lib/splitSettlement.js');
+
+    // 即時匯率與凍結值刻意不同，任何一邊誤用即時匯率結果就會分岔
+    const rates = { TWD: 1, JPY: 0.25, USD: 40 };
+    const expenses = [
+      { id: 'jpy-frozen', paid_by: 'm2', amount: 3000, currency: 'JPY', exchange_rate: 0.21,
+        split_expense_shares: MEMBERS.map((m) => ({ member_id: m.id, share: 1000 })) },
+      { id: 'jpy-legacy', paid_by: 'm1', amount: 600, currency: 'JPY', exchange_rate: null,
+        split_expense_shares: MEMBERS.map((m) => ({ member_id: m.id, share: 200 })) },
+      { id: 'twd', paid_by: 'm3', amount: 900, currency: 'TWD', exchange_rate: 1,
+        split_expense_shares: MEMBERS.map((m) => ({ member_id: m.id, share: 300 })) },
+    ];
+    const settlements = [{ from_member: 'm3', to_member: 'm2', amount: 5, currency: 'USD', exchange_rate: 31.5 }];
+
+    for (const currency of ['TWD', 'JPY']) {
+      expect(cli.calcSettlement(MEMBERS, expenses, settlements, rates, currency)).toEqual(
+        web.calcSettlement(MEMBERS, expenses, settlements, rates, currency)
+      );
+      expect(cli.calcMemberTotals(MEMBERS, expenses, rates, currency)).toEqual(
+        web.calcMemberTotals(MEMBERS, expenses, rates, currency)
+      );
+    }
+    expect(cli.conversionFactor(expenses[0], rates, 'TWD')).toBe(0.21);
+    expect(cli.conversionFactor(expenses[0], rates, 'JPY')).toBe(1);
   });
 
   it('零小數幣別顯示 0 位小數（日圓不會印成 333.33）', async () => {

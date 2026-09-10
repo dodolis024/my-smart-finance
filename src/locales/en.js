@@ -549,6 +549,9 @@ const en = {
 
     // Expense item
     shareDetails: 'Split Details',
+    exchangeRate: 'Exchange Rate',
+    exchangeRateEstimated: 'estimated',
+    exchangeRateEstimatedHint: "This expense's rate on its date wasn't recorded, so this one was filled in later",
     editExpense: 'Edit expense',
     deleteExpense: 'Delete expense',
     paidMeta: '{name} paid · {date}',

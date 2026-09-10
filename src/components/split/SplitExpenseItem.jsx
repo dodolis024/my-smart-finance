@@ -18,6 +18,8 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete, r
   const memberMap = Object.fromEntries((members || []).map(m => [m.id, m.name]));
   const paidByName = expense.paid_by ? memberMap[expense.paid_by] || '—' : '—';
   const shares = expense.split_expense_shares || [];
+  // 與個人帳本一致：台幣不顯示匯率；查不到匯率（exchange_rate 為 null）也不顯示，不能假裝成 1
+  const showRate = Boolean(expense.currency) && expense.currency !== 'TWD' && Number(expense.exchange_rate) > 0;
 
   const {
     translateX,
@@ -134,6 +136,19 @@ export default function SplitExpenseItem({ expense, members, onEdit, onDelete, r
                   )}
                 />
               </p>
+            )}
+            {showRate && (
+              <div className="split-expense-item__rate">
+                <span className="split-expense-item__rate-label">{t('split.exchangeRate')}</span>
+                <span className="split-expense-item__rate-value">
+                  {Number(expense.exchange_rate).toFixed(4)}
+                  {expense.exchange_rate_estimated && (
+                    <span className="split-expense-item__rate-estimated" title={t('split.exchangeRateEstimatedHint')}>
+                      {t('split.exchangeRateEstimated')}
+                    </span>
+                  )}
+                </span>
+              </div>
             )}
             <div className="split-expense-item__shares">
               <p className="split-expense-item__shares-label">{t('split.shareDetails')}</p>

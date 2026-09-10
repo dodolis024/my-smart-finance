@@ -325,3 +325,75 @@ describe('與 tools/core/splitSettlement.js 保持一致', () => {
       .toEqual(calcMemberTotals(members, expenses, rates, currency));
   });
 });
+
+describe('凍結匯率：外幣費用的換算金額不隨即時匯率浮動', () => {
+  // A 代墊 10,000 日圓，A/B 各分 5,000；記帳當天 1 日圓 = 0.21 台幣
+  const jpyDinner = [
+    { paid_by: 'A', amount: 10000, currency: 'JPY', exchange_rate: 0.21, split_expense_shares: [
+      { member_id: 'A', share: 5000 },
+      { member_id: 'B', share: 5000 },
+    ] },
+  ];
+
+  it('有凍結匯率時用凍結值，不看即時匯率', () => {
+    const result = calcSettlement(members, jpyDinner, [], { TWD: 1, JPY: 0.25 }, 'TWD');
+    expect(asSet(result)).toEqual(['B>A:1050']);
+  });
+
+  it('照建議金額還完之後，日圓漲跌都不會再冒出零頭', () => {
+    const paid = [{ from_member: 'B', to_member: 'A', amount: 1050, currency: 'TWD', exchange_rate: 1 }];
+    expect(calcSettlement(members, jpyDinner, paid, { TWD: 1, JPY: 0.21 }, 'TWD')).toEqual([]);
+    expect(calcSettlement(members, jpyDinner, paid, { TWD: 1, JPY: 0.25 }, 'TWD')).toEqual([]);
+    expect(calcSettlement(members, jpyDinner, paid, { TWD: 1, JPY: 0.18 }, 'TWD')).toEqual([]);
+  });
+
+  it('舊資料沒有凍結匯率（null）時退回即時匯率', () => {
+    const legacy = [{ ...jpyDinner[0], exchange_rate: null }];
+    const result = calcSettlement(members, legacy, [], { TWD: 1, JPY: 0.25 }, 'TWD');
+    expect(asSet(result)).toEqual(['B>A:1250']);
+  });
+
+  it('PostgREST 以字串回傳 numeric 時也能用', () => {
+    const asString = [{ ...jpyDinner[0], exchange_rate: '0.210000' }];
+    const result = calcSettlement(members, asString, [], { TWD: 1, JPY: 0.25 }, 'TWD');
+    expect(asSet(result)).toEqual(['B>A:1050']);
+  });
+
+  it('同幣別一律不換算：日圓群組裡的日圓費用就是原金額', () => {
+    // 凍結值 0.21、即時 0.25，相除不是 1，但 10,000 日圓在日圓群組就該是 10,000
+    const result = calcSettlement(members, jpyDinner, [], { TWD: 1, JPY: 0.25 }, 'JPY');
+    expect(asSet(result)).toEqual(['B>A:5000']);
+  });
+
+  it('還款的凍結匯率同樣生效', () => {
+    // B 用 50 美金還款，當天 1 美金 = 21 台幣 → 抵 1,050
+    const paid = [{ from_member: 'B', to_member: 'A', amount: 50, currency: 'USD', exchange_rate: 21 }];
+    expect(calcSettlement(members, jpyDinner, paid, { TWD: 1, JPY: 0.3, USD: 40 }, 'TWD')).toEqual([]);
+  });
+
+  it('每人總支出同樣用凍結值', () => {
+    const totals = calcMemberTotals(members, jpyDinner, { TWD: 1, JPY: 0.25 }, 'TWD');
+    expect(totals.A).toBeCloseTo(1050, 6);
+    expect(totals.B).toBeCloseTo(1050, 6);
+  });
+});
+
+describe('匯率異常不可以讓結算卡死', () => {
+  // 付款人自己不分攤 → 一個純債主、一個純欠款人；餘額若是無限大，配對迴圈會永遠停不下來把記憶體吃光。
+  // 資料庫的 NUMERIC(10, 6) 存不進無限大，這是最後一道防線。
+  const payerNotSharing = (exchangeRate) => [
+    { paid_by: 'A', amount: 1000, currency: 'JPY', exchange_rate: exchangeRate, split_expense_shares: [
+      { member_id: 'B', share: 1000 },
+    ] },
+  ];
+
+  it('凍結匯率是無限大：視為無效，退回即時匯率', () => {
+    const result = calcSettlement(members, payerNotSharing(Infinity), [], { TWD: 1, JPY: 0.21 }, 'TWD');
+    expect(asSet(result)).toEqual(['B>A:210']);
+  });
+
+  it('即時匯率是無限大：不換算，也不會卡死', () => {
+    const result = calcSettlement(members, payerNotSharing(null), [], { TWD: 1, JPY: Infinity }, 'TWD');
+    expect(asSet(result)).toEqual(['B>A:1000']);
+  });
+});

@@ -108,13 +108,15 @@ BEGIN
   WHERE sg.id = p_group_id;
 
   -- 計算用戶目前的分攤總額（各費用幣別轉換至群組幣別）
+  -- 費用幣別用寫入時凍結的 se.exchange_rate，舊資料沒有才退回現值；
+  -- 此處必須與 sync_split_to_ledger 的換算式一致，否則 needs_update 會恆真。
   -- 唯讀顯示，匯率缺失時可能顯示 1:1 估值；寫入路徑已由 sync_split_to_ledger 擋下
   SELECT COALESCE(SUM(
     ses.share *
     CASE
       WHEN se.currency = v_group_currency THEN 1.0
       ELSE (
-        COALESCE((SELECT rate FROM exchange_rates WHERE currency_code = se.currency), 1.0)
+        COALESCE(se.exchange_rate, (SELECT rate FROM exchange_rates WHERE currency_code = se.currency), 1.0)
         / COALESCE((SELECT rate FROM exchange_rates WHERE currency_code = v_group_currency), 1.0)
       )
     END
@@ -223,6 +225,7 @@ BEGIN
   WHERE se.group_id = p_group_id
     AND ses.member_id = v_member_id
     AND se.currency <> v_group_currency
+    AND se.exchange_rate IS NULL  -- 已凍結匯率的費用不需要現值
     AND NOT EXISTS (
       SELECT 1 FROM exchange_rates er
       WHERE er.currency_code = se.currency AND er.rate > 0
@@ -241,12 +244,14 @@ BEGIN
   END IF;
 
   -- 計算分攤總額（轉換至群組幣別；前置檢查通過後 COALESCE 不會走到 fallback）
+  -- 費用幣別用寫入時凍結的 se.exchange_rate（見 split-expense-rate-migration.sql），
+  -- 舊資料沒有才退回現值。群組幣別仍用現值：凍結值以 TWD 為錨點，群組幣別可在設定裡改。
   SELECT COALESCE(SUM(
     ses.share *
     CASE
       WHEN se.currency = v_group_currency THEN 1.0
       ELSE (
-        COALESCE((SELECT rate FROM exchange_rates WHERE currency_code = se.currency), 1.0)
+        COALESCE(se.exchange_rate, (SELECT rate FROM exchange_rates WHERE currency_code = se.currency), 1.0)
         / COALESCE((SELECT rate FROM exchange_rates WHERE currency_code = v_group_currency), 1.0)
       )
     END

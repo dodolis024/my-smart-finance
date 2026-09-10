@@ -154,6 +154,33 @@
   font-style: italic;
 }
 
+/* 匯率：只有外幣費用才有這一列 */
+.split-expense-item__rate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 0;
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+}
+
+.split-expense-item__rate-label {
+  color: var(--color-text);
+}
+
+.split-expense-item__rate-value {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+/* 舊費用的匯率是事後補上的，不是費用當天的 */
+.split-expense-item__rate-estimated {
+  margin-left: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
 .split-expense-item__shares-label {
   font-size: 0.75rem;
   font-weight: 600;

@@ -549,6 +549,9 @@ const zh = {
 
     // Expense item
     shareDetails: '分攤明細',
+    exchangeRate: '匯率',
+    exchangeRateEstimated: '補記',
+    exchangeRateEstimatedHint: '這筆費用當天的匯率沒有留下紀錄，這是事後補上的匯率',
     editExpense: '編輯費用',
     deleteExpense: '刪除費用',
     paidMeta: '{name} 付 · {date}',

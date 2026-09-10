@@ -76,8 +76,16 @@ CREATE TABLE IF NOT EXISTS split_expenses (
   currency   TEXT NOT NULL DEFAULT 'TWD',
   date       DATE NOT NULL DEFAULT CURRENT_DATE,
   note       TEXT,
+  -- 1 單位 currency = 多少 TWD，由 trigger 依 date 凍結（見 split-expense-rate-migration.sql）
+  exchange_rate           NUMERIC(10, 6),
+  -- true = 查不到費用當天的匯率，改用寫入當下的現值補上
+  exchange_rate_estimated BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 為既有資料庫新增欄位（執行時若欄位已存在不影響）
+ALTER TABLE split_expenses ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(10, 6);
+ALTER TABLE split_expenses ADD COLUMN IF NOT EXISTS exchange_rate_estimated BOOLEAN NOT NULL DEFAULT false;
 
 -- =============================================================================
 -- 5. 建立 split_expense_shares 表（費用分攤明細）
@@ -100,8 +108,14 @@ CREATE TABLE IF NOT EXISTS split_settlements (
   amount     NUMERIC(12, 2) NOT NULL,
   currency   TEXT NOT NULL DEFAULT 'TWD',
   date       DATE NOT NULL DEFAULT CURRENT_DATE,
+  -- 語意同 split_expenses.exchange_rate
+  exchange_rate           NUMERIC(10, 6),
+  exchange_rate_estimated BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE split_settlements ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(10, 6);
+ALTER TABLE split_settlements ADD COLUMN IF NOT EXISTS exchange_rate_estimated BOOLEAN NOT NULL DEFAULT false;
 
 -- =============================================================================
 -- 6. 索引

@@ -3,6 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Added automatic syncing of offline entries when the app returns to the foreground, with no need to reopen it or tap "Pending sync"
+- Added the exchange rate to foreign-currency split expenses when expanded; older expenses got their rate from this update and are marked "estimated"
 - Improved offline syncing to work from any page, so a reconnect while you are on the split page still sends them
 - Improved the category detail view on desktop so a note shows about twice as much text
 - Improved spacing in the category and payment breakdown lists so the color dot no longer sits flush against the card edge
@@ -12,6 +13,7 @@ This file records version updates for Smart Finance Tracker.
 - Fixed the note column drifting out of line when an amount ran to four or five digits
 - Fixed a device still receiving an account's notifications after it logged out, including for whoever logs in next; signing back in restores them automatically
 - Fixed removing a member from a split group always failing
+- Fixed the converted amount of foreign-currency split expenses changing every day with the exchange rate, which left a leftover balance after settling up; they now use the rate on the expense date, and older expenses stay at the rate from this update
 
 ## [1.29.0] - Sep-09 2026
 - Added a balance for cash and other non-credit accounts: it counts down with spending and never resets automatically, and can be corrected any time from the account's balance view

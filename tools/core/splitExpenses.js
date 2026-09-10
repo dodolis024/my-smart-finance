@@ -10,8 +10,10 @@ import { fetchRates } from './splitRates.js';
  * 修改前請先看 tools/README.md 的「同步義務」一節。
  */
 
+// exchange_rate 是 DB trigger 依費用日期凍結的匯率，結算要用它才不會隨即時匯率浮動
 const EXPENSE_FIELDS = `
   id, group_id, paid_by, title, amount, currency, date, note, created_at,
+  exchange_rate, exchange_rate_estimated,
   split_expense_shares ( id, member_id, share )
 `;
 

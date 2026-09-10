@@ -82,21 +82,46 @@ export function formatSplitAmount(amount, currency) {
 }
 
 /**
+ * 一筆費用或還款換算成目標幣別的倍率。
+ *
+ * 費用幣別優先用寫入時凍結的 row.exchange_rate（1 單位 = 多少 TWD，由 DB trigger 依
+ * 費用日期凍結），舊資料沒有才退回即時匯率——否則同一筆外幣費用換算後的金額會每天
+ * 跟著匯率浮動，結清之後又冒出零頭。目標幣別仍用即時匯率：凍結值以 TWD 為錨點，
+ * 群組幣別可以在設定裡改。
+ *
+ * 同幣別一律是 1：凍結值與即時值相除不會剛好是 1，但 10,000 日圓在日圓群組就該是 10,000。
+ *
+ * @param {Object} row - { currency, exchange_rate? }
+ * @param {Object} rates - { TWD: 1, USD: 31.5, ... } (1 unit = how many TWD)
+ * @param {string} targetCurrency
+ * @returns {number}
+ */
+export function conversionFactor(row, rates, targetCurrency) {
+  const currency = row.currency || 'TWD';
+  const target = targetCurrency || 'TWD';
+  if (currency === target) return 1;
+  const frozen = Number(row.exchange_rate);
+  const fromRate = Number.isFinite(frozen) && frozen > 0 ? frozen : ((rates && rates[currency]) ?? 1);
+  const toRate = (rates && rates[target]) ?? 1;
+  const factor = toRate > 0 ? fromRate / toRate : 1;
+  // 匯率異常（無限大、NaN）時不換算：餘額一旦是無限大，後面的配對迴圈會永遠停不下來
+  return Number.isFinite(factor) ? factor : 1;
+}
+
+/**
  * Per-member total spend (sum of own shares), converted to the group currency.
  *
  * @param {Array} members - [{ id, name }]
- * @param {Array} expenseList - expenses with split_expense_shares
- * @param {Object} rates - { TWD: 1, USD: 31.5, ... } (1 unit = how many TWD)
+ * @param {Array} expenseList - expenses with split_expense_shares (and frozen exchange_rate)
+ * @param {Object} rates - live rates, fallback for rows without exchange_rate: { TWD: 1, USD: 31.5, ... }
  * @param {string} groupCurrency - target currency for totals
  * @returns {Object} { [memberId]: number }
  */
 export function calcMemberTotals(members, expenseList, rates, groupCurrency) {
   const totals = {};
   members.forEach(m => { totals[m.id] = 0; });
-  const toRate = (rates && groupCurrency) ? (rates[groupCurrency] ?? 1) : 1;
   expenseList.forEach(expense => {
-    const fromRate = (rates && expense.currency) ? (rates[expense.currency] ?? 1) : 1;
-    const factor = toRate > 0 ? fromRate / toRate : 1;
+    const factor = conversionFactor(expense, rates, groupCurrency);
     (expense.split_expense_shares || []).forEach(s => {
       totals[s.member_id] = (totals[s.member_id] || 0) + Number(s.share) * factor;
     });
@@ -108,9 +133,9 @@ export function calcMemberTotals(members, expenseList, rates, groupCurrency) {
  * Minimize-transactions settlement algorithm (greedy matching).
  *
  * @param {Array} members - [{ id, name }]
- * @param {Array} expenseList - expenses with split_expense_shares
- * @param {Array} settlementList - existing settlement records
- * @param {Object} rates - { TWD: 1, USD: 31.5, ... } (1 unit = how many TWD)
+ * @param {Array} expenseList - expenses with split_expense_shares (and frozen exchange_rate)
+ * @param {Array} settlementList - existing settlement records (with frozen exchange_rate)
+ * @param {Object} rates - live rates, fallback for rows without exchange_rate: { TWD: 1, USD: 31.5, ... }
  * @param {string} settlementCurrency - target currency for settlement
  * @returns {Array} [{ fromId, toId, from, to, amount }]
  */
@@ -118,12 +143,9 @@ export function calcSettlement(members, expenseList, settlementList, rates, sett
   const balance = {};
   members.forEach(m => { balance[m.id] = 0; });
 
-  const toRate = (rates && settlementCurrency) ? (rates[settlementCurrency] ?? 1) : 1;
-
   // 費用：付款人 +amount，參與者 -share
   expenseList.forEach(expense => {
-    const fromRate = (rates && expense.currency) ? (rates[expense.currency] ?? 1) : 1;
-    const factor = toRate > 0 ? fromRate / toRate : 1;
+    const factor = conversionFactor(expense, rates, settlementCurrency);
 
     if (expense.paid_by) {
       balance[expense.paid_by] = (balance[expense.paid_by] || 0) + Number(expense.amount) * factor;
@@ -138,9 +160,7 @@ export function calcSettlement(members, expenseList, settlementList, rates, sett
 
   // 還款紀錄：from_member 付了錢（balance +），to_member 收了錢（balance -）
   (settlementList || []).forEach(s => {
-    const fromRate = (rates && s.currency) ? (rates[s.currency] ?? 1) : 1;
-    const factor = toRate > 0 ? fromRate / toRate : 1;
-    const amt = Number(s.amount) * factor;
+    const amt = Number(s.amount) * conversionFactor(s, rates, settlementCurrency);
 
     balance[s.from_member] = (balance[s.from_member] || 0) + amt;
     balance[s.to_member] = (balance[s.to_member] || 0) - amt;
