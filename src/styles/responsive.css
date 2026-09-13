@@ -638,11 +638,6 @@
     line-height: 1.5;
   }
 
-  .transaction-detail-value .badge {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-  }
-
   @media (prefers-reduced-motion: no-preference) {
     .transaction-detail-content {
       animation: slideUpFromBottom 0.3s ease;

@@ -477,7 +477,7 @@
 }
 
 /* hover 底色畫在偽元素上：圓角只作用在色塊，列自己的分隔線才不會被圓角帶著翹起來。
-   底色與列同寬，留白由列自己的左右 padding 撐出來 */
+   上下貼齊分隔線；左右比線條各凸出 4px，圓角的彎曲才不會在線條末端露出缺口 */
 .category-stats-list li.clickable,
 .payment-stats-list li.clickable {
   position: relative;
@@ -487,7 +487,7 @@
 .payment-stats-list li.clickable:hover::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: 0 -4px;
   background: var(--color-row-hover);
   border-radius: 6px;
 }

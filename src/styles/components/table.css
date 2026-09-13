@@ -99,6 +99,12 @@
   font-size: 0.9375rem;
 }
 
+/* 第一格左側另外加寬：共用內距在 ≤1440px 會縮到 10px，分類色點看起來貼著卡片邊緣。
+   手機版的 td 是 .cell-slider-wrap（padding 0 !important），不受影響 */
+.transaction-history-section .table-wrapper tr.transaction-row--semantic td:first-child {
+  padding-left: 1rem;
+}
+
 /* 交錯底色改由 --alt class 指定：日期分組列插在 tbody 裡，nth-child 的奇偶會被打亂 */
 .transaction-history-section .table-wrapper tbody tr.transaction-row--alt .swipe-content,
 .transaction-history-section .table-wrapper tbody tr.transaction-row--alt.transaction-row--semantic td {

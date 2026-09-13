@@ -238,3 +238,15 @@
   .row-slider .slider-cell.cell-category { flex: 0 0 66px; min-width: 66px; }
   .row-slider .slider-cell.cell-amount { flex: 0 0 85px; min-width: 85px; font-size: 0.8125rem; }
 }
+
+/* 月檢視（按日分組）分類是每列第一格：色點離卡片左緣留 12px（對齊右側金額），
+   欄寬放得下 4 字分類、字級與金額一致；空間由品項欄讓出。
+   :first-child 權重高於上方各斷點的欄寬設定，年檢視（日期在第一格）不受影響 */
+@media (max-width: 600px) {
+  .row-slider .slider-cell.cell-category:first-child {
+    flex: 0 0 92px;
+    min-width: 92px;
+    padding-left: 0.75rem;
+    font-size: 0.8125rem;
+  }
+}
