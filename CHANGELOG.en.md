@@ -3,6 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Added the Maple appearance theme and chart color scheme
+- Fixed Escape leaving the confirm dialog open and closing the window behind it instead
 
 ## [1.30.0] - Sep-10 2026
 - Added automatic syncing of offline entries when the app returns to the foreground, with no need to reopen it or tap "Pending sync"
