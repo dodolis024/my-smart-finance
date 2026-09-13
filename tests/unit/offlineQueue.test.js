@@ -210,6 +210,33 @@ describe('offlineQueue - flush', () => {
     );
   });
 
+  it('無匯率的海外消費項目：補送時連手續費一起算', async () => {
+    enqueueTransaction(
+      USER_ID,
+      makeTx({ currency: 'GBP', amount: 10, exchange_rate: null, twd_amount: null, overseas_fee_rate: 1.5, overseas_fee: null }),
+      '2026-07-06'
+    );
+    mocks.rpc.mockResolvedValue({ data: 42.035, error: null });
+
+    await flushQueue(USER_ID);
+
+    expect(mocks.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ exchange_rate: 42.035, twd_amount: 426.66, overseas_fee_rate: 1.5, overseas_fee: 6.31 })
+    );
+  });
+
+  it('舊版佇列項目（沒有手續費欄位）補送行為不變，手續費欄位為 null', async () => {
+    // makeTx 本身就沒有 overseas_fee_rate / overseas_fee，等同加入手續費前入列的項目
+    enqueueTransaction(USER_ID, makeTx({ currency: 'GBP', amount: 10, exchange_rate: null, twd_amount: null }), '2026-07-06');
+    mocks.rpc.mockResolvedValue({ data: 42.035, error: null });
+
+    await flushQueue(USER_ID);
+
+    const payload = mocks.insert.mock.calls[0][0];
+    expect(payload).toMatchObject({ twd_amount: 420.35, overseas_fee: null });
+    expect(payload.overseas_fee_rate ?? null).toBeNull();
+  });
+
   it('single-flight:並發呼叫共用同一個進行中的 flush', async () => {
     enqueueTransaction(USER_ID, makeTx(), '2026-07-06');
     let resolveInsert;

@@ -73,6 +73,35 @@ describe('getMonthlySummary', () => {
       code: 'DB_ERROR',
     });
   });
+
+  it('沒有海外消費時手續費小計為 0', async () => {
+    const result = await getMonthlySummary({ year: 2026, month: 8 });
+
+    expect(result.overseasFeeTotal).toBe(0);
+  });
+
+  it('海外手續費小計只加支出的 overseasFee（已含在分類加總裡，不重複加）', async () => {
+    mocks.rpcImpl.mockResolvedValue({
+      data: {
+        ...DASHBOARD_RESPONSE,
+        history: [
+          { id: '1', category: '飲食', type: 'expense', twdAmount: 426.66, overseasFee: 6.31 },
+          { id: '2', category: '交通', type: 'expense', twdAmount: 101.5, overseasFee: 1.5 },
+          { id: '3', category: '飲食', type: 'expense', twdAmount: 0.3, overseasFee: null },
+          { id: '4', category: '薪水', type: 'income', twdAmount: 100, overseasFee: 9 },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await getMonthlySummary({ year: 2026, month: 8 });
+
+    expect(result.overseasFeeTotal).toBe(7.81);
+    expect(result.expenseByCategory).toEqual([
+      { category: '飲食', total: 426.96 },
+      { category: '交通', total: 101.5 },
+    ]);
+  });
 });
 
 describe('getStreak', () => {

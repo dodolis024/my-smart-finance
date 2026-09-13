@@ -23,12 +23,17 @@ export async function accountsCommand({ flags = {} } = {}) {
         type: ACCOUNT_TYPE_LABELS[a.type] || a.type,
         limit: a.credit_limit ? `NT$${money(a.credit_limit)}` : '－',
         billing: a.billing_day ? `每月 ${a.billing_day} 日` : '－',
+        // 讓 agent 看得出哪張卡記外幣時會自動加手續費
+        fee: a.overseas_fee_rate
+          ? `${Number(a.overseas_fee_rate)}%${a.overseas_fee_auto_check === false ? '' : '（外幣自動）'}`
+          : '－',
       })),
       [
         { key: 'name', label: '帳戶名稱' },
         { key: 'type', label: '類型' },
         { key: 'limit', label: '額度', align: 'right' },
         { key: 'billing', label: '結帳日' },
+        { key: 'fee', label: '海外手續費' },
       ]
     )
   );
@@ -55,6 +60,9 @@ export async function summaryCommand({ flags }) {
   console.log(`  收入  NT$${money(summary.totalIncome)}`);
   console.log(`  支出  NT$${money(summary.totalExpense)}`);
   console.log(`  結餘  NT$${money(summary.balance)}`);
+  if (result.overseasFeeTotal > 0) {
+    console.log(`  海外手續費：NT$${money(result.overseasFeeTotal)}（已含在支出中）`);
+  }
 
   if (result.expenseByCategory.length > 0) {
     console.log('\n支出分類排行');

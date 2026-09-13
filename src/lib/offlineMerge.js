@@ -28,6 +28,8 @@ export function buildQueuedRows(queuedItems, startDate, endDate) {
       currency: item.tx.currency,
       amount: item.tx.amount,
       twdAmount: item.tx.twd_amount,
+      overseasFeeRate: item.tx.overseas_fee_rate ?? null,
+      overseasFee: item.tx.overseas_fee ?? null,
       note: item.tx.note,
       pending: true,
       queueStatus: item.status,

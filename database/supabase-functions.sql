@@ -102,6 +102,8 @@ BEGIN
             'originalAmount', t.amount,
             'exchangeRate', t.exchange_rate,
             'twdAmount', t.twd_amount,
+            'overseasFeeRate', t.overseas_fee_rate,
+            'overseasFee', t.overseas_fee,
             'note', t.note,
             'type', t.type,
             'isSplitSynced', EXISTS (
@@ -124,7 +126,9 @@ BEGIN
             'billingDay', billing_day,
             'paymentDueDay', payment_due_day,
             'balanceAmount', balance_amount,
-            'balanceAsOf', balance_as_of
+            'balanceAsOf', balance_as_of,
+            'overseasFeeRate', overseas_fee_rate,
+            'overseasFeeAutoCheck', overseas_fee_auto_check
         ) ORDER BY created_at ASC
     ) INTO v_accounts
     FROM accounts

@@ -3,6 +3,7 @@
 // 重試撞到 Postgres 23505 重複鍵一律視為已成功,避免重複記帳。
 import { supabase } from '@/lib/supabase';
 import { isOfflineError } from '@/lib/offlineCache';
+import { computeTwdWithFee } from '@/lib/overseasFee';
 
 const QUEUE_PREFIX = 'sf:txq:v1';
 
@@ -130,7 +131,11 @@ async function doFlush(userId, includeFailed) {
           throw err;
         }
         tx.exchange_rate = Number(rate);
-        tx.twd_amount = Math.round(tx.amount * tx.exchange_rate * 100) / 100;
+        // 舊版佇列項目沒有 overseas_fee_rate（undefined）→ 視為非海外，行為與加入手續費前相同
+        const { overseasFee, twdAmount } = computeTwdWithFee(tx.amount, tx.exchange_rate, tx.overseas_fee_rate);
+        tx.twd_amount = twdAmount;
+        tx.overseas_fee = overseasFee;
+        if (overseasFee == null) tx.overseas_fee_rate = null;
       }
 
       const { error } = await supabase.from('transactions').insert(tx);

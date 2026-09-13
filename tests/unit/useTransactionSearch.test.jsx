@@ -102,9 +102,26 @@ describe('mapSearchRow', () => {
       originalAmount: 4.5,
       exchangeRate: 30,
       twdAmount: 135,
+      overseasFeeRate: null,
+      overseasFee: null,
       note: null,
     });
     expect(mapped.isSplitSynced).toBeUndefined();
+  });
+
+  it('海外手續費欄位（NUMERIC 字串）轉成數字', () => {
+    const mapped = mapSearchRow({
+      id: 'x2',
+      currency: 'GBP',
+      amount: '10.00',
+      exchange_rate: '42.035',
+      twd_amount: '426.66',
+      overseas_fee_rate: '1.500',
+      overseas_fee: '6.31',
+    });
+    expect(mapped.overseasFeeRate).toBe(1.5);
+    expect(mapped.overseasFee).toBe(6.31);
+    expect(mapped.twdAmount).toBe(426.66);
   });
 });
 

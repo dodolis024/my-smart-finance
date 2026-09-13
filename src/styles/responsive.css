@@ -291,6 +291,15 @@
     margin-bottom: 0.25rem;
   }
 
+  /* 上一條會把標題列裡的兩個 label 都加上下緣留白讓列變高，改由標題列本身留白 */
+  .transaction-form-section .form-group__label-row {
+    margin-bottom: 0.25rem;
+  }
+
+  .transaction-form-section .form-group__label-row label {
+    margin-bottom: 0;
+  }
+
   .form-group input[type="text"],
   .form-group input[type="number"],
   .form-group input[type="date"],

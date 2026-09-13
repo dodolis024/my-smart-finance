@@ -56,6 +56,10 @@ export async function getMonthlySummary({ year, month } = {}) {
     transactionCount: history.length,
     expenseByCategory: summarizeByCategory(history, 'expense'),
     incomeByCategory: summarizeByCategory(history, 'income'),
+    // 海外手續費已含在各筆 twd_amount 裡（上面的分類加總已包含），這裡只是另外列出小計
+    overseasFeeTotal: Math.round(
+      history.reduce((sum, tx) => sum + (tx.type === 'expense' ? Number(tx.overseasFee) || 0 : 0), 0) * 100
+    ) / 100,
   };
 }
 

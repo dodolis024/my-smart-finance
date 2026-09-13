@@ -11,7 +11,9 @@
 | 變動 | 要改的地方 |
 |---|---|
 | `transactions` 表加／改欄位 | `core/transactions.js` 的 `TX_FIELDS` 與 `addTransaction` |
-| 匯率取得或換算方式 | `resolveExchangeRate` / `computeTwdAmount` |
+| 匯率取得或換算方式 | `resolveExchangeRate` / `computeTwdWithFee` |
+| `transactions` 手續費欄位／計算方式 | `core/overseasFee.js`（與 `src/lib/overseasFee.js` 逐字相同）、`core/transactions.js` 的 `resolveOverseasFeeRate` 與 `updateTransaction` 重算區塊 |
+| `accounts` 手續費欄位 | `core/accounts.js` 的 `listAccounts` select |
 | 簽到規則 | `maybeCheckIn` |
 | 分類或帳戶的解析規則 | `core/categories.js` / `core/accounts.js` |
 
@@ -28,8 +30,8 @@
 零頭歸屬是這裡最容易做錯、也最難被發現的：兩邊若給不同的人，同一筆帳會差一分錢，
 而且只在除不盡時出現。`tests/unit/tools-split-report.test.js` 會直接比對兩份結算演算法的結果。
 
-`tests/unit/tools-transactions.test.js`、`tools-split-shares.test.js`、`tools-split-cli.test.js`
-守著這些行為，改壞了測試會紅。
+`tests/unit/tools-transactions.test.js`、`overseasFee.test.js`（比對兩份手續費計算）、
+`tools-split-shares.test.js`、`tools-split-cli.test.js` 守著這些行為，改壞了測試會紅。
 
 同步只是第一步：`tools/` 的改動要**發版**才會到已安裝的使用者手上，見下方「發版」。
 
@@ -107,6 +109,7 @@ http://localhost:9876/callback
 finance login                                              # 開瀏覽器用 Google 登入
 finance add 星巴克 150 --category 飲食 --account 現金
 finance add 拉麵 1200 --category 飲食 --account 現金 --currency JPY
+finance add 午餐 10 --category 飲食 --account 英國卡 --currency GBP   # 卡片有設海外手續費率會自動併入
 finance list --month 8
 finance summary
 finance help                                               # 完整指令說明

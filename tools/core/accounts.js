@@ -5,7 +5,7 @@ export async function listAccounts() {
   const client = await getAuthedClient();
   const { data, error } = await client
     .from('accounts')
-    .select('id, name, type, credit_limit, billing_day, payment_due_day')
+    .select('id, name, type, credit_limit, billing_day, payment_due_day, overseas_fee_rate, overseas_fee_auto_check')
     .order('name');
 
   if (error) throw fromSupabaseError(error, '讀取帳戶');

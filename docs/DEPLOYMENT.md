@@ -105,6 +105,7 @@
 | database/subscriptions-migration.sql | FK 行為與 prod 核對一致(`ON DELETE SET NULL`),檔頭聲明已更新 | 2026-07-11(核對,非重跑) |
 | database/supabase-functions.sql | freeze 最長連續改合併分段 | 2026-07-11 |
 | database/supabase-functions.sql | get_dashboard_data 回傳 time 欄位,排序改 date+time+created_at | 2026-08-25 |
+| database/overseas-fee-migration.sql + supabase-functions.sql | accounts／transactions 加海外手續費欄位;get_dashboard_data 回傳手續費欄位 | 2026-09-13 |
 
 > 2026-08-25 這次重跑有副作用:當時檔內的 exchange_rates 種子是
 > `ON CONFLICT DO UPDATE`,把 TWD/USD/JPY/EUR/GBP 五個幣別的真實匯率覆寫回種子值

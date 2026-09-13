@@ -18,12 +18,20 @@ finance — My Smart Finance 命令列工具
 記帳
   finance add <項目> <金額> --category <分類> --account <帳戶>
       [--currency TWD] [--date YYYY-MM-DD|today|yesterday] [--time HH:MM]
-      [--type expense|income] [--note 備註]
+      [--type expense|income] [--note 備註] [--overseas|--no-overseas]
   finance list [--month M] [--year Y] [--from 日期] [--to 日期]
       [--type expense|income] [--category 分類] [--search 關鍵字] [--limit N]
   finance edit <id> [--item ...] [--amount ...] [--category ...] [--account ...]
-      [--currency ...] [--date ...] [--time ...] [--note ...]
+      [--currency ...] [--date ...] [--time ...] [--note ...] [--overseas|--no-overseas]
   finance rm <id>
+
+  海外手續費
+    帳戶有設海外手續費率（finance accounts 看得到）時：
+    - 外幣消費且帳戶設為「外幣自動」→ 預設自動加手續費
+    - 使用者說這筆是海外刷的（例如在國內買國外網站、刷台幣）→ 加 --overseas
+    - 使用者說這筆不是海外、或不收手續費 → 加 --no-overseas
+    手續費會併入同一筆的台幣金額，不要另外記一筆手續費。
+    --overseas / --no-overseas 是開關，不接值，放在指令最後。
 
 分帳
   finance split groups                     列出分帳群組與成員

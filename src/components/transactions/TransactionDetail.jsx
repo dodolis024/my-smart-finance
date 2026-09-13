@@ -53,6 +53,12 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
   const currency = tx.currency || 'TWD';
   const exchangeRate = tx.exchangeRate || tx.exchange_rate || 1.0;
   const twdAmount = tx.twdAmount || tx.twd_amount || 0;
+  const overseasFeeRaw = tx.overseasFee ?? tx.overseas_fee;
+  const overseasFee = overseasFeeRaw == null ? null : Number(overseasFeeRaw);
+  const overseasFeeRate = Number(tx.overseasFeeRate ?? tx.overseas_fee_rate) || null;
+  const hasOverseasFee = overseasFee != null;
+  // twd_amount 已包含手續費；「台幣金額」列顯示本體（= 原幣 × 匯率）
+  const baseTwdAmount = hasOverseasFee ? Math.round((twdAmount - overseasFee) * 100) / 100 : twdAmount;
   const isSplitSynced =
     typeof tx.isSplitSynced === 'boolean'
       ? tx.isSplitSynced
@@ -134,6 +140,21 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
                 </div>
                 <div className="transaction-detail-item">
                   <div className="transaction-detail-label">{t('transaction.twdAmount')}</div>
+                  <div className="transaction-detail-value transaction-detail-amount">{formatMoney(baseTwdAmount)}</div>
+                </div>
+              </>
+            )}
+            {hasOverseasFee && (
+              <>
+                <div className="transaction-detail-item">
+                  <div className="transaction-detail-label">{t('transaction.overseasFee')}</div>
+                  <div className="transaction-detail-value">
+                    {formatMoney(overseasFee)}
+                    {overseasFeeRate && ` (${overseasFeeRate}%)`}
+                  </div>
+                </div>
+                <div className="transaction-detail-item">
+                  <div className="transaction-detail-label">{t('transaction.twdTotal')}</div>
                   <div className="transaction-detail-value transaction-detail-amount">{formatMoney(twdAmount)}</div>
                 </div>
               </>

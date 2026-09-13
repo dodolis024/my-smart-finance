@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { OVERSEAS_FEE_ACCOUNT_TYPES } from '@/lib/overseasFee';
 
 const ACCOUNT_TYPE_KEYS = ['cash', 'credit_card', 'debit_card', 'digital_wallet', 'bank'];
-const EMPTY_FORM = { name: '', type: '', creditLimit: '', billingDay: '', paymentDueDay: '', balanceAmount: '', error: '' };
+const EMPTY_FORM = { name: '', type: '', creditLimit: '', billingDay: '', paymentDueDay: '', balanceAmount: '', overseasFeeRate: '', overseasAutoCheck: true, error: '' };
 
 export default function AccountForm({ account, onSave, onCancel, loading }) {
   const { t } = useLanguage();
@@ -17,6 +18,8 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
         billingDay: account.billing_day != null ? String(account.billing_day) : '',
         paymentDueDay: account.payment_due_day != null ? String(account.payment_due_day) : '',
         balanceAmount: account.balance_amount != null ? String(account.balance_amount) : '',
+        overseasFeeRate: account.overseas_fee_rate != null ? String(Number(account.overseas_fee_rate)) : '',
+        overseasAutoCheck: account.overseas_fee_auto_check !== false,
       });
     } else {
       setForm(EMPTY_FORM);
@@ -24,11 +27,18 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
   }, [account]);
 
   const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  const setChecked = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.checked }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.type) {
       setForm((f) => ({ ...f, error: t('settings.account.requiredFieldError') }));
+      return;
+    }
+    const supportsFee = OVERSEAS_FEE_ACCOUNT_TYPES.includes(form.type);
+    const feeRate = supportsFee && form.overseasFeeRate !== '' ? parseFloat(form.overseasFeeRate) : null;
+    if (feeRate != null && (!Number.isFinite(feeRate) || feeRate < 0 || feeRate > 10)) {
+      setForm((f) => ({ ...f, error: t('settings.account.overseasFeeRateError') }));
       return;
     }
     setForm((f) => ({ ...f, error: '' }));
@@ -52,6 +62,9 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
         : balanceChanged
           ? new Date().toISOString()
           : (account?.balance_as_of ?? new Date().toISOString()),
+      // 填 0 等同不收手續費，存 NULL（資料庫 CHECK 要求 > 0）；類型改成不支援的也會存 NULL
+      overseas_fee_rate: feeRate > 0 ? feeRate : null,
+      overseas_fee_auto_check: Boolean(form.overseasAutoCheck),
     };
     await onSave(payload, account?.id || null);
   };
@@ -94,6 +107,24 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
               <label className="form-group__label">{t('settings.account.paymentDueDayLabel')}</label>
               <input className="form-group__input" type="number" min="1" max="31" value={form.paymentDueDay} onChange={set('paymentDueDay')} disabled={loading} />
             </div>
+          </>
+        )}
+        {OVERSEAS_FEE_ACCOUNT_TYPES.includes(form.type) && (
+          <>
+            <div className="form-group">
+              <label className="form-group__label">{t('settings.account.overseasFeeRateLabel')}</label>
+              <input className="form-group__input" type="number" min="0" max="10" step="0.01" inputMode="decimal"
+                placeholder="1.5" value={form.overseasFeeRate} onChange={set('overseasFeeRate')} disabled={loading} />
+              <p className="account-form__hint">{t('settings.account.overseasFeeRateHint')}</p>
+            </div>
+            {parseFloat(form.overseasFeeRate) > 0 && (
+              <div className="form-group">
+                <label className="account-form__checkbox">
+                  <input type="checkbox" checked={form.overseasAutoCheck} onChange={setChecked('overseasAutoCheck')} disabled={loading} />
+                  <span>{t('settings.account.overseasAutoCheckLabel')}</span>
+                </label>
+              </div>
+            )}
           </>
         )}
         {form.error && (

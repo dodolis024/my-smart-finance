@@ -128,6 +128,12 @@
   color: var(--color-text);
 }
 
+/* 範例提示（如手續費的 1.5）要淡到一看就知道不是已填的值；瀏覽器預設的灰太接近輸入文字 */
+.account-form .form-group input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
 .account-form .form-group input:focus,
 .account-form .form-group select:focus {
   outline: none;
@@ -139,6 +145,28 @@
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
   color: var(--color-text-muted);
+}
+
+/* 勾選列：要壓過上面 .account-form .form-group label／input 的 block 與輸入框樣式 */
+.account-form .form-group .account-form__checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: 0;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.account-form .form-group .account-form__checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  box-shadow: none;
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 
 .account-form .form-actions {

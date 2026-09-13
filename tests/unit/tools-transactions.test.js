@@ -398,3 +398,257 @@ describe('deleteTransaction', () => {
     await expect(deleteTransaction('')).rejects.toMatchObject({ code: 'INVALID_INPUT' });
   });
 });
+
+describe('海外手續費', () => {
+  const CARD = { id: 'acc-2', name: '英國卡', type: 'credit_card', overseas_fee_rate: 1.5, overseas_fee_auto_check: true };
+  const MANUAL = { id: 'acc-3', name: '手動卡', type: 'debit_card', overseas_fee_rate: 2, overseas_fee_auto_check: false };
+  const NOFEE = { id: 'acc-4', name: '普通卡', type: 'credit_card', overseas_fee_rate: null, overseas_fee_auto_check: true };
+  const FEE_ACCOUNTS = [...ACCOUNTS, CARD, MANUAL, NOFEE];
+
+  function setupAdd() {
+    queueResult('settings', { data: CATEGORIES, error: null });
+    queueResult('accounts', { data: FEE_ACCOUNTS, error: null });
+    queueResult('transactions', { data: { id: 'tx-1' }, error: null });
+    queueResult('checkins', { data: null, error: null });
+  }
+
+  describe('addTransaction', () => {
+    it('外幣＋有費率卡＋外幣自動、沒帶旗標 → 手續費併入 twd_amount', async () => {
+      setupAdd();
+      mocks.rpcImpl.mockResolvedValue({ data: 42.035, error: null });
+
+      await addTransaction({ itemName: '午餐', amount: 10, category: '飲食', account: '英國卡', currency: 'GBP' });
+
+      expect(lastWrite('transactions', 'insert')).toMatchObject({
+        exchange_rate: 42.035,
+        twd_amount: 426.66,
+        overseas_fee_rate: 1.5,
+        overseas_fee: 6.31,
+      });
+    });
+
+    it('台幣＋有費率卡、沒帶旗標 → 不算手續費', async () => {
+      setupAdd();
+
+      await addTransaction({ itemName: '網購', amount: 100, category: '飲食', account: '英國卡' });
+
+      expect(lastWrite('transactions', 'insert')).toMatchObject({
+        twd_amount: 100,
+        overseas_fee_rate: null,
+        overseas_fee: null,
+      });
+    });
+
+    it('台幣＋有費率卡＋--overseas → 101.5（國外網站刷台幣）', async () => {
+      setupAdd();
+
+      await addTransaction({ itemName: '網購', amount: 100, category: '飲食', account: '英國卡', overseas: true });
+
+      expect(lastWrite('transactions', 'insert')).toMatchObject({
+        twd_amount: 101.5,
+        overseas_fee_rate: 1.5,
+        overseas_fee: 1.5,
+      });
+    });
+
+    it('外幣＋外幣自動關閉、沒帶旗標 → 不算手續費', async () => {
+      setupAdd();
+      mocks.rpcImpl.mockResolvedValue({ data: 42.035, error: null });
+
+      await addTransaction({ itemName: '午餐', amount: 10, category: '飲食', account: '手動卡', currency: 'GBP' });
+
+      expect(lastWrite('transactions', 'insert')).toMatchObject({ twd_amount: 420.35, overseas_fee: null });
+    });
+
+    it('外幣＋外幣自動關閉＋--overseas → 用這張卡的費率', async () => {
+      setupAdd();
+      mocks.rpcImpl.mockResolvedValue({ data: 42.035, error: null });
+
+      await addTransaction({ itemName: '午餐', amount: 10, category: '飲食', account: '手動卡', currency: 'GBP', overseas: true });
+
+      expect(lastWrite('transactions', 'insert')).toMatchObject({ twd_amount: 428.76, overseas_fee_rate: 2, overseas_fee: 8.41 });
+    });
+
+    it('--no-overseas 覆寫卡片預設 → 不算手續費', async () => {
+      setupAdd();
+      mocks.rpcImpl.mockResolvedValue({ data: 42.035, error: null });
+
+      await addTransaction({ itemName: '午餐', amount: 10, category: '飲食', account: '英國卡', currency: 'GBP', overseas: false });
+
+      expect(lastWrite('transactions', 'insert')).toMatchObject({
+        twd_amount: 420.35,
+        overseas_fee_rate: null,
+        overseas_fee: null,
+      });
+    });
+
+    it.each(['普通卡', '現金'])('--overseas＋沒有費率的帳戶（%s）→ 報錯，不寫入', async (account) => {
+      setupAdd();
+      mocks.rpcImpl.mockResolvedValue({ data: 42.035, error: null });
+
+      await expect(
+        addTransaction({ itemName: '午餐', amount: 10, category: '飲食', account, currency: 'GBP', overseas: true })
+      ).rejects.toMatchObject({ code: 'INVALID_INPUT', hint: expect.stringContaining('--overseas') });
+      expect(lastWrite('transactions', 'insert')).toBeUndefined();
+    });
+
+    it('收入＋--overseas → 報錯', async () => {
+      setupAdd();
+
+      await expect(
+        addTransaction({ itemName: '薪水', amount: 1000, category: '薪水', account: '英國卡', overseas: true })
+      ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    });
+
+    it('收入即使是外幣＋外幣自動卡也不算手續費', async () => {
+      setupAdd();
+      mocks.rpcImpl.mockResolvedValue({ data: 42.035, error: null });
+
+      await addTransaction({ itemName: '退款', amount: 10, category: '薪水', account: '英國卡', currency: 'GBP' });
+
+      expect(lastWrite('transactions', 'insert')).toMatchObject({ type: 'income', twd_amount: 420.35, overseas_fee: null });
+    });
+  });
+
+  describe('updateTransaction', () => {
+    const OVERSEAS_TX = {
+      id: 'tx-9',
+      date: '2026-09-01',
+      item_name: '午餐',
+      category: '飲食',
+      type: 'expense',
+      account_id: 'acc-2',
+      payment_method: '英國卡',
+      currency: 'GBP',
+      amount: 10,
+      exchange_rate: 42.035,
+      twd_amount: 426.66,
+      overseas_fee_rate: 1.5,
+      overseas_fee: 6.31,
+    };
+    const PLAIN_TX = { ...OVERSEAS_TX, twd_amount: 420.35, overseas_fee_rate: null, overseas_fee: null };
+
+    function setupUpdate(existing, accounts = FEE_ACCOUNTS) {
+      queueResult('transactions', { data: existing, error: null });
+      queueResult('transactions', { data: existing, error: null });
+      queueResult('accounts', { data: accounts, error: null });
+      queueResult('settings', { data: CATEGORIES, error: null });
+    }
+
+    it('只改備註 → 不動 twd_amount 與手續費欄位', async () => {
+      setupUpdate(OVERSEAS_TX);
+
+      await updateTransaction('tx-9', { note: '好吃' });
+
+      const payload = lastWrite('transactions', 'update');
+      expect(payload).toEqual({ note: '好吃' });
+      expect(mocks.rpcImpl).not.toHaveBeenCalled();
+    });
+
+    it('改金額、原本是海外 → 沿用當時的 1.5%（即使卡片現在改成 1.2%）', async () => {
+      setupUpdate(OVERSEAS_TX, [{ ...CARD, overseas_fee_rate: 1.2 }]);
+
+      await updateTransaction('tx-9', { amount: 20 });
+
+      expect(lastWrite('transactions', 'update')).toMatchObject({
+        amount: 20,
+        exchange_rate: 42.035,
+        twd_amount: 853.31,
+        overseas_fee_rate: 1.5,
+        overseas_fee: 12.61,
+      });
+    });
+
+    it('--no-overseas → 手續費欄位寫回 null，twd_amount 回到本體', async () => {
+      setupUpdate(OVERSEAS_TX);
+
+      await updateTransaction('tx-9', { overseas: false });
+
+      expect(lastWrite('transactions', 'update')).toMatchObject({
+        twd_amount: 420.35,
+        overseas_fee_rate: null,
+        overseas_fee: null,
+      });
+    });
+
+    it('--overseas 開啟一筆原本非海外的交易 → 用卡片目前的費率', async () => {
+      setupUpdate(PLAIN_TX);
+      queueResult('split_ledger_syncs', { data: null, error: null });
+
+      await updateTransaction('tx-9', { overseas: true });
+
+      expect(lastWrite('transactions', 'update')).toMatchObject({
+        twd_amount: 426.66,
+        overseas_fee_rate: 1.5,
+        overseas_fee: 6.31,
+      });
+    });
+
+    it('換到沒有費率的卡、沒帶旗標 → 手續費自動移除', async () => {
+      setupUpdate(OVERSEAS_TX);
+
+      await updateTransaction('tx-9', { account: '普通卡' });
+
+      expect(lastWrite('transactions', 'update')).toMatchObject({
+        account_id: 'acc-4',
+        twd_amount: 420.35,
+        overseas_fee_rate: null,
+        overseas_fee: null,
+      });
+    });
+
+    it('換到沒有費率的卡＋--overseas → 報錯，不寫入', async () => {
+      setupUpdate(OVERSEAS_TX);
+
+      await expect(updateTransaction('tx-9', { account: '普通卡', overseas: true })).rejects.toMatchObject({
+        code: 'INVALID_INPUT',
+      });
+      expect(lastWrite('transactions', 'update')).toBeUndefined();
+    });
+
+    it('換到另一張有費率的卡且仍是海外 → 用新卡目前的費率', async () => {
+      setupUpdate(OVERSEAS_TX);
+
+      await updateTransaction('tx-9', { account: '手動卡' });
+
+      expect(lastWrite('transactions', 'update')).toMatchObject({
+        account_id: 'acc-3',
+        twd_amount: 428.76,
+        overseas_fee_rate: 2,
+        overseas_fee: 8.41,
+      });
+    });
+
+    it('改成收入分類 → 手續費移除', async () => {
+      setupUpdate(OVERSEAS_TX);
+
+      await updateTransaction('tx-9', { category: '薪水' });
+
+      expect(lastWrite('transactions', 'update')).toMatchObject({
+        type: 'income',
+        twd_amount: 420.35,
+        overseas_fee_rate: null,
+        overseas_fee: null,
+      });
+    });
+
+    it('改成收入分類＋--overseas → 報錯', async () => {
+      setupUpdate(OVERSEAS_TX);
+
+      await expect(updateTransaction('tx-9', { category: '薪水', overseas: true })).rejects.toMatchObject({
+        code: 'INVALID_INPUT',
+      });
+    });
+
+    it('分帳同步交易＋--overseas → 報錯', async () => {
+      setupUpdate(PLAIN_TX);
+      queueResult('split_ledger_syncs', { data: { id: 'sync-1' }, error: null });
+
+      await expect(updateTransaction('tx-9', { overseas: true })).rejects.toMatchObject({
+        code: 'INVALID_INPUT',
+        message: expect.stringContaining('分帳'),
+      });
+      expect(lastWrite('transactions', 'update')).toBeUndefined();
+    });
+  });
+});

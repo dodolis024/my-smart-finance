@@ -3,6 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Added the Maple appearance theme and chart color scheme
+- Added foreign transaction fees: set a rate on a credit or debit card, and ticking "Overseas" when recording adds the fee to that entry's TWD amount
 - Fixed Escape leaving the confirm dialog open and closing the window behind it instead
 
 ## [1.30.0] - Sep-10 2026

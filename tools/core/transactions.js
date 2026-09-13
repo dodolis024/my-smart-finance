@@ -1,8 +1,9 @@
 import { getAuthedClient, getCurrentUser } from './client.js';
-import { resolveAccount } from './accounts.js';
+import { listAccounts, resolveAccount } from './accounts.js';
 import { resolveCategory } from './categories.js';
 import { getTodayYmd, normalizeDate, normalizeTime } from './dates.js';
 import { ErrorCode, fromSupabaseError, smfError } from './errors.js';
+import { getOverseasFeeRate, getOverseasAutoCheck, computeTwdWithFee } from './overseasFee.js';
 
 /**
  * ⚠️ 這個檔案是 src/hooks/useTransactions.js 寫入邏輯的第二份實作。
@@ -14,7 +15,7 @@ import { ErrorCode, fromSupabaseError, smfError } from './errors.js';
 // 但 PostgREST 的錯誤訊息對 agent 很難懂，所以提前擋並給清楚訊息
 const MAX_AMOUNT = 99999999.99;
 
-const TX_FIELDS = 'id, date, time, type, item_name, category, payment_method, account_id, currency, amount, exchange_rate, twd_amount, note';
+const TX_FIELDS = 'id, date, time, type, item_name, category, payment_method, account_id, currency, amount, exchange_rate, twd_amount, overseas_fee_rate, overseas_fee, note';
 
 export function parseAmount(rawAmount) {
   if (rawAmount === null || rawAmount === undefined || rawAmount === '') {
@@ -54,9 +55,29 @@ async function resolveExchangeRate(client, currency) {
   return Number(data);
 }
 
-/** 與前端 useTransactions.js:149 完全相同的捨入方式，不可改用其他寫法 */
-function computeTwdAmount(amount, exchangeRate) {
-  return Math.round(amount * exchangeRate * 100) / 100;
+const OVERSEAS_NO_RATE_HINT = '請使用者先到網頁的帳戶設定填寫手續費率，或拿掉 --overseas';
+
+/**
+ * 決定這筆要套用的海外手續費率。
+ * overseas: true（--overseas）/ false（--no-overseas）/ undefined（沒表態 → 依帳戶預設）
+ * 網頁版在這些情況下勾選框根本不會出現；CLI 的使用者是 agent，靜默忽略會讓它以為手續費記上了，所以明確報錯。
+ */
+function resolveOverseasFeeRate({ overseas, account, currency, type }) {
+  const rate = getOverseasFeeRate(account);
+  if (type === 'income') {
+    if (overseas === true) {
+      throw smfError(ErrorCode.INVALID_INPUT, '收入不適用海外手續費', '拿掉 --overseas');
+    }
+    return null;
+  }
+  if (overseas === false) return null;
+  if (overseas === true) {
+    if (rate == null) {
+      throw smfError(ErrorCode.INVALID_INPUT, `帳戶「${account.name}」沒有設定海外手續費率`, OVERSEAS_NO_RATE_HINT);
+    }
+    return rate;
+  }
+  return rate != null && getOverseasAutoCheck(account) && currency !== 'TWD' ? rate : null;
 }
 
 /**
@@ -64,7 +85,7 @@ function computeTwdAmount(amount, exchangeRate) {
  * 對應 src/hooks/useTransactions.js 的 submitTransaction（新增分支）。
  */
 export async function addTransaction(input) {
-  const { itemName, amount: rawAmount, category, type = null, account, currency = 'TWD', date, time, note } = input;
+  const { itemName, amount: rawAmount, category, type = null, account, currency = 'TWD', date, time, note, overseas } = input;
 
   if (!String(itemName || '').trim()) {
     throw smfError(ErrorCode.INVALID_INPUT, '必須指定項目名稱');
@@ -88,6 +109,10 @@ export async function addTransaction(input) {
   const resolvedCategory = await resolveCategory(category, type);
   const resolvedAccount = await resolveAccount(account);
   const exchangeRate = await resolveExchangeRate(client, normalizedCurrency);
+  const feeRate = resolveOverseasFeeRate({
+    overseas, account: resolvedAccount, currency: normalizedCurrency, type: resolvedCategory.type,
+  });
+  const { overseasFee, twdAmount } = computeTwdWithFee(amount, exchangeRate, feeRate);
 
   const transactionData = {
     user_id: user.id,
@@ -102,7 +127,9 @@ export async function addTransaction(input) {
     currency: normalizedCurrency,
     amount,
     exchange_rate: exchangeRate,
-    twd_amount: computeTwdAmount(amount, exchangeRate),
+    twd_amount: twdAmount,
+    overseas_fee_rate: overseasFee == null ? null : feeRate,
+    overseas_fee: overseasFee,
     note: note || null,
   };
 
@@ -195,7 +222,10 @@ export async function listTransactions(options = {}) {
  * 修改一筆交易。
  *
  * 匯率的處理是這裡最容易寫錯的地方：幣別沒變就沿用原本的匯率，不可重新查今日匯率，
- * 否則只是改個備註，就會用今天的匯率改寫幾個月前那筆的台幣金額（對應 useTransactions.js:111-124）。
+ * 否則只是改個備註，就會用今天的匯率改寫幾個月前那筆的台幣金額（對應 useTransactions.js 的匯率鎖定）。
+ *
+ * 海外手續費同理：沒給 patch.overseas 就維持原本狀態，帳戶沒換就沿用當時的費率；
+ * 編輯不套用帳戶預設（CLI 看不到畫面，自動改動較難察覺）。
  */
 export async function updateTransaction(id, patch = {}) {
   const existing = await getTransaction(id);
@@ -238,13 +268,48 @@ export async function updateTransaction(id, patch = {}) {
 
   if (patch.note !== undefined) updates.note = patch.note || null;
 
+  const nextType = updates.type ?? existing.type;
+  const accountChanged = patch.account !== undefined && updates.account_id !== existing.account_id;
+  const wasOverseas = existing.overseas_fee_rate != null;
+  let wantOverseas = patch.overseas !== undefined ? patch.overseas : wasOverseas;
+
+  if (nextType === 'income') {
+    if (patch.overseas === true) throw smfError(ErrorCode.INVALID_INPUT, '收入不適用海外手續費', '拿掉 --overseas');
+    wantOverseas = false;
+  }
+  if (wantOverseas && !wasOverseas) {
+    // 分帳同步交易重新同步時 RPC 會改寫 twd_amount，手續費會被洗掉，所以不支援
+    const { data: sync } = await client.from('split_ledger_syncs').select('id').eq('transaction_id', id).maybeSingle();
+    if (sync) throw smfError(ErrorCode.INVALID_INPUT, '分帳同步進來的交易不支援海外手續費', '拿掉 --overseas');
+  }
+
+  let nextFeeRate = null;
+  if (wantOverseas) {
+    if (!accountChanged && wasOverseas) {
+      nextFeeRate = Number(existing.overseas_fee_rate);
+    } else {
+      const accounts = await listAccounts();
+      const nextAccount = accounts.find((a) => a.id === (updates.account_id ?? existing.account_id))
+        || accounts.find((a) => a.name === (updates.payment_method ?? existing.payment_method));
+      nextFeeRate = getOverseasFeeRate(nextAccount);
+      if (nextFeeRate == null && patch.overseas === true) {
+        throw smfError(
+          ErrorCode.INVALID_INPUT,
+          `帳戶「${nextAccount?.name ?? existing.payment_method}」沒有設定海外手續費率`,
+          OVERSEAS_NO_RATE_HINT
+        );
+      }
+    }
+  }
+  const feeChanged = (nextFeeRate ?? null) !== (wasOverseas ? Number(existing.overseas_fee_rate) : null);
+
   const amountChanged = patch.amount !== undefined;
   const currencyChanged = nextCurrency !== String(existing.currency).toUpperCase();
   // 既有匯率是壞值（歷史髒資料）時，即使這次沒改金額也要重算一次把它修回來——
   // 前端每次編輯都會重寫這兩個欄位，等於順手修復，這裡不跟上就會讓壞值永遠留著
   const existingRateIsBroken = !(Number(existing.exchange_rate) > 0);
 
-  if (amountChanged || currencyChanged || existingRateIsBroken) {
+  if (amountChanged || currencyChanged || existingRateIsBroken || feeChanged) {
     const amount = amountChanged ? parseAmount(patch.amount) : Number(existing.amount);
 
     const exchangeRate =
@@ -255,7 +320,11 @@ export async function updateTransaction(id, patch = {}) {
     updates.amount = amount;
     updates.currency = nextCurrency;
     updates.exchange_rate = exchangeRate;
-    updates.twd_amount = computeTwdAmount(amount, exchangeRate);
+    // 一定要帶入費率：只改金額時 nextFeeRate 就是沿用的舊費率，漏掉會把手續費弄掉
+    const { overseasFee, twdAmount } = computeTwdWithFee(amount, exchangeRate, nextFeeRate);
+    updates.twd_amount = twdAmount;
+    updates.overseas_fee_rate = overseasFee == null ? null : nextFeeRate;
+    updates.overseas_fee = overseasFee;
   }
 
   if (Object.keys(updates).length === 0) {

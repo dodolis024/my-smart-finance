@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { getTodayYmd, getNowHm, formatNumberWithCommas } from '@/lib/utils';
 import { useAmountInput } from '@/hooks/useAmountInput';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getOverseasFeeRate, defaultOverseasChecked } from '@/lib/overseasFee';
 
 // 備註展開與否記在本機：手動開合才會寫入，自動展開（編輯有備註的交易）不算數
 const NOTE_OPEN_KEY = 'transaction-form-note-open';
@@ -18,6 +19,7 @@ const makeInitialForm = (defaultCurrency = 'TWD') => ({
   currency: defaultCurrency,
   amount: '',
   note: '',
+  overseas: false,
 });
 
 export default function TransactionForm({
@@ -43,6 +45,8 @@ export default function TransactionForm({
   const amountRef = useRef(null);
   // 記錄使用者是否手動選過幣別：手動選過就不再被預設幣別覆蓋
   const currencyTouchedRef = useRef(false);
+  // 記錄使用者是否親手點過「海外消費」：點過就不再依卡片／幣別自動改它
+  const overseasTouchedRef = useRef(false);
   const { handleAmountChange, handleAmountBlur, handleAmountPaste } = useAmountInput(amountRef, setForm);
 
   useEffect(() => {
@@ -68,10 +72,14 @@ export default function TransactionForm({
         currency: currencyVal,
         amount: amountValue ? formatNumberWithCommas(String(amountValue)) : '',
         note: editingTransaction.note || '',
+        // 載入時顯示這筆實際存的狀態，不套用卡片預設
+        overseas: (editingTransaction.overseasFeeRate ?? editingTransaction.overseas_fee_rate) != null,
       });
+      overseasTouchedRef.current = false;
       setNoteOpen(Boolean(editingTransaction.note) || readNoteOpenPref());
     } else {
       currencyTouchedRef.current = false;
+      overseasTouchedRef.current = false;
       setForm(makeInitialForm(defaultCurrency));
       setNoteOpen(readNoteOpenPref());
     }
@@ -84,11 +92,27 @@ export default function TransactionForm({
     setForm((prev) => (prev.currency === defaultCurrency ? prev : { ...prev, currency: defaultCurrency }));
   }, [defaultCurrency, editingTransaction]);
 
+  // 改支付方式／幣別／分類時重算「海外消費」預設值（使用者親手點過就不動）。
+  // 只在使用者操作時重算，不可改成監聽 form 的 effect：編輯載入時會把存好的狀態蓋掉
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     if (name === 'currency') currencyTouchedRef.current = true;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  }, []);
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (!overseasTouchedRef.current && (name === 'paymentMethod' || name === 'currency' || name === 'categoryValue')) {
+        const acc = accounts.find((a) => (a.accountName || a.name) === next.paymentMethod);
+        const txType = String(next.categoryValue).startsWith('income:') ? 'income' : 'expense';
+        next.overseas = defaultOverseasChecked(acc, next.currency, txType);
+      }
+      return next;
+    });
+  }, [accounts]);
+
+  const handleOverseasChange = (e) => {
+    overseasTouchedRef.current = true;
+    const { checked } = e.target;
+    setForm((prev) => ({ ...prev, overseas: checked }));
+  };
 
   // <input type="datetime-local"> 的 value 是 "YYYY-MM-DDTHH:mm" 單一字串；
   // 拆回 date/time 兩個欄位存放（後端維持分開存的 schema）。任一段不完整時
@@ -104,8 +128,9 @@ export default function TransactionForm({
     if (submitting || disabled) return;
     setSubmitting(true);
     try {
-      await onSubmit(form, editingTransaction?.id ?? null);
+      await onSubmit({ ...form, overseas: showOverseas && form.overseas }, editingTransaction?.id ?? null);
       currencyTouchedRef.current = false;
+      overseasTouchedRef.current = false;
       setForm(makeInitialForm(defaultCurrency));
       setNoteOpen(readNoteOpenPref());
     } catch {
@@ -136,6 +161,13 @@ export default function TransactionForm({
     form.paymentMethod &&
     !accounts.some((a) => (a.accountName || a.name) === form.paymentMethod);
   const needsExtraCurrency = form.currency && !currencies.includes(form.currency);
+
+  const selectedAccount = accounts.find((a) => (a.accountName || a.name) === form.paymentMethod);
+  const isIncome = String(form.categoryValue).startsWith('income:');
+  // 選到有費率的卡才出現；編輯一筆原本就是海外消費的帳（卡片費率後來被刪掉）時也要出現，才能取消
+  const showOverseas =
+    !paymentOptional && !isIncome &&
+    (getOverseasFeeRate(selectedAccount) != null || (isEditing && form.overseas));
 
   return (
     <section className="transaction-form-section">
@@ -220,7 +252,22 @@ export default function TransactionForm({
         </div>
 
         <div className="form-group">
-          <label htmlFor="method">{t('transaction.paymentMethod')}</label>
+          <div className="form-group__label-row">
+            <label htmlFor="method">{t('transaction.paymentMethod')}</label>
+            {showOverseas && (
+              <label className="overseas-toggle" htmlFor="overseas">
+                <input
+                  type="checkbox"
+                  id="overseas"
+                  name="overseas"
+                  checked={form.overseas}
+                  onChange={handleOverseasChange}
+                  disabled={isFormDisabled}
+                />
+                <span>{t('transaction.overseasToggle')}</span>
+              </label>
+            )}
+          </div>
           <select
             id="method"
             name="paymentMethod"

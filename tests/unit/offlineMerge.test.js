@@ -63,11 +63,24 @@ describe('buildQueuedRows', () => {
       currency: 'TWD',
       amount: 120,
       twdAmount: 120,
+      overseasFeeRate: null,
+      overseasFee: null,
       note: null,
       pending: true,
       queueStatus: 'failed',
       queueError: '網路逾時',
     });
+  });
+
+  it('海外消費的佇列項目帶出手續費欄位（詳細頁要拆本體與手續費）', () => {
+    const [row] = buildQueuedRows(
+      [makeItem({ tx: { currency: 'GBP', amount: 10, twd_amount: 426.66, overseas_fee_rate: 1.5, overseas_fee: 6.31 } })],
+      '2026-07-01',
+      '2026-07-31'
+    );
+    expect(row.overseasFeeRate).toBe(1.5);
+    expect(row.overseasFee).toBe(6.31);
+    expect(row.twdAmount).toBe(426.66);
   });
 
   it('tx 缺 date 時不進列表也不崩潰', () => {

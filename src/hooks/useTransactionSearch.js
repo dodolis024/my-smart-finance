@@ -26,7 +26,7 @@ export function sumTransactions(rows) {
 }
 const SEARCH_COLUMNS = ['item_name', 'category', 'note', 'payment_method'];
 // 兩個查詢（跨月搜尋 / 自訂區間匯出）共用同一份欄位定義，避免日後漂移
-const SELECT_COLUMNS = 'id, date, time, type, item_name, category, payment_method, currency, amount, exchange_rate, twd_amount, note';
+const SELECT_COLUMNS = 'id, date, time, type, item_name, category, payment_method, currency, amount, exchange_rate, twd_amount, overseas_fee_rate, overseas_fee, note';
 
 /**
  * 消毒搜尋字（export 供測試直接驗）：
@@ -54,6 +54,8 @@ export function mapSearchRow(row) {
     originalAmount: row.amount == null ? null : Number(row.amount),
     exchangeRate: row.exchange_rate == null ? null : Number(row.exchange_rate),
     twdAmount: row.twd_amount == null ? 0 : Number(row.twd_amount),
+    overseasFeeRate: row.overseas_fee_rate == null ? null : Number(row.overseas_fee_rate),
+    overseasFee: row.overseas_fee == null ? null : Number(row.overseas_fee),
     note: row.note,
     // isSplitSynced 刻意不帶：resolveSplitSynced / TransactionDetail 會自查 split_ledger_syncs
   };

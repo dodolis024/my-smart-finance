@@ -104,6 +104,41 @@
   margin-bottom: var(--space-xs);
 }
 
+/* 標題列：左邊欄位標題、右邊附屬小控制項（例如「海外消費」勾選框）。
+   高度必須與單獨一個 label 相同，不可讓表單多出一行或變高 */
+.form-group__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.form-group .form-group__label-row label {
+  margin-bottom: 0;
+}
+
+.form-group .overseas-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.overseas-toggle input[type="checkbox"] {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
 /* Form inputs */
 .form-group input[type="text"],
 .form-group input[type="number"],

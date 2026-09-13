@@ -1,4 +1,4 @@
-// ⚠️ 這裡的寫入邏輯（匯率換算、twd_amount 捨入、帳戶對應、簽到條件）在 tools/core/transactions.js
+// ⚠️ 這裡的寫入邏輯（匯率換算、twd_amount 捨入、海外手續費、帳戶對應、簽到條件）在 tools/core/transactions.js
 // 有第二份實作，供 CLI 與 MCP server 使用。改動時兩邊都要改，否則兩邊會算出不同的台幣金額。
 // 詳見 tools/README.md 的「同步義務」。
 import { useCallback } from 'react';
@@ -8,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd, getNowHm, parseFormattedNumber } from '@/lib/utils';
 import { loadRates, loadAccounts, isOfflineError } from '@/lib/offlineCache';
 import { enqueueTransaction } from '@/lib/offlineQueue';
+import { getOverseasFeeRate, computeTwdWithFee } from '@/lib/overseasFee';
 
 export function useTransactions() {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ export function useTransactions() {
       currency = 'TWD',
       amount: rawAmount,
       note,
+      overseas = false,
     } = formData;
 
     const paymentTrimmed = String(paymentMethod || '').trim();
@@ -57,6 +59,9 @@ export function useTransactions() {
 
     if (!user) throw new Error(t('auth.loginRequired'));
 
+    // 分帳同步交易不支援：重新同步時 RPC 會改寫 twd_amount，手續費會被洗掉（見 docs/specs/overseas-fee.md）
+    const wantsOverseas = Boolean(overseas) && type === 'expense' && !isSplitSynced;
+
     const normalizedCurrency = currency.trim().toUpperCase();
 
     // 離線入列(僅新增):以本地快取解析匯率與帳戶,組出完整 insert payload 暫存,
@@ -78,6 +83,8 @@ export function useTransactions() {
       const cachedAccount = paymentTrimmed
         ? loadAccounts(user.id).find((a) => (a.accountName || a.name) === paymentTrimmed)
         : null;
+      const feeRate = wantsOverseas ? getOverseasFeeRate(cachedAccount) : null;
+      const { overseasFee, twdAmount } = computeTwdWithFee(amount, offlineRate, feeRate);
       const queued = enqueueTransaction(
         user.id,
         {
@@ -93,7 +100,9 @@ export function useTransactions() {
           currency: normalizedCurrency,
           amount,
           exchange_rate: offlineRate,
-          twd_amount: Math.round(amount * offlineRate * 100) / 100,
+          twd_amount: twdAmount,
+          overseas_fee_rate: overseasFee == null ? null : feeRate,
+          overseas_fee: overseasFee,
           note: note || null,
         },
         getTodayYmd()
@@ -111,12 +120,13 @@ export function useTransactions() {
 
     // 編輯時沿用原本的匯率，避免用今日匯率改寫歷史台幣金額；只有幣別變更才重新取匯率
     let exchangeRate = null;
+    let existingTx = null;
     if (editId) {
-      const { data: existingTx } = await supabase
+      ({ data: existingTx } = await supabase
         .from('transactions')
-        .select('currency, exchange_rate')
+        .select('currency, exchange_rate, account_id, overseas_fee_rate')
         .eq('id', editId)
-        .maybeSingle();
+        .maybeSingle());
       if (
         existingTx &&
         String(existingTx.currency).toUpperCase() === normalizedCurrency &&
@@ -145,11 +155,25 @@ export function useTransactions() {
 
     let account = null;
     if (paymentTrimmed) {
-      const { data: acc } = await supabase.from('accounts').select('id').eq('name', paymentTrimmed).maybeSingle();
+      const { data: acc } = await supabase
+        .from('accounts')
+        .select('id, type, overseas_fee_rate')
+        .eq('name', paymentTrimmed)
+        .maybeSingle();
       account = acc;
     }
 
-    const twdAmount = Math.round(amount * exchangeRate * 100) / 100;
+    // 編輯時同一個帳戶、原本就是海外消費 → 沿用當時的費率（同匯率鎖定：改備註不該用今天的卡片設定改寫歷史金額）
+    let feeRate = null;
+    if (wantsOverseas) {
+      const lockedRate = Number(existingTx?.overseas_fee_rate);
+      if (editId && lockedRate > 0 && account?.id && existingTx?.account_id === account.id) {
+        feeRate = lockedRate;
+      } else {
+        feeRate = getOverseasFeeRate(account);
+      }
+    }
+    const { overseasFee, twdAmount } = computeTwdWithFee(amount, exchangeRate, feeRate);
 
     const transactionData = {
       user_id: user.id,
@@ -164,6 +188,9 @@ export function useTransactions() {
       amount,
       exchange_rate: exchangeRate,
       twd_amount: twdAmount,
+      // 編輯時也一定要送：取消勾選要寫回 null，否則舊手續費會殘留
+      overseas_fee_rate: overseasFee == null ? null : feeRate,
+      overseas_fee: overseasFee,
       note: note || null,
     };
 
