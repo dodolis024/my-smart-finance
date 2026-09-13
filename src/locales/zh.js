@@ -382,6 +382,7 @@ const zh = {
         sorbet: '橘子汽水',
         peach: '蜜桃',
         lime: '萊姆',
+        maple: '紅楓',
       },
       intervals: {
         open: '每次開啟',

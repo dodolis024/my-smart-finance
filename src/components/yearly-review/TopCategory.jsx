@@ -8,7 +8,7 @@ import ReviewExportFooter from './ReviewExportFooter';
 import {
   CHART_COLORS_ROSE, CHART_COLORS_GRAY, CHART_COLORS_DAWN, CHART_COLORS_SODA,
   CHART_COLORS_LAVENDER, CHART_COLORS_SORBET, CHART_COLORS_PEACH, CHART_COLORS_LIME,
-  CHART_COLORS,
+  CHART_COLORS_MAPLE, CHART_COLORS,
 } from '@/lib/constants';
 
 ChartJS.register(ArcElement, Tooltip);
@@ -16,7 +16,7 @@ ChartJS.register(ArcElement, Tooltip);
 const THEME_PALETTES = {
   rose: CHART_COLORS_ROSE, graphite: CHART_COLORS_GRAY, dawn: CHART_COLORS_DAWN,
   soda: CHART_COLORS_SODA, lavender: CHART_COLORS_LAVENDER, sorbet: CHART_COLORS_SORBET,
-  peach: CHART_COLORS_PEACH, lime: CHART_COLORS_LIME,
+  peach: CHART_COLORS_PEACH, lime: CHART_COLORS_LIME, maple: CHART_COLORS_MAPLE,
 };
 
 const MAX_RING_ITEMS = 3;

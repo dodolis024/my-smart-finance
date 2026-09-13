@@ -163,4 +163,17 @@ export const CHART_COLORS_LAVENDER = [
   'hsl(265, 44%, 60%)',
 ];
 
+// Maple 主題圖表色：楓紅＋杏／奶茶暖色系（色相 3°～26°，不用冷粉；淺色偏杏、深色偏紅）
+export const CHART_COLORS_MAPLE = [
+  'hsl(5, 48%, 47%)',
+  'hsl(14, 44%, 67%)',
+  'hsl(10, 52%, 55%)',
+  'hsl(26, 44%, 80%)',
+  'hsl(3, 44%, 39%)',
+  'hsl(26, 44%, 54%)',
+  'hsl(14, 40%, 45%)',
+  'hsl(26, 44%, 71%)',
+  'hsl(3, 40%, 35%)',
+];
+
 export const MONTH_ABBREVS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

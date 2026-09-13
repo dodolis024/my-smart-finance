@@ -1,0 +1,52 @@
+/* Maple — #b3372d  Autumn maple red monochrome */
+[data-theme="maple"] {
+  /* ─── Primary: Maple ─── */
+  --color-primary: #b3372d;
+  --color-primary-hover: #982f26;
+  --color-primary-dark: #71231c;
+  --color-primary-tint: rgba(179, 55, 45, 0.35);
+  --color-primary-tint-border: rgba(179, 55, 45, 0.55);
+  --color-primary-tint-light: rgba(179, 55, 45, 0.15);
+  --color-primary-tint-hover: rgba(179, 55, 45, 0.1);
+  --color-primary-tint-focus: rgba(179, 55, 45, 0.15);
+
+  /* ─── Surfaces ─── */
+  --color-bg: #f9f1ea;
+  --color-card: #ffffff;
+  --color-text: #4a2717;
+  --color-text-secondary: #8a5d45;
+  --color-text-muted: #b2856d;
+  --color-border: #e8d4c4;
+  --color-border-light: #f1e2d7;
+  --color-border-input: #e4c9b8;
+  --color-border-subtle: rgba(179, 55, 45, 0.08);
+
+  /* ─── Table ─── */
+  --color-table-header: #e8c7b5;
+  --color-row-hover: #f5e6d8;
+  --color-row-alt: #fdf9f5;
+
+  /* ─── Progress ─── */
+  --color-progress-track: #e8d4c4;
+  --color-progress-safe: #5a9e78;
+  --color-progress-warn: #d4903c;
+  --color-progress-danger: #d04848;
+
+  /* ─── Misc UI ─── */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%234a2717'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+
+  --shadow-focus: 0 0 0 3px rgba(179, 55, 45, 0.3);
+
+  --scrollbar-track: #f9f1ea;
+  --scrollbar-thumb: #e8d4c4;
+  --scrollbar-thumb-hover: #d8b89e;
+
+  /* ─── Feature colors ─── */
+  --color-subscription: #b8815f;
+
+  /* ─── Accent: Ginkgo Gold (check-in / manual) ─── */
+  --icon-checkin-color: #d9a032;
+
+  --color-manual-bg: rgba(217, 160, 50, 0.25);
+  --color-manual-border: rgba(190, 135, 30, 0.85);
+}

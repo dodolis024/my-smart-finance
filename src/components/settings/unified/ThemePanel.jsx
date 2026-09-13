@@ -14,6 +14,7 @@ const THEME_OPTIONS = [
   { id: 'sorbet', swatch: ['#ee9248', '#f0be3a', '#5ab0d4'] },
   { id: 'peach', swatch: ['#f99584', '#fffdfc', '#f4dbd6'] },
   { id: 'lime', swatch: ['#aec22a', '#fcfdf5', '#e0e6c0'] },
+  { id: 'maple', swatch: ['#b3372d', '#f9f1ea', '#e8d4c4'] },
 ];
 
 const ChevronRight = ({ isOpen }) => (

@@ -382,6 +382,7 @@ const en = {
         sorbet: 'Orange Sorbet',
         peach: 'Peach',
         lime: 'Lime',
+        maple: 'Maple',
       },
       intervals: {
         open: 'Every Open',
