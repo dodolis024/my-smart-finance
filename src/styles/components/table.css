@@ -247,6 +247,12 @@
   white-space: nowrap;
 }
 
+/* 金額放不下時截成刪節號（完整值在 title），不要溢出壓到右側的操作鈕 */
+.cell-amount-inner {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .cell-actions {
   padding: 0 0.5rem;
   text-align: center;

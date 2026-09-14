@@ -77,6 +77,50 @@
   box-shadow: var(--shadow-focus);
 }
 
+/* 設定清單（一般分頁）：左名稱＋灰色說明、右控制項，一行一個設定；
+   窄螢幕放不下時控制項自動換到下一行 */
+.settings-list {
+  margin-bottom: 1.25rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.settings-list__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.settings-list__row + .settings-list__row {
+  border-top: 1px solid var(--color-border-light);
+}
+
+/* 文字欄吃掉剩餘寬度，說明太長時在欄內折行；最窄只縮到名稱一行的寬度，
+   名稱加控制項真的放不下（例如英文版手機）才讓控制項換到下一行 */
+.settings-list__text {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: min-content;
+}
+
+.settings-list__label {
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.settings-list__hint {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
 @media (max-width: 860px) {
   .settings-manage-grid {
     grid-template-columns: 1fr;

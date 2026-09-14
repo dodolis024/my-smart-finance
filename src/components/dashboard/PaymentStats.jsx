@@ -1,15 +1,16 @@
 import { useMemo } from 'react';
-import { formatMoney } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import { hasBalanceTracking } from '@/lib/accountBalance';
 
 export default function PaymentStats({ history = [], accounts = [], onOpenCreditCard, onOpenAccountBalance, onSelectMethod, periodName }) {
   const { t } = useLanguage();
+  const { toDisplay, formatTotal } = useDisplayAmount();
   const pairs = useMemo(() => {
     const byMethod = {};
     (history || []).forEach((tx) => {
       const m = (tx.paymentMethod && String(tx.paymentMethod).trim()) ? tx.paymentMethod : t('transaction.other');
-      const amt = typeof tx.twdAmount === 'number' ? tx.twdAmount : 0;
+      const amt = toDisplay(tx).value;
       if (!byMethod[m]) byMethod[m] = { value: 0, txs: [] };
       byMethod[m].value += amt;
       byMethod[m].txs.push(tx);
@@ -17,7 +18,7 @@ export default function PaymentStats({ history = [], accounts = [], onOpenCredit
     return Object.entries(byMethod)
       .map(([label, { value, txs }]) => ({ label, value, txs }))
       .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-  }, [history, t]);
+  }, [history, t, toDisplay]);
 
   // 占比分母：本期各支付方式的絕對值總和（這份統計含收入，故不叫支出）
   const totalPayment = useMemo(
@@ -53,7 +54,7 @@ export default function PaymentStats({ history = [], accounts = [], onOpenCredit
             onKeyDown={select ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); } } : undefined}
           >
             <span className="pay-name">{p.label}</span>
-            <span className="pay-amount">{formatMoney(p.value)}</span>
+            <span className="pay-amount">{formatTotal(p.value)}</span>
           </li>
         );
       })}

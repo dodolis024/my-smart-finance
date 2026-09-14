@@ -61,6 +61,27 @@ export function formatCurrencyAmount(amount, currencyCode) {
   }).format(n);
 }
 
+/**
+ * 帶幣別符號的原幣金額（£12.50、US$8.00、¥1,200），供「交易記錄顯示方式＝原幣」使用。
+ * 小數位規則同 formatCurrencyAmount；台幣在 zh-TW 下是「$」，與 formatMoney 一致。
+ */
+export function formatOriginalMoney(amount, currencyCode) {
+  const n = typeof amount === 'number' ? amount : parseFloat(amount);
+  const code = String(currencyCode || 'TWD').toUpperCase();
+  const fractionDigits = ZERO_DECIMAL_CURRENCIES.has(code) ? 0 : 2;
+  try {
+    return new Intl.NumberFormat('zh-TW', {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(isNaN(n) ? 0 : n);
+  } catch {
+    // 非 ISO 4217 的幣別代碼會讓 Intl 拋 RangeError，退回「代碼 金額」
+    return `${code} ${formatCurrencyAmount(isNaN(n) ? 0 : n, code)}`;
+  }
+}
+
 export function escapeHtml(s) {
   if (s == null) return '';
   const t = String(s);

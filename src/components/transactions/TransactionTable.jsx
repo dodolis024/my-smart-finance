@@ -3,6 +3,7 @@ import TransactionRow from './TransactionRow';
 import TransactionDayGroup from './TransactionDayGroup';
 import TransactionDetail from './TransactionDetail';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { LAYOUT } from '@/lib/constants';
 
@@ -25,6 +26,7 @@ export default function TransactionTable({
   categoryColors,
 }) {
   const { t } = useLanguage();
+  const { toDisplay } = useDisplayAmount();
   const { width } = useWindowSize();
   const isMobile = width <= LAYOUT.MOBILE_MAX_WIDTH;
   const [detailTx, setDetailTx] = useState(null);
@@ -35,22 +37,22 @@ export default function TransactionTable({
   );
 
   // 當日合計刻意算在分頁前：同一天被分頁切開時，兩頁的標題顯示同一個總額，
-  // 而不是各自當頁的部分和。
+  // 而不是各自當頁的部分和。金額換成顯示幣別
   const dayTotals = useMemo(() => {
     const totals = new Map();
     for (const tx of transactions) {
       const acc = totals.get(tx.date) || { count: 0, expense: 0, income: 0 };
       acc.count += 1;
-      const amount = typeof tx.twdAmount === 'number' ? tx.twdAmount : parseFloat(tx.twdAmount) || 0;
+      const { value } = toDisplay(tx);
       if (tx.type === 'income') {
-        acc.income += amount;
+        acc.income += value;
       } else {
-        acc.expense += amount;
+        acc.expense += value;
       }
       totals.set(tx.date, acc);
     }
     return totals;
-  }, [transactions]);
+  }, [transactions, toDisplay]);
 
   // 當頁依日期切成一天一組；交錯底色在每張卡片內重新起算
   const days = useMemo(() => {
@@ -75,14 +77,17 @@ export default function TransactionTable({
   }, [groupByDate, pagedTransactions, dayTotals]);
 
   // 分組時日期由每日標題標示，整個日期欄不存在，寬度分給其他欄；
-  // 年檢視不分組，日期回到每一列自己顯示，欄位與原本的寬度一起還原
+  // 年檢視不分組，日期回到每一列自己顯示，欄位與原本的寬度一起還原。
+  // 操作欄固定成剛好放得下編輯＋刪除（36 + 8 + 36 + 左右內距 20 = 100px，留 4px 餘裕），
+  // 金額欄不給寬度、吃掉剩下的空間：寬螢幕上操作欄原本多出來的留白都讓給金額，
+  // 原幣模式的長金額（US$1,234.56）才放得下。兩種金額模式共用同一組欄寬，切換時欄位不會移動
   const colgroup = groupByDate ? (
     <colgroup>
       <col style={{ width: '15%' }} />
       <col style={{ width: '32%' }} />
       <col style={{ width: '16%' }} />
-      <col style={{ width: '17%' }} />
-      <col style={{ width: '20%' }} />
+      <col />
+      <col style={{ width: '6.5rem' }} />
     </colgroup>
   ) : (
     <colgroup>
@@ -90,8 +95,8 @@ export default function TransactionTable({
       <col style={{ width: '13.89%' }} />
       <col style={{ width: '18.06%' }} />
       <col style={{ width: '13.89%' }} />
-      <col style={{ width: '18.06%' }} />
-      <col style={{ width: '19.44%' }} />
+      <col />
+      <col style={{ width: '6.5rem' }} />
     </colgroup>
   );
 

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import Modal from './Modal';
 import TransactionListPanel from '@/components/transactions/TransactionListPanel';
+import { DisplayAmountTwdScope } from '@/contexts/DisplayAmountContext';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { formatMoney, getDaysUntilDay } from '@/lib/utils';
 import { calculateCreditUsage } from '@/lib/creditCard';
@@ -138,17 +139,19 @@ export default function CreditCardModal({
                 {rows.length > 0 && ` · ${formatMoney(rowsTotal)}`}
               </span>
             </div>
-            <TransactionListPanel
-              txs={rows}
-              isOpen={isOpen}
-              resetKey={account}
-              sortBy={sortBy}
-              onSortChange={setSortBy}
-              emptyText={t('creditCard.recordsEmpty', { period: periodName })}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onCloseParent={onClose}
-            />
+            <DisplayAmountTwdScope>
+              <TransactionListPanel
+                txs={rows}
+                isOpen={isOpen}
+                resetKey={account}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                emptyText={t('creditCard.recordsEmpty', { period: periodName })}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onCloseParent={onClose}
+              />
+            </DisplayAmountTwdScope>
           </section>
         )}
       </div>

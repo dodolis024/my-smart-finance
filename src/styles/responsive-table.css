@@ -24,12 +24,15 @@
     text-align: center;
   }
 
-  /* 手機版：用 grid 讓標題置中、icon 釘右上、搜尋框獨佔第二列（避免與 icon 重疊） */
+  /* 手機版：用 grid 讓標題置中、icon 釘右上、搜尋框獨佔第二列（避免與 icon 重疊）。
+     兩側欄最小為內容寬：窄螢幕放不下四顆 icon 時，標題往左讓位而不是被 icon 蓋住 */
   .transaction-history-header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
     align-items: center;
     row-gap: var(--space-sm);
+    /* 欄距收到 0.5rem：390px 手機放四顆 icon 時標題偏離中心不到 3px */
+    column-gap: 0.5rem;
   }
 
   /* 電腦版把標題與翻頁組包成一組（靠左並排）；手機版要讓 h2 回到 grid 中間欄才會真正置中，
@@ -52,11 +55,12 @@
     justify-self: start;
   }
 
-  /* icon 群固定在第一列右側 */
+  /* icon 群固定在第一列右側；間距收窄，讓 390px 手機放得下四顆 icon 時標題仍置中 */
   .transaction-history-header__controls {
     grid-column: 3;
     grid-row: 1;
     justify-self: end;
+    gap: 0.25rem;
   }
 
   /* 搜尋框容器橫跨整列、置於第二列並置中 */
@@ -66,6 +70,9 @@
     justify-self: center;
     width: 100%;
     max-width: 22rem;
+    /* 不讓搜尋框的內容寬度回頭撐大第一列兩側的欄（兩側欄最小為內容寬），
+       否則一展開搜尋，標題就被推離中心 */
+    contain: inline-size;
   }
 
   /* 手機版 table 改為 block + flex */
@@ -158,8 +165,10 @@
     text-overflow: ellipsis;
   }
 
+  /* 寬度至少 85px、放不下時跟著內容變寬（由品項欄讓出）：原幣模式的
+     US$1,234.56 這類字串會超過 85px，固定寬度會被截成刪節號 */
   .row-slider .slider-cell.cell-amount {
-    flex: 0 0 85px;
+    flex: 0 0 auto;
     min-width: 85px;
     font-size: 0.875rem;
     text-align: right !important;
@@ -223,7 +232,7 @@
 
   .row-slider .slider-cell.cell-date { flex: 0 0 68px; min-width: 68px; }
   .row-slider .slider-cell.cell-category { flex: 0 0 72px; min-width: 72px; }
-  .row-slider .slider-cell.cell-amount { flex: 0 0 85px; min-width: 85px; }
+  .row-slider .slider-cell.cell-amount { flex: 0 0 auto; min-width: 85px; }
 }
 
 /* Responsive — Extra Narrow Mobile (≤470px) */
@@ -236,7 +245,7 @@
 
   .row-slider .slider-cell.cell-date { flex: 0 0 62px; min-width: 62px; font-size: 0.75rem; }
   .row-slider .slider-cell.cell-category { flex: 0 0 66px; min-width: 66px; }
-  .row-slider .slider-cell.cell-amount { flex: 0 0 85px; min-width: 85px; font-size: 0.8125rem; }
+  .row-slider .slider-cell.cell-amount { flex: 0 0 auto; min-width: 85px; font-size: 0.8125rem; }
 }
 
 /* 月檢視（按日分組）分類是每列第一格：色點離卡片左緣留 12px（對齊右側金額），

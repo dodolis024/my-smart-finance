@@ -27,6 +27,7 @@ export function buildQueuedRows(queuedItems, startDate, endDate) {
       paymentMethod: item.tx.payment_method,
       currency: item.tx.currency,
       amount: item.tx.amount,
+      exchangeRate: item.tx.exchange_rate,
       twdAmount: item.tx.twd_amount,
       overseasFeeRate: item.tx.overseas_fee_rate ?? null,
       overseasFee: item.tx.overseas_fee ?? null,

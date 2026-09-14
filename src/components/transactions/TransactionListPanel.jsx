@@ -2,8 +2,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import TransactionDetail from './TransactionDetail';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { LAYOUT } from '@/lib/constants';
-import { formatMoney, formatDateForDisplay } from '@/lib/utils';
+import { formatDateForDisplay } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 
 // 分類明細與信用卡彈窗共用的紀錄清單：排序列 + 清單 + 點進單筆詳情。
 // 樣式沿用 category-detail-* 一套，兩邊外觀一致。
@@ -20,6 +21,7 @@ export default function TransactionListPanel({
   onCloseParent,
 }) {
   const { t } = useLanguage();
+  const { formatTxAmount } = useDisplayAmount();
   const { width } = useWindowSize();
   const isMobile = width <= LAYOUT.MOBILE_MAX_WIDTH;
   const [detailTx, setDetailTx] = useState(null);
@@ -117,7 +119,7 @@ export default function TransactionListPanel({
               <span className="category-detail-row__date">{formatDateForDisplay(tx.date, isMobile)}</span>
               <span className="category-detail-row__item">{tx.itemName}</span>
               <span className="category-detail-row__note">{tx.note}</span>
-              <span className="category-detail-row__amount">{formatMoney(tx.twdAmount)}</span>
+              <span className="category-detail-row__amount">{formatTxAmount(tx)}</span>
             </li>
           ))}
         </ul>

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import Modal from './Modal';
 import TransactionListPanel from '@/components/transactions/TransactionListPanel';
+import { DisplayAmountTwdScope } from '@/contexts/DisplayAmountContext';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { formatMoney } from '@/lib/utils';
 import { calculateAccountBalance, getBalanceSettings } from '@/lib/accountBalance';
@@ -181,17 +182,19 @@ export default function AccountBalanceModal({
                 {rows.length > 0 && ` · ${formatMoney(rowsTotal)}`}
               </span>
             </div>
-            <TransactionListPanel
-              txs={rows}
-              isOpen={isOpen}
-              resetKey={account}
-              sortBy={sortBy}
-              onSortChange={setSortBy}
-              emptyText={t('accountBalance.recordsEmpty', { period: periodName })}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onCloseParent={onClose}
-            />
+            <DisplayAmountTwdScope>
+              <TransactionListPanel
+                txs={rows}
+                isOpen={isOpen}
+                resetKey={account}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                emptyText={t('accountBalance.recordsEmpty', { period: periodName })}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onCloseParent={onClose}
+              />
+            </DisplayAmountTwdScope>
           </section>
         )}
       </div>

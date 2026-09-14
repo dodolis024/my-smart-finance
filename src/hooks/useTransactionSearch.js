@@ -128,6 +128,8 @@ export function useTransactionSearch(userId, query) {
   const [results, setResults] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  // 加總所用的「全部符合」列（可能多於畫面上的 200 筆），顯示幣別不是台幣時由呼叫端自行換算加總
+  const [allMatches, setAllMatches] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const requestIdRef = useRef(0);
@@ -140,6 +142,7 @@ export function useTransactionSearch(userId, query) {
         setResults([]);
         setTotalCount(0);
         setSummary(EMPTY_SUMMARY);
+        setAllMatches([]);
         setSearching(false);
         setSearchError(null);
         return;
@@ -158,6 +161,7 @@ export function useTransactionSearch(userId, query) {
         setResults([]);
         setTotalCount(0);
         setSummary(EMPTY_SUMMARY);
+        setAllMatches([]);
         return;
       }
 
@@ -176,6 +180,7 @@ export function useTransactionSearch(userId, query) {
       setResults(rows);
       setTotalCount(count);
       setSummary(sumTransactions(summaryRows));
+      setAllMatches(summaryRows);
       setSearching(false);
     },
     [userId]
@@ -188,6 +193,7 @@ export function useTransactionSearch(userId, query) {
       setResults([]);
       setTotalCount(0);
       setSummary(EMPTY_SUMMARY);
+      setAllMatches([]);
       setSearching(false);
       setSearchError(null);
       return;
@@ -205,5 +211,5 @@ export function useTransactionSearch(userId, query) {
     if (query && query.trim()) runSearch(query);
   }, [query, runSearch]);
 
-  return { results, totalCount, summary, searching, searchError, refresh };
+  return { results, totalCount, summary, summaryRows: allMatches, searching, searchError, refresh };
 }

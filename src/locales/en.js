@@ -131,6 +131,9 @@ const en = {
     syncSuccess: 'Synced {count} offline transaction(s).',
     searchPlaceholder: 'Search all months…',
     searchClear: 'Clear search text',
+    showOriginalAmounts: 'Show amounts in original currency',
+    estimatedAmountHint: 'No rate recorded for that day; estimated at today\'s rate',
+    estimatedTotalHint: 'Some transactions have no rate recorded for their day; estimated at today\'s rate',
     searchNoResults: 'No transactions match your search',
     searchResultCount: 'Found {count} transactions across all months',
     searchResultCountCapped: '{count} matches found, latest 200 loaded',
@@ -284,15 +287,32 @@ const en = {
       en: 'English',
     },
 
+    preferences: {
+      sectionTitle: 'Language & Currency',
+    },
+
     currency: {
-      title: 'Default Currency',
-      label: 'Currency used by default when recording',
+      title: 'Recording Currency',
+      label: 'Preselected when adding a transaction',
       saveError: 'Failed to save default currency',
+    },
+
+    displayCurrency: {
+      title: 'Display Currency',
+      label: 'Used for dashboard amounts and totals',
+      saveError: 'Failed to save display currency',
+    },
+
+    amountMode: {
+      title: 'Transaction Amounts',
+      converted: 'Display currency',
+      original: 'Original',
+      saveError: 'Failed to save transaction amount display',
     },
 
     tabs: {
       theme: 'Appearance',
-      options: 'Categories',
+      options: 'General',
       accounts: 'Accounts',
       notification: 'Notifications',
       subscription: 'Subscriptions',

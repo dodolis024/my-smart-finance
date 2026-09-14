@@ -5,6 +5,7 @@ import CategoryManager from './CategoryManager';
 import AccountManager from './AccountManager';
 import { useSettings } from '@/hooks/useSettings';
 import { useDashboard } from '@/hooks/useDashboard';
+import { useDisplayPreferences, AMOUNT_MODES } from '@/hooks/useDisplayPreferences';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -24,13 +25,15 @@ function OptionsPanel({ isOpen, confirm, toast }) {
     loadSettingsData, addCategory, renameCategory, deleteCategory, reorderCategoriesTo,
   } = useSettings();
   const { currencies, defaultCurrency, fetchCurrencies, saveDefaultCurrency } = useDashboard();
+  const { displayPreferences, loadDisplayPreferences, saveDisplayPreferences } = useDisplayPreferences();
 
   useEffect(() => {
     if (isOpen) {
       loadSettingsData();
       fetchCurrencies().catch(() => {});
+      loadDisplayPreferences().catch(() => {});
     }
-  }, [isOpen, loadSettingsData, fetchCurrencies]);
+  }, [isOpen, loadSettingsData, fetchCurrencies, loadDisplayPreferences]);
 
   const handleDefaultCurrencyChange = async (e) => {
     const code = e.target.value;
@@ -41,48 +44,98 @@ function OptionsPanel({ isOpen, confirm, toast }) {
     }
   };
 
+  const handleDisplayPreferenceChange = async (patch, errorKey) => {
+    try {
+      await saveDisplayPreferences(patch);
+    } catch (err) {
+      toast.error(err?.message || t(errorKey));
+    }
+  };
+
   return (
     <div className="usm-panel">
       <section className="settings-manage__section">
-        <h3 className="settings-manage__section-title">{t('settings.language.title')}</h3>
-        <div className="theme-language-toggle">
-          <div className="theme-language-toggle__buttons">
-            <button
-              type="button"
-              className={`theme-language-toggle__btn${lang === 'zh' ? ' is-active' : ''}`}
-              onClick={() => lang !== 'zh' && toggleLang()}
-              aria-pressed={lang === 'zh'}
-            >
-              {t('settings.language.zh')}
-            </button>
-            <button
-              type="button"
-              className={`theme-language-toggle__btn${lang === 'en' ? ' is-active' : ''}`}
-              onClick={() => lang !== 'en' && toggleLang()}
-              aria-pressed={lang === 'en'}
-            >
-              {t('settings.language.en')}
-            </button>
+        <h3 className="settings-manage__section-title">{t('settings.preferences.sectionTitle')}</h3>
+        <div className="settings-list">
+          <div className="settings-list__row">
+            <div className="settings-list__text">
+              <span className="settings-list__label" id="language-label">{t('settings.language.title')}</span>
+            </div>
+            <div className="theme-language-toggle__buttons" role="group" aria-labelledby="language-label">
+              <button
+                type="button"
+                className={`theme-language-toggle__btn${lang === 'zh' ? ' is-active' : ''}`}
+                onClick={() => lang !== 'zh' && toggleLang()}
+                aria-pressed={lang === 'zh'}
+              >
+                {t('settings.language.zh')}
+              </button>
+              <button
+                type="button"
+                className={`theme-language-toggle__btn${lang === 'en' ? ' is-active' : ''}`}
+                onClick={() => lang !== 'en' && toggleLang()}
+                aria-pressed={lang === 'en'}
+              >
+                {t('settings.language.en')}
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
 
-      <section className="settings-manage__section">
-        <h3 className="settings-manage__section-title">{t('settings.currency.title')}</h3>
-        <div className="settings-currency">
-          <label className="settings-currency__label" htmlFor="default-currency">
-            {t('settings.currency.label')}
-          </label>
-          <select
-            id="default-currency"
-            className="settings-currency__select"
-            value={defaultCurrency}
-            onChange={handleDefaultCurrencyChange}
-          >
-            {(currencies.includes(defaultCurrency) ? currencies : [defaultCurrency, ...currencies]).map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <div className="settings-list__row">
+            <div className="settings-list__text">
+              <label className="settings-list__label" htmlFor="default-currency">{t('settings.currency.title')}</label>
+              <span className="settings-list__hint">{t('settings.currency.label')}</span>
+            </div>
+            <select
+              id="default-currency"
+              className="settings-currency__select"
+              value={defaultCurrency}
+              onChange={handleDefaultCurrencyChange}
+            >
+              {(currencies.includes(defaultCurrency) ? currencies : [defaultCurrency, ...currencies]).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="settings-list__row">
+            <div className="settings-list__text">
+              <label className="settings-list__label" htmlFor="display-currency">{t('settings.displayCurrency.title')}</label>
+              <span className="settings-list__hint">{t('settings.displayCurrency.label')}</span>
+            </div>
+            <select
+              id="display-currency"
+              className="settings-currency__select"
+              value={displayPreferences.currency}
+              onChange={(e) => handleDisplayPreferenceChange({ currency: e.target.value }, 'settings.displayCurrency.saveError')}
+            >
+              {(currencies.includes(displayPreferences.currency) ? currencies : [displayPreferences.currency, ...currencies]).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="settings-list__row">
+            <div className="settings-list__text">
+              <span className="settings-list__label" id="amount-mode-label">{t('settings.amountMode.title')}</span>
+            </div>
+            <div className="theme-language-toggle__buttons" role="group" aria-labelledby="amount-mode-label">
+              {AMOUNT_MODES.map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`theme-language-toggle__btn${displayPreferences.amountMode === mode ? ' is-active' : ''}`}
+                  onClick={() =>
+                    displayPreferences.amountMode !== mode &&
+                    handleDisplayPreferenceChange({ amountMode: mode }, 'settings.amountMode.saveError')
+                  }
+                  aria-pressed={displayPreferences.amountMode === mode}
+                >
+                  {t(`settings.amountMode.${mode}`)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 

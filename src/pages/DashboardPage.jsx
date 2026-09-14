@@ -11,6 +11,7 @@ import { useTransactionYearRange } from '@/hooks/useTransactionYearRange';
 import { useTransactionMonthsInYear, invalidateTransactionMonths } from '@/hooks/useTransactionMonthsInYear';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { useTheme } from '@/hooks/useTheme';
+import { useDisplayPreferences } from '@/hooks/useDisplayPreferences';
 import { supabase } from '@/lib/supabase';
 import { getPeriodRange, getPeriodFileLabel, getPeriodNameKey } from '@/lib/period';
 import { isOfflineError } from '@/lib/offlineCache';
@@ -19,6 +20,7 @@ import { subscribeDataChanged } from '@/lib/dataEvents';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { DisplayAmountProvider, useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import TopBar from '@/components/layout/TopBar';
 import FormColumn from '@/components/layout/FormColumn';
 import DashboardColumn from '@/components/layout/DashboardColumn';
@@ -55,7 +57,7 @@ const readGranularity = () => {
   }
 };
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user, ensureDefaultDataForOAuth } = useAuth();
   const {
     dashboardData,
@@ -98,6 +100,15 @@ export default function DashboardPage() {
   const toast = useToast();
   const { confirm } = useConfirm();
   const { t } = useLanguage();
+  const { displayPreferences, saveDisplayPreferences } = useDisplayPreferences();
+  const showOriginalAmounts = displayPreferences.amountMode === 'original';
+  const { currency: displayCurrency, sumTransactions: sumInDisplayCurrency } = useDisplayAmount();
+
+  // 與設定頁「交易記錄顯示方式」是同一個值，這裡只是捷徑
+  const toggleAmountMode = () => {
+    saveDisplayPreferences({ amountMode: showOriginalAmounts ? 'converted' : 'original' })
+      .catch((err) => toast.error(err?.message || t('settings.amountMode.saveError')));
+  };
   const { theme } = useTheme();
   const modals = useModalStates();
   const { openStreakModal } = modals;
@@ -143,6 +154,7 @@ export default function DashboardPage() {
     results: searchResults,
     totalCount: searchTotalCount,
     summary: searchSummary,
+    summaryRows: searchSummaryRows,
     searching: searchLoading,
     searchError,
     refresh: refreshSearch,
@@ -278,6 +290,13 @@ export default function DashboardPage() {
     onFailed: (result) => toast.error(t('dashboard.syncFailed', { count: result.failed })),
     onNeedsLogin: () => toast.error(t('dashboard.syncNeedsLogin')),
   });
+
+  // 顯示幣別是台幣時沿用伺服器彙總（加入顯示幣別前的行為）；其他幣別由每筆交易換算後自行加總，
+  // 搜尋時用「全部符合」的列而不是畫面上的前 200 筆
+  const statSummary = useMemo(() => {
+    if (displayCurrency === 'TWD') return searchActive ? searchSummary : displaySummary;
+    return sumInDisplayCurrency(searchActive ? searchSummaryRows : displayHistory);
+  }, [displayCurrency, searchActive, searchSummary, displaySummary, sumInDisplayCurrency, searchSummaryRows, displayHistory]);
 
   const formRef = useRef(null);
   const historyRef = useRef(null);
@@ -774,7 +793,7 @@ export default function DashboardPage() {
             </div>
             {streakBadge}
           </div>
-          <StatCards summary={searchActive ? searchSummary : displaySummary} loading={viewLoading} />
+          <StatCards summary={statSummary} loading={viewLoading} />
         </section>
 
         {!searchActive && (
@@ -877,6 +896,18 @@ export default function DashboardPage() {
               </div>
             )}
             <div className="transaction-history-header__controls">
+              <button
+                type="button"
+                className={`btn-search-toggle${showOriginalAmounts ? ' btn-search-toggle--active' : ''}`}
+                onClick={toggleAmountMode}
+                aria-label={t('dashboard.showOriginalAmounts')}
+                title={t('dashboard.showOriginalAmounts')}
+                aria-pressed={showOriginalAmounts}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                </svg>
+              </button>
               <button
                 ref={filterBtnRef}
                 type="button"
@@ -1025,5 +1056,14 @@ export default function DashboardPage() {
       />
 
     </div>
+  );
+}
+
+// 顯示偏好的 Provider 包在最外層，頁內所有交易列表（含各彈窗）都照同一個設定顯示金額
+export default function DashboardPage() {
+  return (
+    <DisplayAmountProvider>
+      <DashboardContent />
+    </DisplayAmountProvider>
   );
 }

@@ -2,13 +2,14 @@ import { useRef, useState } from 'react';
 import Modal from '@/components/common/Modal';
 import TransactionListPanel from '@/components/transactions/TransactionListPanel';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
-import { formatMoney } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 
 // 分類明細，也服務支付方式明細（category.kind === 'payment'）：
 // 兩者結構一樣（標題 + 總額 + 清單），只有占比那句文案不同。
 export default function CategoryDetailModal({ isOpen, onClose, category, onEdit, onDelete, periodName }) {
   const { t } = useLanguage();
+  const { formatTotal } = useDisplayAmount();
   const dialogRef = useRef(null);
   // 排序偏好刻意跨開關保留：選過金額的人多半下一次還想看金額
   const [sortBy, setSortBy] = useState('date');
@@ -30,7 +31,7 @@ export default function CategoryDetailModal({ isOpen, onClose, category, onEdit,
         <h2 id="category-detail-modal-title" className="category-detail-modal__title">{category.label}</h2>
 
         <div className="category-detail-modal__summary">
-          <span className="category-detail-modal__total">{formatMoney(category.value)}</span>
+          <span className="category-detail-modal__total">{formatTotal(category.value)}</span>
           <span className="category-detail-modal__meta">
             {t('dashboard.categoryDetailCount', { count: rows.length })}
             {' · '}

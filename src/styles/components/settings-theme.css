@@ -134,6 +134,7 @@
 
 .theme-shuffle__toggle-label {
   font-size: 0.9rem;
+  font-weight: 600;
   color: var(--color-text);
 }
 

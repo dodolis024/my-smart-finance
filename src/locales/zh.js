@@ -131,6 +131,9 @@ const zh = {
     syncSuccess: '已同步 {count} 筆離線交易。',
     searchPlaceholder: '搜尋所有月份的交易…',
     searchClear: '清除搜尋文字',
+    showOriginalAmounts: '以原幣顯示每筆金額',
+    estimatedAmountHint: '當天沒有匯率紀錄，以今日匯率估算',
+    estimatedTotalHint: '部分交易當天沒有匯率紀錄，以今日匯率估算',
     searchNoResults: '沒有符合搜尋的交易',
     searchResultCount: '跨月搜尋結果 {count} 筆',
     searchResultCountCapped: '共 {count} 筆符合，已載入最新 200 筆',
@@ -284,15 +287,32 @@ const zh = {
       en: 'English',
     },
 
+    preferences: {
+      sectionTitle: '語言與幣別',
+    },
+
     currency: {
-      title: '預設幣別',
-      label: '記帳時預設使用的幣別',
+      title: '記帳預設幣別',
+      label: '新增交易時預先選好的幣別',
       saveError: '預設幣別儲存失敗',
+    },
+
+    displayCurrency: {
+      title: '顯示幣別',
+      label: '主畫面金額與加總的幣別',
+      saveError: '顯示幣別儲存失敗',
+    },
+
+    amountMode: {
+      title: '交易記錄顯示方式',
+      converted: '顯示幣別',
+      original: '原幣',
+      saveError: '交易記錄顯示方式儲存失敗',
     },
 
     tabs: {
       theme: '外觀主題',
-      options: '類別管理',
+      options: '一般',
       accounts: '支付工具',
       notification: '通知設定',
       subscription: '訂閱管理',

@@ -1,6 +1,7 @@
 import TransactionRow from './TransactionRow';
-import { formatMoney, formatMoneyInteger, formatDateForDisplay } from '@/lib/utils';
+import { formatDateForDisplay } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import zhLocale from '@/locales/zh';
 import enLocale from '@/locales/en';
 
@@ -13,11 +14,11 @@ import enLocale from '@/locales/en';
  */
 export default function TransactionDayGroup({ day, isMobile, colgroup, categoryColors, onEdit, onDelete, onShowDetail }) {
   const { t, lang } = useLanguage();
+  const { formatTotal } = useDisplayAmount();
   // t() 只回傳字串，星期陣列比照 StreakCalendar 直接取語系檔
   const weekLabels = (lang === 'en' ? enLocale : zhLocale).transaction.weekLabels;
   const parsed = new Date(`${day.date}T00:00:00`);
   const weekday = isNaN(parsed) ? '' : weekLabels[parsed.getDay()];
-  const money = isMobile ? formatMoneyInteger : formatMoney;
   const displayDate = formatDateForDisplay(day.date, isMobile);
 
   return (
@@ -28,9 +29,11 @@ export default function TransactionDayGroup({ day, isMobile, colgroup, categoryC
         </h3>
         <div className="tx-day__meta">
           <span className="tx-day__count">{t('transaction.dateGroupCount', { count: day.count })}</span>
-          {day.income > 0 && <span className="amount-income">+{money(day.income)}</span>}
+          {day.income > 0 && (
+            <span className="amount-income">{formatTotal(day.income, { prefix: '+' })}</span>
+          )}
           {(day.expense > 0 || day.income === 0) && (
-            <span className="amount-expense">-{money(day.expense)}</span>
+            <span className="amount-expense">{formatTotal(day.expense, { prefix: '-' })}</span>
           )}
         </div>
       </div>

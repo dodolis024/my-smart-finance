@@ -1,16 +1,19 @@
 import { useRef, useEffect } from 'react';
-import { formatMoney, formatMoneyInteger, formatDateForDisplay } from '@/lib/utils';
+import { formatDateForDisplay } from '@/lib/utils';
 import { LAYOUT } from '@/lib/constants';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 
 export default function TransactionRow({ transaction: tx, isAlt, showDate = false, categoryColors, onEdit, onDelete, onShowDetail }) {
   const { t } = useLanguage();
+  const { describeTxAmount } = useDisplayAmount();
   const rowRef = useRef(null);
   const { width } = useWindowSize();
   const isMobile = width <= LAYOUT.MOBILE_MAX_WIDTH;
-  const displayAmount = isMobile ? formatMoneyInteger(tx.twdAmount) : formatMoney(tx.twdAmount);
+  const { text: displayAmount, estimated } = describeTxAmount(tx, { isMobile });
+  const amountTitle = estimated ? `${displayAmount}（${t('dashboard.estimatedAmountHint')}）` : displayAmount;
   // 日期平常由分組列統一標示，只有不分組（年檢視）時才逐列印出
   const displayDate = showDate ? formatDateForDisplay(tx.date, isMobile) : '';
 
@@ -165,7 +168,7 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
         <div className="cell-payment-inner">{tx.paymentMethod}</div>
       </td>
       <td className="cell-amount">
-        <div className="cell-amount-inner">{formatMoney(tx.twdAmount)}</div>
+        <div className="cell-amount-inner" title={amountTitle}>{displayAmount}</div>
       </td>
       <td className="cell-actions">
         <div className="cell-actions-inner">
