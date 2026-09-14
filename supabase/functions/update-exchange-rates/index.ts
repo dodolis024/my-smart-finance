@@ -4,7 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { cronSecretGuard } from '../_shared/cronAuth.ts'
-import { RETENTION_DAYS, retentionCutoff, utcDateString } from './rateHistory.ts'
+import { utcDateString } from './rateHistory.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -254,17 +254,6 @@ serve(async (req) => {
       console.error('Failed to record exchange rate history:', historyError.message)
     }
 
-    // 清理超過保留期的歷史。放在這裡而不是另開一個 cron：少一個要維護的排程，
-    // 而且清理本來就該跟著寫入一起發生，不會出現「有寫沒清」的漂移。
-    const { error: pruneError } = await supabase
-      .from('exchange_rate_history')
-      .delete()
-      .lt('date', retentionCutoff(new Date(), RETENTION_DAYS))
-
-    if (pruneError) {
-      console.error('Failed to prune exchange rate history:', pruneError.message)
-    }
-
     const rejected = anomalies.filter(a => a.action === 'rejected')
 
     return new Response(
@@ -278,7 +267,6 @@ serve(async (req) => {
         history: {
           date: historyDate,
           recorded: !historyError,
-          retention_days: RETENTION_DAYS,
         },
         anomalies: anomalies.length > 0 ? anomalies : undefined,
         warning: rejected.length > 0

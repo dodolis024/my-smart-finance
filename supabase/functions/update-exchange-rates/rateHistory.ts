@@ -2,14 +2,9 @@
 // 匯率歷史的純日期函式，抽出以便單元測試（無 Deno 專屬相依，可於 vitest/Node 直接匯入）。
 // 由 index.ts 匯入使用。
 
-/**
- * 歷史匯率保留天數。
- *
- * 一年多一點，撐得住「去年同期」的比較。成本可以忽略：12 種幣別 × 400 天
- * 約 4,800 列、250 KB 上下，相對 Supabase 免費額度的 500 MB 是萬分之五。
- * 保留期沒有技術上限，訂在這裡純粹是「累積得夠久」與「表不要無限長」的折衷。
- */
-export const RETENTION_DAYS = 400
+// 歷史匯率永久保留、不做清理：歷史一旦刪掉就補不回來（API 的歷史端點要付費），
+// 而成本可以忽略——12 種幣別一年約 4,400 列、兩三百 KB，
+// 相對 Supabase 免費額度的 500 MB 要上千年才會成為問題。
 
 /**
  * 取 UTC 的日期字串（YYYY-MM-DD）。
@@ -26,12 +21,3 @@ export function utcDateString(now: Date): string {
   return now.toISOString().slice(0, 10)
 }
 
-/**
- * 保留期的界線日期（YYYY-MM-DD）：**早於**這天的歷史可以刪。
- *
- * 界線當天本身保留，所以實際留存是 RETENTION_DAYS + 1 天。以毫秒做減法而非
- * 逐月推算，UTC 沒有日光節約，不會有「減一個月碰到不存在的日期」那類問題。
- */
-export function retentionCutoff(now: Date, days: number = RETENTION_DAYS): string {
-  return utcDateString(new Date(now.getTime() - days * 24 * 60 * 60 * 1000))
-}

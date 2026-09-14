@@ -13,8 +13,8 @@
 --     以 TWD 為錨點而不是存「對群組幣別」的比率，因為群組幣別可以在設定裡改，
 --     改了之後後者會全部作廢。
 --   - 取值順序：get_exchange_rate_on(幣別, 日期) → 查無則用 exchange_rates 現值並標記
---     exchange_rate_estimated = true。查無的情況是日期早於歷史表起點（2026-09-09）
---     或超過 400 天保留期。當天的費用查到的是歷史表最新一筆，與現值同源（同一支
+--     exchange_rate_estimated = true。查無的情況是日期早於歷史表起點（2026-09-09）。
+--     當天的費用查到的是歷史表最新一筆，與現值同源（同一支
 --     update-exchange-rates 寫入），等同即時匯率。
 --   - 用 trigger 而不是改 add_split_expense / update_split_expense：還款是前端與 CLI
 --     直接 INSERT，沒有 RPC；trigger 一處就涵蓋兩張表、所有寫入路徑，連已安裝的舊版

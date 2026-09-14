@@ -116,7 +116,7 @@
 
 | 函式 | 最後部署 | version | 備註 |
 |---|---|---|---|
-| update-exchange-rates | 2026-09-09 | v20 | 每日更新後多寫一筆 exchange_rate_history(存 validatedRates 即實際採用值,非 API 原始值),並清理超過 400 天者;歷史寫入失敗只記 log 不中斷主線。搭配 database/exchange-rate-history-migration.sql。x-cron-secret 驗證原樣保留 |
+| update-exchange-rates | 2026-09-14 | v21 | 拿掉 exchange_rate_history 的 400 天清理,歷史改為永久保留(回傳也不再帶 retention_days)。v20(2026-09-09)起每日更新後多寫一筆 exchange_rate_history(存 validatedRates 即實際採用值,非 API 原始值);歷史寫入失敗只記 log 不中斷主線。搭配 database/exchange-rate-history-migration.sql。x-cron-secret 驗證原樣保留,verify_jwt 維持 false(以 `--no-verify-jwt` 部署) |
 | send-streak-reminder | 2026-08-27 | v26 | 加 `x-cron-secret` 驗證(取代 2026-07-11 v24 的通知多語化版,該邏輯保留) |
 | send-split-notification | 2026-07-11 | v9 | 同上 |
 | send-credit-card-reminder | 2026-08-31 | v6 | 加 `x-cron-secret` 驗證;繳款提醒改為未設定過即視同未啟用 |
