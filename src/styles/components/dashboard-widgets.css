@@ -489,7 +489,7 @@
   position: absolute;
   inset: 0 -4px;
   background: var(--color-row-hover);
-  border-radius: 6px;
+  border-radius: 4.65px;
 }
 
 /* 內容要疊在底色之上（定位後代預設會蓋住未定位的內容） */
