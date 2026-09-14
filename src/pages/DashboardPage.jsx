@@ -408,13 +408,20 @@ export default function DashboardPage() {
         setEditingTransaction(null);
         toast.success(result.isEdit ? t('dashboard.transactionUpdated') : t('dashboard.transactionAdded'));
         invalidateTransactionMonths(user?.id);
-        refetchPeriod().catch((err) => console.error('[Dashboard] refetch after write failed:', err));
+        // 簽到彈窗要等重抓回來的 streak 判斷（送出前的 state 還沒算進這筆的簽到）；
+        // 不 await，免得表單要多等一次 RPC 才重設
+        refetchPeriod()
+          .catch((err) => {
+            console.error('[Dashboard] refetch after write failed:', err);
+            return null;
+          })
+          .then(async (data) => {
+            if (result.isEdit || !(await shouldShowPositiveModal(result.date, data))) return;
+            const content = getPositiveModalContent(data?.streakCount);
+            openStreakModal(content.title, 'positive');
+          })
+          .catch((err) => console.error('[Dashboard] positive streak modal check failed:', err));
         refreshSearch();
-
-        if (!result.isEdit && (await shouldShowPositiveModal(result.date))) {
-          const content = getPositiveModalContent();
-          openStreakModal(content.title, 'positive');
-        }
 
         // 若此筆交易的付款方式為信用卡，檢查使用率並在需要時推播警告
         // （accounts 來自 RPC，欄位為駝峰 accountName）

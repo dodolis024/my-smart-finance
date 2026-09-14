@@ -2,6 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Fixed the streak modal not appearing for the first entry of the day after a missed day
+- Fixed the milestone title in the streak modal (e.g. day 30) appearing a day late
+
 ## [1.31.0] - Sep-13 2026
 - Added the Maple appearance theme and chart color scheme
 - Added foreign transaction fees: set a rate on a credit or debit card, and ticking "Overseas" when recording adds the fee to that entry's TWD amount

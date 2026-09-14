@@ -208,19 +208,28 @@ export function useStreak(userId) {
     [streakState.broken, claimNoticeForToday]
   );
 
+  /**
+   * @param {string} submittedDate
+   * @param {{ streakCount?: number, streakBroken?: boolean } | null} [data]
+   *   記帳後重抓回來的伺服器資料；送出前的 state 還沒算進這筆的簽到，
+   *   昨天中斷、今天記第一筆時仍是「中斷」。拿不到才退回 state。
+   */
   const shouldShowPositiveModal = useCallback(
-    async (submittedDate) => {
+    async (submittedDate, data) => {
       const today = getTodayYmd();
       if (!submittedDate || submittedDate !== today) return false;
-      if (streakState.broken) return false;
-      if (!streakState.count || streakState.count <= 0) return false;
+      const broken = data ? !!data.streakBroken : streakState.broken;
+      const count = data ? data.streakCount ?? 0 : streakState.count;
+      if (broken) return false;
+      if (!count || count <= 0) return false;
       return claimNoticeForToday('positive');
     },
     [streakState.broken, streakState.count, claimNoticeForToday]
   );
 
-  const getPositiveModalContent = useCallback(() => {
-    const count = streakState.count || 0;
+  /** @param {number} [countFromServer] 同上，傳入重抓後的天數，里程碑標題才不會晚一天 */
+  const getPositiveModalContent = useCallback((countFromServer) => {
+    const count = countFromServer ?? streakState.count ?? 0;
     if (STREAK_MILESTONES.includes(count)) {
       return {
         title: t('streak.milestoneTitle'),
