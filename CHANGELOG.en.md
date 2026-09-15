@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.31.1] - Sep-15 2026
 - Added a display currency setting, so dashboard amounts and totals can be shown in a foreign currency
 - Added an original-currency view for transactions, with a quick toggle at the top right of the transaction list
 - Improved the settings page by renaming the Categories tab to General and gathering language and currency settings into one list
