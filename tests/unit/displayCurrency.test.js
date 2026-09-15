@@ -85,21 +85,18 @@ describe('buildDisplayAmount', () => {
     expect(d.formatTotal(1939.5, { prefix: '-' })).toBe('-$1,940');
   });
 
-  it('英鎊：單筆換算；估算的照樣顯示金額、不加任何符號，只回報 estimated', () => {
+  it('英鎊：單筆換算；估算的照樣顯示金額、不加任何符號', () => {
     const d = buildDisplayAmount(GBP, table);
     expect(d.formatTxAmount(rows[0])).toBe('£10.00');
-    expect(d.describeTxAmount(rows[1])).toEqual({ text: '£10.00', estimated: true });
+    expect(d.formatTxAmount(rows[1])).toBe('£10.00');
+    expect(d.toDisplay(rows[1]).estimated).toBe(true);
   });
 
-  it('加總：收入、支出各自記錄是否含估算；金額字串不加符號', () => {
+  it('加總：估算的一樣算進去；金額字串不加符號', () => {
     const d = buildDisplayAmount(GBP, table);
     const s = d.sumTransactions(rows);
-    expect(s).toEqual({
-      totalIncome: 20, totalExpense: 20, balance: 0,
-      incomeEstimated: false, expenseEstimated: true, estimated: true,
-    });
+    expect(s).toEqual({ totalIncome: 20, totalExpense: 20, balance: 0 });
     expect(d.formatTotal(s.totalExpense, { prefix: '-' })).toBe('-£20.00');
-    expect(d.sumTransactions([rows[0], rows[2]]).estimated).toBe(false);
   });
 
   it('原幣模式不受顯示幣別影響', () => {
@@ -113,11 +110,12 @@ describe('buildDisplayAmount', () => {
     const d = buildDisplayAmount(GBP, null);
     expect(d.currency).toBe('TWD');
     expect(d.formatTxAmount(rows[0])).toBe('$400');
-    expect(d.sumTransactions(rows).estimated).toBe(false);
+    expect(d.sumTransactions(rows)).toEqual({ totalIncome: 880, totalExpense: 900, balance: -20 });
   });
 
   it('只有今日匯率、沒有歷史：可換算，但全部標估算', () => {
     const d = buildDisplayAmount(GBP, { history: [], live: 40 });
-    expect(d.describeTxAmount(rows[0])).toEqual({ text: '£10.00', estimated: true });
+    expect(d.formatTxAmount(rows[0])).toBe('£10.00');
+    expect(d.toDisplay(rows[0]).estimated).toBe(true);
   });
 });

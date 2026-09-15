@@ -132,8 +132,6 @@ const zh = {
     searchPlaceholder: '搜尋所有月份的交易…',
     searchClear: '清除搜尋文字',
     showOriginalAmounts: '以原幣顯示每筆金額',
-    estimatedAmountHint: '當天沒有匯率紀錄，以今日匯率估算',
-    estimatedTotalHint: '部分交易當天沒有匯率紀錄，以今日匯率估算',
     searchNoResults: '沒有符合搜尋的交易',
     searchResultCount: '跨月搜尋結果 {count} 筆',
     searchResultCountCapped: '共 {count} 筆符合，已載入最新 200 筆',

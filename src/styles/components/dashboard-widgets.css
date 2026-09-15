@@ -287,6 +287,7 @@
 
 .stat-card {
   flex: 1;
+  min-width: 0; /* 長金額不撐寬卡片，三張維持等寬，放不下改由 useFitStatValues 縮字 */
   display: flex;
   flex-direction: column;
   background: var(--color-card);
@@ -386,6 +387,9 @@
   font-size: 2rem;
   font-weight: 700;
   color: var(--color-text);
+  /* 寬度等於文字寬度：useFitStatValues 靠它量數字會不會碰到小狗 */
+  width: max-content;
+  white-space: nowrap;
 }
 
 .stat-card:nth-child(1) .stat-value { color: var(--color-success); }

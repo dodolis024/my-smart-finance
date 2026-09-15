@@ -6,7 +6,7 @@ import { formatMoney, formatMoneyInteger, formatOriginalMoney } from '@/lib/util
 // transactions.exchange_rate 皆同），所以一律以 twd_amount 為錨點換算：
 //   1. 交易本身就是顯示幣別 → 用這筆記帳時凍結的匯率反推，得到「原幣＋手續費」，不受匯率漂移影響
 //   2. 其他幣別 → 除以顯示幣別「交易當天」的歷史匯率（當天沒有就往前找最近一筆，同 get_exchange_rate_on）
-//   3. 歷史表起點（2026-09-09）以前查不到 → 退回今日匯率，標記為估算（畫面不加符號，只在滑鼠提示說明）
+//   3. 歷史表起點（2026-09-09）以前查不到 → 退回今日匯率，標記為估算（畫面不另外標示）
 // 顯示幣別是台幣時完全不換算，數字與加入這個功能之前一致。
 
 /** 歷史匯率表（依日期升冪的 [date, rate]）中，date 當天或之前最近的一筆；查無回 null */
@@ -81,45 +81,23 @@ export function buildDisplayAmount(preferences, table) {
     return `${prefix}${text}`;
   };
 
-  /** 單筆交易的金額字串與是否為估算 */
-  const describeTxAmount = (tx, { isMobile = false } = {}) => {
-    if (amountMode === 'original') {
-      return { text: formatOriginalMoney(originalAmountOf(tx), tx.currency), estimated: false };
-    }
-    if (currency === 'TWD') {
-      return { text: isMobile ? formatMoneyInteger(tx.twdAmount) : formatMoney(tx.twdAmount), estimated: false };
-    }
-    const { value, estimated } = toDisplay(tx);
-    return { text: formatOriginalMoney(value, currency), estimated };
+  /** 單筆交易的金額字串 */
+  const formatTxAmount = (tx, { isMobile = false } = {}) => {
+    if (amountMode === 'original') return formatOriginalMoney(originalAmountOf(tx), tx.currency);
+    if (currency === 'TWD') return isMobile ? formatMoneyInteger(tx.twdAmount) : formatMoney(tx.twdAmount);
+    return formatOriginalMoney(toDisplay(tx).value, currency);
   };
 
-  /**
-   * 收入／支出／結餘，與 get_dashboard_data 的彙總同義，只是單位換成顯示幣別。
-   * 估算旗標收入、支出分開記（供統計卡的滑鼠提示），結餘兩者有一即算
-   */
+  /** 收入／支出／結餘，與 get_dashboard_data 的彙總同義，只是單位換成顯示幣別 */
   const sumTransactions = (rows) => {
     let totalIncome = 0;
     let totalExpense = 0;
-    let incomeEstimated = false;
-    let expenseEstimated = false;
     for (const tx of rows || []) {
-      const r = toDisplay(tx);
-      if (tx.type === 'income') {
-        totalIncome += r.value;
-        if (r.estimated) incomeEstimated = true;
-      } else {
-        totalExpense += r.value;
-        if (r.estimated) expenseEstimated = true;
-      }
+      const { value } = toDisplay(tx);
+      if (tx.type === 'income') totalIncome += value;
+      else totalExpense += value;
     }
-    return {
-      totalIncome,
-      totalExpense,
-      balance: totalIncome - totalExpense,
-      incomeEstimated,
-      expenseEstimated,
-      estimated: incomeEstimated || expenseEstimated,
-    };
+    return { totalIncome, totalExpense, balance: totalIncome - totalExpense };
   };
 
   return {
@@ -127,8 +105,7 @@ export function buildDisplayAmount(preferences, table) {
     amountMode,
     toDisplay,
     formatTotal,
-    describeTxAmount,
-    formatTxAmount: (tx, opts) => describeTxAmount(tx, opts).text,
+    formatTxAmount,
     sumTransactions,
   };
 }

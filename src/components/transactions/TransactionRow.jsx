@@ -8,12 +8,11 @@ import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 
 export default function TransactionRow({ transaction: tx, isAlt, showDate = false, categoryColors, onEdit, onDelete, onShowDetail }) {
   const { t } = useLanguage();
-  const { describeTxAmount } = useDisplayAmount();
+  const { formatTxAmount } = useDisplayAmount();
   const rowRef = useRef(null);
   const { width } = useWindowSize();
   const isMobile = width <= LAYOUT.MOBILE_MAX_WIDTH;
-  const { text: displayAmount, estimated } = describeTxAmount(tx, { isMobile });
-  const amountTitle = estimated ? `${displayAmount}（${t('dashboard.estimatedAmountHint')}）` : displayAmount;
+  const displayAmount = formatTxAmount(tx, { isMobile });
   // 日期平常由分組列統一標示，只有不分組（年檢視）時才逐列印出
   const displayDate = showDate ? formatDateForDisplay(tx.date, isMobile) : '';
 
@@ -168,7 +167,8 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
         <div className="cell-payment-inner">{tx.paymentMethod}</div>
       </td>
       <td className="cell-amount">
-        <div className="cell-amount-inner" title={amountTitle}>{displayAmount}</div>
+        {/* 金額欄窄，長金額會被截成「…」，滑鼠移上去看完整數字 */}
+        <div className="cell-amount-inner" title={displayAmount}>{displayAmount}</div>
       </td>
       <td className="cell-actions">
         <div className="cell-actions-inner">

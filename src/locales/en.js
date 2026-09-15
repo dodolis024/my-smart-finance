@@ -132,8 +132,6 @@ const en = {
     searchPlaceholder: 'Search all months…',
     searchClear: 'Clear search text',
     showOriginalAmounts: 'Show amounts in original currency',
-    estimatedAmountHint: 'No rate recorded for that day; estimated at today\'s rate',
-    estimatedTotalHint: 'Some transactions have no rate recorded for their day; estimated at today\'s rate',
     searchNoResults: 'No transactions match your search',
     searchResultCount: 'Found {count} transactions across all months',
     searchResultCountCapped: '{count} matches found, latest 200 loaded',
