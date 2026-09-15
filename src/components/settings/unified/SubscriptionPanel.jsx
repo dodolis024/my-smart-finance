@@ -3,6 +3,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { IconSubscription } from './UnifiedTabIcons';
 
 const makeEmptyForm = (defaultCurrency = 'TWD') => ({ name: '', amount: '', currency: defaultCurrency, category: '', payment_method: '', billing_cycle: 'monthly', renewal_month: 1, renewal_day: 1 });
 
@@ -133,7 +134,12 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
         ) : (
           <div className="subscription-list">
             {subscriptions.length === 0 ? (
-              <p className="subscription-list__empty">{t('settings.subscription.noSubscriptions')}</p>
+              <div className="subscription-empty">
+                <span className="subscription-empty__icon"><IconSubscription /></span>
+                <p className="subscription-empty__title">{t('settings.subscription.noSubscriptions')}</p>
+                <p className="subscription-empty__hint">{t('settings.subscription.emptyHint')}</p>
+                <button type="button" className="subscription-empty__add-btn" onClick={handleOpenAdd}>{t('settings.subscription.addBtn')}</button>
+              </div>
             ) : (
               <ul className="subscription-list__items">
                 {subscriptions.map((sub) => (
@@ -158,9 +164,11 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
                 ))}
               </ul>
             )}
-            <div className="subscription-list__footer">
-              <button type="button" className="subscription-list__add-btn" onClick={handleOpenAdd}>{t('settings.subscription.addBtn')}</button>
-            </div>
+            {subscriptions.length > 0 && (
+              <div className="subscription-list__footer">
+                <button type="button" className="subscription-list__add-btn" onClick={handleOpenAdd}>{t('settings.subscription.addBtn')}</button>
+              </div>
+            )}
           </div>
         )}
     </div>

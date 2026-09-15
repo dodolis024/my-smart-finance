@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { useLanguage } from '@/contexts/LanguageContext';
+import DisclosureToggle from '../DisclosureToggle';
 
 const SHUFFLE_INTERVAL_IDS = ['open', 'daily', 'weekly', 'monthly'];
 
@@ -17,17 +18,12 @@ const THEME_OPTIONS = [
   { id: 'maple', swatch: ['#b3372d', '#f9f1ea', '#e8d4c4'] },
 ];
 
-const ChevronRight = ({ isOpen }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14, flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-    <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
-  </svg>
-);
-
 export default function ThemePanel() {
   const { theme, setTheme, shuffleEnabled, setShuffleEnabled, shuffleThemes, setShuffleThemes, shuffleInterval, setShuffleInterval } = useTheme();
   const { t } = useLanguage();
   const [open, setOpen] = useState({ shuffle: false });
   const shuffleRef = useRef(null);
+  const shuffleBodyId = useId();
   const toggle = (k) => setOpen((s) => {
     const isMobile = window.matchMedia('(max-width: 600px)').matches;
     if (isMobile) {
@@ -82,68 +78,68 @@ export default function ThemePanel() {
       </div>
 
       <div className="category-group" ref={shuffleRef}>
-        <div className="category-group__header" onClick={() => toggle('shuffle')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-          <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <ChevronRight isOpen={open.shuffle} />
-            {t('settings.theme.shuffleSection')}
-          </h4>
-        </div>
-        {open.shuffle && <div className="theme-shuffle">
-          <label className="theme-shuffle__toggle-row">
-            <span className="theme-shuffle__toggle-label">{t('settings.theme.enableShuffle')}</span>
+        <div className="category-group__header disclosure-row" onClick={() => toggle('shuffle')}>
+          <h4>{t('settings.theme.shuffleSection')}</h4>
+          <div className="disclosure-right">
+            <DisclosureToggle
+              status={shuffleEnabled ? t(`settings.theme.intervals.${shuffleInterval}`) : t('settings.theme.shuffleStatusOff')}
+              open={open.shuffle}
+              controls={shuffleBodyId}
+            />
             <button
               type="button"
               role="switch"
               aria-checked={shuffleEnabled}
+              aria-label={t('settings.theme.enableShuffle')}
               className={`reminder-modal__toggle${shuffleEnabled ? ' is-on' : ''}`}
-              onClick={() => setShuffleEnabled(!shuffleEnabled)}
+              onClick={(e) => { e.stopPropagation(); setShuffleEnabled(!shuffleEnabled); }}
             >
               <span className="reminder-modal__toggle-knob" />
             </button>
-          </label>
-
-          {shuffleEnabled && (
-            <div className="theme-shuffle__options">
-              <div className="theme-shuffle__field">
-                <span className="theme-shuffle__field-label">{t('settings.theme.shuffleThemes')}</span>
-                <div className="theme-shuffle__themes">
-                  {THEME_OPTIONS.map(({ id, swatch }) => (
-                    <label key={id} className={`theme-shuffle__theme-item${shuffleThemes.includes(id) ? ' is-checked' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={shuffleThemes.includes(id)}
-                        onChange={() => toggleShuffleTheme(id)}
-                        className="sr-only"
-                      />
-                      <span className="theme-shuffle__theme-swatch">
-                        {swatch.map((color, i) => <span key={i} style={{ background: color }} />)}
-                      </span>
-                      <span className="theme-shuffle__theme-label">{t(`settings.theme.names.${id}`)}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="theme-shuffle__field">
-                <span className="theme-shuffle__field-label">{t('settings.theme.shuffleInterval')}</span>
-                <div className="theme-shuffle__intervals">
-                  {SHUFFLE_INTERVAL_IDS.map((id) => (
-                    <label key={id} className={`theme-shuffle__interval-item${shuffleInterval === id ? ' is-checked' : ''}`}>
-                      <input
-                        type="radio"
-                        name="shuffle-interval"
-                        value={id}
-                        checked={shuffleInterval === id}
-                        onChange={() => setShuffleInterval(id)}
-                        className="sr-only"
-                      />
-                      <span>{t(`settings.theme.intervals.${id}`)}</span>
-                    </label>
-                  ))}
-                </div>
+          </div>
+        </div>
+        {open.shuffle && <div className="theme-shuffle" id={shuffleBodyId}>
+          {/* 輪換關閉時照樣展開、內容變灰，可以先預覽、先調好再開 */}
+          <div className={`theme-shuffle__options${shuffleEnabled ? '' : ' settings-dimmed'}`}>
+            <div className="theme-shuffle__field">
+              <span className="theme-shuffle__field-label">{t('settings.theme.shuffleThemes')}</span>
+              <div className="theme-shuffle__themes">
+                {THEME_OPTIONS.map(({ id, swatch }) => (
+                  <label key={id} className={`theme-shuffle__theme-item${shuffleThemes.includes(id) ? ' is-checked' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={shuffleThemes.includes(id)}
+                      onChange={() => toggleShuffleTheme(id)}
+                      className="sr-only"
+                    />
+                    <span className="theme-shuffle__theme-swatch">
+                      {swatch.map((color, i) => <span key={i} style={{ background: color }} />)}
+                    </span>
+                    <span className="theme-shuffle__theme-label">{t(`settings.theme.names.${id}`)}</span>
+                  </label>
+                ))}
               </div>
             </div>
-          )}
+
+            <div className="theme-shuffle__field">
+              <span className="theme-shuffle__field-label">{t('settings.theme.shuffleInterval')}</span>
+              <div className="theme-shuffle__intervals">
+                {SHUFFLE_INTERVAL_IDS.map((id) => (
+                  <label key={id} className={`theme-shuffle__interval-item${shuffleInterval === id ? ' is-checked' : ''}`}>
+                    <input
+                      type="radio"
+                      name="shuffle-interval"
+                      value={id}
+                      checked={shuffleInterval === id}
+                      onChange={() => setShuffleInterval(id)}
+                      className="sr-only"
+                    />
+                    <span>{t(`settings.theme.intervals.${id}`)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>}
       </div>
     </div>

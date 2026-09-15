@@ -66,11 +66,38 @@
   flex-direction: column;
   gap: 0.5rem;
 }
-.subscription-list__empty {
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
-  margin: 0 0 1rem 0;
+/* 沒有訂閱時：提示與按鈕收進置中卡片；最小高度讓內容高過左側選單，卡片下方才不會空一截 */
+.subscription-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 11.5rem;
+  padding: 1.5rem 1rem;
+  box-sizing: border-box;
+  text-align: center;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
 }
+.subscription-empty__icon { display: flex; margin-bottom: 0.25rem; color: var(--color-text-muted); }
+.subscription-empty__icon svg { width: 28px; height: 28px; }
+.subscription-empty__title { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--color-text); }
+.subscription-empty__hint { margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--color-text-secondary); }
+.subscription-empty__add-btn {
+  padding: 0.55rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.subscription-empty__add-btn:hover { background: var(--color-primary-hover); }
+.subscription-empty__add-btn:focus { outline: none; box-shadow: var(--shadow-focus); }
 .subscription-item {
   display: flex;
   align-items: center;

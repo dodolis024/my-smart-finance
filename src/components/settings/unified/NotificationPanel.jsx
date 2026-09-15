@@ -5,13 +5,15 @@ import PushDeviceSection from './notification/PushDeviceSection';
 import CreditCardNotifSection from './notification/CreditCardNotifSection';
 
 // 這個檔案只負責三個區塊的摺疊開合與手機版的捲動定位。
+// 標題列要顯示狀態（例如「每天 20:00」），所以三個 Section 一律 mount，
+// 設定視窗一打開就載入資料，不再等展開才載。
 // 每一區各自對應一個儲存位置，彼此不共用 state：
-//   簽到提醒信 → settings.reminder_settings（email）
 //   裝置推播   → push_subscriptions（推播的傳輸層）
+//   簽到提醒信 → settings.reminder_settings（email）
 //   信用卡通知 → settings.credit_card_notification_settings（推播）
 export default function NotificationPanel({ isOpen, toast }) {
   const { t } = useLanguage();
-  const [open, setOpen] = useState({ reminder: false, push: false, creditCard: false });
+  const [open, setOpen] = useState({ push: false, reminder: false, creditCard: false });
   const reminderRef = useRef(null);
   const pushRef = useRef(null);
   const creditCardRef = useRef(null);
@@ -32,35 +34,14 @@ export default function NotificationPanel({ isOpen, toast }) {
     if (el && container) container.scrollTop = el.offsetTop - container.offsetTop;
   }, [open, sectionRefs]);
 
-  const SectionHeader = ({ id, label }) => (
-    <div
-      className="category-group__header"
-      onClick={() => toggle(id)}
-      style={{ cursor: 'pointer', userSelect: 'none' }}
-    >
-      <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14, flexShrink: 0, transition: 'transform 0.2s', transform: open[id] ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
-        </svg>
-        {label}
-      </h4>
-    </div>
-  );
-
   return (
     <div className="usm-panel">
       <h3 className="settings-manage__section-title">{t('settings.notification.sectionTitle')}</h3>
-      <div className="category-group" ref={reminderRef}>
-        <SectionHeader id="reminder" label={t('settings.notification.checkinReminder')} />
-        {open.reminder && <div className="notification-section__body"><EmailReminderSection isOpen={isOpen} toast={toast} /></div>}
-      </div>
-      <div className="category-group" ref={pushRef}>
-        <SectionHeader id="push" label={t('settings.notification.devicePush')} />
-        {open.push && <div className="notification-section__body"><PushDeviceSection /></div>}
-      </div>
-      <div className="category-group" ref={creditCardRef}>
-        <SectionHeader id="creditCard" label={t('settings.notification.creditCardReminder')} />
-        {open.creditCard && <div className="notification-section__body"><CreditCardNotifSection isOpen={isOpen} toast={toast} /></div>}
+      <div className="settings-list">
+        {/* 推播是傳輸層，要先開它下面的信用卡提醒才送得到，所以放第一個 */}
+        <PushDeviceSection open={open.push} onToggle={() => toggle('push')} groupRef={pushRef} />
+        <EmailReminderSection isOpen={isOpen} toast={toast} open={open.reminder} onToggle={() => toggle('reminder')} groupRef={reminderRef} />
+        <CreditCardNotifSection isOpen={isOpen} toast={toast} open={open.creditCard} onToggle={() => toggle('creditCard')} groupRef={creditCardRef} />
       </div>
     </div>
   );

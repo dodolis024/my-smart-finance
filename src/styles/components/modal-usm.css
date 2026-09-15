@@ -65,10 +65,10 @@
   width: 152px;
   flex-shrink: 0;
   border-right: 1px solid var(--color-border-light);
-  padding: 0.75rem 0.5rem;
+  padding: 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.125rem;
   background: var(--color-row-alt);
 }
 .usm__nav-item {
@@ -101,15 +101,21 @@
 /* Tab bar (mobile only) */
 .usm__tabs { display: none; }
 
-/* Content area */
+/* Content area：底部內距 14px，與標題線到下方內容的距離一致 */
 .usm__content {
   flex: 1;
   overflow-y: auto;
-  padding: 1.25rem 1.5rem;
+  padding: 1.25rem 1.5rem 0.875rem;
   min-width: 0;
 }
 .usm-panel { width: 100%; display: flex; flex-direction: column; gap: 1rem; }
-.usm-panel > .settings-manage__section-title { margin-bottom: 0; }
+/* 清單是分頁最後一個元素時，底部只留內容區內距 */
+.usm-panel > .settings-list:last-child { margin-bottom: 0; }
+/* 通知設定內容比左側選單矮，視窗會被選單撐高、卡片下方多出空白；
+   標題列稍微加高，讓內容高過選單（手機版沒有左側選單，不需要） */
+@media (min-width: 601px) {
+  .usm-panel > .settings-list > .disclosure-group > .disclosure-row { padding-block: 0.875rem; }
+}
 
 /* ─── Mobile ──────────────────────────────────────────────────── */
 @media (max-width: 600px) {
@@ -162,8 +168,9 @@
 }
 
 /* ─── Guide panel (CLI / MCP 使用說明，僅電腦版) ──────────────── */
+/* 行高 1.7 讓第一行字上方多出約 3px，往上收回，標題線到文字維持 14px */
 .guide-intro {
-  margin: 0;
+  margin: -0.1875rem 0 0;
   font-size: 0.875rem;
   line-height: 1.7;
   color: var(--color-text-secondary);
@@ -280,6 +287,7 @@
   transition: var(--transition);
 }
 .guide-collapsible__head:hover { background: var(--color-primary-tint-hover); }
+.guide-collapsible__head .disclosure-chevron { margin-left: auto; }
 .guide-collapsible__body { padding: 0.35rem 0.5rem 0.85rem 1.5rem; }
 
 .guide-cmdlist { margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
@@ -323,5 +331,9 @@
   line-height: 1.65;
   color: var(--color-text-secondary);
 }
+/* 問答類內容：每一題左邊一條淺色細線，把題目和答案圈成一組；兩區題與題的間距一致 */
+.guide-cmdlist__row--stack,
+.guide-scope__item { border-left: 2px solid var(--color-border); padding-left: 0.75rem; }
+.guide-scope__item + .guide-scope__item { margin-top: 0.6rem; }
 
 

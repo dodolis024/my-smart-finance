@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { ChevronDown } from '../DisclosureToggle';
 
 /**
  * 命令列工具使用說明。
@@ -25,17 +26,6 @@ const COMMAND_ROWS = [
 ];
 
 const TROUBLE_ROWS = ['stuck', 'port', 'ssh', 'session'];
-
-const ChevronRight = ({ isOpen }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 20 20"
-    fill="currentColor"
-    style={{ width: 14, height: 14, flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
-  >
-    <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
-  </svg>
-);
 
 const IconCopy = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -94,8 +84,8 @@ function Collapsible({ title, isOpen, onToggle, children }) {
   return (
     <div className={`guide-collapsible${isOpen ? ' is-open' : ''}`}>
       <button type="button" className="guide-collapsible__head" onClick={onToggle} aria-expanded={isOpen}>
-        <ChevronRight isOpen={isOpen} />
         <span>{title}</span>
+        <ChevronDown open={isOpen} />
       </button>
       {isOpen && <div className="guide-collapsible__body">{children}</div>}
     </div>
@@ -186,12 +176,18 @@ export default function GuidePanel() {
           isOpen={open.scope}
           onToggle={() => toggle('scope')}
         >
-          <p className="guide-scope__lead">{t('settings.guide.advanced.scope.canTitle')}</p>
-          <p className="guide-scope__text">{t('settings.guide.advanced.scope.can')}</p>
-          <p className="guide-scope__lead">{t('settings.guide.advanced.scope.cannotTitle')}</p>
-          <p className="guide-scope__text">{t('settings.guide.advanced.scope.cannot')}</p>
-          <p className="guide-scope__lead">{t('settings.guide.advanced.scope.safetyTitle')}</p>
-          <p className="guide-scope__text">{t('settings.guide.advanced.scope.safety')}</p>
+          <div className="guide-scope__item">
+            <p className="guide-scope__lead">{t('settings.guide.advanced.scope.canTitle')}</p>
+            <p className="guide-scope__text">{t('settings.guide.advanced.scope.can')}</p>
+          </div>
+          <div className="guide-scope__item">
+            <p className="guide-scope__lead">{t('settings.guide.advanced.scope.cannotTitle')}</p>
+            <p className="guide-scope__text">{t('settings.guide.advanced.scope.cannot')}</p>
+          </div>
+          <div className="guide-scope__item">
+            <p className="guide-scope__lead">{t('settings.guide.advanced.scope.safetyTitle')}</p>
+            <p className="guide-scope__text">{t('settings.guide.advanced.scope.safety')}</p>
+          </div>
         </Collapsible>
       </div>
     </div>

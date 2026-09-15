@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useId } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import DisclosureToggle from './DisclosureToggle';
 import {
   DndContext,
   DragOverlay,
@@ -106,6 +107,7 @@ export default function CategoryManager({ expenseCategories, incomeCategories, o
   const [renamingKey, setRenamingKey] = useState(null);
   const [openGroups, setOpenGroups] = useState({ expense: false, income: false });
   const [activeItem, setActiveItem] = useState(null); // { type, cat }：目前拖曳中的項目
+  const baseId = useId();
   const expenseRef = useRef(null);
   const incomeRef = useRef(null);
   const groupRefs = useMemo(() => ({ expense: expenseRef, income: incomeRef }), []);
@@ -175,69 +177,71 @@ export default function CategoryManager({ expenseCategories, incomeCategories, o
     const groupLabel = type === 'expense' ? t('settings.category.expenseCategories') : t('settings.category.incomeCategories');
     const addPlaceholder = type === 'expense' ? t('settings.category.expensePlaceholder') : t('settings.category.incomePlaceholder');
     const addAriaLabel = type === 'expense' ? t('settings.category.addExpenseAriaLabel') : t('settings.category.addIncomeAriaLabel');
+    const listId = `${baseId}-${type}`;
     return (
     <div className="category-group" ref={groupRefs[type]}>
-      <div className="category-group__header" onClick={() => toggleGroup(type)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: 14, height: 14, flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
-          </svg>
-          {groupLabel}
-        </h4>
-        {isOpen && (addingType === type ? (
-          <div className="category-group__inline-add" onClick={(e) => e.stopPropagation()}>
-            <InlineInput
-              placeholder={addPlaceholder}
-              onConfirm={(v) => handleAdd(type, v)}
-              onCancel={() => setAddingType(null)}
-              confirmLabel={t('common.confirm')}
-              cancelLabel={t('common.cancel')}
-            />
-          </div>
-        ) : (
-          <button type="button" className="btn-add-category" disabled={loading} onClick={(e) => { e.stopPropagation(); setAddingType(type); }} aria-label={addAriaLabel}>
-            {t('settings.category.addBtn')}
-          </button>
-        ))}
+      <div className="category-group__header disclosure-row" onClick={() => toggleGroup(type)}>
+        <h4>{groupLabel}</h4>
+        <div className="disclosure-right">
+          <DisclosureToggle status={t('settings.category.count', { count: cats.length })} open={isOpen} controls={listId} />
+        </div>
       </div>
       {isOpen && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={(e) => setActiveItem({ type, cat: e.active.id })}
-          onDragCancel={() => setActiveItem(null)}
-          onDragEnd={(e) => handleDragEnd(type, cats, e)}
-        >
-          <SortableContext items={cats} strategy={verticalListSortingStrategy}>
-            <ul className="category-list">
-              {cats.map((cat) => (
-                <SortableCategoryItem
-                  key={cat}
-                  type={type}
-                  cat={cat}
-                  loading={loading}
-                  isRenaming={renamingKey === `${type}:${cat}`}
-                  t={t}
-                  onStartRename={(ty, c) => setRenamingKey(`${ty}:${c}`)}
-                  onDelete={handleDelete}
-                  renameInput={(
-                    <InlineInput
-                      defaultValue={cat}
-                      placeholder={t('settings.category.newNamePlaceholder')}
-                      onConfirm={(v) => handleRename(type, cat, v)}
-                      onCancel={() => setRenamingKey(null)}
-                      confirmLabel={t('common.confirm')}
-                      cancelLabel={t('common.cancel')}
-                    />
-                  )}
-                />
-              ))}
-            </ul>
-          </SortableContext>
-          <DragOverlay>
-            {activeItem?.type === type ? <CategoryCardPreview cat={activeItem.cat} loading={loading} t={t} /> : null}
-          </DragOverlay>
-        </DndContext>
+        <div id={listId}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={(e) => setActiveItem({ type, cat: e.active.id })}
+            onDragCancel={() => setActiveItem(null)}
+            onDragEnd={(e) => handleDragEnd(type, cats, e)}
+          >
+            <SortableContext items={cats} strategy={verticalListSortingStrategy}>
+              <ul className="category-list">
+                {cats.map((cat) => (
+                  <SortableCategoryItem
+                    key={cat}
+                    type={type}
+                    cat={cat}
+                    loading={loading}
+                    isRenaming={renamingKey === `${type}:${cat}`}
+                    t={t}
+                    onStartRename={(ty, c) => setRenamingKey(`${ty}:${c}`)}
+                    onDelete={handleDelete}
+                    renameInput={(
+                      <InlineInput
+                        defaultValue={cat}
+                        placeholder={t('settings.category.newNamePlaceholder')}
+                        onConfirm={(v) => handleRename(type, cat, v)}
+                        onCancel={() => setRenamingKey(null)}
+                        confirmLabel={t('common.confirm')}
+                        cancelLabel={t('common.cancel')}
+                      />
+                    )}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+            <DragOverlay>
+              {activeItem?.type === type ? <CategoryCardPreview cat={activeItem.cat} loading={loading} t={t} /> : null}
+            </DragOverlay>
+          </DndContext>
+          {/* 新類別會加在最後面，所以新增入口也放在清單最下面：在哪輸入就出現在哪 */}
+          {addingType === type ? (
+            <div className="category-item category-add-editing">
+              <InlineInput
+                placeholder={addPlaceholder}
+                onConfirm={(v) => handleAdd(type, v)}
+                onCancel={() => setAddingType(null)}
+                confirmLabel={t('common.confirm')}
+                cancelLabel={t('common.cancel')}
+              />
+            </div>
+          ) : (
+            <button type="button" className="category-add-row" disabled={loading} onClick={() => setAddingType(type)} aria-label={addAriaLabel}>
+              <span aria-hidden="true">＋</span>{t('settings.category.addCategoryRow')}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

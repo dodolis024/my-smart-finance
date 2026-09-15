@@ -5,6 +5,9 @@ This file records version updates for Smart Finance Tracker.
 - Added a display currency setting, so dashboard amounts and totals can be shown in a foreign currency
 - Added an original-currency view for transactions, with a quick toggle at the top right of the transaction list
 - Improved the settings page by renaming the Categories tab to General and gathering language and currency settings into one list
+- Improved expandable settings sections to show the current setting on the right while collapsed (e.g. "Daily at 20:00", "7 items")
+- Improved notification settings to save instantly, without a save button
+- Improved the empty subscriptions tab with a hint and an add button in one card
 - Fixed large amounts on the desktop stat cards overlapping the dog illustrations
 - Fixed the streak modal not appearing for the first entry of the day after a missed day
 - Fixed the milestone title in the streak modal (e.g. day 30) appearing a day late

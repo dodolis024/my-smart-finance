@@ -57,36 +57,38 @@ afterEach(() => { act(() => root.unmount()); container.remove(); });
 const render = () => act(() => {
   root.render(createElement(NotificationPanel, { isOpen: true, toast: { success: vi.fn(), error: vi.fn() } }));
 });
-const headers = () => [...container.querySelectorAll('.category-group__header')];
+// 區塊順序：裝置推播、簽到提醒、信用卡提醒
+const headers = () => [...container.querySelectorAll('.disclosure-row')];
 const click = (el) => act(() => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 const text = () => container.textContent;
 
 describe('NotificationPanel 容器', () => {
   it('三個區塊都在，且推播那區標成「裝置推播」而不是「群組通知」', () => {
     render();
-    const labels = headers().map((h) => h.textContent);
+    const labels = headers().map((h) => h.querySelector('.settings-list__label').textContent);
 
     expect(labels).toEqual([
-      'settings.notification.checkinReminder',
       'settings.notification.devicePush',
+      'settings.notification.checkinReminder',
       'settings.notification.creditCardReminder',
     ]);
   });
 
+  // 簽到提醒的總開關在標題列上，收合時也在；改用展開後才出現的「提醒時間」判斷
   it('區塊預設收合，點開才載入內容', () => {
     render();
-    expect(text()).not.toContain('settings.notification.enableEmail');
+    expect(text()).not.toContain('settings.notification.reminderTime');
 
-    click(headers()[0]);
-    expect(text()).toContain('settings.notification.enableEmail');
+    click(headers()[1]);
+    expect(text()).toContain('settings.notification.reminderTime');
   });
 
   it('三個區塊彼此獨立，展開一個不會影響另一個', () => {
     render();
-    click(headers()[0]);
+    click(headers()[1]);
     click(headers()[2]);
 
-    expect(text()).toContain('settings.notification.enableEmail');
+    expect(text()).toContain('settings.notification.reminderTime');
     expect(text()).toContain('settings.notification.paymentReminder');
   });
 });

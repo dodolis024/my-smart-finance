@@ -16,12 +16,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
 }
 
+/* 只有展開、後面接著內容時才留距離；收合時標題上下置中。
+   多一層 .category-group 是為了權重高過下方 .category-list 的 margin: 0 */
+.category-group > .category-group__header + * { margin-top: 0.75rem; }
+/* 展開區內容統一比標題縮 1rem（主題輪換的 .theme-shuffle 自己在 settings-theme.css 處理） */
+.category-group > .disclosure-row + div:not(.theme-shuffle) { padding-left: 1rem; }
+
+/* 跟通知設定的標題列同一級（.settings-list__label 0.9rem / 600） */
 .category-group__header h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--color-text);
   font-weight: 600;
 }
@@ -172,3 +178,55 @@
   flex: 1;
   min-width: 0;
 }
+
+/* ─── 展開入口：右側「狀態 ⌄」（通知、主題輪換、類別管理共用） ─── */
+.disclosure-row { cursor: pointer; user-select: none; }
+.disclosure-right { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; flex-shrink: 0; }
+.disclosure-toggle {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.3rem 0.5rem; border: none; background: transparent; border-radius: 8px;
+  font: inherit; color: var(--color-text-secondary); cursor: pointer;
+}
+@media (hover: hover) { .disclosure-toggle:hover { background: var(--color-primary-tint-hover); } }
+.disclosure-toggle__status { font-size: 0.85rem; white-space: nowrap; }
+.disclosure-chevron { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text-secondary); transition: transform 0.2s; }
+.disclosure-chevron.is-open { transform: rotate(180deg); }
+
+/* 通知設定：每區是一個 group，group 之間才畫分隔線；group 內的細項列不畫線、往內縮 */
+.disclosure-group + .disclosure-group { border-top: 1px solid var(--color-border-light); }
+.settings-list .settings-list__row.settings-sub-row { border-top: none; padding-top: 0; padding-bottom: 1.25rem; padding-left: 2rem; }
+/* 展開後第一列（說明文字）貼近標題、對齊標題左緣，不跟著細項縮排 */
+.disclosure-row + div > .settings-sub-row:first-child { padding-left: 1rem; margin-top: -0.625rem; }
+/* 細項標籤比區塊標題低一級（標題 600／0.9rem），靠字重分層級 */
+.settings-list .disclosure-row + div > .settings-list__row.settings-sub-row:not(:first-child) .settings-list__label { font-weight: 500; font-size: 0.85rem; }
+.settings-sub-row .credit-notif-panel__chip-row { flex-wrap: wrap; }
+/* 時區欄和時間輪同寬，右側看起來是整齊的一欄；空間不夠時一起縮 */
+.settings-sub-row .reminder-modal__time-wheels { margin: 0; flex: 0 1 20rem; width: 20rem; max-width: 100%; }
+/* 細項列右側需要上下疊兩個元素時（時區下拉＋偵測按鈕）用的直欄 */
+.settings-sub-row__control { display: flex; flex-direction: column; gap: 0.35rem; flex: 0 1 20rem; min-width: 0; }
+.settings-sub-row .reminder-modal__select { width: 100%; }
+/* 右側是直欄時，名稱改對齊下拉選單裡的字（基線），不對齊整欄的中間 */
+.settings-list .settings-list__row.settings-sub-row--baseline { align-items: baseline; }
+/* 警告框撐滿整列 */
+.settings-sub-row .push-panel__warning { flex: 1 1 100%; }
+/* 手機換行後兩者都撐滿整行，不會一寬一窄 */
+@media (max-width: 600px) {
+  .settings-sub-row__control,
+  .settings-sub-row .reminder-modal__time-wheels { flex: 1 1 100%; width: 100%; }
+  .disclosure-row + div > .settings-sub-row:first-child { margin-top: -0.25rem; }
+}
+
+/* 總開關關閉時，展開內容看得到但不能操作 */
+.settings-dimmed { opacity: 0.45; pointer-events: none; }
+
+/* 類別管理：清單最下面的新增列 */
+.category-add-row {
+  display: flex; align-items: center; gap: 0.4rem; width: 100%; box-sizing: border-box;
+  margin-top: 0.5rem; padding: 0.6rem 0.8rem;
+  border: 1px dashed var(--color-border); border-radius: 8px; background: transparent;
+  color: var(--color-primary); font-size: 0.875rem; font-weight: 600; cursor: pointer;
+}
+/* 只在有滑鼠的裝置顯示 hover，手機點過後才不會殘留底色 */
+@media (hover: hover) { .category-add-row:hover { background: var(--color-primary-tint-hover); } }
+.category-add-row:disabled { opacity: 0.5; cursor: default; }
+.category-add-editing { margin-top: 0.5rem; }

@@ -15,8 +15,9 @@
   gap: 1rem;
 }
 
+/* 外層都是 gap: 1rem 的 flex 直欄，負 margin 把「標題線 → 下方內容」收成 14px */
 .settings-manage__section-title {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 -0.125rem 0;
   font-size: 1.125rem;
   color: var(--color-text);
   font-weight: 600;
