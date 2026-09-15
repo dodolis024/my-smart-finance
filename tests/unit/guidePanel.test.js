@@ -108,6 +108,28 @@ describe('GuidePanel', () => {
     expect(container.querySelector('.guide-collapsible__body')).toBeNull();
   });
 
+  it('展開箭頭在標題列最右邊（跟設定其他分頁一致）', () => {
+    render();
+
+    container.querySelectorAll('.guide-collapsible__head').forEach((head) => {
+      expect(head.lastElementChild.classList.contains('disclosure-chevron')).toBe(true);
+    });
+  });
+
+  it('「能做什麼」每一題各自一組（左側細線靠這層分組）', () => {
+    render();
+
+    const heads = container.querySelectorAll('.guide-collapsible__head');
+    act(() => heads[2].dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+    const items = container.querySelectorAll('.guide-scope__item');
+    expect(items).toHaveLength(3);
+    items.forEach((item) => {
+      expect(item.querySelector('.guide-scope__lead')).not.toBeNull();
+      expect(item.querySelector('.guide-scope__text')).not.toBeNull();
+    });
+  });
+
   it('複製按鈕會把該段指令寫入剪貼簿', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
