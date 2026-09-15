@@ -11,6 +11,7 @@ This file records version updates for Smart Finance Tracker.
 - Fixed large amounts on the desktop stat cards overlapping the dog illustrations
 - Fixed the streak modal not appearing for the first entry of the day after a missed day
 - Fixed the milestone title in the streak modal (e.g. day 30) appearing a day late
+- Fixed a manually chosen reminder timezone being switched back to the device's timezone
 
 ## [1.31.0] - Sep-13 2026
 - Added the Maple appearance theme and chart color scheme
