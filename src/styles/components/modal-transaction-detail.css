@@ -95,6 +95,8 @@
 .transaction-detail-item {
   display: flex;
   align-items: flex-start;
+  /* 標籤欄是固定寬的，英文的 Exchange Rate 正好填滿它，沒有 gap 就會黏住數值 */
+  gap: 1.5rem;
   padding: 1rem 0;
   border-bottom: 1px solid var(--color-border);
 }

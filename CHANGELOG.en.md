@@ -6,6 +6,7 @@ This file records version updates for Smart Finance Tracker.
 - Improved the split sync notice to flag any change, such as an edited note or date, rather than only a different total
 - Fixed re-syncing a split group moving its transaction to today, which threw monthly and yearly totals off
 - Fixed split-synced transactions showing a Chinese category and note in the English interface
+- Fixed longer labels sitting flush against their values in transaction details in the English interface
 
 ## [1.31.1] - Sep-15 2026
 - Added a display currency setting, so dashboard amounts and totals can be shown in a foreign currency
