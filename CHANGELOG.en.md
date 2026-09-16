@@ -3,7 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Improved split sync so each split expense becomes its own ledger transaction, keeping the expense's date, the group name as its category and the expense's own note; a group now appears directly in the category chart, with editable transactions behind it
-- Improved the split sync notice to flag any change, such as an edited note or date, rather than only a different total
+- Improved the split sync notice to flag any change, such as an edited note or date, rather than only a different total, and to drop the before/after amounts when the total is unchanged
 - Fixed re-syncing a split group moving its transaction to today, which threw monthly and yearly totals off
 - Fixed split-synced transactions showing a Chinese category and note in the English interface
 - Fixed longer labels sitting flush against their values in transaction details in the English interface

@@ -9,7 +9,7 @@ const syncIcon = (
 
 /**
  * 「同步到帳本」狀態盒，依同步狀態呈現三態：
- *   未同步 → 說明 + 同步按鈕；有新費用 → 帳本 vs 最新金額 + 更新；已同步 → 金額 + 重新同步
+ *   未同步 → 說明 + 同步按鈕；有變動 → 提示 + 更新（金額也變了才列出帳本 vs 最新）；已同步 → 金額 + 重新同步
  *
  * @param {object|null} syncStatus  useSplitSync 的同步狀態（null = 尚未同步過）
  * @param {boolean} syncing         同步進行中（按鈕轉圈/禁用）
@@ -21,6 +21,10 @@ const syncIcon = (
 export default function SplitSyncBox({ syncStatus, syncing, currency, fallbackAmount, onSync, onViewDetail }) {
   const { t } = useLanguage();
   const fmtAmt = (amt) => formatSplitAmount(amt, currency);
+  // 改備註、日期或名稱時金額不會變，這時列出「帳本 → 最新」只會是兩個相同數字，
+  // 看起來像在說「沒變，但請更新」。比格式化後的字串而非原始值，免得差在看不見的小數。
+  const amountChanged =
+    !!syncStatus && fmtAmt(syncStatus.synced_amount) !== fmtAmt(syncStatus.current_total);
 
   return (
     <div className="split-sync-box">
@@ -48,9 +52,11 @@ export default function SplitSyncBox({ syncStatus, syncing, currency, fallbackAm
             <span className="split-sync-box__dot" />
             <span className="split-sync-box__update-text">{t('split.hasNewExpenses')}</span>
           </div>
-          <p className="split-sync-box__desc">
-            {t('split.ledgerRecord')}{syncStatus.currency} {fmtAmt(syncStatus.synced_amount)}　→　{t('split.latest')}{syncStatus.currency} {fmtAmt(syncStatus.current_total)}
-          </p>
+          {amountChanged && (
+            <p className="split-sync-box__desc">
+              {t('split.ledgerRecord')}{syncStatus.currency} {fmtAmt(syncStatus.synced_amount)}　→　{t('split.latest')}{syncStatus.currency} {fmtAmt(syncStatus.current_total)}
+            </p>
+          )}
           <div className="split-sync-box__actions">
             <button
               type="button"
