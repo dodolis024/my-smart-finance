@@ -78,24 +78,25 @@ export default function TransactionTable({
 
   // 分組時日期由每日標題標示，整個日期欄不存在，寬度分給其他欄；
   // 年檢視不分組，日期回到每一列自己顯示，欄位與原本的寬度一起還原。
-  // 操作欄固定成剛好放得下編輯＋刪除（36 + 8 + 36 + 左右內距 20 = 100px，留 4px 餘裕），
-  // 金額欄不給寬度、吃掉剩下的空間：寬螢幕上操作欄原本多出來的留白都讓給金額，
-  // 原幣模式的長金額（US$1,234.56）才放得下。兩種金額模式共用同一組欄寬，切換時欄位不會移動
+  // 操作欄固定成剛好放得下編輯＋刪除（36 + 8 + 36 + 左右內距 20 = 100px，留 4px 餘裕）；
+  // 金額欄固定成放得下原幣模式的長金額（US$12,345.67：>1440px 字級 15px 約 102px + 左右內距 24px = 126px），
+  // 兩種金額模式共用同一組欄寬，切換時欄位不會移動。
+  // 品項欄不給寬度、吃掉剩下的空間：只有品項名稱長短說不準，寬螢幕多出來的留白都給它
   const colgroup = groupByDate ? (
     <colgroup>
       <col style={{ width: '15%' }} />
-      <col style={{ width: '32%' }} />
-      <col style={{ width: '16%' }} />
       <col />
+      <col style={{ width: '16%' }} />
+      <col style={{ width: '8rem' }} />
       <col style={{ width: '6.5rem' }} />
     </colgroup>
   ) : (
     <colgroup>
       <col style={{ width: '16.67%' }} />
       <col style={{ width: '13.89%' }} />
-      <col style={{ width: '18.06%' }} />
-      <col style={{ width: '13.89%' }} />
       <col />
+      <col style={{ width: '13.89%' }} />
+      <col style={{ width: '8rem' }} />
       <col style={{ width: '6.5rem' }} />
     </colgroup>
   );
