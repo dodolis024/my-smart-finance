@@ -67,6 +67,7 @@
 | scripts/fix-split-sync-decimal-regression.sql | sync_split_to_ledger 補回被 fix-split-sync-ownership.sql 洗掉的兩處:零小數幣別清單對齊 src/lib/constants.js 的 ZERO_DECIMAL_CURRENCIES、SPLIT_RATE_UNAVAILABLE 的 DETAIL 分隔符改回 ", "。擁有權檢查與匯率守門原樣保留,定義已與 database/split-sync-migration.sql 逐字一致 | 2026-09-09 |
 | database/exchange-rate-history-migration.sql | 匯率歷史:新增 exchange_rate_history 表(主鍵 currency_code+date,故不另建索引),RLS 只給 authenticated SELECT、不開寫入 policy(寫入走 update-exchange-rates 的 service role);建表時以現值種一列今日;新增 get_exchange_rate_on(p_currency, p_date) RPC,查「<= 該日期的最新一筆」而非精準比對(週末與排程停擺會留洞),查無回 NULL 以區分「真的 1:1」。**只能從此日起累積,過去補不回來** | 2026-09-09 |
 | database/split-expense-rate-migration.sql | 分帳凍結匯率:split_expenses 與 split_settlements 各加 exchange_rate(語意同 transactions,1 單位=多少 TWD)與 exchange_rate_estimated;BEFORE INSERT OR UPDATE trigger(set_split_row_rate)依費用日期以 get_exchange_rate_on 凍結,查無(早於 2026-09-09 或超過 400 天)退回現值並標記補記,幣別與日期未變則沿用原值(直接 PATCH 會被還原,要手動改需先 DISABLE TRIGGER)。用 trigger 而非改 RPC,是因為還款由前端與 CLI 直接 INSERT,舊版 CLI 寫入的也要涵蓋。既有外幣費用以執行當下現值補值並標補記(53 筆),台幣填 1;get_split_sync_status 與 sync_split_to_ledger 換算改用凍結值、前置匯率檢查略過已凍結者,定義與 database/split-sync-migration.sql 一致 | 2026-09-10 |
+| database/split-sync-per-expense-migration.sql | 分帳同步改逐筆:split_ledger_syncs 加 expense_id(ON DELETE SET NULL,不用 CASCADE——費用被刪時要留線索才找得到該收掉哪筆交易),UNIQUE 由 (user_id, group_id) 改為 (user_id, expense_id) 的 partial index。sync_split_to_ledger 改逐筆建立/更新/收掉交易,日期=費用日期、分類=群組名稱、備註=費用備註(沒寫則留空)、金額=分攤額(費用原幣,用凍結匯率);不再換算到群組幣別,故不再需要零小數清單。get_split_sync_status 的 needs_update 改比對費用集合與帳本內容(金額相等但日期/名稱/備註改過也會偵測到)。內建遷移把既有彙總交易拆成逐筆並刪除原交易(支付方式與帳戶沿用),第 5 節回填備註。可重複執行 | 2026-09-16 |
 
 > 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
 > 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,
@@ -210,6 +211,7 @@
 | 2026-09-02 | 2026-08-31 批次的 5 支 SQL 腳本 + 6 支 Edge Function | 22 項全數通過 |
 | 2026-09-09 | scripts/fix-split-sync-decimal-regression.sql | 11 項全數通過 |
 | 2026-09-10 | database/split-expense-rate-migration.sql | 16 項全數通過(腳本內建驗證);另以 anon key 呼叫 resolve_split_rate 確認函式可執行、歷史表路徑可用 |
+| 2026-09-16 | database/split-sync-per-expense-migration.sql | 8 項全數通過(腳本內建驗證);另以測試帳號在瀏覽器確認群組已成為分類圓餅圖的一塊、點進去是可編輯的逐筆交易,且英文介面不再出現寫死的中文 |
 
 > 2026-09-02 的重點不在前 19 項設定檢查,而在後 3 項:
 > `credit-card-reminder-daily` 首次成功執行(2026-09-02 01:00 UTC = 台灣 09:00),

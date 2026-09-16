@@ -395,8 +395,10 @@ BEGIN
 
   IF v_existing_sync.id IS NOT NULL THEN
     -- 更新既有的個人帳簿交易
-    -- 重新同步 = 更新到最新狀態：金額用今日匯率、日期也更新為今日，
-    -- 避免「舊日期配新匯率」造成報表漂移
+    -- 重新同步 = 更新到最新狀態。
+    -- 日期仍設為今日，但原本的理由（金額用今日匯率，日期配合今日）已不成立：
+    -- 本腳本起金額改用每筆費用凍結的當日匯率（見上方 set_split_row_rate），
+    -- 交易日期因此與金額所依據的日期對不起來。日期語意待重新決定。
     UPDATE transactions SET
       date          = CURRENT_DATE,
       amount        = v_total_share,

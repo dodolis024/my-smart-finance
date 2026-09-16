@@ -37,9 +37,11 @@ export const DEFAULT_ACCOUNT = {
 // Currencies with no minor unit — displayed as whole numbers, no decimal point.
 // Based on the standard ISO 4217 zero-decimal list, plus TWD by this app's own
 // convention (Taiwan practice treats NT$ as whole dollars despite ISO allowing 2).
-// database/split-sync-migration.sql (sync_split_to_ledger) keeps a SQL copy of
+// database/split-sync-migration.sql (get_split_sync_status) keeps a SQL copy of
 // this list for v_decimal_places — keep both in sync when changing this set.
-// Any one-off script that re-declares sync_split_to_ledger must carry the list
+// sync_split_to_ledger no longer needs it: since the per-expense migration it
+// writes each expense in its own currency instead of converting to the group's.
+// Any one-off script that re-declares get_split_sync_status must carry the list
 // over too: scripts/fix-split-sync-ownership.sql copied an older definition and
 // silently reverted it (fixed by scripts/fix-split-sync-decimal-regression.sql).
 export const ZERO_DECIMAL_CURRENCIES = new Set([

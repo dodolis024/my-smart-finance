@@ -31,8 +31,7 @@ export default function TransactionListPanel({
     setDetailTx(null);
   }, [isOpen, resetKey]);
 
-  // 開/關內層 TransactionDetail 時，Modal 會無條件移除 body.modal-open
-  //（它內部的 SplitShareDetailModal 以 isOpen=false 掛載也會觸發 else 分支），
+  // 開/關內層 TransactionDetail 時，Modal 會無條件移除 body.modal-open，
   // 外層彈窗還開著時要補回，否則背景會變成可捲動。
   useEffect(() => {
     if (isOpen) document.body.classList.add('modal-open');
