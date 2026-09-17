@@ -72,6 +72,11 @@ export function loadRates() {
   return readJson(RATES_KEY)?.rates || null;
 }
 
+/** 匯率上次存下的時間（ms）；從沒存過回 0 */
+export function loadRatesSavedAt() {
+  return readJson(RATES_KEY)?.savedAt ?? 0;
+}
+
 export function saveCurrencies(list) {
   writeJson(CURRENCIES_KEY, list);
 }

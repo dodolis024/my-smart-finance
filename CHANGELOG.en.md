@@ -11,6 +11,7 @@ This file records version updates for Smart Finance Tracker.
 - Fixed the current year being unselectable in the period picker before its first entry, or until a refresh after it
 - Fixed logging out while offline clearing unsynced entries even though the logout itself failed
 - Fixed screen readers announcing the Year in Review card progress in Chinese in the English interface
+- Fixed multi-currency split settlements keeping the exchange rate from when the app was opened, even days later
 
 ## [1.31.1] - Sep-15 2026
 - Added a display currency setting, so dashboard amounts and totals can be shown in a foreign currency

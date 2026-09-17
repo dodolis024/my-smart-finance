@@ -6,6 +6,7 @@ import { useSplitGroups } from '@/hooks/useSplitGroups';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { loadRates, loadRatesSavedAt, saveRates } from '@/lib/offlineCache';
 import SplitGroupCard from '@/components/split/SplitGroupCard';
 import SplitGroupDetail from '@/components/split/SplitGroupDetail';
 import CreateGroupModal from '@/components/split/CreateGroupModal';
@@ -13,9 +14,12 @@ import CreateGroupModal from '@/components/split/CreateGroupModal';
 // 幣別下拉選項排序：常用幣別優先，其餘照字母序（與個人帳本一致）
 const PREFERRED_ORDER = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP'];
 
-// Module-level caches（跨頁面切換沿用，避免重複查詢）
-let cachedRates = null;
+// 幣別清單很少變，module-level 快取整個 session 沿用
 let cachedCurrencies = null;
+// 匯率與主畫面共用 offlineCache 那份（含存檔時間）。凍結匯率上線後這裡只剩
+// 「換算成群組結算幣別」一個用途，但 PWA 常開好幾天，超過一天就重抓
+const RATES_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const initialRates = () => ({ TWD: 1, ...(loadRates() || {}) });
 
 // ── 分帳主頁（/split）────────────────────────────────────────────────────────
 export default function SplitPage() {
@@ -26,7 +30,7 @@ export default function SplitPage() {
   const { groups, loading, fetchGroups, createGroup, updateGroup, archiveGroup, unarchiveGroup, togglePin, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
   const [createOpen, setCreateOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  const [rates, setRates] = useState(() => cachedRates || { TWD: 1 });
+  const [rates, setRates] = useState(initialRates);
   const [currencies, setCurrencies] = useState(() => cachedCurrencies || PREFERRED_ORDER);
   const toast = useToast();
   const { confirm } = useConfirm();
@@ -45,18 +49,31 @@ export default function SplitPage() {
     }
   }, [groupId, loading, groups, navigate]);
 
+  // 進頁面與 App 切回前景時各檢查一次；還新鮮就不查，查失敗（離線）就沿用手上那份
   useEffect(() => {
-    if (cachedRates) return;
-    supabase
-      .from('exchange_rates')
-      .select('currency_code, rate')
-      .then(({ data }) => {
-        if (!data) return;
-        const obj = { TWD: 1 };
-        data.forEach(r => { obj[r.currency_code] = Number(r.rate); });
-        cachedRates = obj;
-        setRates(obj);
-      });
+    let cancelled = false;
+    const refreshIfStale = () => {
+      if (Date.now() - loadRatesSavedAt() < RATES_MAX_AGE_MS) return;
+      supabase
+        .from('exchange_rates')
+        .select('currency_code, rate')
+        .then(({ data }) => {
+          if (cancelled || !Array.isArray(data) || data.length === 0) return;
+          const obj = { TWD: 1 };
+          data.forEach(r => { obj[String(r.currency_code).toUpperCase()] = Number(r.rate); });
+          saveRates(obj);
+          setRates(obj);
+        });
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshIfStale();
+    };
+    refreshIfStale();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   // 幣別選項改由匯率表動態決定（與個人帳本同一來源），免手動維護清單
