@@ -9,10 +9,14 @@ const h = vi.hoisted(() => ({
   confirmResult: true,
   confirmMessages: [],
   signOutCalls: 0,
+  signOutError: null,
+  toastErrors: [],
   reset() {
     this.confirmResult = true;
     this.confirmMessages = [];
     this.signOutCalls = 0;
+    this.signOutError = null;
+    this.toastErrors = [];
   },
 }));
 
@@ -30,7 +34,10 @@ vi.mock('@/lib/supabase', () => ({
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({
     user: { id: 'user-1' },
-    signOut: async () => { h.signOutCalls += 1; },
+    signOut: async () => {
+      h.signOutCalls += 1;
+      if (h.signOutError) throw h.signOutError;
+    },
   }),
 }));
 
@@ -41,6 +48,10 @@ vi.mock('@/contexts/ConfirmContext', () => ({
       return h.confirmResult;
     },
   }),
+}));
+
+vi.mock('@/contexts/ToastContext', () => ({
+  useToast: () => ({ error: (message) => { h.toastErrors.push(message); } }),
 }));
 
 // t 直接回傳 key + 參數，方便斷言用到哪一組文案與內插值
@@ -113,5 +124,21 @@ describe('useLogout', () => {
     await act(async () => { await logout(); });
     expect(h.signOutCalls).toBe(0);
     expect(listQueue(USER)).toHaveLength(1);
+  });
+
+  it('登出失敗（斷線）時提示使用者，不讓錯誤往外拋', async () => {
+    h.signOutError = new Error('Failed to fetch');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logout = await renderLogout();
+    await act(async () => { await logout(); });
+    expect(h.signOutCalls).toBe(1);
+    expect(h.toastErrors).toEqual(['auth.logoutFailed']);
+    errorSpy.mockRestore();
+  });
+
+  it('登出成功不跳錯誤提示', async () => {
+    const logout = await renderLogout();
+    await act(async () => { await logout(); });
+    expect(h.toastErrors).toEqual([]);
   });
 });

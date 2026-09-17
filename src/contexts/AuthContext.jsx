@@ -108,14 +108,21 @@ export function AuthProvider({ children }) {
   // 等重新登入補送(見 offlineQueue 的 needsLogin 分支)。
   // 未同步佇列會一併丟棄,呼叫端(useLogout)負責先向使用者確認筆數。
   const signOut = useCallback(async () => {
-    if (user?.id) {
-      clearQueue(user.id);
-      clearUserCache(user.id);
+    // 登出成功會觸發 SIGNED_OUT 把 user 設成 null，清理要用的 id 先存起來
+    const userId = user?.id;
+    if (userId) {
       // 必須趕在 signOut 之前：刪 push_subscriptions 要通過 RLS，
       // session 一沒了就刪不動，那筆訂閱會留著繼續把通知推到這台裝置
-      await clearPushSubscription(user.id);
+      await clearPushSubscription(userId);
     }
-    await supabase.auth.signOut();
+    // 斷線時 supabase 只回傳 error、不清本機 session（人還登入著），
+    // 所以佇列與快取要等確定登出了才清，否則會變成「沒登出、帳卻沒了」
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    if (userId) {
+      clearQueue(userId);
+      clearUserCache(userId);
+    }
   }, [user]);
 
   const ensureDefaultDataForOAuth = useCallback(async (userId) => {

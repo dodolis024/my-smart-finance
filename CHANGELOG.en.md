@@ -9,6 +9,7 @@ This file records version updates for Smart Finance Tracker.
 - Fixed split-synced transactions showing a Chinese category and note in the English interface
 - Fixed longer labels sitting flush against their values in transaction details in the English interface
 - Fixed the current year being unselectable in the period picker before its first entry, or until a refresh after it
+- Fixed logging out while offline clearing unsynced entries even though the logout itself failed
 
 ## [1.31.1] - Sep-15 2026
 - Added a display currency setting, so dashboard amounts and totals can be shown in a foreign currency

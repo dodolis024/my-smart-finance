@@ -10,12 +10,16 @@ import { createRoot } from 'react-dom/client';
  * 清除排在 supabase.auth.signOut 之後 → session 已經沒了，刪 push_subscriptions
  * 過不了 RLS，那筆訂閱會留著繼續把通知推到這台裝置。
  * 這兩件事都不會讓任何既有測試變紅，所以在這裡單獨釘住。
+ *
+ * 同一條登出路徑也釘住佇列／快取的清理時機：要等 supabase 確定登出才清。
+ * 斷線時 signOut 只回傳 error、人還登入著，先清就會變成「沒登出、帳卻沒了」。
  */
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const calls = [];
 let session = null;
+let signOutResult = { error: null };
 
 vi.mock('@/lib/supabase', () => ({
   createDefaultData: vi.fn(),
@@ -23,14 +27,14 @@ vi.mock('@/lib/supabase', () => ({
     auth: {
       getSession: vi.fn(() => Promise.resolve({ data: { session } })),
       onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
-      signOut: vi.fn(() => { calls.push('supabase.signOut'); return Promise.resolve({ error: null }); }),
+      signOut: vi.fn(() => { calls.push('supabase.signOut'); return Promise.resolve(signOutResult); }),
     },
   },
 }));
 
 vi.mock('@/lib/resourceCache', () => ({ clearAllCaches: vi.fn() }));
-vi.mock('@/lib/offlineCache', () => ({ clearUserCache: vi.fn() }));
-vi.mock('@/lib/offlineQueue', () => ({ clearQueue: vi.fn() }));
+vi.mock('@/lib/offlineCache', () => ({ clearUserCache: vi.fn((userId) => { calls.push(`cache:${userId}`); }) }));
+vi.mock('@/lib/offlineQueue', () => ({ clearQueue: vi.fn((userId) => { calls.push(`queue:${userId}`); }) }));
 
 vi.mock('@/lib/pushSubscription', () => ({
   clearPushSubscription: vi.fn((userId) => { calls.push(`clear:${userId}`); return Promise.resolve(); }),
@@ -39,6 +43,8 @@ vi.mock('@/lib/pushSubscription', () => ({
 
 const { AuthProvider, AuthContext } = await import('@/contexts/AuthContext');
 const { clearPushSubscription, restorePushSubscription } = await import('@/lib/pushSubscription');
+const { clearQueue } = await import('@/lib/offlineQueue');
+const { clearUserCache } = await import('@/lib/offlineCache');
 
 const USER = { id: 'user-1', email: 'a@example.com', app_metadata: {}, user_metadata: {} };
 
@@ -63,6 +69,7 @@ async function mount() {
 beforeEach(() => {
   calls.length = 0;
   session = null;
+  signOutResult = { error: null };
   vi.clearAllMocks();
 });
 
@@ -103,6 +110,34 @@ describe('AuthContext 的推播訂閱接線', () => {
 
     await act(async () => { await auth.current.signOut(); });
 
-    expect(calls).toEqual(['clear:user-1', 'supabase.signOut']);
+    expect(calls).toEqual(['clear:user-1', 'supabase.signOut', 'queue:user-1', 'cache:user-1']);
+  });
+});
+
+describe('AuthContext 登出的佇列／快取清理時機', () => {
+  it('登出成功後才清這個帳號的佇列與快取', async () => {
+    session = { user: USER };
+    await mount();
+    calls.length = 0;
+
+    await act(async () => { await auth.current.signOut(); });
+
+    expect(calls.indexOf('queue:user-1')).toBeGreaterThan(calls.indexOf('supabase.signOut'));
+    expect(calls.indexOf('cache:user-1')).toBeGreaterThan(calls.indexOf('supabase.signOut'));
+  });
+
+  it('登出失敗（斷線）時拋出錯誤，佇列與快取原封不動', async () => {
+    session = { user: USER };
+    await mount();
+    signOutResult = { error: new Error('Failed to fetch') };
+
+    let thrown = null;
+    await act(async () => {
+      try { await auth.current.signOut(); } catch (err) { thrown = err; }
+    });
+
+    expect(thrown?.message).toBe('Failed to fetch');
+    expect(clearQueue).not.toHaveBeenCalled();
+    expect(clearUserCache).not.toHaveBeenCalled();
   });
 });

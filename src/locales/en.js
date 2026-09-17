@@ -53,6 +53,7 @@ const en = {
     logout: 'Log out',
     logoutConfirm: 'Are you sure you want to log out?',
     logoutConfirmPending: '{count} transaction(s) have not synced yet. Logging out clears them for good. Log out anyway?',
+    logoutFailed: 'Could not log out. Check your connection and try again.',
     loginRequired: 'Please log in first',
     forgotPassword: 'Forgot password?',
     forgotTitle: 'Forgot password',
