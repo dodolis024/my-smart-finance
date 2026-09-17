@@ -118,7 +118,12 @@ export function AuthProvider({ children }) {
     // 斷線時 supabase 只回傳 error、不清本機 session（人還登入著），
     // 所以佇列與快取要等確定登出了才清，否則會變成「沒登出、帳卻沒了」
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (error) {
+      // 沒登出成功、人還在，剛刪掉的推播歸屬要立刻接回來；否則要等下次重新載入
+      // （restorePushSubscription 只在 user.id 改變時跑）這台裝置才會再收到通知
+      if (userId) await restorePushSubscription(userId);
+      throw error;
+    }
     if (userId) {
       clearQueue(userId);
       clearUserCache(userId);

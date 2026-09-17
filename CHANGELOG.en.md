@@ -9,7 +9,7 @@ This file records version updates for Smart Finance Tracker.
 - Fixed split-synced transactions showing a Chinese category and note in the English interface
 - Fixed longer labels sitting flush against their values in transaction details in the English interface
 - Fixed the current year being unselectable in the period picker before its first entry, or until a refresh after it
-- Fixed logging out while offline clearing unsynced entries even though the logout itself failed
+- Fixed logging out while offline clearing unsynced entries and stopping notifications on that device even though the logout itself failed
 - Fixed screen readers announcing the Year in Review card progress in Chinese in the English interface
 - Fixed multi-currency split settlements keeping the exchange rate from when the app was opened, even days later
 - Fixed a dropped connection while creating a split group possibly leaving a group you own but cannot sync because you are not a member

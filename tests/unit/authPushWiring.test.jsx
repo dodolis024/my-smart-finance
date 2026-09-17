@@ -140,4 +140,18 @@ describe('AuthContext 登出的佇列／快取清理時機', () => {
     expect(clearQueue).not.toHaveBeenCalled();
     expect(clearUserCache).not.toHaveBeenCalled();
   });
+
+  it('登出失敗時把剛清掉的推播訂閱接回來，這台裝置才不會收不到通知', async () => {
+    session = { user: USER };
+    await mount();
+    calls.length = 0;
+    signOutResult = { error: new Error('Failed to fetch') };
+
+    await act(async () => {
+      try { await auth.current.signOut(); } catch { /* 錯誤本身由上一個測試釘住 */ }
+    });
+
+    // 清除在 signOut 之前（RLS），還原在 signOut 失敗之後；佇列與快取都沒被碰
+    expect(calls).toEqual(['clear:user-1', 'supabase.signOut', 'restore:user-1']);
+  });
 });
