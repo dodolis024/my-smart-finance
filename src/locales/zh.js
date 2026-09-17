@@ -757,6 +757,7 @@ const zh = {
     nextYear: '下一年',
     prevCard: '上一張',
     nextCard: '下一張',
+    cardProgress: '卡片進度',
     noData: '這一年還沒有記帳資料',
     loading: '載入中…',
     loadError: '年度回顧載入失敗',

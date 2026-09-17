@@ -757,6 +757,7 @@ const en = {
     nextYear: 'Next year',
     prevCard: 'Previous card',
     nextCard: 'Next card',
+    cardProgress: 'Card progress',
     noData: 'No records found for this year',
     loading: 'Loading…',
     loadError: 'Could not load your year in review',

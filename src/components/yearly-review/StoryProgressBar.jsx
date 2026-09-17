@@ -1,6 +1,9 @@
+import { useLanguage } from '@/contexts/LanguageContext';
+
 export default function StoryProgressBar({ total, current, onJump }) {
+  const { t } = useLanguage();
   return (
-    <div className="story-progress-bar" role="tablist" aria-label="卡片進度">
+    <div className="story-progress-bar" role="tablist" aria-label={t('yearlyReview.cardProgress')}>
       {Array.from({ length: total }, (_, i) => (
         <div
           key={i}

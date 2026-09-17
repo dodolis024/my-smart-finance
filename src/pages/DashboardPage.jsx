@@ -57,6 +57,27 @@ const readGranularity = () => {
   }
 };
 
+// 三種匯出（目前期間、搜尋結果、自訂區間）共用的表頭與類型標籤，加欄位只改這裡
+function csvOptions(t) {
+  return {
+    headers: [
+      t('transaction.tableDate'),
+      t('transaction.tableType'),
+      t('transaction.tableCategory'),
+      t('transaction.tableItem'),
+      t('transaction.tablePayment'),
+      t('transaction.currencyLabel'),
+      t('transaction.tableAmount'),
+      t('transaction.twdAmount'),
+      t('transaction.note'),
+    ],
+    typeLabels: {
+      expense: t('transaction.expenseGroup'),
+      income: t('transaction.incomeGroup'),
+    },
+  };
+}
+
 function DashboardContent() {
   const { user, ensureDefaultDataForOAuth } = useAuth();
   const {
@@ -397,16 +418,15 @@ function DashboardContent() {
     if (!transaction?.id) return false;
     if (typeof transaction.isSplitSynced === 'boolean') return transaction.isSplitSynced;
 
-    const heuristicGuess =
-      transaction.note === '從分帳群組同步' || transaction.category === '分帳';
-
     const { data, error } = await supabase
       .from('split_ledger_syncs')
       .select('id')
       .eq('transaction_id', transaction.id)
       .maybeSingle();
 
-    if (error) return heuristicGuess;
+    // 查不到就當作不是分帳交易（同 TransactionDetail）：逐筆同步後分類是群組名稱、
+    // 備註是費用自己的備註，已經沒有可以猜的線索
+    if (error) return false;
     return !!data;
   }, []);
 
@@ -604,23 +624,7 @@ function DashboardContent() {
     );
     if (!confirmed) return;
 
-    const csv = buildTransactionsCsv(tableRows, {
-      headers: [
-        t('transaction.tableDate'),
-        t('transaction.tableType'),
-        t('transaction.tableCategory'),
-        t('transaction.tableItem'),
-        t('transaction.tablePayment'),
-        t('transaction.currencyLabel'),
-        t('transaction.tableAmount'),
-        t('transaction.twdAmount'),
-        t('transaction.note'),
-      ],
-      typeLabels: {
-        expense: t('transaction.expenseGroup'),
-        income: t('transaction.incomeGroup'),
-      },
-    });
+    const csv = buildTransactionsCsv(tableRows, csvOptions(t));
     downloadCsv(`my-smart-finance-${periodFileLabel}.csv`, csv);
   }, [tableRows, periodFileLabel, t, confirm]);
 
@@ -648,23 +652,7 @@ function DashboardContent() {
       exportRows = rows;
     }
 
-    const csv = buildTransactionsCsv(exportRows, {
-      headers: [
-        t('transaction.tableDate'),
-        t('transaction.tableType'),
-        t('transaction.tableCategory'),
-        t('transaction.tableItem'),
-        t('transaction.tablePayment'),
-        t('transaction.currencyLabel'),
-        t('transaction.tableAmount'),
-        t('transaction.twdAmount'),
-        t('transaction.note'),
-      ],
-      typeLabels: {
-        expense: t('transaction.expenseGroup'),
-        income: t('transaction.incomeGroup'),
-      },
-    });
+    const csv = buildTransactionsCsv(exportRows, csvOptions(t));
     downloadCsv('my-smart-finance-search.csv', csv);
   }, [searchResults, searchTotalCount, searchQuery, user, t, confirm, toast]);
 
@@ -691,23 +679,7 @@ function DashboardContent() {
       return;
     }
 
-    const csv = buildTransactionsCsv(rows, {
-      headers: [
-        t('transaction.tableDate'),
-        t('transaction.tableType'),
-        t('transaction.tableCategory'),
-        t('transaction.tableItem'),
-        t('transaction.tablePayment'),
-        t('transaction.currencyLabel'),
-        t('transaction.tableAmount'),
-        t('transaction.twdAmount'),
-        t('transaction.note'),
-      ],
-      typeLabels: {
-        expense: t('transaction.expenseGroup'),
-        income: t('transaction.incomeGroup'),
-      },
-    });
+    const csv = buildTransactionsCsv(rows, csvOptions(t));
     downloadCsv(`my-smart-finance-${sy}-${pad(sm)}_${ey}-${pad(em)}.csv`, csv);
     setExportRangeOpen(false);
   }, [user, t, toast]);
