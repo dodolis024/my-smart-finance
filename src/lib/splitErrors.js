@@ -1,6 +1,8 @@
 // 分帳相關 Postgres RPC 以穩定的 ASCII 錯誤碼（如 'SPLIT_INVALID_INVITE'）作為
 // RAISE EXCEPTION 訊息字串，本模組把這些錯誤碼轉譯成使用者當前語言的文案。
-// 對照表詳見 scripts/fix-split-error-codes.sql 檔頭與 locales/{zh,en}.js 的 errors 區塊。
+// 對照表詳見 scripts/fix-split-error-codes.sql 檔頭與 locales/{zh,en}.js 的 errors 區塊；
+// SPLIT_SHARES_SUM_MISMATCH 由 database/split-shares-balance-guard-migration.sql 的
+// 延遲 trigger 在 commit 時拋出，不是 RPC 本體。
 const KNOWN_ERROR_CODES = new Set([
   'AUTH_REQUIRED',
   'SPLIT_NOT_LINKED_MEMBER',
@@ -15,6 +17,7 @@ const KNOWN_ERROR_CODES = new Set([
   'SPLIT_NO_EDIT_PERMISSION',
   'SPLIT_SHARES_EMPTY',
   'SPLIT_SHARE_MEMBER_INVALID',
+  'SPLIT_SHARES_SUM_MISMATCH',
   'SPLIT_NO_ADD_PERMISSION',
   'SPLIT_SYNC_TX_NOT_OWNED',
   'ACCOUNT_NOT_OWNED',

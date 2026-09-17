@@ -12,8 +12,9 @@ import { ZERO_DECIMAL_CURRENCIES } from './constants';
 /**
  * 分攤送出前，總和與費用金額的容許誤差。
  * 分攤都已收斂到該幣別的最小單位，這裡只吸收浮點加總的雜訊，
- * 不該放行真的差一個單位——split_expense_shares 沒有 CHECK 約束，
- * 這裡放行就沒有人擋了。
+ * 不該放行真的差一個單位。資料庫在 commit 時會以精確相等再擋一次
+ * （database/split-shares-balance-guard-migration.sql），這裡先擋是為了
+ * 讓使用者在送出前就看到指得出哪一格的錯誤，而不是一句籠統的伺服器錯誤。
  */
 export const SHARE_SUM_TOLERANCE = 0.001;
 
