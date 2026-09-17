@@ -26,6 +26,7 @@
 | 零小數幣別名單（`src/lib/constants.js` 的 `ZERO_DECIMAL_CURRENCIES`） | `core/splitSettlement.js`（`core/splitShares.js` 由此匯入，CLI 內只留一份） |
 | 新增／修改／刪除費用的副作用（通知、簽到） | `core/splitExpenses.js` |
 | `split_expenses` 或分攤明細的欄位 | `core/splitExpenses.js` 的 `EXPENSE_FIELDS` |
+| 還款紀錄的寫入欄位（`date` 一律由客戶端帶本地日期，不交給資料庫預設） | `core/splitExpenses.js` 的 `addSettlement` |
 
 零頭歸屬是這裡最容易做錯、也最難被發現的：兩邊若給不同的人，同一筆帳會差一分錢，
 而且只在除不盡時出現。`tests/unit/tools-split-report.test.js` 會直接比對兩份結算演算法的結果。

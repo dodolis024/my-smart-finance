@@ -320,9 +320,12 @@ export async function deleteExpense({ group, expense }) {
 export async function addSettlement({ group, fromMember, toMember, amount, currency }) {
   const client = await getAuthedClient();
 
+  // date 一定要自己帶（與 src/hooks/useSplitExpenses.js 一致）：
+  // 交給資料庫預設等於用 UTC 時鐘，台灣凌晨 0～8 點記的還款會變成前一天
   const { data, error } = await client
     .from('split_settlements')
     .insert({
+      date: getTodayYmd(),
       group_id: group.id,
       from_member: fromMember.id,
       to_member: toMember.id,

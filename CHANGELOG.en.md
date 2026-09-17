@@ -13,6 +13,8 @@ This file records version updates for Smart Finance Tracker.
 - Fixed screen readers announcing the Year in Review card progress in Chinese in the English interface
 - Fixed multi-currency split settlements keeping the exchange rate from when the app was opened, even days later
 - Fixed a dropped connection while creating a split group possibly leaving a group you own but cannot sync because you are not a member
+- Fixed split repayments marked between midnight and 8 a.m. Taiwan time being dated the previous day
+- Fixed transactions created by split sync showing a time 8 hours behind
 
 ## [1.31.1] - Sep-15 2026
 - Added a display currency setting, so dashboard amounts and totals can be shown in a foreign currency

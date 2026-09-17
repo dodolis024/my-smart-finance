@@ -265,7 +265,8 @@ describe('addSettlement', () => {
 
     expect(calls.insert[0]).toMatchObject({
       table: 'split_settlements',
-      row: { group_id: 'group-1', from_member: 'm2', to_member: 'm1', amount: 500, currency: 'TWD' },
+      // date 一定要帶本地日期：交給資料庫預設等於用 UTC 時鐘，凌晨記的還款會變成前一天
+      row: { date: TODAY, group_id: 'group-1', from_member: 'm2', to_member: 'm1', amount: 500, currency: 'TWD' },
     });
     expect(calls.invoke[0].body).toMatchObject({
       event: 'settlement_added',

@@ -41,7 +41,11 @@ CREATE TABLE IF NOT EXISTS transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     date DATE NOT NULL,
-    time TIME NOT NULL DEFAULT CURRENT_TIME, -- 交易發生時間，用於同日多筆交易的排序
+    -- 交易發生時間，用於同日多筆交易的排序。前端與 CLI 一律自己帶本地時間；
+    -- 這個預設只給沒帶 time 的路徑（舊版 CLI、排程）用。資料庫時區是 UTC，
+    -- 若沿用 CURRENT_TIME 會存成比台灣慢 8 小時的時間，故以台灣時間為預設
+    -- （與排程函式判斷「今天」的基準一致）。
+    time TIME NOT NULL DEFAULT ((now() AT TIME ZONE 'Asia/Taipei')::time),
     type TEXT NOT NULL CHECK (type IN ('expense', 'income')),
     item_name TEXT NOT NULL,
     category TEXT NOT NULL,

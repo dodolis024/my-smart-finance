@@ -252,10 +252,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
 -- 4. RPC: sync_split_to_ledger
 -- 原子操作：計算分攤總額 → 建立或更新個人帳簿交易 → 更新 sync 記錄
 -- =============================================================================
+-- p_time：新建交易的 time 欄位，由前端帶使用者裝置的本地時間（與手動記帳一致）。
+-- 沒帶（舊版前端）就退回台灣時間；不能交給欄位預設以外的 CURRENT_TIME，
+-- 資料庫時區是 UTC，會存成比台灣慢 8 小時的時間。已同步過的交易不動 time。
+--
+-- ⚠️ 簽章曾從 (UUID, TEXT, UUID) 改為加上 p_time：改參數時 CREATE OR REPLACE 只會
+-- 在旁邊多蓋一支新函式，舊簽章必須先 DROP（見 scripts/fix-time-defaults-and-settlement-date.sql）。
+DROP FUNCTION IF EXISTS sync_split_to_ledger(UUID, TEXT, UUID);
 CREATE OR REPLACE FUNCTION sync_split_to_ledger(
   p_group_id       UUID,
   p_payment_method TEXT DEFAULT NULL,
-  p_account_id     UUID DEFAULT NULL
+  p_account_id     UUID DEFAULT NULL,
+  p_time           TIME DEFAULT NULL
 )
 RETURNS JSON AS $$
 DECLARE
@@ -400,12 +408,13 @@ BEGIN
       v_updated := v_updated + 1;
     ELSE
       INSERT INTO transactions (
-        user_id, date, type, item_name, category,
+        user_id, date, time, type, item_name, category,
         payment_method, account_id,
         currency, amount, exchange_rate, twd_amount, note
       ) VALUES (
         v_user_id,
         v_row.expense_date,
+        COALESCE(p_time, (now() AT TIME ZONE 'Asia/Taipei')::time),
         'expense',
         v_row.title,
         v_group_name,

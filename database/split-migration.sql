@@ -74,7 +74,9 @@ CREATE TABLE IF NOT EXISTS split_expenses (
   title      TEXT NOT NULL,
   amount     NUMERIC(12, 2) NOT NULL,
   currency   TEXT NOT NULL DEFAULT 'TWD',
-  date       DATE NOT NULL DEFAULT CURRENT_DATE,
+  -- 前端與 CLI 一律自己帶本地日期；預設只是後備。資料庫時區是 UTC，
+  -- 沿用 CURRENT_DATE 會讓台灣凌晨 0～8 點寫入的列變成前一天，故以台灣日期為預設
+  date       DATE NOT NULL DEFAULT ((now() AT TIME ZONE 'Asia/Taipei')::date),
   note       TEXT,
   -- 1 單位 currency = 多少 TWD，由 trigger 依 date 凍結（見 split-expense-rate-migration.sql）
   exchange_rate           NUMERIC(10, 6),
@@ -107,7 +109,8 @@ CREATE TABLE IF NOT EXISTS split_settlements (
   to_member  UUID NOT NULL REFERENCES split_members(id) ON DELETE CASCADE,
   amount     NUMERIC(12, 2) NOT NULL,
   currency   TEXT NOT NULL DEFAULT 'TWD',
-  date       DATE NOT NULL DEFAULT CURRENT_DATE,
+  -- 同 split_expenses.date：客戶端帶本地日期，預設（台灣日期）只給舊版 CLI 這類沒帶的路徑
+  date       DATE NOT NULL DEFAULT ((now() AT TIME ZONE 'Asia/Taipei')::date),
   -- 語意同 split_expenses.exchange_rate
   exchange_rate           NUMERIC(10, 6),
   exchange_rate_estimated BOOLEAN NOT NULL DEFAULT false,

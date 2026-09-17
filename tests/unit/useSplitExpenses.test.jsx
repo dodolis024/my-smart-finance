@@ -8,27 +8,31 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const h = vi.hoisted(() => ({
   rpcResponse: { data: null, error: null },
   rpcCalls: [],
+  inserts: [], // { table, row }：直接 insert（不走 RPC）的寫入
   reset() {
     this.rpcResponse = { data: null, error: null };
     this.rpcCalls = [];
+    this.inserts = [];
   },
 }));
 
 vi.mock('@/lib/supabase', () => {
   // fetchExpenses 的查詢鏈（select/eq/order...）最後直接被 await，故 builder 需為 thenable
-  const makeBuilder = () => {
+  const makeBuilder = (table) => {
     const b = {
       select: () => b,
       eq: () => b,
       order: () => b,
       upsert: async () => ({ error: null }),
+      // addSettlement 的 insert 直接被 await，回同一個 thenable 即可
+      insert: (row) => { h.inserts.push({ table, row }); return b; },
       then: (resolve) => { resolve({ data: [], error: null }); },
     };
     return b;
   };
   return {
     supabase: {
-      from: () => makeBuilder(),
+      from: (table) => makeBuilder(table),
       rpc: async (fn, args) => {
         h.rpcCalls.push({ fn, args });
         return h.rpcResponse;
@@ -47,6 +51,7 @@ vi.mock('@/lib/splitNotify', () => ({
 
 import { useSplitExpenses } from '@/hooks/useSplitExpenses';
 import { clearAllCaches } from '@/lib/resourceCache';
+import { getTodayYmd } from '@/lib/utils';
 
 const GROUP_ID = 'group-1';
 
@@ -142,5 +147,36 @@ describe('useSplitExpenses.addExpense', () => {
       }
     });
     expect(caught?.message).toBe('分攤成員不屬於此群組');
+  });
+});
+
+describe('useSplitExpenses.addSettlement', () => {
+  let harness;
+
+  beforeEach(() => {
+    h.reset();
+    clearAllCaches();
+  });
+
+  afterEach(() => {
+    harness?.unmount();
+    harness = null;
+  });
+
+  it('還款帶裝置本地日期，不交給資料庫預設（UTC 時鐘會讓凌晨的還款變成前一天）', async () => {
+    harness = renderSplitExpenses();
+
+    await act(async () => {
+      await harness.result.current.addSettlement({
+        fromMember: 'm2', toMember: 'm1', amount: 500, currency: 'TWD',
+      });
+    });
+
+    expect(h.inserts).toEqual([
+      {
+        table: 'split_settlements',
+        row: { date: getTodayYmd(), group_id: GROUP_ID, from_member: 'm2', to_member: 'm1', amount: 500, currency: 'TWD' },
+      },
+    ]);
   });
 });
