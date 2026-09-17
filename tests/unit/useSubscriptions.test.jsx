@@ -7,10 +7,12 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const h = vi.hoisted(() => ({
   rateResponse: { data: null, error: null },
+  txInsertError: null, // transactions 的 insert 要回的 error（null = 成功）
   rpcCalls: [],
   inserts: {}, // table -> 收到的 insert payload 陣列
   reset() {
     this.rateResponse = { data: null, error: null };
+    this.txInsertError = null;
     this.rpcCalls = [];
     this.inserts = {};
   },
@@ -32,7 +34,7 @@ vi.mock('@/lib/supabase', () => {
       insert: (payload) => {
         (h.inserts[table] ??= []).push(payload);
         // transactions 的 insert 直接被 await，需為 thenable
-        b.then = (resolve) => { resolve({ error: null }); };
+        b.then = (resolve) => { resolve({ error: table === 'transactions' ? h.txInsertError : null }); };
         return b;
       },
     };
@@ -86,6 +88,12 @@ function renderSubscriptions() {
 function twTodayDay() {
   const tw = new Date(Date.now() + 8 * 60 * 60 * 1000);
   return tw.getUTCDate();
+}
+
+/** 同一個台灣時鐘的 HH:MM；交易的 time 要跟 date 用同一個時鐘 */
+function twNowHm() {
+  const tw = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  return `${String(tw.getUTCHours()).padStart(2, '0')}:${String(tw.getUTCMinutes()).padStart(2, '0')}`;
 }
 
 function makeFormData(overrides = {}) {
@@ -146,16 +154,21 @@ describe('useSubscriptions.saveSubscription（新增且今天是扣款日）', (
     const onTxChanged = vi.fn();
     const unsubscribe = subscribeDataChanged(onTxChanged);
 
+    const hmBefore = twNowHm();
     let result;
     await act(async () => {
       result = await harness.result.current.saveSubscription(makeFormData());
     });
     unsubscribe();
+    const hmAfter = twNowHm();
 
     expect(h.inserts.subscriptions).toHaveLength(1);
     expect(h.inserts.transactions).toHaveLength(1);
     const tx = h.inserts.transactions[0];
     expect(tx.subscription_id).toBe('sub-1');
+    // time 一定要帶：交給資料庫預設等於用 UTC 時鐘，會比台灣慢 8 小時。
+    // 跨分鐘邊界時前後兩個值都算對
+    expect([hmBefore, hmAfter]).toContain(tx.time);
     expect(tx.currency).toBe('USD');
     expect(tx.amount).toBe(9.99);
     expect(tx.exchange_rate).toBe(31.5);
@@ -164,5 +177,28 @@ describe('useSubscriptions.saveSubscription（新增且今天是扣款日）', (
     expect(result).toEqual({ transactionCreated: true });
     // 建了交易 → 通知已掛載的儀表板重抓（首頁不用手動刷新）
     expect(onTxChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('扣款交易寫入失敗時保留訂閱，回傳 transactionFailed 讓面板提示手動補記', async () => {
+    h.rateResponse = { data: 31.5, error: null };
+    h.txInsertError = { message: 'network error' };
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    harness = renderSubscriptions();
+    const onTxChanged = vi.fn();
+    const unsubscribe = subscribeDataChanged(onTxChanged);
+
+    let result;
+    await act(async () => {
+      result = await harness.result.current.saveSubscription(makeFormData());
+    });
+    unsubscribe();
+    errorSpy.mockRestore();
+
+    // 訂閱已存、交易試過但失敗：不能跟「今天不是扣款日」長得一樣，
+    // 排程只在到期日跑一次，這一期不會被補上
+    expect(h.inserts.subscriptions).toHaveLength(1);
+    expect(h.inserts.transactions).toHaveLength(1);
+    expect(result).toEqual({ transactionCreated: false, transactionFailed: true });
+    expect(onTxChanged).not.toHaveBeenCalled();
   });
 });

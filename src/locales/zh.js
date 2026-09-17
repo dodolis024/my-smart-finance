@@ -531,6 +531,7 @@ const zh = {
       subscriptionAdded: '已新增訂閱！',
       subscriptionAddedWithTx: '已新增訂閱，並自動建立今日交易！',
       subscriptionAddedRateUnavailable: '訂閱已建立，但今日扣款因無法取得匯率未自動入帳，請手動記錄',
+      subscriptionAddedTxFailed: '訂閱已建立，但今日扣款寫入失敗未自動入帳，請手動記錄',
       subscriptionUpdated: '已更新訂閱。',
       subscriptionDeleted: '已刪除。',
       deleteConfirm: '確定要刪除這筆訂閱嗎？',

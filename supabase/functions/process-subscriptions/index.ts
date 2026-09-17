@@ -10,6 +10,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import webpush from 'npm:web-push'
 import { subscriptionRateSkipBody } from '../_shared/notificationTexts.ts'
 import { getUserLangs } from '../_shared/userLang.ts'
+import { otherCategoryLabel } from '../_shared/categoryLabels.ts'
 import { cronSecretGuard } from '../_shared/cronAuth.ts'
 
 const corsHeaders = {
@@ -48,6 +49,9 @@ serve(async (req) => {
     const month = tw.getUTCMonth() + 1
     const today = tw.getUTCDate()
 
+    // 交易的 time 與日期用同一個台灣時鐘；不帶的話資料庫會用它自己的 UTC 時鐘，慢 8 小時
+    const timeStr = `${String(tw.getUTCHours()).padStart(2, '0')}:${String(tw.getUTCMinutes()).padStart(2, '0')}`
+
     const monthStr = String(month).padStart(2, '0')
     const monthStart = `${year}-${monthStr}-01`
     const monthEnd = `${year}-${monthStr}-${daysInMonth(year, month)}`
@@ -71,6 +75,10 @@ serve(async (req) => {
     const errors: { subscriptionId: string; error: string }[] = []
     // 因缺匯率被跳過的訂閱：主迴圈結束後批次推播提醒擁有者手動記帳
     const rateSkipped: { userId: string; subName: string; currency: string }[] = []
+
+    // 訂閱未填分類時的後備分類要跟著使用者語言（前端建立當日扣款用的是 t('transaction.other')），
+    // 寫死 '其他' 會讓英文介面的使用者看到一個中文分類。查不到偏好時跟前端一樣退回中文。
+    const userLangs = await getUserLangs(supabase, subscriptions.map((s) => s.user_id))
 
     for (const sub of subscriptions) {
       try {
@@ -142,9 +150,10 @@ serve(async (req) => {
           .insert({
             user_id: sub.user_id,
             date: dateStr,
+            time: timeStr,
             type: 'expense',
             item_name: sub.name,
-            category: sub.category || '其他',
+            category: sub.category || otherCategoryLabel(userLangs.get(sub.user_id) ?? 'zh'),
             payment_method: sub.payment_method || null,
             account_id: accountId,
             currency: sub.currency || 'TWD',

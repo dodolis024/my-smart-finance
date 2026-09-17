@@ -14,7 +14,9 @@ This file records version updates for Smart Finance Tracker.
 - Fixed multi-currency split settlements keeping the exchange rate from when the app was opened, even days later
 - Fixed a dropped connection while creating a split group possibly leaving a group you own but cannot sync because you are not a member
 - Fixed split repayments marked between midnight and 8 a.m. Taiwan time being dated the previous day
-- Fixed transactions created by split sync showing a time 8 hours behind
+- Fixed transactions created by split sync and subscription auto-charges showing a time 8 hours behind
+- Fixed no notice appearing when today's charge failed to save while adding a subscription
+- Fixed auto-charged subscriptions without a category being filed under the Chinese "其他" in the English interface
 
 ## [1.31.1] - Sep-15 2026
 - Added a display currency setting, so dashboard amounts and totals can be shown in a foreign currency

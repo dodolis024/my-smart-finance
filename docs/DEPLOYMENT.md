@@ -140,7 +140,7 @@
 | send-split-notification | 2026-07-11 | v9 | 同上 |
 | send-credit-card-reminder | 2026-08-31 | v6 | 加 `x-cron-secret` 驗證;繳款提醒改為未設定過即視同未啟用 |
 | send-credit-usage-alert | 2026-08-31 | v6 | 額度警告改為未設定過即視同未啟用(呼叫端是前端,不加 cron 密鑰) |
-| process-subscriptions | 2026-08-31 | v9 | 加 `x-cron-secret` 驗證 |
+| process-subscriptions | 2026-09-17 | v10 | 自動入帳補上 `time`(台灣時鐘,原本落在資料庫的 UTC 時鐘),未填分類的後備分類改為跟隨使用者語言(`_shared/categoryLabels.ts`);`x-cron-secret` 驗證與 verify_jwt=true 原樣保留 |
 
 (以 `supabase functions list` 的 updated_at/version 為準;2026-08-31 已核對)
 

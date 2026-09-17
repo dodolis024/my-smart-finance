@@ -73,6 +73,8 @@ export function useSubscriptions() {
 
       if (isDueToday) {
         const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
+        // time 與日期用同一個台灣時鐘；不帶的話資料庫會用它自己的 UTC 時鐘，慢 8 小時
+        const timeStr = `${String(tw.getUTCHours()).padStart(2, '0')}:${String(tw.getUTCMinutes()).padStart(2, '0')}`;
 
         // 查無匯率時不建立當日交易（訂閱本身照常保留），避免外幣被靜默以 1:1 記成錯誤的台幣金額
         let exchangeRate = 1;
@@ -102,6 +104,7 @@ export function useSubscriptions() {
         const { error: txError } = await supabase.from('transactions').insert({
           user_id: user.id,
           date: dateStr,
+          time: timeStr,
           type: 'expense',
           item_name: formData.name,
           category: formData.category || t('transaction.other'),
@@ -114,12 +117,18 @@ export function useSubscriptions() {
           subscription_id: inserted.id,
         });
 
-        if (!txError) {
-          transactionCreated = true;
-          // 通知已掛載的儀表板重抓當月資料，否則設定面板疊在儀表板上，
-          // 關閉後要手動刷新才看得到這筆當日扣款
-          notifyDataChanged();
+        if (txError) {
+          // 訂閱本身已經存好，不能整個報失敗；但這筆扣款也不能就此無聲消失——
+          // 排程只在到期日當天跑一次，錯過了不會回頭補，使用者得知道要手動記
+          console.error('[useSubscriptions] create due-today transaction failed:', txError.message);
+          await loadSubscriptions();
+          return { transactionCreated: false, transactionFailed: true };
         }
+
+        transactionCreated = true;
+        // 通知已掛載的儀表板重抓當月資料，否則設定面板疊在儀表板上，
+        // 關閉後要手動刷新才看得到這筆當日扣款
+        notifyDataChanged();
       }
     }
 

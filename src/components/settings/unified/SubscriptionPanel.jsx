@@ -45,6 +45,7 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
       if (editingId) { toast.success(t('settings.subscription.subscriptionUpdated')); }
       else if (result?.transactionCreated) { toast.success(t('settings.subscription.subscriptionAddedWithTx')); }
       else if (result?.rateUnavailable) { toast.error(t('settings.subscription.subscriptionAddedRateUnavailable')); }
+      else if (result?.transactionFailed) { toast.error(t('settings.subscription.subscriptionAddedTxFailed')); }
       else { toast.success(t('settings.subscription.subscriptionAdded')); }
       setShowForm(false); setEditingId(null);
     } catch (err) {
