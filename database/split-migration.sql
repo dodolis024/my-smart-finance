@@ -462,6 +462,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 以新成員身份加入群組（接受邀請碼，不接受 group_id，防止 group_id 外洩後繞過邀請機制）
+-- 舊版收 p_group_id 的多載沒有邀請碼檢查,曾只存在於 prod(見 docs/DEPLOYMENT.md 2026-09-17 注記)。
+-- CREATE OR REPLACE 不會替換簽章不同的函式,所以要先明確 DROP,重跑本檔才不會留下側門。
+DROP FUNCTION IF EXISTS join_split_group_as_new_member(UUID, TEXT);
 CREATE OR REPLACE FUNCTION join_split_group_as_new_member(p_invite_code TEXT, p_name TEXT)
 RETURNS JSON AS $$
 DECLARE

@@ -67,8 +67,9 @@
 | scripts/fix-split-sync-decimal-regression.sql | sync_split_to_ledger 補回被 fix-split-sync-ownership.sql 洗掉的兩處:零小數幣別清單對齊 src/lib/constants.js 的 ZERO_DECIMAL_CURRENCIES、SPLIT_RATE_UNAVAILABLE 的 DETAIL 分隔符改回 ", "。擁有權檢查與匯率守門原樣保留,定義已與 database/split-sync-migration.sql 逐字一致 | 2026-09-09 |
 | database/exchange-rate-history-migration.sql | 匯率歷史:新增 exchange_rate_history 表(主鍵 currency_code+date,故不另建索引),RLS 只給 authenticated SELECT、不開寫入 policy(寫入走 update-exchange-rates 的 service role);建表時以現值種一列今日;新增 get_exchange_rate_on(p_currency, p_date) RPC,查「<= 該日期的最新一筆」而非精準比對(週末與排程停擺會留洞),查無回 NULL 以區分「真的 1:1」。**只能從此日起累積,過去補不回來** | 2026-09-09 |
 | database/split-expense-rate-migration.sql | 分帳凍結匯率:split_expenses 與 split_settlements 各加 exchange_rate(語意同 transactions,1 單位=多少 TWD)與 exchange_rate_estimated;BEFORE INSERT OR UPDATE trigger(set_split_row_rate)依費用日期以 get_exchange_rate_on 凍結,查無(早於 2026-09-09 或超過 400 天)退回現值並標記補記,幣別與日期未變則沿用原值(直接 PATCH 會被還原,要手動改需先 DISABLE TRIGGER)。用 trigger 而非改 RPC,是因為還款由前端與 CLI 直接 INSERT,舊版 CLI 寫入的也要涵蓋。既有外幣費用以執行當下現值補值並標補記(53 筆),台幣填 1;get_split_sync_status 與 sync_split_to_ledger 換算改用凍結值、前置匯率檢查略過已凍結者,定義與 database/split-sync-migration.sql 一致 | 2026-09-10 |
-| database/split-shares-balance-guard-migration.sql | 分攤總和守門:split_expenses 與 split_expense_shares 各掛一個 DEFERRABLE INITIALLY DEFERRED 的 constraint trigger(assert_split_shares_balanced),commit 時檢查 SUM(share) = amount(精確相等,不留容差),不平就拋 SPLIT_SHARES_SUM_MISMATCH。放表上而不是 RPC 裡,是因為 RLS 讓群組成員能直接 INSERT/DELETE shares 與 UPDATE expenses.amount,RPC 內的檢查擋不到;要延遲是因為 add/update RPC 的寫入順序本身會經過不平的中間狀態。另加 share >= 0(NOT VALID + VALIDATE)。既有不平的舊費用不動,驗證查詢第 7、8 列會列出 | **待執行** |
-| database/transaction-amount-guard-migration.sql | transactions.amount 加 CHECK (amount >= 0)(NOT VALID + VALIDATE)。是 >= 0 不是 > 0:sync_split_to_ledger 在成員分攤全被刪掉後重新同步會寫 0,這是正常操作走得到的路;> 0 的驗證仍由前端與 CLI 做。只防自己的帳本被寫進負數,無跨使用者影響 | **待執行** |
+| database/split-shares-balance-guard-migration.sql | 分攤總和守門:split_expenses 與 split_expense_shares 各掛一個 DEFERRABLE INITIALLY DEFERRED 的 constraint trigger(assert_split_shares_balanced),commit 時檢查 SUM(share) = amount(精確相等,不留容差),不平就拋 SPLIT_SHARES_SUM_MISMATCH。放表上而不是 RPC 裡,是因為 RLS 讓群組成員能直接 INSERT/DELETE shares 與 UPDATE expenses.amount,RPC 內的檢查擋不到;要延遲是因為 add/update RPC 的寫入順序本身會經過不平的中間狀態。另加 share >= 0(NOT VALID + VALIDATE)。既有不平的舊費用不動,驗證查詢第 7、8 列會列出。prod 執行時第 7 列為 1(35b91a6f…,31300 vs 31299.99,台幣舊制 2 位小數分攤),在 App 重存該筆即可補平 | 2026-09-17 |
+| database/transaction-amount-guard-migration.sql | transactions.amount 加 CHECK (amount >= 0)(NOT VALID + VALIDATE)。是 >= 0 不是 > 0:sync_split_to_ledger 在成員分攤全被刪掉後重新同步會寫 0,這是正常操作走得到的路;> 0 的驗證仍由前端與 CLI 做。只防自己的帳本被寫進負數,無跨使用者影響。VALIDATE 通過,prod 無負數金額 | 2026-09-17 |
+| (SQL Editor 直接執行)`DROP FUNCTION join_split_group_as_new_member(uuid, text)` | 移除只存在於 prod 的孤兒多載:收 p_group_id 的舊版加入函式,無邀請碼、封存、登入檢查,SECURITY DEFINER 且 search_path 未鎖,anon 也可執行。任何人拿到群組 id 就能不經邀請碼加入;未登入呼叫會插入 user_id NULL 的空位成員。成因與教訓見下方 2026-09-17 注記。已查 split_members 全部 14 筆,無人利用 | 2026-09-17 |
 
 > 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
 > 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,
@@ -98,6 +99,21 @@
 > `update_split_expense`、`protect_split_group_ownership`、
 > `join_split_group_as_new_member`、`link_self_to_split_member`、
 > `get_group_by_invite_code`),後版都是前版的嚴格超集,沒有同類問題。
+
+> 2026-09-17:`scripts/verify-prod-security.sql` 首次在 prod 執行,抓到一支 **repo 裡從未存在過**
+> 的函式:`join_split_group_as_new_member(p_group_id uuid, p_name text)`。它是 repo 建立前
+> 直接在 Dashboard 建的舊版,後來每一份腳本寫的都是 `(p_invite_code TEXT, p_name TEXT)`——
+> **`CREATE OR REPLACE FUNCTION` 只替換簽章完全相同的函式,簽章不同就是在旁邊蓋一支新的**,
+> 舊的一次都沒被碰到。連 `fix-security-hardening.sql` 的
+> `ALTER FUNCTION join_split_group_as_new_member(TEXT, TEXT) SET search_path` 也只鎖到新版。
+> 於是 2026-08-31 `fix-split-member-access.sql` 要收掉的「加入群組一律需通過邀請碼」,
+> 從那天到 2026-09-17 一直有一條沒關的側門。
+>
+> 因此:改任何函式的**參數**時,腳本必須先 `DROP FUNCTION IF EXISTS <舊簽章>`,
+> 不能只 `CREATE OR REPLACE` 新簽章。每次跑完 migration 後執行一次
+> `scripts/verify-prod-security.sql`,第 6 區(多版本函式)必須是空的。
+> 本次審查同時確認:16 張表 RLS 全開、push_subscriptions 四條 policy 齊全、
+> 4 支收 p_user_id 的函式皆已 REVOKE、其餘 SECURITY DEFINER 函式皆以 auth.uid() 取身分。
 
 ### 正式定義檔重跑紀錄
 
