@@ -64,6 +64,7 @@
 | scripts/fix-split-sync-ownership.sql | 分帳同步補擁有權檢查:交易 UPDATE 比對 user_id、p_account_id 驗證擁有者,split_ledger_syncs 加 assert_sync_tx_owned trigger | 2026-08-31 |
 | database/split-pin-migration.sql | 分帳群組置頂:新增 split_group_pins 表(user_id+group_id),4 條 RLS 均限 user_id = auth.uid();INSERT 另以 can_access_split_group 擋住對他人群組的探測,UPDATE 為前端 upsert 走 ON CONFLICT DO UPDATE 所必需(缺了跨裝置置頂會被擋) | 2026-09-02 |
 | database/split-member-delete-guard-migration.sql | 移除成員的守門:split_expense_shares.member_id 與 split_settlements 的 from/to_member 三個外鍵由 ON DELETE CASCADE 改為 ON DELETE RESTRICT。原本刪成員會連分攤與還款紀錄一起消失,那些費用的分攤加總不再等於金額,代墊者永遠少收且畫面看不出來。前端已擋,這層是防漏。已以 pg_constraint 驗證三列 confdeltype = r | 2026-09-05 |
+| database/account-balance-migration.sql | 帳戶餘額:accounts 加 balance_amount、balance_as_of,get_dashboard_data 一併回傳(`bcbf316`)。執行當時漏記,2026-09-17 以 information_schema 核對:兩欄位存在、函式本體含 balance_amount,三項皆已套用 | 2026-09-06 前後(確切日期未記) |
 | scripts/fix-split-sync-decimal-regression.sql | sync_split_to_ledger 補回被 fix-split-sync-ownership.sql 洗掉的兩處:零小數幣別清單對齊 src/lib/constants.js 的 ZERO_DECIMAL_CURRENCIES、SPLIT_RATE_UNAVAILABLE 的 DETAIL 分隔符改回 ", "。擁有權檢查與匯率守門原樣保留,定義已與 database/split-sync-migration.sql 逐字一致 | 2026-09-09 |
 | database/exchange-rate-history-migration.sql | 匯率歷史:新增 exchange_rate_history 表(主鍵 currency_code+date,故不另建索引),RLS 只給 authenticated SELECT、不開寫入 policy(寫入走 update-exchange-rates 的 service role);建表時以現值種一列今日;新增 get_exchange_rate_on(p_currency, p_date) RPC,查「<= 該日期的最新一筆」而非精準比對(週末與排程停擺會留洞),查無回 NULL 以區分「真的 1:1」。**只能從此日起累積,過去補不回來** | 2026-09-09 |
 | database/split-expense-rate-migration.sql | 分帳凍結匯率:split_expenses 與 split_settlements 各加 exchange_rate(語意同 transactions,1 單位=多少 TWD)與 exchange_rate_estimated;BEFORE INSERT OR UPDATE trigger(set_split_row_rate)依費用日期以 get_exchange_rate_on 凍結,查無(早於 2026-09-09 或超過 400 天)退回現值並標記補記,幣別與日期未變則沿用原值(直接 PATCH 會被還原,要手動改需先 DISABLE TRIGGER)。用 trigger 而非改 RPC,是因為還款由前端與 CLI 直接 INSERT,舊版 CLI 寫入的也要涵蓋。既有外幣費用以執行當下現值補值並標補記(53 筆),台幣填 1;get_split_sync_status 與 sync_split_to_ledger 換算改用凍結值、前置匯率檢查略過已凍結者,定義與 database/split-sync-migration.sql 一致 | 2026-09-10 |
@@ -139,10 +140,10 @@
 |---|---|---|---|
 | update-exchange-rates | 2026-09-14 | v21 | 拿掉 exchange_rate_history 的 400 天清理,歷史改為永久保留(回傳也不再帶 retention_days)。v20(2026-09-09)起每日更新後多寫一筆 exchange_rate_history(存 validatedRates 即實際採用值,非 API 原始值);歷史寫入失敗只記 log 不中斷主線。搭配 database/exchange-rate-history-migration.sql。x-cron-secret 驗證原樣保留,verify_jwt 維持 false(以 `--no-verify-jwt` 部署) |
 | send-streak-reminder | 2026-08-27 | v26 | 加 `x-cron-secret` 驗證(取代 2026-07-11 v24 的通知多語化版,該邏輯保留) |
-| send-split-notification | 2026-07-11 | v9 | 同上 |
+| send-split-notification | 2026-09-04 | v10 | 推播文案改從資料庫紀錄組,不再信任 body 帶來的名稱與金額(`f30dc2d`,安全稽核 M-5)。原本漏記為 07-11 v9,2026-09-17 以 `supabase functions list` 核對補正 |
 | send-credit-card-reminder | 2026-08-31 | v6 | 加 `x-cron-secret` 驗證;繳款提醒改為未設定過即視同未啟用 |
 | send-credit-usage-alert | 2026-08-31 | v6 | 額度警告改為未設定過即視同未啟用(呼叫端是前端,不加 cron 密鑰) |
-| process-subscriptions | 2026-09-17 | v10 | 自動入帳補上 `time`(台灣時鐘,原本落在資料庫的 UTC 時鐘),未填分類的後備分類改為跟隨使用者語言(`_shared/categoryLabels.ts`);`x-cron-secret` 驗證與 verify_jwt=true 原樣保留 |
+| process-subscriptions | 2026-09-17 | v11 | 自動入帳補上 `time`(台灣時鐘,原本落在資料庫的 UTC 時鐘),未填分類的後備分類改為跟隨使用者語言(`_shared/categoryLabels.ts`);到期日判斷抽成 `schedule.ts` 供單元測試(`e523396`,純重構);`x-cron-secret` 驗證與 verify_jwt=true 原樣保留。同日 v10 為 `91802e4`(尚未含 schedule.ts) |
 
 (以 `supabase functions list` 的 updated_at/version 為準;2026-08-31 已核對)
 
