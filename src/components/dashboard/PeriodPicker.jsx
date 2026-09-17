@@ -104,9 +104,11 @@ export default function PeriodPicker({
   }, [isOpen, displayYear, displayYearBlock, granularity, positionPopover]);
 
   const thisYear = new Date().getFullYear();
-  // 未來年份與資料範圍外的年份都點不動；完全沒有交易的新帳號（yearRange 為 null）只擋未來年份
+  // 未來年份與資料範圍外的年份都點不動；完全沒有交易的新帳號（yearRange 為 null）只擋未來年份。
+  // 今年一律可點：元旦還沒記帳時今年不在範圍內，但「看今年」是最常用的操作
   const isYearSelectable = (y) =>
-    y <= thisYear && (!yearRange || (y >= yearRange.minYear && y <= yearRange.maxYear));
+    y === thisYear ||
+    (y < thisYear && (!yearRange || (y >= yearRange.minYear && y <= yearRange.maxYear)));
 
   const handleMonthClick = (m) => {
     onChange({ granularity: 'month', year: displayYear, month: m });

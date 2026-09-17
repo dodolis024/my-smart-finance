@@ -7,7 +7,7 @@ import { useOfflineMergedView } from '@/hooks/useOfflineMergedView';
 import { useCreditCardNotifications } from '@/hooks/useCreditCardNotifications';
 import { useModalStates } from '@/hooks/useModalStates';
 import { useTransactionSearch, fetchTransactionMatches, fetchTransactionsByDateRange, sumTransactions, SEARCH_LIMIT, RANGE_FETCH_LIMIT } from '@/hooks/useTransactionSearch';
-import { useTransactionYearRange } from '@/hooks/useTransactionYearRange';
+import { useTransactionYearRange, invalidateTransactionYearRange } from '@/hooks/useTransactionYearRange';
 import { useTransactionMonthsInYear, invalidateTransactionMonths } from '@/hooks/useTransactionMonthsInYear';
 import { useWindowSize } from '@/hooks/useWindowSize';
 import { useTheme } from '@/hooks/useTheme';
@@ -427,6 +427,7 @@ function DashboardContent() {
         setEditingTransaction(null);
         toast.success(result.isEdit ? t('dashboard.transactionUpdated') : t('dashboard.transactionAdded'));
         invalidateTransactionMonths(user?.id);
+        invalidateTransactionYearRange(user?.id);
         // 簽到彈窗要等重抓回來的 streak 判斷（送出前的 state 還沒算進這筆的簽到）；
         // 不 await，免得表單要多等一次 RPC 才重設
         refetchPeriod()
@@ -508,6 +509,7 @@ function DashboardContent() {
         removeTransactionLocally(id);
         toast.success(t('dashboard.transactionDeleted'));
         invalidateTransactionMonths(user?.id);
+        invalidateTransactionYearRange(user?.id);
         refetchPeriod().catch((err) => console.error('[Dashboard] refetch after write failed:', err));
         refreshSearch();
         // 刪除後重新計算信用卡使用率

@@ -9,6 +9,7 @@ import { createRoot } from 'react-dom/client';
  * 1. 月模式的外觀與行為要跟改動前一樣（同樣的觸發鈕標籤、12 宮格、回這個月鈕）
  * 2. 年份格狀中「沒有資料的年份」與「未來年份」都要點不動
  * 3. 全新帳號（沒有任何交易 → yearRange 為 null）不可以連今年都點不了
+ * 4. 元旦還沒記帳（最新一筆在去年）時，今年仍然點得動
  */
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -170,6 +171,20 @@ describe('PeriodPicker 年模式', () => {
 
     act(() => { yearOf('2025').click(); });
     expect(onChange).toHaveBeenCalledWith({ granularity: 'year', year: 2025 });
+  });
+
+  it('今年還沒有交易（最新一筆在去年）仍然點得動，其餘規則不變', () => {
+    const onChange = vi.fn();
+    render({ period: YEAR_PERIOD, onChange, onGranularityChange: () => {}, yearRange: { minYear: 2023, maxYear: 2025 } });
+    open();
+
+    expect(yearOf('2026').disabled).toBe(false);
+    expect(yearOf('2025').disabled).toBe(false);
+    expect(yearOf('2022').disabled).toBe(true);
+    expect(yearOf('2027').disabled).toBe(true);
+
+    act(() => { yearOf('2026').click(); });
+    expect(onChange).toHaveBeenCalledWith({ granularity: 'year', year: 2026 });
   });
 
   it('全新帳號（沒有任何交易）不淡化過去年份，只擋未來', () => {
