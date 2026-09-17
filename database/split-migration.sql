@@ -615,3 +615,60 @@ BEGIN
   RETURN row_to_json(v_expense);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- =============================================================================
+-- 14. 建群組 RPC：群組與成員在同一交易內建立
+-- =============================================================================
+-- 以前前端分兩步 insert（先群組、再成員），第二步失敗會留下「有群主、沒成員」的群組：
+-- 群主看得到它，卻因為不是成員而不能同步、通知發不出去，也沒有把自己加回去的入口。
+-- 包成單一交易後任一步失敗整個 rollback（與 add_split_expense 同一套做法）。
+-- SECURITY INVOKER：RLS 照常套用（split_groups_insert 已限 owner_id = auth.uid()，
+-- split_members_insert 走 can_access_split_group，同一交易內剛建的群組已看得到），
+-- 函式本身不需要額外權限，也就不必自己補擁有權檢查。
+-- 成員順序決定均分的零頭給誰：建立者先插入、其餘依傳入順序，與前端原本的寫法一致。
+CREATE OR REPLACE FUNCTION create_split_group(
+  p_name                     TEXT,
+  p_my_name                  TEXT,
+  p_currency                 TEXT   DEFAULT 'TWD',
+  p_default_expense_currency TEXT   DEFAULT NULL,
+  p_description              TEXT   DEFAULT NULL,
+  p_extra_members            TEXT[] DEFAULT '{}'
+)
+RETURNS JSON AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_group   split_groups%ROWTYPE;
+  v_member  TEXT;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'AUTH_REQUIRED';
+  END IF;
+
+  IF NULLIF(TRIM(p_name), '') IS NULL OR NULLIF(TRIM(p_my_name), '') IS NULL THEN
+    RAISE EXCEPTION 'SPLIT_NAME_REQUIRED';
+  END IF;
+
+  INSERT INTO split_groups (owner_id, name, description, currency, default_expense_currency)
+  VALUES (
+    v_user_id,
+    TRIM(p_name),
+    NULLIF(TRIM(p_description), ''),
+    COALESCE(NULLIF(TRIM(p_currency), ''), 'TWD'),
+    NULLIF(TRIM(p_default_expense_currency), '')
+  )
+  RETURNING * INTO v_group;
+
+  -- 建立者自動成為第一位成員
+  INSERT INTO split_members (group_id, name, user_id)
+  VALUES (v_group.id, TRIM(p_my_name), v_user_id);
+
+  FOREACH v_member IN ARRAY COALESCE(p_extra_members, '{}') LOOP
+    IF NULLIF(TRIM(v_member), '') IS NOT NULL THEN
+      INSERT INTO split_members (group_id, name, user_id)
+      VALUES (v_group.id, TRIM(v_member), NULL);
+    END IF;
+  END LOOP;
+
+  RETURN row_to_json(v_group);
+END;
+$$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public;

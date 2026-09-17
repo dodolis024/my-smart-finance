@@ -72,34 +72,17 @@ export function useSplitGroups() {
   const createGroup = useCallback(async ({ name, description, currency, defaultExpenseCurrency, myName, extraMembers }) => {
     if (!user) throw new Error(t('auth.loginRequired'));
 
-    // 建立群組
-    const { data: group, error: groupError } = await supabase
-      .from('split_groups')
-      .insert({
-        owner_id: user.id,
-        name,
-        description: description || null,
-        currency: currency || 'TWD',
-        default_expense_currency: defaultExpenseCurrency || null,
-      })
-      .select()
-      .single();
-    if (groupError) throw groupError;
-
-    // 建立者自動成為第一位成員
-    const membersToInsert = [
-      { group_id: group.id, name: myName, user_id: user.id },
-      ...(extraMembers || []).filter(n => n.trim()).map(n => ({
-        group_id: group.id,
-        name: n.trim(),
-        user_id: null,
-      })),
-    ];
-
-    const { error: membersError } = await supabase
-      .from('split_members')
-      .insert(membersToInsert);
-    if (membersError) throw membersError;
+    // 群組與成員（建立者排第一，之後依填寫順序）在同一個交易內建立：
+    // 分兩步 insert 的話第二步失敗會留下「有群主、沒成員」的群組，群主看得到卻不能同步
+    const { data: group, error } = await supabase.rpc('create_split_group', {
+      p_name: name,
+      p_my_name: myName,
+      p_currency: currency || 'TWD',
+      p_default_expense_currency: defaultExpenseCurrency || null,
+      p_description: description || null,
+      p_extra_members: (extraMembers || []).map(n => n.trim()).filter(Boolean),
+    });
+    if (error) throw error;
 
     await fetchGroups();
     return group;
