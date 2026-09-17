@@ -191,6 +191,15 @@ describe('RPC 例外轉成看得懂的錯誤', () => {
     });
   });
 
+  it('分攤加總與金額不符（資料庫延遲 trigger）', async () => {
+    responses.rpc.add_split_expense = { data: null, error: { message: 'SPLIT_SHARES_SUM_MISMATCH' } };
+
+    await expect(addExpense(baseExpense)).rejects.toMatchObject({
+      code: 'INVALID_INPUT',
+      message: expect.stringContaining('加總'),
+    });
+  });
+
   it('成員不屬於這個群組', async () => {
     responses.rpc.add_split_expense = { data: null, error: { message: 'SPLIT_SHARE_MEMBER_INVALID' } };
 

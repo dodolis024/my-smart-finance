@@ -849,6 +849,7 @@ const en = {
     SPLIT_NO_EDIT_PERMISSION: 'You do not have permission to edit this expense',
     SPLIT_SHARES_EMPTY: 'Shares cannot be empty',
     SPLIT_SHARE_MEMBER_INVALID: 'A share member does not belong to this group',
+    SPLIT_SHARES_SUM_MISMATCH: 'The shares do not add up to the expense amount',
     SPLIT_NO_ADD_PERMISSION: 'You do not have permission to add expenses to this group',
     SPLIT_SYNC_TX_NOT_OWNED: 'The synced transaction does not belong to you',
     ACCOUNT_NOT_OWNED: 'This account does not belong to you',

@@ -52,6 +52,15 @@ function fromSplitRpcError(error, context) {
       '請用 --split 指定參與者，或省略 --split 讓全體成員均分'
     );
   }
+  if (raw.includes('SPLIT_SHARES_SUM_MISMATCH')) {
+    // 資料庫 commit 時的延遲 trigger 拋的（split-shares-balance-guard-migration.sql）。
+    // parseSplitSpec 送出前已擋過同一件事，走到這裡通常是資料庫端的舊資料或分攤被人動過。
+    return smfError(
+      ErrorCode.INVALID_INPUT,
+      '分攤加總與費用金額不符',
+      '請重新指定 --split，或省略 --split 讓全體成員均分'
+    );
+  }
   if (raw.includes('SPLIT_EXPENSE_NOT_FOUND')) {
     return smfError(
       ErrorCode.EXPENSE_NOT_FOUND,
