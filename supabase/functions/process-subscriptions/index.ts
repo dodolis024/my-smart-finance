@@ -12,20 +12,11 @@ import { subscriptionRateSkipBody } from '../_shared/notificationTexts.ts'
 import { getUserLangs } from '../_shared/userLang.ts'
 import { otherCategoryLabel } from '../_shared/categoryLabels.ts'
 import { cronSecretGuard } from '../_shared/cronAuth.ts'
+import { taipeiClock, chargeDateToday, dedupeRange } from './schedule.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-/** 計算指定年月的實際天數 */
-function daysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate()
-}
-
-/** 將用戶設定的 renewal_day 轉換為當月的實際日期（處理月底邊界） */
-function getActualDay(renewalDay: number, year: number, month: number): number {
-  return Math.min(renewalDay, daysInMonth(year, month))
 }
 
 serve(async (req) => {
@@ -42,19 +33,8 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // 以台灣時間（UTC+8）為基準計算「今天」，避免 UTC 使扣款日與交易日期提早一天
-    const now = new Date()
-    const tw = new Date(now.getTime() + 8 * 60 * 60 * 1000)
-    const year = tw.getUTCFullYear()
-    const month = tw.getUTCMonth() + 1
-    const today = tw.getUTCDate()
-
-    // 交易的 time 與日期用同一個台灣時鐘；不帶的話資料庫會用它自己的 UTC 時鐘，慢 8 小時
-    const timeStr = `${String(tw.getUTCHours()).padStart(2, '0')}:${String(tw.getUTCMinutes()).padStart(2, '0')}`
-
-    const monthStr = String(month).padStart(2, '0')
-    const monthStart = `${year}-${monthStr}-01`
-    const monthEnd = `${year}-${monthStr}-${daysInMonth(year, month)}`
+    // 「今天」與交易時間都以台灣時鐘為準（見 schedule.ts）
+    const clock = taipeiClock(new Date())
 
     // 撈出所有啟用中的訂閱
     const { data: subscriptions, error: subError } = await supabase
@@ -84,25 +64,17 @@ serve(async (req) => {
       try {
         const cycle = sub.billing_cycle || 'monthly'
 
-        // 年繳：僅在指定月份扣款
-        if (cycle === 'yearly') {
-          if (!sub.renewal_month) {
-            errors.push({ subscriptionId: sub.id, error: 'yearly subscription missing renewal_month' })
-            continue
-          }
-          if (month !== sub.renewal_month) continue
+        // 年繳缺扣款月份無從判斷，記為錯誤而不是默默略過
+        if (cycle === 'yearly' && !sub.renewal_month) {
+          errors.push({ subscriptionId: sub.id, error: 'yearly subscription missing renewal_month' })
+          continue
         }
 
-        const actualDay = getActualDay(sub.renewal_day, year, month)
-
         // 不是今天到期的跳過
-        if (actualDay !== today) continue
+        const dateStr = chargeDateToday(sub, clock)
+        if (!dateStr) continue
 
-        const dateStr = `${year}-${monthStr}-${String(actualDay).padStart(2, '0')}`
-
-        // 防重複：月繳查本月、年繳查本年是否已建立過此訂閱的交易
-        const rangeStart = cycle === 'yearly' ? `${year}-01-01` : monthStart
-        const rangeEnd = cycle === 'yearly' ? `${year}-12-31` : monthEnd
+        const { start: rangeStart, end: rangeEnd } = dedupeRange(cycle, clock.year, clock.month)
         const { data: existing } = await supabase
           .from('transactions')
           .select('id')
@@ -112,7 +84,7 @@ serve(async (req) => {
           .limit(1)
 
         if (existing && existing.length > 0) {
-          console.log(`Subscription ${sub.id} already has transaction for ${cycle === 'yearly' ? year : `${year}-${monthStr}`}, skipping`)
+          console.log(`Subscription ${sub.id} already has transaction for ${cycle === 'yearly' ? clock.year : dateStr.slice(0, 7)}, skipping`)
           continue
         }
 
@@ -150,7 +122,7 @@ serve(async (req) => {
           .insert({
             user_id: sub.user_id,
             date: dateStr,
-            time: timeStr,
+            time: clock.time,
             type: 'expense',
             item_name: sub.name,
             category: sub.category || otherCategoryLabel(userLangs.get(sub.user_id) ?? 'zh'),
