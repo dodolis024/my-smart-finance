@@ -209,6 +209,10 @@ const zh = {
     subscriptionBadgeShort: '訂閱',
     uncategorized: '未分類',
     other: '其他',
+    // 支付方式從缺（分帳同步、未設支付方式的訂閱）。不沿用 other：
+    // 「其他」是一種支付方式，這裡是根本不適用，混在一起會蓋掉真的叫「其他」的帳戶。
+    // 用字對齊 noPaymentSplitSync 的「不指定」
+    unspecifiedPayment: '不指定',
   },
 
   creditCard: {

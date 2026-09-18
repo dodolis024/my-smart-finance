@@ -9,7 +9,7 @@ export default function PaymentStats({ history = [], accounts = [], onOpenCredit
   const pairs = useMemo(() => {
     const byMethod = {};
     (history || []).forEach((tx) => {
-      const m = (tx.paymentMethod && String(tx.paymentMethod).trim()) ? tx.paymentMethod : t('transaction.other');
+      const m = (tx.paymentMethod && String(tx.paymentMethod).trim()) ? tx.paymentMethod : t('transaction.unspecifiedPayment');
       const amt = toDisplay(tx).value;
       if (!byMethod[m]) byMethod[m] = { value: 0, txs: [] };
       byMethod[m].value += amt;

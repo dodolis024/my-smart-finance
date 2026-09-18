@@ -23,7 +23,7 @@ export function useTransactionFilters(rows, onChange) {
     [t]
   );
   const paymentOf = useCallback(
-    (tx) => (tx.paymentMethod && String(tx.paymentMethod).trim()) || t('transaction.other'),
+    (tx) => (tx.paymentMethod && String(tx.paymentMethod).trim()) || t('transaction.unspecifiedPayment'),
     [t]
   );
 

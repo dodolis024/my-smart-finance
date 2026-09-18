@@ -164,7 +164,13 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
         </div>
       </td>
       <td className="cell-payment">
-        <div className="cell-payment-inner">{tx.paymentMethod}</div>
+        <div className="cell-payment-inner">
+          {String(tx.paymentMethod || '').trim()
+            ? tx.paymentMethod
+            /* 分帳同步與未設支付方式的訂閱會留空。畫破折號補洞，
+               但對讀屏隱藏——唸出「破折號」比留白更難懂 */
+            : <span className="cell-payment-empty" aria-hidden="true">—</span>}
+        </div>
       </td>
       <td className="cell-amount">
         {/* 金額欄窄，長金額會被截成「…」，滑鼠移上去看完整數字 */}

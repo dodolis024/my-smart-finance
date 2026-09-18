@@ -209,6 +209,7 @@ const en = {
     subscriptionBadgeShort: 'Sub',
     uncategorized: 'Uncategorized',
     other: 'Other',
+    unspecifiedPayment: 'Unspecified',
   },
 
   creditCard: {

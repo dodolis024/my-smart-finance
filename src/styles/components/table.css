@@ -240,6 +240,10 @@
   text-overflow: ellipsis;
 }
 
+.cell-payment-empty {
+  color: var(--color-text-secondary);
+}
+
 .cell-amount {
   text-align: right;
   font-weight: 600;

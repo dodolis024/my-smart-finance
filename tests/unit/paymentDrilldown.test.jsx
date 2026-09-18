@@ -67,14 +67,14 @@ function renderStats(props = {}) {
 }
 
 describe('支付方式統計的點擊', () => {
-  it('每一種支付方式都可以點，包含沒填支付方式的「其他」', () => {
+  it('每一種支付方式都可以點，包含沒填支付方式的「未指定」', () => {
     renderStats({ onOpenCreditCard: vi.fn(), onSelectMethod: vi.fn() });
     expect(rows()).toHaveLength(3);
     rows().forEach((li) => {
       expect(li.classList.contains('clickable')).toBe(true);
       expect(li.getAttribute('role')).toBe('button');
     });
-    expect(rowByName('transaction.other')).toBeTruthy();
+    expect(rowByName('transaction.unspecifiedPayment')).toBeTruthy();
   });
 
   it('非信用卡走一般明細彈窗，帶著自己的交易與占比分母', () => {
