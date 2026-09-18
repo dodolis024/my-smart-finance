@@ -63,7 +63,10 @@ function forgiveRoundingResidue(balance, expenseBalance, unit) {
  */
 export function formatSplitAmount(amount, currency) {
   const d = ZERO_DECIMAL_CURRENCIES.has(currency || 'TWD') ? 0 : 2;
-  const rounded = Number(amount.toFixed(d));
+  // 金額從缺時顯示 0 而不是讓整頁崩掉：狀態類 RPC 在「還沒同步過」等情況
+  // 不會回傳每個金額欄位，呼叫端不見得擋得住
+  const n = Number(amount);
+  const rounded = Number((Number.isFinite(n) ? n : 0).toFixed(d));
   return rounded.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 

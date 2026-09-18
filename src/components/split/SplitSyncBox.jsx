@@ -23,8 +23,10 @@ export default function SplitSyncBox({ syncStatus, syncing, currency, fallbackAm
   const fmtAmt = (amt) => formatSplitAmount(amt, currency);
   // 改備註、日期或名稱時金額不會變，這時列出「帳本 → 最新」只會是兩個相同數字，
   // 看起來像在說「沒變，但請更新」。比格式化後的字串而非原始值，免得差在看不見的小數。
+  // 只在同步過之後才比得出差異：還沒同步過時 get_split_sync_status 不回 synced_amount，
+  // 拿 undefined 去格式化會整個分帳頁崩掉。這個分支也只在 synced 為真時才用得到。
   const amountChanged =
-    !!syncStatus && fmtAmt(syncStatus.synced_amount) !== fmtAmt(syncStatus.current_total);
+    !!syncStatus?.synced && fmtAmt(syncStatus.synced_amount) !== fmtAmt(syncStatus.current_total);
 
   return (
     <div className="split-sync-box">
