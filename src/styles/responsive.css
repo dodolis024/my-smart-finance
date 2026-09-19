@@ -29,18 +29,28 @@
     padding: 1.25rem;
   }
 
+  /* 🐶 主畫面・收入小狗（gif-12）｜601～1200px（1201px 以上看 dashboard-widgets.css 側邊欄規則） */
   .stat-card:nth-child(1)::after {
     width: 4.5rem;
     height: 4.5rem;
   }
+  /* 🐶 主畫面・支出小狗（gif-15）｜601～1200px（1201px 以上看 dashboard-widgets.css 側邊欄規則） */
   .stat-card:nth-child(2)::after {
     width: 6.7rem;
     height: 6.7rem;
   }
 
+  /* 🐶 主畫面・餘額小狗（gif-6）｜601～1200px（1201px 以上看 dashboard-widgets.css 側邊欄規則） */
   .stat-card:nth-child(3)::after {
     width: 5rem;
     height: 5rem;
+  }
+
+  /* 🐶 主畫面・餘額為負小狗（gif-9）｜601～1200px（1201px 以上看 dashboard-widgets.css 側邊欄規則） */
+  .stat-card.is-negative:nth-child(3)::after {
+    width: 3.25rem;
+    height: 3.25rem;
+    right: 1.625rem;
   }
 
   .stat-value {
@@ -162,14 +172,29 @@
 
   :root { --chart-max-width: 220px; }
 
+  /* 🐶 記帳天數彈窗・目前連續小狗（gif-10）｜平板 601～870px */
   .streak-summary__card:first-child::after {
     width: 5.0rem;
     height: 5.0rem;
   }
 
+  /* 🐶 記帳天數彈窗・總共天數小狗（gif-11）｜平板 601～870px */
+  .streak-summary__card:nth-child(2)::after {
+    width: 3.6rem;
+    height: 3.6rem;
+  }
+
+  /* 🐶 記帳天數彈窗・最長連續小狗（gif-2）｜平板 601～870px（玫瑰主題以外） */
   .streak-summary__card:nth-child(3)::after {
     width: 3.2rem;
     height: 3.2rem;
+  }
+
+  /* 🐶 記帳天數彈窗・最長連續小狗（玫瑰主題 gif-4）｜平板 601～870px */
+  [data-theme="rose"] .streak-summary__card:nth-child(3)::after {
+    width: 4.0rem;
+    height: 4.0rem;
+    right: 0.3rem;
   }
 }
 
@@ -385,22 +410,32 @@
     padding: 1rem;
   }
 
+  /* 🐶 主畫面・收入小狗（gif-12）｜手機 401～600px（如 iPhone 16 Pro） */
   .stat-card:nth-child(1)::after {
-    width: 3.5rem;
-    height: 3.5rem;
+    width: 5.0rem;
+    height: 5.0rem;
+    right: 1.0rem;
+  }
+
+  /* 🐶 主畫面・支出小狗（gif-15）｜手機 401～600px（如 iPhone 16 Pro） */
+  .stat-card:nth-child(2)::after {
+    width: 5.7rem;
+    height:  5.7rem;
+    right: 0.8rem;
+  }
+
+  /* 🐶 主畫面・餘額小狗（gif-6）｜手機 401～600px（如 iPhone 16 Pro） */
+  .stat-card:nth-child(3)::after {
+    width: 6.2rem;
+    height: 6.2rem;
     right: 0.5rem;
   }
 
-  .stat-card:nth-child(2)::after {
-    width: 3.5rem;
-    height: 3.5rem;
-    right: 1.5rem;
-  }
-
-  .stat-card:nth-child(3)::after {
-    width: 3.5rem;
-    height: 3.5rem;
-    right: 1.7rem;
+  /* 🐶 主畫面・餘額為負小狗（gif-9）｜手機 401～600px（如 iPhone 16 Pro） */
+  .stat-card.is-negative:nth-child(3)::after {
+    width: 4.8rem;
+    height: 4.8rem;
+    right: 1.2rem;
   }
 
   .stat-value {
@@ -533,16 +568,32 @@
     gap: 0.5rem;
   }
 
+  /* 🐶 記帳天數彈窗・目前連續小狗（gif-10）｜手機 401～600px（如 iPhone 16 Pro） */
   .streak-summary__card:first-child::after {
-    width: 3rem;
-    height: 3rem;
+    width: 4.0rem;
+    height: 4.0rem;
+    right: 0.7rem;
+  }
+
+  /* 🐶 記帳天數彈窗・總共天數小狗（gif-11）｜手機 401～600px（如 iPhone 16 Pro） */
+  .streak-summary__card:nth-child(2)::after {
+    width: 4.0rem;
+    height: 4.0rem;
+    right: 0.6rem;
+  }
+
+  /* 🐶 記帳天數彈窗・最長連續小狗（gif-2）｜手機 401～600px（如 iPhone 16 Pro）（玫瑰主題以外） */
+  .streak-summary__card:nth-child(3)::after {
+    width: 3.5rem;
+    height: 3.5rem;
     right: 0.4rem;
   }
 
-  .streak-summary__card:nth-child(3)::after {
-    width: 3rem;
-    height: 3rem;
-    right: 0.4rem;
+  /* 🐶 記帳天數彈窗・最長連續小狗（玫瑰主題 gif-4）｜手機 401～600px（如 iPhone 16 Pro） */
+  [data-theme="rose"] .streak-summary__card:nth-child(3)::after {
+    width: 4.0rem;
+    height: 4.0rem;
+    right: 0.3rem;
   }
 
   .form-actions {
@@ -672,22 +723,32 @@
     padding: 0.875rem;
   }
 
+  /* 🐶 主畫面・收入小狗（gif-12）｜手機 400px 以下（如 iPhone 16） */
   .stat-card:nth-child(1)::after {
     width: 4.9rem;
     height: 4.9rem;
-    right: 0rem;
+    right: 0.75rem;
   }
 
+  /* 🐶 主畫面・支出小狗（gif-15）｜手機 400px 以下（如 iPhone 16） */
   .stat-card:nth-child(2)::after {
     width: 6.2rem;
     height: 6.2rem;
     right: 0rem;
   }
 
+  /* 🐶 主畫面・餘額小狗（gif-6）｜手機 400px 以下（如 iPhone 16） */
   .stat-card:nth-child(3)::after {
     width: 5.1rem;
     height: 5.1rem;
     right: 0.75rem;
+  }
+
+  /* 🐶 主畫面・餘額為負小狗（gif-9）｜手機 400px 以下（如 iPhone 16） */
+  .stat-card.is-negative:nth-child(3)::after {
+    width: 3.3rem;
+    height: 3.3rem;
+    right: 1.65rem;
   }
 
   :root { --chart-max-width: 180px; }
@@ -702,16 +763,32 @@
     font-size: 0.7rem;
   }
 
+  /* 🐶 記帳天數彈窗・目前連續小狗（gif-10）｜手機 400px 以下（如 iPhone 16） */
   .streak-summary__card:first-child::after {
-    width: 5.0rem;
+    width: 4.8rem;
     height: 5.0rem;
     right: 0.3rem;
   }
 
+  /* 🐶 記帳天數彈窗・總共天數小狗（gif-11）｜手機 400px 以下（如 iPhone 16） */
+  .streak-summary__card:nth-child(2)::after {
+    width: 4.0rem;
+    height: 4.0rem;
+    right: 0.8rem;
+  }
+
+  /* 🐶 記帳天數彈窗・最長連續小狗（gif-2）｜手機 400px 以下（如 iPhone 16）（玫瑰主題以外） */
   .streak-summary__card:nth-child(3)::after {
     width: 3.3rem;
     height: 3.3rem;
     right: 1.1rem;
+  }
+
+  /* 🐶 記帳天數彈窗・最長連續小狗（玫瑰主題 gif-4）｜手機 400px 以下（如 iPhone 16） */
+  [data-theme="rose"] .streak-summary__card:nth-child(3)::after {
+    width: 4.0rem;
+    height: 4.0rem;
+    right: 0.3rem;
   }
 
   /* Transaction detail modal — extra small */

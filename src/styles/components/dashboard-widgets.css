@@ -297,6 +297,7 @@
   position: relative;
 }
 
+/* 🐶 主畫面・收入小狗（gif-12）｜預設值，實際各寬度都被下方側邊欄規則或 responsive.css 蓋掉 */
 .stat-card:nth-child(1)::after {
   content: '';
   position: absolute;
@@ -306,13 +307,14 @@
   width: 5rem;
   height: 5rem;
   right: 0rem;
-  background-image: url('/images/maltese-gif-3.gif');
+  background-image: url('/images/maltese-gif-12.gif');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
   opacity: 0.85;
 }
 
+/* 🐶 主畫面・支出小狗（gif-15）｜預設值，實際各寬度都被下方側邊欄規則或 responsive.css 蓋掉 */
 .stat-card:nth-child(2)::after {
   content: '';
   position: absolute;
@@ -321,13 +323,14 @@
   transform: translateY(-50%);
   width: 11rem;
   height: 11rem;
-  background-image: url('/images/maltese-gif-5.png');
+  background-image: url('/images/maltese-gif-15.gif');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
   opacity: 0.85;
 }
 
+/* 🐶 主畫面・餘額小狗（gif-6）｜預設值，實際各寬度都被下方側邊欄規則或 responsive.css 蓋掉 */
 .stat-card:nth-child(3)::after {
   content: '';
   position: absolute;
@@ -343,35 +346,78 @@
   opacity: 0.85;
 }
 
-/* 桌面版 sidebar 展開時的小狗圖片調整 */
-.app-sidebar:not(.is-collapsed) ~ .app-layout__main .stat-card:nth-child(2)::after {
-  width: 6rem;
-  height: 6rem;
-  right: -1.1rem;
-  top: calc(50% + 0.4rem);
-}
-.app-sidebar:not(.is-collapsed) ~ .app-layout__main .stat-card:nth-child(3)::after {
-  width: 4.5rem;
-  height: 4.5rem;
-  right: -0.5rem;
-  top: calc(50% + 0.25rem);
+/* 🐶 主畫面・餘額為負小狗（gif-9）｜換圖用；大小位置在下方側邊欄規則與 responsive.css 各有自己一組 */
+.stat-card.is-negative:nth-child(3)::after {
+  background-image: url('/images/maltese-gif-9.gif');
 }
 
-/* 桌面版 sidebar 折疊時的小狗圖片調整 */
-.app-sidebar.is-collapsed ~ .app-layout__main .stat-card:nth-child(1)::after {
-  width: 5rem;
-  height: 5rem;
-  right: 0rem;
+/* 側邊欄只在 1200px 以上顯示（nav.css）；隱藏時元素仍在、不帶 is-collapsed，
+   不限寬度的話會一路蓋掉 responsive.css 的手機／平板設定 */
+@media (min-width: 1201px) {
+  /* 🐶 主畫面・收入小狗（gif-12）｜電腦 1441px 以上、側邊欄展開（1201～1440px 在下一段） */
+  .app-sidebar:not(.is-collapsed) ~ .app-layout__main .stat-card:nth-child(1)::after {
+    width: 4.5rem;
+    height: 4.5rem;
+    right: 0rem;
+  }
+  /* 🐶 主畫面・支出小狗（gif-15）｜電腦 1201px 以上、側邊欄展開 */
+  .app-sidebar:not(.is-collapsed) ~ .app-layout__main .stat-card:nth-child(2)::after {
+    width: 5.0rem;
+    height: 5.0rem;
+    right: -0.4rem;
+    top: calc(50% + 0.4rem);
+  }
+  /* 🐶 主畫面・餘額小狗（gif-6）｜電腦 1201px 以上、側邊欄展開 */
+  .app-sidebar:not(.is-collapsed) ~ .app-layout__main .stat-card:nth-child(3)::after {
+    width: 4.5rem;
+    height: 4.5rem;
+    right: 0.5rem;
+    top: calc(50% + 0.25rem);
+  }
+  /* 🐶 主畫面・餘額為負小狗（gif-9）｜電腦 1201px 以上、側邊欄展開 */
+  .app-sidebar:not(.is-collapsed) ~ .app-layout__main .stat-card.is-negative:nth-child(3)::after {
+    width: 2.9rem;
+    height: 2.9rem;
+    right: 0.3rem;
+    top: 4.0rem;
+  }
+
+  /* 🐶 主畫面・收入小狗（gif-12）｜電腦 1201px 以上、側邊欄收合 */
+  .app-sidebar.is-collapsed ~ .app-layout__main .stat-card:nth-child(1)::after {
+    width: 5rem;
+    height: 5rem;
+    right: 0.5rem;
+    top: 3.7rem;
+  }
+  /* 🐶 主畫面・支出小狗（gif-15）｜電腦 1201px 以上、側邊欄收合 */
+  .app-sidebar.is-collapsed ~ .app-layout__main .stat-card:nth-child(2)::after {
+    width: 6.0rem;
+    height: 6.0rem;
+    right: 0rem;
+    top: 3.8rem;
+  }
+  /* 🐶 主畫面・餘額小狗（gif-6）｜電腦 1201px 以上、側邊欄收合 */
+  .app-sidebar.is-collapsed ~ .app-layout__main .stat-card:nth-child(3)::after {
+    width: 6rem;
+    height: 6rem;
+    right: 0rem;
+  }
+  /* 🐶 主畫面・餘額為負小狗（gif-9）｜電腦 1201px 以上、側邊欄收合 */
+  .app-sidebar.is-collapsed ~ .app-layout__main .stat-card.is-negative:nth-child(3)::after {
+    width: 4.9rem;
+    height: 4.9rem;
+    right: 0.2rem;
+  }
 }
-.app-sidebar.is-collapsed ~ .app-layout__main .stat-card:nth-child(2)::after {
-  width: 8rem;
-  height: 8rem;
-  right: -1rem;
-}
-.app-sidebar.is-collapsed ~ .app-layout__main .stat-card:nth-child(3)::after {
-  width: 6rem;
-  height: 6rem;
-  right: 0rem;
+
+@media (min-width: 1201px) and (max-width: 1440px) {
+  /* 🐶 主畫面・收入小狗（gif-12）｜電腦 1201～1440px、側邊欄展開 */
+  .app-sidebar:not(.is-collapsed) ~ .app-layout__main .stat-card:nth-child(1)::after {
+    width: 4.0rem;
+    height: 4.0rem;
+    right: 0.45rem;
+    top: 3.9rem;
+  }
 }
 
 .stat-label {
@@ -424,6 +470,35 @@
   max-width: var(--chart-max-width);
   margin: var(--space-sm) auto;
   display: block;
+}
+
+.category-chart {
+  position: relative;
+  max-width: var(--chart-max-width);
+  margin: 0.5rem auto;
+}
+
+.category-chart canvas {
+  position: relative;
+  z-index: 1;
+}
+
+/* 🐶 分類分析・圓餅圖中間小狗（icon-8）｜所有寬度；大小是圖表寬度的百分比，圖表縮放會跟著等比縮放。
+   放在圖表下層：甜甜圈中間透明看得到，提示框與點擊切片都不受影響 */
+.category-chart::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 49%;
+  transform: translate(-50%, -50%);
+  width: 47%;
+  height: 47%;
+  background-image: url('/images/maltese-icon-8.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 /* --------------------------------------------

@@ -96,7 +96,9 @@ export default function CategoryChart({ history = [], incomeCategories = [], onS
 
   return (
     <>
-      <Doughnut data={chartData} options={chartOptions} style={{ maxWidth: 'var(--chart-max-width)', margin: '0.5rem auto', display: 'block' }} />
+      <div className="category-chart">
+        <Doughnut data={chartData} options={chartOptions} />
+      </div>
       <ul className="category-stats-list" id="categoryStats">
         {pairs.map((p, i) => (
           <li

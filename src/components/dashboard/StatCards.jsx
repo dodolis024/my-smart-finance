@@ -27,7 +27,7 @@ export default function StatCards({ summary }) {
           {expenseText}
         </span>
       </div>
-      <div className="stat-card">
+      <div className={`stat-card ${balanceClass === 'balance-negative' ? 'is-negative' : ''}`}>
         <span className="stat-label">{t('dashboard.balance')}</span>
         <span className={`stat-value ${balanceClass}`}>
           {balanceText}

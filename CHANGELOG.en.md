@@ -2,11 +2,14 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added a crying dog on the balance card when the balance is negative
+- Added a dog illustration in the middle of the category chart
 - Improved split sync so each split expense becomes its own ledger transaction, keeping the expense's date, the group name as its category and the expense's own note; a group now appears directly in the category chart, with editable transactions behind it
 - Improved the split sync notice to flag any change, such as an edited note or date, rather than only a different total, and to drop the before/after amounts when the total is unchanged
 - Improved the transaction list column widths so long original-currency amounts stay on one line, with the extra space going to the item name
 - Improved transactions without a payment method, such as those from split sync, to show a dash in the transaction list instead of a blank cell
 - Improved the payment breakdown to list transactions without a payment method under "Unspecified" instead of folding them into "Other"
+- Improved the dog illustrations on the dashboard and in the streak modal with new artwork, including a new one for total days
 - Fixed re-syncing a split group moving its transaction to today, which threw monthly and yearly totals off
 - Fixed split-synced transactions showing a Chinese category and note in the English interface
 - Fixed longer labels sitting flush against their values in transaction details in the English interface
@@ -19,6 +22,7 @@ This file records version updates for Smart Finance Tracker.
 - Fixed transactions created by split sync and subscription auto-charges showing a time 8 hours behind
 - Fixed no notice appearing when today's charge failed to save while adding a subscription
 - Fixed auto-charged subscriptions without a category being filed under the Chinese "其他" in the English interface
+- Fixed the expense and balance dogs not resizing for phone and tablet screens
 
 ## [1.31.1] - Sep-15 2026
 - Added a display currency setting, so dashboard amounts and totals can be shown in a foreign currency
