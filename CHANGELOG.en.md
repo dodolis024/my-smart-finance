@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.32.0] - Sep-19 2026
 - Added a crying dog on the balance card when the balance is negative
 - Added a dog illustration in the middle of the category chart
 - Improved split sync so each split expense becomes its own ledger transaction, keeping the expense's date, the group name as its category and the expense's own note; a group now appears directly in the category chart, with editable transactions behind it
