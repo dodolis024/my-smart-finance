@@ -10,6 +10,7 @@ This file records version updates for Smart Finance Tracker.
 - Improved transactions without a payment method, such as those from split sync, to show a dash in the transaction list instead of a blank cell
 - Improved the payment breakdown to list transactions without a payment method under "Unspecified" instead of folding them into "Other"
 - Improved the dog illustrations on the dashboard and in the streak modal with new artwork, including a new one for total days
+- Improved the category chart colors of eight themes, drawn from each theme's own hues and easier to tell apart across the usual five or six categories
 - Fixed re-syncing a split group moving its transaction to today, which threw monthly and yearly totals off
 - Fixed split-synced transactions showing a Chinese category and note in the English interface
 - Fixed longer labels sitting flush against their values in transaction details in the English interface
