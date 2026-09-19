@@ -52,6 +52,9 @@ DROP POLICY IF EXISTS "Users can view their own subscriptions" ON subscriptions;
 DROP POLICY IF EXISTS "Users can insert their own subscriptions" ON subscriptions;
 DROP POLICY IF EXISTS "Users can update their own subscriptions" ON subscriptions;
 DROP POLICY IF EXISTS "Users can delete their own subscriptions" ON subscriptions;
+-- 只存在於 prod 的早期冗餘 policy(ALL,條件與下面四條相同),2026-09-17 由
+-- scripts/verify-prod-security.sql 第 2 區發現後清除,一併寫在這裡避免重跑時復活。
+DROP POLICY IF EXISTS "Users can manage their own subscriptions" ON subscriptions;
 
 CREATE POLICY "Users can view their own subscriptions"
     ON subscriptions FOR SELECT

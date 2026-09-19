@@ -74,6 +74,7 @@
 | (SQL Editor 直接執行)`DROP FUNCTION join_split_group_as_new_member(uuid, text)` | 移除只存在於 prod 的孤兒多載:收 p_group_id 的舊版加入函式,無邀請碼、封存、登入檢查,SECURITY DEFINER 且 search_path 未鎖,anon 也可執行。任何人拿到群組 id 就能不經邀請碼加入;未登入呼叫會插入 user_id NULL 的空位成員。成因與教訓見下方 2026-09-17 注記。已查 split_members 全部 14 筆,無人利用 | 2026-09-17 |
 | scripts/fix-time-defaults-and-settlement-date.sql | transactions.time 與 split_expenses/split_settlements.date 的預設改為台灣時鐘(原本用資料庫的 UTC 時鐘,慢 8 小時);sync_split_to_ledger DROP 舊簽章 (UUID, TEXT, UUID) 後重建,新增 p_time TIME DEFAULT NULL(客戶端帶本地時間,未帶退回台灣時間);一次性修正既有資料:time 仍等於 created_at UTC 時刻的交易改成台灣時刻、還款日期停在 UTC 日期的改成台灣日期。驗證 10/10 通過,第 9、10 列(待修正筆數)皆為 0 | 2026-09-17 |
 | scripts/fix-split-create-group-atomic.sql | 新增 create_split_group RPC(SECURITY INVOKER,RLS 照常套用):群組與成員在同一交易內建立,成員寫入失敗不再留下「有群主、沒成員」的群組;空白名稱拋 SPLIT_NAME_REQUIRED。前端 useSplitGroups.createGroup 自 26941b2 起改呼叫此 RPC,release 前必須先跑。驗證 6/6 通過,既有群主不在成員名單的群組數為 0 | 2026-09-17 |
+| (SQL Editor 直接執行)`DROP POLICY "Users can manage their own subscriptions" ON subscriptions` | 移除只存在於 prod 的冗餘 policy:早期留下的 ALL policy,條件 auth.uid() = user_id 與 database/subscriptions-migration.sql 定義的 view/insert/update/delete 四條相同。permissive policy 是 OR 疊加,故未放寬任何權限,不是漏洞,清掉只為讓 repo 與 prod 一致。同一行已補進該 migration 的 DROP 清單,重跑不會復活。清除後 subscriptions 剩正好四條 policy | 2026-09-17 |
 
 > 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
 > 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,
@@ -118,6 +119,12 @@
 > `scripts/verify-prod-security.sql`,第 6 區(多版本函式)必須是空的。
 > 本次審查同時確認:16 張表 RLS 全開、push_subscriptions 四條 policy 齊全、
 > 4 支收 p_user_id 的函式皆已 REVOKE、其餘 SECURITY DEFINER 函式皆以 auth.uid() 取身分。
+>
+> 同日稍晚(`fix-time-defaults-and-settlement-date.sql` 與 `fix-split-create-group-atomic.sql`
+> 跑完後)再執行一次,六區全數通過:第 6 區為空,`sync_split_to_ledger` 只剩新的四參數版、
+> `create_split_group` 只有一版且為 SECURITY INVOKER(故不列在第 3 區);21 支 SECURITY DEFINER
+> 函式的 search_path 全部鎖在 public。唯一發現是 subscriptions 上一條 repo 沒有的冗餘 ALL
+> policy,已清除並補進 migration(見上表)。
 
 ### 正式定義檔重跑紀錄
 
