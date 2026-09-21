@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import Modal from '@/components/common/Modal';
 import { formatMoney, formatCurrencyAmount } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
-import { supabase } from '@/lib/supabase';
 import LinkifiedText from '@/components/common/LinkifiedText';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -10,39 +9,6 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
   const { t } = useLanguage();
   const bodyRef = useRef(null);
   useScrollbarOnScroll(bodyRef, isOpen && !!tx);
-  const [resolvedIsSplitSynced, setResolvedIsSplitSynced] = useState(null);
-
-  useEffect(() => {
-    if (!isOpen || !tx?.id) return;
-
-    if (typeof tx.isSplitSynced === 'boolean') {
-      setResolvedIsSplitSynced(tx.isSplitSynced);
-      return;
-    }
-
-    let cancelled = false;
-    // 查不到就當作不是分帳交易。以前會退而求其次比對分類「分帳」與那句固定備註，
-    // 但逐筆同步後分類是群組名稱、備註是費用自己的備註，已經沒有可以猜的線索了。
-    setResolvedIsSplitSynced(false);
-
-    supabase
-      .from('split_ledger_syncs')
-      .select('id')
-      .eq('transaction_id', tx.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          setResolvedIsSplitSynced(false);
-          return;
-        }
-        setResolvedIsSplitSynced(!!data);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, tx]);
 
   if (!tx) return null;
 
@@ -54,13 +20,8 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
   const overseasFee = overseasFeeRaw == null ? null : Number(overseasFeeRaw);
   const overseasFeeRate = Number(tx.overseasFeeRate ?? tx.overseas_fee_rate) || null;
   const hasOverseasFee = overseasFee != null;
-  // twd_amount 已包含手續費；「台幣金額」列顯示本體（= 原幣 × 匯率）
-  const baseTwdAmount = hasOverseasFee ? Math.round((twdAmount - overseasFee) * 100) / 100 : twdAmount;
-  const isSplitSynced =
-    typeof tx.isSplitSynced === 'boolean'
-      ? tx.isSplitSynced
-      : (resolvedIsSplitSynced ?? false);
-  const showPaymentMethod = !isSplitSynced && Boolean(String(tx.paymentMethod || '').trim());
+  // 分帳同步進來的交易預設沒有支付方式，使用者補填後照常顯示
+  const showPaymentMethod = Boolean(String(tx.paymentMethod || '').trim());
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="transaction-detail-modal" titleId="transactionDetailTitle">
@@ -109,34 +70,31 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
             <div className="transaction-detail-label">{t('transaction.amount')}</div>
             <div className="transaction-detail-value transaction-detail-amount">
               {currency} {formatCurrencyAmount(originalAmount, currency)}
+              {currency !== 'TWD' && (
+                <span className="transaction-detail-sub">
+                  ({t('transaction.exchangeRate')} {Number(exchangeRate).toFixed(4)})
+                </span>
+              )}
             </div>
           </div>
-          {currency !== 'TWD' && (
-            <>
-              <div className="transaction-detail-item">
-                <div className="transaction-detail-label">{t('transaction.exchangeRate')}</div>
-                <div className="transaction-detail-value">{Number(exchangeRate).toFixed(4)}</div>
+          {/* 有手續費時，台幣本體可由合計減手續費得出，只列合計；沒有時外幣交易列台幣金額 */}
+          {hasOverseasFee ? (
+            <div className="transaction-detail-item">
+              <div className="transaction-detail-label">{t('transaction.twdTotal')}</div>
+              <div className="transaction-detail-value transaction-detail-amount">
+                {formatMoney(twdAmount)}
+                <span className="transaction-detail-sub">
+                  ({overseasFeeRate
+                    ? t('transaction.feeIncludedWithRate', { fee: formatMoney(overseasFee), rate: overseasFeeRate })
+                    : t('transaction.feeIncluded', { fee: formatMoney(overseasFee) })})
+                </span>
               </div>
-              <div className="transaction-detail-item">
-                <div className="transaction-detail-label">{t('transaction.twdAmount')}</div>
-                <div className="transaction-detail-value transaction-detail-amount">{formatMoney(baseTwdAmount)}</div>
-              </div>
-            </>
-          )}
-          {hasOverseasFee && (
-            <>
-              <div className="transaction-detail-item">
-                <div className="transaction-detail-label">{t('transaction.overseasFee')}</div>
-                <div className="transaction-detail-value">
-                  {formatMoney(overseasFee)}
-                  {overseasFeeRate && ` (${overseasFeeRate}%)`}
-                </div>
-              </div>
-              <div className="transaction-detail-item">
-                <div className="transaction-detail-label">{t('transaction.twdTotal')}</div>
-                <div className="transaction-detail-value transaction-detail-amount">{formatMoney(twdAmount)}</div>
-              </div>
-            </>
+            </div>
+          ) : currency !== 'TWD' && (
+            <div className="transaction-detail-item">
+              <div className="transaction-detail-label">{t('transaction.twdAmount')}</div>
+              <div className="transaction-detail-value transaction-detail-amount">{formatMoney(twdAmount)}</div>
+            </div>
           )}
           {showPaymentMethod && (
             <div className="transaction-detail-item">

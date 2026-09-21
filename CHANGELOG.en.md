@@ -2,6 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Improved how the transaction details show amounts, with the exchange rate beside the foreign amount and the foreign transaction fee folded into the TWD total, so the view no longer fills a phone screen
+- Fixed transaction details hiding the payment method of a split-synced transaction after one was filled in
+
 ## [1.32.0] - Sep-19 2026
 - Added a crying dog on the balance card when the balance is negative
 - Added a dog illustration in the middle of the category chart
