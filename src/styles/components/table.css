@@ -231,6 +231,27 @@
   flex: 0 0 auto;
 }
 
+/* 電腦版的文字包在 td 內層的 div：td 上的 text-overflow 管不到，
+   放不下時會被硬切、看不出後面還有字。刪節號要設在內層（比照品項、金額） */
+.transaction-row--semantic .cell-date-inner,
+.transaction-row--semantic .cell-payment-inner {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 分類是「色點＋名稱」：色點固定不縮，只截名稱 */
+.transaction-row--semantic .cell-category-inner {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.transaction-row--semantic .cell-category-inner .badge {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .cell-payment {
   font-size: 0.875rem;
   text-align: left;

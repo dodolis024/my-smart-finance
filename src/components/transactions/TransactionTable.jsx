@@ -76,15 +76,26 @@ export default function TransactionTable({
     return out;
   }, [groupByDate, pagedTransactions, dayTotals]);
 
+  // 以整份清單（不是當頁）判斷：翻頁時日期格式與欄寬不會跳來跳去
+  const singleYear = useMemo(
+    () => new Set(transactions.map((tx) => String(tx.date).slice(0, 4))).size <= 1,
+    [transactions]
+  );
+
   // 分組時日期由每日標題標示，整個日期欄不存在，寬度分給其他欄；
-  // 年檢視不分組，日期回到每一列自己顯示，欄位與原本的寬度一起還原。
+  // 年檢視不分組，日期回到每一列自己顯示。
   // 操作欄固定成剛好放得下編輯＋刪除（36 + 8 + 36 + 左右內距 20 = 100px，留 4px 餘裕）；
   // 金額欄固定成放得下原幣模式的長金額（US$12,345.67：>1440px 字級 15px 約 102px + 左右內距 24px = 126px），
   // 兩種金額模式共用同一組欄寬，切換時欄位不會移動。
-  // 品項欄不給寬度、吃掉剩下的空間：只有品項名稱長短說不準，寬螢幕多出來的留白都給它
+  // 品項欄不給寬度、吃掉剩下的空間：只有品項名稱長短說不準，寬螢幕多出來的留白都給它。
+  // 分類欄 20%：最擠的是 1201～1300px（側邊欄＋雙欄，表格只有約 540～590px），
+  // 15% 時 1280px 連五個字的自訂分類都會被截，20% 剛好放得下五個中文字。
+  // 年檢視的日期欄改固定寬：原本 16.67% 在寬螢幕留一大片白、1201px 卻連日期都被截。
+  // 整張表同一年時省略年份（09-22：>1440px 字級 15px 約 43px + 左右內距 28px = 71px → 4.75rem）；
+  // 搜尋結果會跨年，此時保留完整日期（2026-09-22 約 86px + 28px = 114px → 7.25rem）
   const colgroup = groupByDate ? (
     <colgroup>
-      <col style={{ width: '15%' }} />
+      <col style={{ width: '20%' }} />
       <col />
       <col style={{ width: '16%' }} />
       <col style={{ width: '8rem' }} />
@@ -92,8 +103,8 @@ export default function TransactionTable({
     </colgroup>
   ) : (
     <colgroup>
-      <col style={{ width: '16.67%' }} />
-      <col style={{ width: '13.89%' }} />
+      <col style={{ width: singleYear ? '4.75rem' : '7.25rem' }} />
+      <col style={{ width: '20%' }} />
       <col />
       <col style={{ width: '13.89%' }} />
       <col style={{ width: '8rem' }} />
@@ -157,6 +168,7 @@ export default function TransactionTable({
                   transaction={tx}
                   isAlt={index % 2 === 1}
                   showDate
+                  shortDate={singleYear}
                   categoryColors={categoryColors}
                   onEdit={onEdit}
                   onDelete={onDelete}

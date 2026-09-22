@@ -79,7 +79,22 @@ describe('交易列表的每日分組', () => {
 
     expect(dayGroups()).toHaveLength(0);
     expect(txRows()).toHaveLength(4);
-    expect(dateCells()).toEqual(['2026-09-06', '2026-09-06', '2026-09-05', '2026-09-05']);
+    // 整張表同一年：省略年份
+    expect(dateCells()).toEqual(['09-06', '09-06', '09-05', '09-05']);
+  });
+
+  it('年檢視的清單跨年（搜尋結果）時保留完整日期', () => {
+    const crossYear = [...rows, { id: 5, date: '2025-12-31', category: '餐飲', itemName: '跨年', paymentMethod: '現金', twdAmount: 500, type: 'expense' }];
+    render({ groupByDate: false, transactions: crossYear });
+
+    expect(dateCells()).toEqual(['2026-09-06', '2026-09-06', '2026-09-05', '2026-09-05', '2025-12-31']);
+  });
+
+  it('跨年判斷看整份清單：跨年的資料在別頁，當頁仍保留完整日期', () => {
+    const crossYear = [...rows, { id: 5, date: '2025-12-31', category: '餐飲', itemName: '跨年', paymentMethod: '現金', twdAmount: 500, type: 'expense' }];
+    render({ groupByDate: false, transactions: crossYear, pageSize: 2, page: 1 });
+
+    expect(dateCells()).toEqual(['2026-09-06', '2026-09-06']);
   });
 
   it('當日合計算在分頁前：同一天跨頁時兩頁顯示同一個總額', () => {

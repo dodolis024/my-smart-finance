@@ -6,15 +6,16 @@ import { useSwipe } from '@/hooks/useSwipe';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 
-export default function TransactionRow({ transaction: tx, isAlt, showDate = false, categoryColors, onEdit, onDelete, onShowDetail }) {
+export default function TransactionRow({ transaction: tx, isAlt, showDate = false, shortDate = false, categoryColors, onEdit, onDelete, onShowDetail }) {
   const { t } = useLanguage();
   const { formatTxAmount } = useDisplayAmount();
   const rowRef = useRef(null);
   const { width } = useWindowSize();
   const isMobile = width <= LAYOUT.MOBILE_MAX_WIDTH;
   const displayAmount = formatTxAmount(tx, { isMobile });
-  // 日期平常由分組列統一標示，只有不分組（年檢視）時才逐列印出
-  const displayDate = showDate ? formatDateForDisplay(tx.date, isMobile) : '';
+  // 日期平常由分組列統一標示，只有不分組（年檢視）時才逐列印出；
+  // 整張表都在同一年時由上層傳 shortDate，省略年份只印月-日（與手機版同格式）
+  const displayDate = showDate ? formatDateForDisplay(tx.date, isMobile || shortDate) : '';
 
   const {
     translateX,
