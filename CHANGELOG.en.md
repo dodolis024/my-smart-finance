@@ -2,7 +2,9 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added per-expense sync checkboxes in the split sync details; an unchecked expense is removed from your ledger right away and stays out on later syncs
 - Improved how the transaction details show amounts, with the exchange rate beside the foreign amount and the foreign transaction fee folded into the TWD total, so the view no longer fills a phone screen
+- Improved the position and size of the balance dogs on the phone dashboard
 - Improved the transaction list column widths so category names show more characters; year view drops the year from dates unless search results span years
 - Improved the edit and delete buttons in the transaction list, which now appear only when you hover over a transaction, leaving more room for item names
 - Improved foreign-currency amounts in the transaction list, which drop the decimals past a thousand so long amounts are no longer cut off; smaller amounts still show them

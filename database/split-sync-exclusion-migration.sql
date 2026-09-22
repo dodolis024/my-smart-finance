@@ -1,92 +1,114 @@
 -- =============================================================================
--- Smart Finance Tracker - Split Ledger Sync Migration
--- 分帳同步至個人帳簿功能資料庫結構
+-- 分帳同步：逐筆排除
+-- 在 Supabase Dashboard > SQL Editor 中執行（可重複執行）
 -- =============================================================================
+-- 背景：
+--   「同步至帳本」會把群組裡所有我有分攤的費用逐筆寫進個人帳本，無法挑選。
+--   在帳本刪掉同步交易也沒用：split_ledger_syncs 會 CASCADE 一起刪除，下次
+--   同步又把那筆重建回來。長期往來的群組（結算要看全部、帳本只想記一部分）
+--   因此沒有辦法用。
 --
--- 使用說明：
--- 在 Supabase Dashboard > SQL Editor 中執行此腳本
+-- 做法：
+--   1. 新表 split_sync_exclusions(user_id, expense_id)：每個人自己的排除清單。
+--      只開 SELECT policy，寫入一律走下面的 RPC。
+--   2. 新 RPC set_split_sync_excluded：關掉時在同一個交易內刪除帳本那筆與同步
+--      紀錄；打開時只移除排除紀錄（群組同步過的話，前端接著整組同步把它加回）。
+--   3. get_split_sync_status：分攤總額、筆數、needs_update 都略過被排除的費用；
+--      新增 items（所有我有分攤的費用，含 excluded 旗標）與 excluded_count。
+--      expense_snapshot、synced_amount 等舊欄位原樣保留，給舊前端相容。
+--   4. sync_split_to_ledger：匯率前置檢查與逐筆迴圈略過被排除的費用；孤兒清理
+--      額外收掉「已被排除卻還留著」的同步紀錄（兩台裝置競態的防漏）。
 --
+-- 兩支函式的底稿是 database/split-sync-migration.sql（commit 26b98a0），
+-- 下方定義與該檔逐字一致；之後修改請兩邊一起改。
+--
+-- 執行後的行為：
+--   - 沒有任何排除紀錄時，同步結果與改之前完全相同
+--   - 舊前端沒有排除入口，SQL 先上線、前端晚點 release 不會有影響
+--
+-- 回滾：scripts/rollback-split-sync-exclusion.sql（還原兩支函式、DROP 新 RPC，
+--       保留排除清單表）
 -- =============================================================================
 
+-- 1. 建立 split_sync_exclusions 表（同步排除清單）
+-- 使用者在「同步明細」逐筆關掉的費用：之後的同步一律略過。每人各自一份。
 -- =============================================================================
--- 1. 建立 split_ledger_syncs 表（分帳同步記錄）
--- =============================================================================
-CREATE TABLE IF NOT EXISTS split_ledger_syncs (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  group_id         UUID NOT NULL REFERENCES split_groups(id) ON DELETE CASCADE,
-  transaction_id   UUID NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
-  synced_amount    NUMERIC(12, 2) NOT NULL,
-  synced_currency  TEXT NOT NULL DEFAULT 'TWD',
-  synced_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  -- 該筆費用的明細快照：[{expense_id, title, share, currency, date}]
-  expense_snapshot JSONB NOT NULL DEFAULT '[]',
-  -- 一列 = 一筆費用（見 database/split-sync-per-expense-migration.sql）。
-  -- 不用 ON DELETE CASCADE：費用被刪除時若同步記錄跟著消失，就找不到該收掉
-  -- 哪一筆帳本交易了；留成 NULL 當線索，由 sync_split_to_ledger 下次清理。
-  expense_id UUID REFERENCES split_expenses(id) ON DELETE SET NULL
+-- 不放進 split_ledger_syncs：那張表的 transaction_id 是 NOT NULL 且 CASCADE，
+-- 放不下「沒有帳本交易」的列。
+CREATE TABLE IF NOT EXISTS split_sync_exclusions (
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- 費用刪除時排除紀錄跟著消失即可：沒有帳本交易要收，不需要留線索
+  expense_id UUID NOT NULL REFERENCES split_expenses(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, expense_id)
 );
+CREATE INDEX IF NOT EXISTS idx_split_sync_exclusions_expense ON split_sync_exclusions(expense_id);
 
-CREATE INDEX IF NOT EXISTS idx_split_ledger_syncs_user        ON split_ledger_syncs(user_id);
-CREATE INDEX IF NOT EXISTS idx_split_ledger_syncs_group       ON split_ledger_syncs(group_id);
-CREATE INDEX IF NOT EXISTS idx_split_ledger_syncs_transaction ON split_ledger_syncs(transaction_id);
-
--- 一筆費用對一個人只該有一列；expense_id 為 NULL（費用已刪、待清理）的列不受限制
-CREATE UNIQUE INDEX IF NOT EXISTS idx_split_ledger_syncs_user_expense
-  ON split_ledger_syncs (user_id, expense_id)
-  WHERE expense_id IS NOT NULL;
-
--- =============================================================================
--- 2. RLS
--- =============================================================================
-ALTER TABLE split_ledger_syncs ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "split_ledger_syncs_select" ON split_ledger_syncs;
-DROP POLICY IF EXISTS "split_ledger_syncs_insert" ON split_ledger_syncs;
-DROP POLICY IF EXISTS "split_ledger_syncs_update" ON split_ledger_syncs;
-DROP POLICY IF EXISTS "split_ledger_syncs_delete" ON split_ledger_syncs;
-
-CREATE POLICY "split_ledger_syncs_select" ON split_ledger_syncs
+ALTER TABLE split_sync_exclusions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "split_sync_exclusions_select" ON split_sync_exclusions;
+CREATE POLICY "split_sync_exclusions_select" ON split_sync_exclusions
   FOR SELECT USING (user_id = auth.uid());
-
-CREATE POLICY "split_ledger_syncs_insert" ON split_ledger_syncs
-  FOR INSERT WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "split_ledger_syncs_update" ON split_ledger_syncs
-  FOR UPDATE USING (user_id = auth.uid());
-
-CREATE POLICY "split_ledger_syncs_delete" ON split_ledger_syncs
-  FOR DELETE USING (user_id = auth.uid());
-
--- 安全性：上面四條 policy 只檢查「這列是不是自己的」，不檢查 transaction_id
--- 指向的交易是不是自己的。sync_split_to_ledger 會照著這裡記的 transaction_id
--- 去更新交易，因此一列被竄改的同步記錄等於一張覆寫他人交易的許可證。
--- UPDATE policy 缺 WITH CHECK 時 Postgres 沿用 USING，改完 transaction_id 之後
--- user_id = auth.uid() 仍然成立，policy 天生擋不住，故比照
--- protect_split_group_ownership 改用 trigger（見 scripts/fix-split-sync-ownership.sql）。
-CREATE OR REPLACE FUNCTION assert_sync_tx_owned()
-RETURNS TRIGGER
-SET search_path = public
-AS $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM transactions
-    WHERE id = NEW.transaction_id AND user_id = NEW.user_id
-  ) THEN
-    RAISE EXCEPTION 'SPLIT_SYNC_TX_NOT_OWNED';
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS assert_sync_tx_owned ON split_ledger_syncs;
-CREATE TRIGGER assert_sync_tx_owned
-  BEFORE INSERT OR UPDATE ON split_ledger_syncs
-  FOR EACH ROW
-  EXECUTE FUNCTION assert_sync_tx_owned();
+-- 刻意不開 INSERT/UPDATE/DELETE policy：寫入只走 set_split_sync_excluded，
+-- 因為「寫排除」與「刪帳本交易」必須在同一個交易內完成
 
 -- =============================================================================
--- 3. RPC: get_split_sync_status
+-- 2. RPC: set_split_sync_excluded
+-- 切換單筆費用是否同步到帳本。關掉時在同一個交易內刪除帳本那筆；
+-- 打開時只移除排除紀錄，加回帳本由前端接著呼叫 sync_split_to_ledger。
+-- =============================================================================
+CREATE OR REPLACE FUNCTION set_split_sync_excluded(p_expense_id UUID, p_excluded BOOLEAN)
+RETURNS JSON AS $$
+DECLARE
+  v_user_id   UUID;
+  v_group_id  UUID;
+  v_member_id UUID;
+  v_sync_id   UUID;
+  v_tx_id     UUID;
+  v_removed   INT := 0;
+BEGIN
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'AUTH_REQUIRED';
+  END IF;
+
+  SELECT group_id INTO v_group_id FROM split_expenses WHERE id = p_expense_id;
+  IF v_group_id IS NULL THEN
+    RAISE EXCEPTION 'SPLIT_EXPENSE_NOT_FOUND';
+  END IF;
+
+  SELECT id INTO v_member_id
+  FROM split_members
+  WHERE group_id = v_group_id AND user_id = v_user_id;
+  IF v_member_id IS NULL THEN
+    RAISE EXCEPTION 'SPLIT_NOT_LINKED_MEMBER';
+  END IF;
+
+  IF p_excluded THEN
+    INSERT INTO split_sync_exclusions (user_id, expense_id)
+    VALUES (v_user_id, p_expense_id)
+    ON CONFLICT DO NOTHING;
+
+    SELECT id, transaction_id INTO v_sync_id, v_tx_id
+    FROM split_ledger_syncs
+    WHERE user_id = v_user_id AND expense_id = p_expense_id;
+
+    IF v_sync_id IS NOT NULL THEN
+      -- SECURITY DEFINER 擋不住 RLS，刪交易一定要帶 user_id
+      DELETE FROM transactions WHERE id = v_tx_id AND user_id = v_user_id;
+      DELETE FROM split_ledger_syncs WHERE id = v_sync_id;
+      v_removed := 1;
+    END IF;
+  ELSE
+    DELETE FROM split_sync_exclusions
+    WHERE user_id = v_user_id AND expense_id = p_expense_id;
+  END IF;
+
+  RETURN json_build_object('success', true, 'excluded', p_excluded, 'removed', v_removed);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- =============================================================================
+-- 3. RPC: get_split_sync_status（重新定義）
 -- 回傳用戶對指定群組的同步狀態，包含是否有未同步費用
 -- =============================================================================
 CREATE OR REPLACE FUNCTION get_split_sync_status(p_group_id UUID)
@@ -279,7 +301,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public;
 
 -- =============================================================================
--- 4. RPC: sync_split_to_ledger
+-- 4. RPC: sync_split_to_ledger（重新定義）
 -- 原子操作：計算分攤總額 → 建立或更新個人帳簿交易 → 更新 sync 記錄
 -- =============================================================================
 -- p_time：新建交易的 time 欄位，由前端帶使用者裝置的本地時間（與手動記帳一致）。
@@ -495,80 +517,38 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- =============================================================================
--- 5. 建立 split_sync_exclusions 表（同步排除清單）
--- 使用者在「同步明細」逐筆關掉的費用：之後的同步一律略過。每人各自一份。
--- =============================================================================
--- 不放進 split_ledger_syncs：那張表的 transaction_id 是 NOT NULL 且 CASCADE，
--- 放不下「沒有帳本交易」的列。
-CREATE TABLE IF NOT EXISTS split_sync_exclusions (
-  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  -- 費用刪除時排除紀錄跟著消失即可：沒有帳本交易要收，不需要留線索
-  expense_id UUID NOT NULL REFERENCES split_expenses(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (user_id, expense_id)
-);
-CREATE INDEX IF NOT EXISTS idx_split_sync_exclusions_expense ON split_sync_exclusions(expense_id);
-
-ALTER TABLE split_sync_exclusions ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "split_sync_exclusions_select" ON split_sync_exclusions;
-CREATE POLICY "split_sync_exclusions_select" ON split_sync_exclusions
-  FOR SELECT USING (user_id = auth.uid());
--- 刻意不開 INSERT/UPDATE/DELETE policy：寫入只走 set_split_sync_excluded，
--- 因為「寫排除」與「刪帳本交易」必須在同一個交易內完成
 
 -- =============================================================================
--- 6. RPC: set_split_sync_excluded
--- 切換單筆費用是否同步到帳本。關掉時在同一個交易內刪除帳本那筆；
--- 打開時只移除排除紀錄，加回帳本由前端接著呼叫 sync_split_to_ledger。
+-- 5. 驗證
 -- =============================================================================
-CREATE OR REPLACE FUNCTION set_split_sync_excluded(p_expense_id UUID, p_excluded BOOLEAN)
-RETURNS JSON AS $$
-DECLARE
-  v_user_id   UUID;
-  v_group_id  UUID;
-  v_member_id UUID;
-  v_sync_id   UUID;
-  v_tx_id     UUID;
-  v_removed   INT := 0;
-BEGIN
-  v_user_id := auth.uid();
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'AUTH_REQUIRED';
-  END IF;
-
-  SELECT group_id INTO v_group_id FROM split_expenses WHERE id = p_expense_id;
-  IF v_group_id IS NULL THEN
-    RAISE EXCEPTION 'SPLIT_EXPENSE_NOT_FOUND';
-  END IF;
-
-  SELECT id INTO v_member_id
-  FROM split_members
-  WHERE group_id = v_group_id AND user_id = v_user_id;
-  IF v_member_id IS NULL THEN
-    RAISE EXCEPTION 'SPLIT_NOT_LINKED_MEMBER';
-  END IF;
-
-  IF p_excluded THEN
-    INSERT INTO split_sync_exclusions (user_id, expense_id)
-    VALUES (v_user_id, p_expense_id)
-    ON CONFLICT DO NOTHING;
-
-    SELECT id, transaction_id INTO v_sync_id, v_tx_id
-    FROM split_ledger_syncs
-    WHERE user_id = v_user_id AND expense_id = p_expense_id;
-
-    IF v_sync_id IS NOT NULL THEN
-      -- SECURITY DEFINER 擋不住 RLS，刪交易一定要帶 user_id
-      DELETE FROM transactions WHERE id = v_tx_id AND user_id = v_user_id;
-      DELETE FROM split_ledger_syncs WHERE id = v_sync_id;
-      v_removed := 1;
-    END IF;
-  ELSE
-    DELETE FROM split_sync_exclusions
-    WHERE user_id = v_user_id AND expense_id = p_expense_id;
-  END IF;
-
-  RETURN json_build_object('success', true, 'excluded', p_excluded, 'removed', v_removed);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+-- 寫成單一查詢：Supabase SQL Editor 執行多段 SQL 時只顯示最後一句的輸出。
+--
+-- 預期：第 1–6 列的「結果」都是 true。
+SELECT * FROM (
+  SELECT 1 AS 序, 'split_sync_exclusions 表存在且已啟用 RLS' AS 檢查項目,
+    COALESCE((SELECT relrowsecurity FROM pg_class
+      WHERE oid = to_regclass('public.split_sync_exclusions')), false)::text AS 結果
+  UNION ALL SELECT 2, '該表只有一條 policy，且為 SELECT',
+    ((SELECT count(*) FROM pg_policies
+       WHERE schemaname = 'public' AND tablename = 'split_sync_exclusions') = 1
+     AND (SELECT count(*) FROM pg_policies
+       WHERE schemaname = 'public' AND tablename = 'split_sync_exclusions' AND cmd = 'SELECT') = 1)::text
+  UNION ALL SELECT 3, 'set_split_sync_excluded 存在、SECURITY DEFINER、有 search_path',
+    COALESCE((SELECT prosecdef AND array_to_string(proconfig, ',') LIKE '%search_path%' FROM pg_proc
+      WHERE proname = 'set_split_sync_excluded' AND pronamespace = 'public'::regnamespace), false)::text
+  UNION ALL SELECT 4, 'sync_split_to_ledger 只有一個多載，且為 4 個參數',
+    ((SELECT count(*) FROM pg_proc
+       WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace) = 1
+     AND (SELECT pronargs FROM pg_proc
+       WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace) = 4)::text
+  UNION ALL SELECT 5, 'get_split_sync_status 與 sync_split_to_ledger 都認得排除清單',
+    ((SELECT prosrc FROM pg_proc
+       WHERE proname = 'get_split_sync_status' AND pronamespace = 'public'::regnamespace) LIKE '%split_sync_exclusions%'
+     AND (SELECT prosrc FROM pg_proc
+       WHERE proname = 'sync_split_to_ledger' AND pronamespace = 'public'::regnamespace) LIKE '%split_sync_exclusions%')::text
+  UNION ALL SELECT 6, '零小數幣別清單仍在（防底稿回歸）',
+    ((SELECT prosrc FROM pg_proc
+       WHERE proname = 'get_split_sync_status' AND pronamespace = 'public'::regnamespace) LIKE '%''TWD''%'
+     AND (SELECT prosrc FROM pg_proc
+       WHERE proname = 'get_split_sync_status' AND pronamespace = 'public'::regnamespace) LIKE '%''JPY''%')::text
+) v ORDER BY 序;

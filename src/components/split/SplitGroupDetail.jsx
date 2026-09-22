@@ -33,7 +33,23 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
     actorUserId: user?.id ?? '',
     groupName: group.name ?? '',
   });
-  const { syncStatus, syncing, fetchSyncStatus, syncToLedger } = useSplitSync(group.id);
+  // 逐筆勾選：成功等使用者停手才總結提示一次（見 EXCLUSION_SUMMARY_DELAY_MS），失敗立即提示
+  const handleExclusionsSettled = ({ removed, ledgerUpdated }) => {
+    if (ledgerUpdated) toast.success(t('split.ledgerUpdated'));
+    else if (removed) toast.success(t('split.itemRemovedFromLedger'));
+  };
+  const handleExclusionError = (errors) => {
+    console.error(errors);
+    // 例如別的成員剛刪了這筆費用（SPLIT_EXPENSE_NOT_FOUND）：該筆已退回原狀
+    toast.error(resolveRpcError(errors[0], t) || t('split.toggleSyncFailed'));
+  };
+  const {
+    syncStatus, syncing, fetchSyncStatus, syncToLedger,
+    setExcluded, syncItems, updatingExclusions,
+  } = useSplitSync(group.id, {
+    onExclusionsSettled: handleExclusionsSettled,
+    onExclusionError: handleExclusionError,
+  });
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
@@ -338,7 +354,7 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
           </div>
           <SplitSyncBox
             syncStatus={syncStatus}
-            syncing={syncing}
+            syncing={syncing || updatingExclusions}
             currency={cur}
             fallbackAmount={memberTotals[actorMember.id]}
             onSync={handleSyncToLedger}
@@ -350,10 +366,11 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
       <SplitShareDetailModal
         isOpen={shareDetailOpen}
         onClose={() => setShareDetailOpen(false)}
-        snapshot={syncStatus?.expense_snapshot || []}
+        items={syncItems}
         groupName={group.name}
         currency={syncStatus?.currency || group.currency || 'TWD'}
-        totalAmount={syncStatus?.synced_amount || 0}
+        currentTotal={syncStatus?.current_total ?? 0}
+        onToggle={(expenseId, include) => setExcluded(expenseId, !include)}
       />
 
       <AddExpenseModal

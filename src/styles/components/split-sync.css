@@ -228,3 +228,42 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+.split-sync-box__excluded {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0.25rem 0 0;
+}
+
+/* ── 分攤明細：逐筆同步勾選 ───────────────────────────────────────────────── */
+
+/* 多出來的寬度全給費用項目：自動欄寬會依內容重分空間，合計金額（1rem 粗體，
+   常是金額欄最寬的一格）一變，其他欄就跟著左右移動。同步與日期欄只留內容寬，
+   左邊界因此固定；金額靠右對齊，變動只落在費用項目與金額之間看不見的邊界 */
+.split-share-detail__th--title {
+  width: 100%;
+}
+
+.split-share-detail__th--sync,
+.split-share-detail__td--sync {
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 0.75rem;
+}
+
+.split-share-detail__check {
+  accent-color: var(--color-primary);
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.split-share-detail__row--excluded .split-share-detail__td {
+  color: var(--color-text-muted);
+}
+
+.split-share-detail__row--excluded .split-share-detail__td--amount {
+  text-decoration: line-through;
+}

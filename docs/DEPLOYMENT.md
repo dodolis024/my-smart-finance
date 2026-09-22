@@ -75,6 +75,7 @@
 | scripts/fix-time-defaults-and-settlement-date.sql | transactions.time 與 split_expenses/split_settlements.date 的預設改為台灣時鐘(原本用資料庫的 UTC 時鐘,慢 8 小時);sync_split_to_ledger DROP 舊簽章 (UUID, TEXT, UUID) 後重建,新增 p_time TIME DEFAULT NULL(客戶端帶本地時間,未帶退回台灣時間);一次性修正既有資料:time 仍等於 created_at UTC 時刻的交易改成台灣時刻、還款日期停在 UTC 日期的改成台灣日期。驗證 10/10 通過,第 9、10 列(待修正筆數)皆為 0 | 2026-09-17 |
 | scripts/fix-split-create-group-atomic.sql | 新增 create_split_group RPC(SECURITY INVOKER,RLS 照常套用):群組與成員在同一交易內建立,成員寫入失敗不再留下「有群主、沒成員」的群組;空白名稱拋 SPLIT_NAME_REQUIRED。前端 useSplitGroups.createGroup 自 26941b2 起改呼叫此 RPC,release 前必須先跑。驗證 6/6 通過,既有群主不在成員名單的群組數為 0 | 2026-09-17 |
 | (SQL Editor 直接執行)`DROP POLICY "Users can manage their own subscriptions" ON subscriptions` | 移除只存在於 prod 的冗餘 policy:早期留下的 ALL policy,條件 auth.uid() = user_id 與 database/subscriptions-migration.sql 定義的 view/insert/update/delete 四條相同。permissive policy 是 OR 疊加,故未放寬任何權限,不是漏洞,清掉只為讓 repo 與 prod 一致。同一行已補進該 migration 的 DROP 清單,重跑不會復活。清除後 subscriptions 剩正好四條 policy | 2026-09-17 |
+| database/split-sync-exclusion-migration.sql | 分帳同步逐筆排除:新表 split_sync_exclusions(user_id, expense_id)存每人自己的排除清單,只開 SELECT policy,寫入一律走新 RPC set_split_sync_excluded(SECURITY DEFINER)。不開寫入 policy 是因為「寫排除」與「刪帳本交易」必須在同一交易內完成,且 RPC 內才驗得了成員身分。get_split_sync_status:分攤總額、筆數、needs_update 略過被排除的費用,新增 items(所有我有分攤的費用含 excluded)與 excluded_count,舊欄位保留給舊前端;sync_split_to_ledger:匯率檢查與逐筆迴圈略過被排除的費用,孤兒清理多收「已排除卻還留著」的同步紀錄。兩支函式以 database/split-sync-migration.sql(`26b98a0`)為底稿,該檔已同步更新。回滾:scripts/rollback-split-sync-exclusion.sql(還原兩支函式、DROP 新 RPC,保留排除表) | 2026-09-22 |
 
 > 2026-08-31:`fix-invite-code-hardening.sql` 的第 4 段把當時全部 5 個群組的邀請碼
 > 換掉了,**舊的邀請連結與代碼自此失效**,使用者若回報「連結打不開」是這個原因,
@@ -240,6 +241,7 @@
 | 2026-09-09 | scripts/fix-split-sync-decimal-regression.sql | 11 項全數通過 |
 | 2026-09-10 | database/split-expense-rate-migration.sql | 16 項全數通過(腳本內建驗證);另以 anon key 呼叫 resolve_split_rate 確認函式可執行、歷史表路徑可用 |
 | 2026-09-16 | database/split-sync-per-expense-migration.sql | 8 項全數通過(腳本內建驗證);另以測試帳號在瀏覽器確認群組已成為分類圓餅圖的一塊、點進去是可編輯的逐筆交易,且英文介面不再出現寫死的中文 |
+| 2026-09-22 | database/split-sync-exclusion-migration.sql | 6 項全數通過(腳本內建驗證);隨即以測試帳號在正式站(舊版前端)回歸:重新同步、新增費用後更新、刪除費用後更新,帳本筆數與金額皆符合預期;再以本機新前端走完逐筆排除驗收流程(關閉未同步項目、關閉已同步項目立即移除、重新打開立即加回、重新同步不復活、連點多筆不需等待(背景依序處理,整批只同步一次)) |
 
 > 2026-09-02 的重點不在前 19 項設定檢查,而在後 3 項:
 > `credit-card-reminder-daily` 首次成功執行(2026-09-02 01:00 UTC = 台灣 09:00),

@@ -4,7 +4,14 @@ import { formatNumberWithCommas } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function SplitShareDetailModal({ isOpen, onClose, snapshot = [], groupName, currency, totalAmount }) {
+/**
+ * 同步明細：列出所有我有分攤的費用，逐筆切換是否同步到個人帳本
+ *
+ * @param {Array} items           get_split_sync_status 的 items：{expense_id, title, date, share, currency, excluded}
+ * @param {number} currentTotal   未排除項目的分攤總額（群組幣別）
+ * @param {Function} onToggle     (expenseId, include) => void；include 為「要不要納入同步」
+ */
+export default function SplitShareDetailModal({ isOpen, onClose, items = [], groupName, currency, currentTotal, onToggle }) {
   const { t } = useLanguage();
   const bodyRef = useRef(null);
   useScrollbarOnScroll(bodyRef, isOpen);
@@ -25,20 +32,33 @@ export default function SplitShareDetailModal({ isOpen, onClose, snapshot = [], 
         <div ref={bodyRef} className="transaction-detail-body scrollbar-on-scroll">
           <div className="split-share-detail__group-name">{groupName}</div>
 
-          {snapshot.length === 0 ? (
+          {items.length === 0 ? (
             <p className="split-share-detail__empty">{t('split.noShareRecords')}</p>
           ) : (
             <table className="split-share-detail__table">
               <thead>
                 <tr>
+                  <th className="split-share-detail__th split-share-detail__th--sync">{t('split.syncCol')}</th>
                   <th className="split-share-detail__th split-share-detail__th--date">{t('transaction.tableDate')}</th>
                   <th className="split-share-detail__th split-share-detail__th--title">{t('split.expenseNameCol')}</th>
                   <th className="split-share-detail__th split-share-detail__th--amount">{t('split.myShareCol')}</th>
                 </tr>
               </thead>
               <tbody>
-                {snapshot.map((item, i) => (
-                  <tr key={item.expense_id || i} className="split-share-detail__row">
+                {items.map((item) => (
+                  <tr
+                    key={item.expense_id}
+                    className={`split-share-detail__row${item.excluded ? ' split-share-detail__row--excluded' : ''}`}
+                  >
+                    <td className="split-share-detail__td split-share-detail__td--sync">
+                      <input
+                        type="checkbox"
+                        className="split-share-detail__check"
+                        checked={!item.excluded}
+                        aria-label={t('split.syncItemToggle', { title: item.title })}
+                        onChange={() => onToggle(item.expense_id, item.excluded)}
+                      />
+                    </td>
                     <td className="split-share-detail__td split-share-detail__td--date">{item.date}</td>
                     <td className="split-share-detail__td split-share-detail__td--title">{item.title}</td>
                     <td className="split-share-detail__td split-share-detail__td--amount">
@@ -49,9 +69,9 @@ export default function SplitShareDetailModal({ isOpen, onClose, snapshot = [], 
               </tbody>
               <tfoot>
                 <tr className="split-share-detail__total-row">
-                  <td colSpan={2} className="split-share-detail__total-label">{t('split.totalLabel', { currency })}</td>
+                  <td colSpan={3} className="split-share-detail__total-label">{t('split.totalLabel', { currency })}</td>
                   <td className="split-share-detail__total-amount">
-                    {currency} {formatNumberWithCommas(String(Number(totalAmount)))}
+                    {currency} {formatNumberWithCommas(String(Number(currentTotal)))}
                   </td>
                 </tr>
               </tfoot>

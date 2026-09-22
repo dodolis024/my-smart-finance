@@ -10,6 +10,7 @@ const syncIcon = (
 /**
  * 「同步到帳本」狀態盒，依同步狀態呈現三態：
  *   未同步 → 說明 + 同步按鈕；有變動 → 提示 + 更新（金額也變了才列出帳本 vs 最新）；已同步 → 金額 + 重新同步
+ *   有排除項目時各狀態都會顯示排除筆數
  *
  * @param {object|null} syncStatus  useSplitSync 的同步狀態（null = 尚未同步過）
  * @param {boolean} syncing         同步進行中（按鈕轉圈/禁用）
@@ -38,15 +39,20 @@ export default function SplitSyncBox({ syncStatus, syncing, currency, fallbackAm
               amount: fmtAmt(syncStatus?.current_total ?? fallbackAmount ?? 0),
             })}
           </p>
-          <button
-            type="button"
-            className="split-sync-box__btn split-sync-box__btn--primary"
-            onClick={onSync}
-            disabled={syncing}
-          >
-            {syncIcon}
-            {syncing ? t('split.syncing') : t('split.syncBtn')}
-          </button>
+          <div className="split-sync-box__actions">
+            <button
+              type="button"
+              className="split-sync-box__btn split-sync-box__btn--primary"
+              onClick={onSync}
+              disabled={syncing}
+            >
+              {syncIcon}
+              {syncing ? t('split.syncing') : t('split.syncBtn')}
+            </button>
+            <button type="button" className="split-sync-box__btn split-sync-box__btn--secondary" onClick={onViewDetail}>
+              {t('split.viewDetail')}
+            </button>
+          </div>
         </div>
       ) : syncStatus.needs_update ? (
         <div className="split-sync-box__needs-update">
@@ -98,6 +104,9 @@ export default function SplitSyncBox({ syncStatus, syncing, currency, fallbackAm
             </button>
           </div>
         </div>
+      )}
+      {syncStatus?.excluded_count > 0 && (
+        <p className="split-sync-box__excluded">{t('split.excludedCount', { n: syncStatus.excluded_count })}</p>
       )}
     </div>
   );
