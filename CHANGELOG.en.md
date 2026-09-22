@@ -5,6 +5,7 @@ This file records version updates for Smart Finance Tracker.
 - Improved how the transaction details show amounts, with the exchange rate beside the foreign amount and the foreign transaction fee folded into the TWD total, so the view no longer fills a phone screen
 - Improved the transaction list column widths so category names show more characters; year view drops the year from dates unless search results span years
 - Improved the edit and delete buttons in the transaction list, which now appear only when you hover over a transaction, leaving more room for item names
+- Improved foreign-currency amounts in the transaction list, which drop the decimals past a thousand so long amounts are no longer cut off; smaller amounts still show them
 - Fixed transaction details hiding the payment method of a split-synced transaction after one was filled in
 - Fixed categories, payment methods and dates in the transaction list being cut off without an ellipsis when they don't fit
 

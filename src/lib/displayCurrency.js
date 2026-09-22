@@ -64,6 +64,17 @@ export function convertTx(tx, currency, table) {
 }
 
 /**
+ * 列表裡的單筆外幣金額：破千（四位數以上）就四捨五入到個位、省略小數。
+ * 美金、英鎊、歐元破千的消費本來就少，到這個量級分位已沒有意義，
+ * 省下的寬度讓 US$123,456.78 這種長金額不必被截成「…」；小額照舊印到分。
+ * 以「進位到分之後」判斷，999.996 會印成 US$1,000 而不是 US$1,000.00。
+ */
+export function formatListMoney(value, currencyCode) {
+  const wholeUnits = Math.abs(Math.round(value * 100)) >= 100000;
+  return formatOriginalMoney(value, currencyCode, { wholeUnits });
+}
+
+/**
  * 依顯示偏好與匯率表，組出元件用的換算／格式化工具。
  * 匯率還沒載入（或該幣別完全沒有匯率）時，整個畫面暫以台幣顯示，不會出現半換算的混合數字。
  */
@@ -81,11 +92,11 @@ export function buildDisplayAmount(preferences, table) {
     return `${prefix}${text}`;
   };
 
-  /** 單筆交易的金額字串 */
+  /** 單筆交易的金額字串（交易列表、分類明細用；詳情彈窗另有完整金額） */
   const formatTxAmount = (tx, { isMobile = false } = {}) => {
-    if (amountMode === 'original') return formatOriginalMoney(originalAmountOf(tx), tx.currency);
+    if (amountMode === 'original') return formatListMoney(originalAmountOf(tx), tx.currency);
     if (currency === 'TWD') return isMobile ? formatMoneyInteger(tx.twdAmount) : formatMoney(tx.twdAmount);
-    return formatOriginalMoney(toDisplay(tx).value, currency);
+    return formatListMoney(toDisplay(tx).value, currency);
   };
 
   /** 收入／支出／結餘，與 get_dashboard_data 的彙總同義，只是單位換成顯示幣別 */

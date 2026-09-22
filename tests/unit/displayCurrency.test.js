@@ -118,4 +118,19 @@ describe('buildDisplayAmount', () => {
     expect(d.formatTxAmount(rows[0])).toBe('£10.00');
     expect(d.toDisplay(rows[0]).estimated).toBe(true);
   });
+
+  it('單筆外幣金額破千就省略小數，未滿一千照舊印到分', () => {
+    const orig = buildDisplayAmount({ currency: 'TWD', amountMode: 'original' }, table);
+    const usd = (originalAmount) => orig.formatTxAmount({ currency: 'USD', originalAmount, twdAmount: 1, date: '2026-09-10' });
+    expect(usd(999.99)).toBe('US$999.99');
+    expect(usd(1000)).toBe('US$1,000');
+    expect(usd(123456.78)).toBe('US$123,457');
+    expect(usd(999.996)).toBe('US$1,000'); // 進位到分就破千，不印成 US$1,000.00
+    expect(orig.formatTxAmount({ currency: 'JPY', originalAmount: 123456, twdAmount: 1, date: '2026-09-10' })).toBe('¥123,456');
+
+    // 換算成顯示幣別的也一樣；加總（每日小計、統計卡）不受影響，照舊印到分
+    const d = buildDisplayAmount(GBP, table);
+    expect(d.formatTxAmount({ currency: 'TWD', twdAmount: 41234, date: '2026-09-10' })).toBe('£1,031');
+    expect(d.formatTotal(1030.85)).toBe('£1,030.85');
+  });
 });
