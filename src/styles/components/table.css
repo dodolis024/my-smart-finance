@@ -177,8 +177,7 @@
 .transaction-row--semantic .cell-category-inner,
 .transaction-row--semantic .cell-item-inner,
 .transaction-row--semantic .cell-payment-inner,
-.transaction-row--semantic .cell-amount-inner,
-.transaction-row--semantic .cell-actions-inner {
+.transaction-row--semantic .cell-amount-inner {
   position: relative;
   z-index: 2;
   will-change: transform;
@@ -272,20 +271,45 @@
   white-space: nowrap;
 }
 
-/* 金額放不下時截成刪節號（完整值在 title），不要溢出壓到右側的操作鈕 */
+/* 金額放不下時截成刪節號（完整值在 title），不要溢出到卡片外 */
 .cell-amount-inner {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.cell-actions {
-  padding: 0 0.5rem;
-  text-align: center;
-  vertical-align: middle;
+/* 編輯／刪除平常隱藏，滑鼠指到該列才浮出來蓋在金額上（左緣漸層，不會硬切一刀）。
+   用 opacity 而非 display: none：隱藏時仍能用 Tab 聚焦，鍵盤聚焦時一併浮出。
+   沒有滑鼠的裝置（平板）不浮出，點列開詳情一樣能編輯、刪除 */
+.transaction-row--semantic .row-actions--overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding: 0 0.5rem 0 1.5rem;
+  background: linear-gradient(to right, transparent, var(--color-row-hover) 1rem);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 
-.cell-actions .row-actions {
-  justify-content: center;
+@media (hover: hover) {
+  .transaction-row--semantic:hover .row-actions--overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.transaction-row--semantic:has(:focus-visible) .row-actions--overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 鍵盤聚焦的那一列比照 hover 換底色，浮層的漸層才接得上 */
+.transaction-history-section .table-wrapper tbody tr.transaction-row--semantic:has(:focus-visible) td {
+  background: var(--color-row-hover);
 }
 
 .swipe-action {

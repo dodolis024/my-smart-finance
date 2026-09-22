@@ -93,7 +93,7 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
         onTouchCancel={handleTouchCancel}
         onClick={handleRowClick}
       >
-        <td className="cell-slider-wrap" colSpan={showDate ? 6 : 5}>
+        <td className="cell-slider-wrap" colSpan={showDate ? 5 : 4}>
           <div className="row-slider-container">
             <div
               className="row-slider"
@@ -138,7 +138,7 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
     );
   }
 
-  /* 桌面版：6 欄 */
+  /* 桌面版：4 欄（年檢視多一欄日期） */
   return (
     <tr
       ref={rowRef}
@@ -174,33 +174,30 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
         </div>
       </td>
       <td className="cell-amount">
-        {/* 金額欄窄，長金額會被截成「…」，滑鼠移上去看完整數字 */}
+        {/* 金額欄窄，長金額會被截成「…」；滑鼠移上去時操作鈕會蓋住它，完整數字改看詳情彈窗 */}
         <div className="cell-amount-inner" title={displayAmount}>{displayAmount}</div>
-      </td>
-      <td className="cell-actions">
-        <div className="cell-actions-inner">
-          <div className="row-actions">
-            <button
-              type="button"
-              className="btn-edit"
-              aria-label={t('common.edit')}
-              onClick={(e) => { e.stopPropagation(); onEdit(tx); }}
-            >
-              <svg className="icon-edit" aria-hidden="true">
-                <use href="#icon-edit" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="btn-delete"
-              aria-label={t('common.delete')}
-              onClick={(e) => { e.stopPropagation(); onDelete(tx.id); }}
-            >
-              <svg className="icon-delete" aria-hidden="true">
-                <use href="#icon-delete" />
-              </svg>
-            </button>
-          </div>
+        {/* 編輯／刪除不佔獨立欄位：滑鼠指到這一列才浮出來蓋在金額上，空間留給品項名稱 */}
+        <div className="row-actions row-actions--overlay">
+          <button
+            type="button"
+            className="btn-edit"
+            aria-label={t('common.edit')}
+            onClick={(e) => { e.stopPropagation(); onEdit(tx); }}
+          >
+            <svg className="icon-edit" aria-hidden="true">
+              <use href="#icon-edit" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="btn-delete"
+            aria-label={t('common.delete')}
+            onClick={(e) => { e.stopPropagation(); onDelete(tx.id); }}
+          >
+            <svg className="icon-delete" aria-hidden="true">
+              <use href="#icon-delete" />
+            </svg>
+          </button>
         </div>
       </td>
     </tr>
