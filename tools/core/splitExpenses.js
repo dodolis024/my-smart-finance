@@ -3,6 +3,7 @@ import { getTodayYmd } from './dates.js';
 import { ErrorCode, fromSupabaseError, smfError } from './errors.js';
 import { calcMemberTotals, calcSettlement } from './splitSettlement.js';
 import { fetchRates } from './splitRates.js';
+import { reconcileStreakFreezes } from './streakFreeze.js';
 
 /**
  * ⚠️ 這個檔案是 src/hooks/useSplitExpenses.js 寫入邏輯的第二份實作。
@@ -254,7 +255,11 @@ async function maybeCheckIn(client, userId, date) {
     .from('checkins')
     .upsert({ user_id: userId, date, source: 'onTimeTransaction' }, { onConflict: 'user_id,date' });
 
-  return !error;
+  if (error) return false;
+
+  // 這筆可能讓連續天數剛好滿發卡門檻，當場對帳才發得出來
+  await reconcileStreakFreezes(client);
+  return true;
 }
 
 /** 修改分帳費用。比照前端：不簽到，只發 expense_updated 通知 */

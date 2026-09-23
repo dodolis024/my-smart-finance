@@ -93,7 +93,8 @@ describe('addTransaction — 匯率與台幣換算', () => {
 
     await addTransaction({ itemName: '星巴克', amount: 150, category: '飲食', account: '現金' });
 
-    expect(mocks.rpcImpl).not.toHaveBeenCalled();
+    // 只斷言沒查匯率：記今天的帳會順帶簽到，簽到成功會再打一次凍結卡對帳的 RPC
+    expect(mocks.rpcImpl).not.toHaveBeenCalledWith('get_exchange_rate', expect.anything());
     expect(lastWrite('transactions', 'insert')).toMatchObject({
       currency: 'TWD',
       amount: 150,
@@ -213,6 +214,58 @@ describe('addTransaction — 簽到', () => {
 
     expect(result.transaction).toBeTruthy();
     expect(result.checkedIn).toBe(false);
+  });
+});
+
+/**
+ * 發卡只發生在 reconcile_streak_freezes 裡。CLI 以前完全不呼叫它，等於只用 CLI 記帳的人
+ * 記到第 10 天不會發卡，要等他哪天打開網頁；中間漏記一天就永遠拿不到那張卡。
+ */
+describe('addTransaction — 凍結卡對帳', () => {
+  const reconcileCalls = () =>
+    mocks.rpcImpl.mock.calls.filter(([name]) => name === 'reconcile_streak_freezes');
+
+  it('簽到成功後要對帳一次（這筆可能剛好讓連續天數滿門檻）', async () => {
+    setupHappyPath();
+
+    await addTransaction({
+      itemName: '星巴克', amount: 150, category: '飲食', account: '現金', date: today(),
+    });
+
+    expect(reconcileCalls()).toHaveLength(1);
+    expect(reconcileCalls()[0][1]).toMatchObject({ p_client_today: today() });
+  });
+
+  it('補記舊帳沒簽到，就不必對帳', async () => {
+    setupHappyPath();
+
+    await addTransaction({
+      itemName: '昨天的咖啡', amount: 150, category: '飲食', account: '現金', date: 'yesterday',
+    });
+
+    expect(reconcileCalls()).toHaveLength(0);
+  });
+
+  it('簽到失敗就不對帳', async () => {
+    setupHappyPath({ checkinError: { message: 'checkin boom' } });
+
+    await addTransaction({
+      itemName: '星巴克', amount: 150, category: '飲食', account: '現金', date: today(),
+    });
+
+    expect(reconcileCalls()).toHaveLength(0);
+  });
+
+  it('對帳失敗不影響記帳成功', async () => {
+    setupHappyPath();
+    mocks.rpcImpl.mockRejectedValue(new Error('reconcile boom'));
+
+    const result = await addTransaction({
+      itemName: '星巴克', amount: 150, category: '飲食', account: '現金', date: today(),
+    });
+
+    expect(result.transaction).toBeTruthy();
+    expect(result.checkedIn).toBe(true);
   });
 });
 

@@ -65,10 +65,18 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
 
     // 若新增的費用日期是今天，且用戶是已連結成員，則同步簽到記錄
     if (actorUserId && date === getTodayYmd()) {
-      await supabase.from('checkins').upsert(
+      const { error: checkinError } = await supabase.from('checkins').upsert(
         { user_id: actorUserId, date, source: 'onTimeTransaction' },
         { onConflict: 'user_id,date' }
       );
+      // 這筆可能讓連續天數剛好滿發卡門檻，當場對帳才發得出來；
+      // 失敗吞掉：帳已經記進去了，對帳不成功不該讓它看起來像失敗
+      if (!checkinError) {
+        const { error: reconcileError } = await supabase.rpc('reconcile_streak_freezes', {
+          p_client_today: getTodayYmd(),
+        });
+        if (reconcileError) console.error('[useSplitExpenses] reconcile streak freezes failed:', reconcileError);
+      }
     }
 
     notifySplit({

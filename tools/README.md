@@ -15,6 +15,7 @@
 | `transactions` 手續費欄位／計算方式 | `core/overseasFee.js`（與 `src/lib/overseasFee.js` 逐字相同）、`core/transactions.js` 的 `resolveOverseasFeeRate` 與 `updateTransaction` 重算區塊 |
 | `accounts` 手續費欄位 | `core/accounts.js` 的 `listAccounts` select |
 | 簽到規則 | `maybeCheckIn` |
+| 簽到成功後的凍結卡對帳 | `core/streakFreeze.js`（兩邊都要在簽到成功後呼叫，否則發卡時機會不一致） |
 | 分類或帳戶的解析規則 | `core/categories.js` / `core/accounts.js` |
 
 分帳也是一樣的處境，`core/splitExpenses.js` 是 `src/hooks/useSplitExpenses.js` 的第二份實作：

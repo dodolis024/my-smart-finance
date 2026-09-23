@@ -4,6 +4,7 @@ import { resolveCategory } from './categories.js';
 import { getTodayYmd, normalizeDate, normalizeTime } from './dates.js';
 import { ErrorCode, fromSupabaseError, smfError } from './errors.js';
 import { getOverseasFeeRate, getOverseasAutoCheck, computeTwdWithFee } from './overseasFee.js';
+import { reconcileStreakFreezes } from './streakFreeze.js';
 
 /**
  * ⚠️ 這個檔案是 src/hooks/useTransactions.js 寫入邏輯的第二份實作。
@@ -155,7 +156,11 @@ async function maybeCheckIn(client, userId, date) {
     .from('checkins')
     .upsert({ user_id: userId, date, source: 'onTimeTransaction' }, { onConflict: 'user_id,date' });
 
-  return !error;
+  if (error) return false;
+
+  // 這筆可能讓連續天數剛好滿發卡門檻，當場對帳才發得出來
+  await reconcileStreakFreezes(client);
+  return true;
 }
 
 export async function getTransaction(id) {

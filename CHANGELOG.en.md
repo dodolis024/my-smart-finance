@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Fixed freeze cards not being granted the moment a logging streak reached the threshold
+
 ## [1.32.1] - Sep-22 2026
 - Added per-expense sync checkboxes in the split sync details; an unchecked expense is removed from your ledger right away and stays out on later syncs
 - Improved how the transaction details show amounts, with the exchange rate beside the foreign amount and the foreign transaction fee folded into the TWD total, so the view no longer fills a phone screen

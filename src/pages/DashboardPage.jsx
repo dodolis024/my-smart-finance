@@ -353,26 +353,28 @@ function DashboardContent() {
     if (user) ensureDefaultDataForOAuth(user.id);
   }, [user, ensureDefaultDataForOAuth]);
 
-  // 開 App 對帳：呼叫 reconcile_streak_freezes 補橋接漏記的缺口並發卡。
-  // 與 dashboard 抓取平行進行（不擋首載）；只有實際橋接了缺口（consumedThisCall>0）
-  // 才 +1 觸發重抓，讓 streak 反映補上的凍結日。
+  // 對帳：呼叫 reconcile_streak_freezes 補橋接漏記的缺口並發卡。
+  // 只有實際橋接了缺口（consumedThisCall>0）才 +1 觸發重抓，讓 streak 反映補上的凍結日。
+  const reconcileFreezes = useCallback(async () => {
+    try {
+      const data = await reconcileStreakFreezes();
+      if (!data) return;
+      if (await shouldShowFreezeConsumedToast(data)) {
+        toastRef.current.info(tRef.current('streak.freezeConsumedToast', { count: data.consumedThisCall }));
+      }
+      if ((data.consumedThisCall ?? 0) > 0) {
+        setStreakRefreshTick((n) => n + 1);
+      }
+    } catch (err) {
+      console.error('[Dashboard] reconcile streak freezes failed:', err);
+    }
+  }, [reconcileStreakFreezes, shouldShowFreezeConsumedToast]);
+
+  // 開 App 時對帳一次，與 dashboard 抓取平行進行（不擋首載）
   useEffect(() => {
     if (!user?.id) return;
-    let cancelled = false;
-    reconcileStreakFreezes()
-      .then(async (data) => {
-        if (cancelled || !data) return;
-        if (await shouldShowFreezeConsumedToast(data)) {
-          if (cancelled) return;
-          toastRef.current.info(tRef.current('streak.freezeConsumedToast', { count: data.consumedThisCall }));
-        }
-        if ((data.consumedThisCall ?? 0) > 0) {
-          setStreakRefreshTick((n) => n + 1);
-        }
-      })
-      .catch((err) => console.error('[Dashboard] reconcile streak freezes failed:', err));
-    return () => { cancelled = true; };
-  }, [user?.id, reconcileStreakFreezes, shouldShowFreezeConsumedToast]);
+    reconcileFreezes();
+  }, [user?.id, reconcileFreezes]);
 
   // 月 RPC 永遠要打（即使目前是年模式）：記帳表單的分類下拉、支付統計的信用卡、簽到徽章都靠它
   useEffect(() => {
@@ -462,6 +464,8 @@ function DashboardContent() {
           })
           .catch((err) => console.error('[Dashboard] positive streak modal check failed:', err));
         refreshSearch();
+        // 這筆可能讓連續紀錄剛好滿發卡門檻——不當場對帳的話，隔天斷了就再也發不出來
+        if (!result.isEdit) reconcileFreezes();
 
         // 若此筆交易的付款方式為信用卡，檢查使用率並在需要時推播警告
         // （accounts 來自 RPC，欄位為駝峰 accountName）
@@ -484,6 +488,7 @@ function DashboardContent() {
       checkCreditUsageAlert,
       editingTransaction,
       refreshSearch,
+      reconcileFreezes,
       t,
     ]
   );
@@ -546,6 +551,8 @@ function DashboardContent() {
   const handleCheckin = useCallback(async () => {
     try {
       await submitDailyCheckin();
+      // 同記帳：這次簽到可能剛好達標，當場對帳才發得出卡
+      reconcileFreezes();
       const data = await refetchPeriod();
       if (data) {
         updateStreakFromServer(data);
@@ -559,7 +566,7 @@ function DashboardContent() {
     } catch (err) {
       toast.error(err.message || t('dashboard.checkinFailed'));
     }
-  }, [submitDailyCheckin, refetchPeriod, updateStreakFromServer, toast, getCurrentModalContentFromData, getCurrentModalContent, openStreakModal, t]);
+  }, [submitDailyCheckin, refetchPeriod, reconcileFreezes, updateStreakFromServer, toast, getCurrentModalContentFromData, getCurrentModalContent, openStreakModal, t]);
 
   const handleStreakBadgeClick = useCallback(() => {
     const content = getCurrentModalContent();
