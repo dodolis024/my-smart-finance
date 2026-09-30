@@ -19,6 +19,7 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
 
   const {
     translateX,
+    swipeActive,
     swipeTransition,
     handleTouchStart,
     handleTouchMove,
@@ -52,6 +53,9 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
     tx.pending && 'transaction-row--pending',
     swipedRight && 'swiped-right',
     swipedLeft && 'swiped-left',
+    // 只有正在側滑的那一列開獨立圖層、畫出底下的編輯／刪除；每一列都常駐會讓
+    // 快速上下捲動時來不及重繪，露出藏在卡片下面的按鈕
+    isMobile && swipeActive && 'transaction-row--swiping',
   ]
     .filter(Boolean)
     .join(' ');

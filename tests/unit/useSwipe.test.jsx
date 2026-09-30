@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createElement, act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useSwipe } from '@/hooks/useSwipe';
-import { SWIPE } from '@/lib/constants';
+import { SWIPE, TIMING } from '@/lib/constants';
 
 // React 18 的 act() 需要此旗標
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -121,6 +121,33 @@ describe('useSwipe', () => {
     act(() => api.handleTouchStart(touchEvent(120)));
     act(() => api.handleTouchEnd(touchEvent(120)));
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('只有正在側滑時才算 swipeActive，收尾動畫跑完才收回', () => {
+    vi.useFakeTimers();
+    try {
+      render();
+      // 沒在滑的列不開獨立圖層、也不畫底下的按鈕（常駐會讓快速捲動時漏畫成殘影）
+      expect(api.swipeActive).toBe(false);
+
+      drag(200, 120);
+      expect(api.swipeActive).toBe(true);
+
+      // 停在滑開狀態：按鈕正露在外面，圖層要留著
+      act(() => api.handleTouchEnd(touchEvent(120)));
+      expect(api.translateX).toBe(-SWIPE.ACTION_WIDTH);
+      act(() => vi.advanceTimersByTime(1000));
+      expect(api.swipeActive).toBe(true);
+
+      // 關回去：位移立刻歸零，但 transition 還在跑，這段期間不能收掉
+      act(() => api.resetSwipe());
+      expect(api.translateX).toBe(0);
+      expect(api.swipeActive).toBe(true);
+      act(() => vi.advanceTimersByTime(TIMING.SWIPE_TRANSITION_DURATION + 50));
+      expect(api.swipeActive).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('disableRight 的卡片不能往右滑開', () => {

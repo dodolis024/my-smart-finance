@@ -125,7 +125,12 @@
     gap: 0.375rem;
     position: relative;
     z-index: 2;
-    /* 獨立圖層：側滑時文字才不會每幀重新描邊 */
+  }
+
+  /* 獨立圖層：側滑時文字才不會每幀重新描邊。只加在正在滑的那一列——每一列都常駐的話，
+     長列表會有幾百個圖層，快速上下捲動時這些圖層來不及重繪，底下純色的編輯／刪除
+     就會漏出來變成殘影 */
+  .transaction-row--swiping .row-slider {
     will-change: transform;
   }
 
@@ -192,17 +197,23 @@
     background: var(--color-row-hover);
   }
 
-  /* 滑動按鈕：固定於左右，上層交易列滑開時 gradually 露出 */
+  /* 滑動按鈕：固定於左右，上層交易列滑開時 gradually 露出。
+     沒在滑的列根本不畫（display: none）：畫了也被卡片完全蓋住，只有在捲動漏畫時
+     才會露臉，那正是殘影的來源 */
   .row-slider-container .swipe-action {
     position: absolute;
     top: 0;
     bottom: 0;
     width: 90px;
     z-index: 1;
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+  }
+
+  .transaction-row--swiping .row-slider-container .swipe-action {
+    display: flex;
   }
 
   .row-slider-container .swipe-action--edit {

@@ -10,6 +10,10 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
   const [translateX, setTranslateX] = useState(0);
   // 拖曳中要關掉 transition，否則每次觸控微抖動都會重啟一次補間動畫，整列看起來在閃
   const [isSwiping, setIsSwiping] = useState(false);
+  // 「這一列正在側滑」：從按下去到收尾動畫跑完都算。呼叫端用它決定要不要為這一列
+  // 開獨立圖層（見 responsive-table.css）。常駐開圖層會讓長列表在快速捲動時漏畫
+  const [swipeActive, setSwipeActive] = useState(false);
+  const inactiveTimer = useRef(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
   const startY = useRef(0);
@@ -33,13 +37,35 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
     setTranslateX(x);
   }, []);
 
+  const markSwipeActive = useCallback(() => {
+    if (inactiveTimer.current) {
+      clearTimeout(inactiveTimer.current);
+      inactiveTimer.current = null;
+    }
+    setSwipeActive(true);
+  }, []);
+
+  // 位移歸零後還要多留一段：transition 還在把卡片滑回原位，這時收掉圖層會在半路重繪
+  const releaseSwipeActive = useCallback(() => {
+    if (inactiveTimer.current) clearTimeout(inactiveTimer.current);
+    inactiveTimer.current = setTimeout(() => {
+      inactiveTimer.current = null;
+      setSwipeActive(false);
+    }, TIMING.SWIPE_TRANSITION_DURATION + 50);
+  }, []);
+
+  useEffect(() => () => {
+    if (inactiveTimer.current) clearTimeout(inactiveTimer.current);
+  }, []);
+
   const resetSwipe = useCallback(() => {
     moveTo(0);
     prevTranslate.current = 0;
     isSwiped.current = false;
     setIsSwiping(false);
+    releaseSwipeActive();
     if (currentResetFn === resetSwipe) currentResetFn = null;
-  }, [moveTo]);
+  }, [moveTo, releaseSwipeActive]);
 
   const handleTouchStart = useCallback(
     (e) => {
@@ -53,8 +79,9 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
       isDragging.current = true;
       directionLocked.current = null;
       prevTranslate.current = currentTranslate.current;
+      markSwipeActive();
     },
-    [isMobile, resetSwipe]
+    [isMobile, resetSwipe, markSwipeActive]
   );
 
   const handleTouchMove = useCallback(
@@ -104,7 +131,9 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
     prevTranslate.current = next;
     moveTo(next);
     setIsSwiping(false);
-  }, [moveTo, resetSwipe]);
+    if (next === 0) releaseSwipeActive();
+    else markSwipeActive();
+  }, [moveTo, resetSwipe, markSwipeActive, releaseSwipeActive]);
 
   const handleTouchEnd = useCallback(
     (e) => {
@@ -154,6 +183,7 @@ export function useSwipe({ onEdit, onDelete, onClick, isMobile, disableRight = f
 
   return {
     translateX,
+    swipeActive,
     swipeTransition: isSwiping ? 'none' : SWIPE_TRANSITION,
     handleTouchStart,
     handleTouchMove,
