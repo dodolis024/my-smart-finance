@@ -443,6 +443,7 @@ const en = {
 
     account: {
       sectionTitle: 'Payment Methods',
+      dragToReorder: 'Drag to reorder',
       addBtn: '+ Add',
       noAccounts: 'No accounts yet. Please add one.',
       addTitle: 'Add Account',

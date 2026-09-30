@@ -3,6 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Added the current balance beside each payment method in the breakdown, so a tracked account no longer needs opening
+- Added drag-to-reorder to payment method management, which the payment menu in the transaction form follows
 - Improved the payment breakdown to keep listing an account that tracks a balance in a month with no transactions
 - Fixed the edit and delete buttons hidden under a transaction card flashing into view while scrolling the mobile list quickly
 - Fixed freeze cards not being granted the moment a logging streak reached the threshold

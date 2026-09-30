@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCachedResource } from '@/hooks/useCachedResource';
 import { notifyDataChanged } from '@/lib/dataEvents';
+import { ACCOUNT_ORDER_KEY, sortAccountsByOrder } from '@/lib/accountOrder';
 
 const DEFAULT_EXPENSE_CATEGORIES = {
   zh: ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他'],
@@ -15,7 +16,7 @@ const DEFAULT_INCOME_CATEGORIES = {
 };
 
 const CACHE_KEY = 'settings';
-const INITIAL = { expenseCategories: [], incomeCategories: [], accounts: [] };
+const INITIAL = { expenseCategories: [], incomeCategories: [], accounts: [], accountOrder: [] };
 
 export function useSettings() {
   const { user } = useAuth();
@@ -25,19 +26,22 @@ export function useSettings() {
     userId: user?.id,
     initial: INITIAL,
     fetcher: async () => {
-      const [{ data: expenseData }, { data: incomeData }, { data: accountsData }] = await Promise.all([
+      const [{ data: expenseData }, { data: incomeData }, { data: accountsData }, { data: orderData }] = await Promise.all([
         supabase.from('settings').select('value').eq('user_id', user.id).eq('key', 'expense_categories').single(),
         supabase.from('settings').select('value').eq('user_id', user.id).eq('key', 'income_categories').single(),
         supabase.from('accounts').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+        supabase.from('settings').select('value').eq('user_id', user.id).eq('key', ACCOUNT_ORDER_KEY).maybeSingle(),
       ]);
+      const accountOrder = Array.isArray(orderData?.value) ? orderData.value : [];
       return {
         expenseCategories: expenseData?.value || DEFAULT_EXPENSE_CATEGORIES[lang] || DEFAULT_EXPENSE_CATEGORIES.zh,
         incomeCategories: incomeData?.value || DEFAULT_INCOME_CATEGORIES[lang] || DEFAULT_INCOME_CATEGORIES.zh,
-        accounts: accountsData || [],
+        accounts: sortAccountsByOrder(accountsData || [], accountOrder),
+        accountOrder,
       };
     },
   });
-  const { expenseCategories, incomeCategories, accounts } = data;
+  const { expenseCategories, incomeCategories, accounts, accountOrder } = data;
 
   const loadSettingsData = useCallback(async () => {
     if (!user) return;
@@ -163,6 +167,33 @@ export function useSettings() {
     notifyDataChanged();
   }, [user, accounts, loadSettingsData, t]);
 
+  /**
+   * 拖曳排序支付工具：以整份 id 順序覆寫 settings 的 account_order。
+   * 樂觀更新（同 reorderCategoriesTo）：本地先到位，存檔在背景進行，失敗才回滾。
+   */
+  const reorderAccountsTo = useCallback(async (orderedIds) => {
+    if (!user) return;
+    const sameSet = orderedIds.length === accounts.length
+      && orderedIds.every((id) => accounts.some((a) => a.id === id));
+    if (!sameSet) return;
+    const prevAccounts = accounts;
+    const prevOrder = accountOrder;
+    const reordered = sortAccountsByOrder(accounts, orderedIds);
+    setData((prev) => ({ ...prev, accounts: reordered, accountOrder: orderedIds }));
+    try {
+      const { error: saveError } = await supabase.from('settings').upsert(
+        { user_id: user.id, key: ACCOUNT_ORDER_KEY, value: orderedIds },
+        { onConflict: 'user_id,key' }
+      );
+      if (saveError) throw saveError;
+      // 儀表板的帳戶來自 get_dashboard_data、不吃這份快取，要通知它重抓才會照新順序排
+      notifyDataChanged();
+    } catch (err) {
+      setData((prev) => ({ ...prev, accounts: prevAccounts, accountOrder: prevOrder }));
+      throw err;
+    }
+  }, [user, accounts, accountOrder, setData]);
+
   return {
     expenseCategories,
     incomeCategories,
@@ -176,5 +207,6 @@ export function useSettings() {
     reorderCategoriesTo,
     saveAccount,
     deleteAccount,
+    reorderAccountsTo,
   };
 }

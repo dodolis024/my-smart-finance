@@ -166,7 +166,7 @@ function AccountsPanel({ isOpen, confirm, toast }) {
   const { t } = useLanguage();
   const {
     accounts, loading, loadError,
-    loadSettingsData, saveAccount, deleteAccount,
+    loadSettingsData, saveAccount, deleteAccount, reorderAccountsTo,
   } = useSettings();
 
   useEffect(() => {
@@ -183,6 +183,7 @@ function AccountsPanel({ isOpen, confirm, toast }) {
             accounts={accounts}
             onSave={saveAccount}
             onDelete={deleteAccount}
+            onReorderTo={reorderAccountsTo}
             loading={loading}
             confirm={confirm}
             onError={(msg) => toast.error(msg)}

@@ -1,10 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd } from '@/lib/utils';
 import { getBillingCycleRange } from '@/lib/creditCard';
 import { getBalanceSettings } from '@/lib/accountBalance';
+import { ACCOUNT_ORDER_KEY, sortAccountsByOrder } from '@/lib/accountOrder';
 import {
   saveSnapshot,
   loadSnapshot,
@@ -38,7 +39,9 @@ export function useDashboard() {
   const [transactionHistoryFull, setTransactionHistoryFull] = useState([]);
   const [creditHistory, setCreditHistory] = useState([]);
   const [balanceHistory, setBalanceHistory] = useState([]);
-  const [accounts, setAccounts] = useState([]);
+  // RPC 一律按 created_at 回傳；使用者排好的順序存在 settings，於下方套用
+  const [accountsRaw, setAccounts] = useState([]);
+  const [accountOrder, setAccountOrder] = useState([]);
   const [categoriesExpense, setCategoriesExpense] = useState([]);
   const [categoriesIncome, setCategoriesIncome] = useState([]);
   const [currencies, setCurrencies] = useState(() => cachedCurrencies || ['TWD']);
@@ -71,7 +74,27 @@ export function useDashboard() {
     if (!cached) return;
     setCategoriesExpense(cached.expenseCategories || []);
     setCategoriesIncome(cached.incomeCategories || []);
+    if (Array.isArray(cached.accountOrder)) setAccountOrder(cached.accountOrder);
   }), [user?.id]);
+
+  // 支付工具的順序：上面的訂閱只在 useSettings 載入過（開過設定）之後才有值，
+  // 冷啟動時記帳表單的下拉會停在建立順序，所以這裡自己讀一次
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('user_id', user.id)
+      .eq('key', ACCOUNT_ORDER_KEY)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && Array.isArray(data?.value)) setAccountOrder(data.value);
+      });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  const accounts = useMemo(() => sortAccountsByOrder(accountsRaw, accountOrder), [accountsRaw, accountOrder]);
 
   // 注意：setSummary 不可放進 setTransactionHistoryFull 的 updater 內，
   // StrictMode 會將 updater 執行兩次，導致彙總被重複扣除

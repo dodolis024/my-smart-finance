@@ -52,6 +52,49 @@
   color: var(--color-text);
 }
 
+/* 拖曳排序（與類別排序同一套外觀）：把手擺在名稱左邊，只有把手能發動拖曳，
+   卡片其他地方照舊可點編輯／刪除 */
+.account-item__title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.account-item--overlay {
+  box-shadow: var(--shadow-focus);
+  border-color: var(--color-primary);
+  cursor: grabbing;
+}
+
+.account-item__drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  margin-right: 0.35rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: grab;
+  touch-action: none;
+  transition: var(--transition);
+}
+
+.account-item__drag-handle:hover:not(:disabled) {
+  background: var(--color-primary-tint-hover);
+  color: var(--color-primary);
+}
+
+.account-item__drag-handle:active {
+  cursor: grabbing;
+}
+
+.account-item__drag-handle:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .account-item__actions {
   display: flex;
   gap: 0.5rem;

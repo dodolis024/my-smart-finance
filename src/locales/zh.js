@@ -446,6 +446,7 @@ const zh = {
 
     account: {
       sectionTitle: '支付工具管理',
+      dragToReorder: '拖曳以調整順序',
       addBtn: '+ 新增',
       noAccounts: '尚無帳戶，請新增帳戶。',
       addTitle: '新增帳戶',
