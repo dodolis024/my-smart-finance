@@ -168,14 +168,19 @@ export function useDashboard() {
    * 餘額要從「使用者設定金額的那一刻」算到今天，可能跨好幾個月，
    * 儀表板手上只有正在看的那一個月，所以另外抓一段（比照 fetchCreditHistory）。
    * time 一起帶回來：同一天要分得出交易在設定之前還是之後。
+   *
+   * 吃單一帳戶或一組帳戶：支付方式分析要同時顯示每個帳戶的餘額，抓最早的那個設定
+   * 時間就一次涵蓋全部（查詢本來就沒有按帳戶過濾，餘額由 calculateAccountBalance
+   * 各自挑出自己的交易）。只抓其中一個帳戶的區間，設定時間更早的那個會少算。
    */
-  const fetchBalanceHistory = useCallback(async (account) => {
-    const settings = getBalanceSettings(account);
-    if (!settings) {
+  const fetchBalanceHistory = useCallback(async (accountOrAccounts) => {
+    const list = Array.isArray(accountOrAccounts) ? accountOrAccounts : [accountOrAccounts];
+    const asOfTimes = list.map(getBalanceSettings).filter(Boolean).map((s) => s.asOfTime);
+    if (asOfTimes.length === 0) {
       setBalanceHistory([]);
       return;
     }
-    const asOfDate = new Date(settings.asOf);
+    const asOfDate = new Date(Math.min(...asOfTimes));
     const pad = (n) => String(n).padStart(2, '0');
     const fromDate = `${asOfDate.getFullYear()}-${pad(asOfDate.getMonth() + 1)}-${pad(asOfDate.getDate())}`;
 

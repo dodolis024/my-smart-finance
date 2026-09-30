@@ -235,6 +235,7 @@ const zh = {
 
   accountBalance: {
     current: '目前餘額',
+    inline: '餘額 {amount}',
     setAmount: '設定時：',
     spent: '已花：',
     overdrawn: '已經超過設定的金額了，記得更新錢包裡的實際金額',

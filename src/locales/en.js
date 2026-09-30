@@ -232,6 +232,7 @@ const en = {
 
   accountBalance: {
     current: 'Current Balance',
+    inline: 'Balance {amount}',
     setAmount: 'Set to: ',
     spent: 'Spent: ',
     overdrawn: 'You have spent past the amount you set. Update it with what is actually in your wallet.',

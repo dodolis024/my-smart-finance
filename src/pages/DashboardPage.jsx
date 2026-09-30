@@ -41,6 +41,7 @@ import CreditCardModal from '@/components/common/CreditCardModal';
 import StreakBadge from '@/components/streak/StreakBadge';
 import StreakModal from '@/components/streak/StreakModal';
 import YearlyReviewBanner from '@/components/dashboard/YearlyReviewBanner';
+import { hasBalanceTracking } from '@/lib/accountBalance';
 
 // 交易紀錄每頁筆數：約 3 個手機螢幕，是可以一頁看完的單位
 const PAGE_SIZE = 50;
@@ -328,10 +329,19 @@ function DashboardContent() {
     fetchCreditHistory(account);
   }, [fetchCreditHistory, modals]);
 
+  // 餘額用的交易已由下方 effect 為所有帳戶抓好（支付方式分析要直接印餘額），這裡只開彈窗
   const handleOpenAccountBalance = useCallback((account, stat) => {
     modals.openAccountBalanceModal(account, stat?.txs || []);
-    fetchBalanceHistory(account);
-  }, [fetchBalanceHistory, modals]);
+  }, [modals]);
+
+  const balanceAccounts = useMemo(() => accounts.filter(hasBalanceTracking), [accounts]);
+
+  // 一次抓齊所有有設餘額的帳戶要用的交易。跟著 accounts 重抓：記一筆帳之後 RPC 會重抓
+  // 帳戶，餘額也就跟著更新
+  useEffect(() => {
+    if (balanceAccounts.length === 0) return;
+    fetchBalanceHistory(balanceAccounts);
+  }, [balanceAccounts, fetchBalanceHistory]);
 
   // 彈窗開著時存了新餘額，重抓後要吃到新的帳戶資料。
   // 彈窗自己存的是「點下去那一刻」的帳戶，會停在舊金額
@@ -346,8 +356,10 @@ function DashboardContent() {
   const handleUpdateBalance = useCallback(async (account, amount) => {
     await updateAccountBalance(account, amount);
     const updated = { ...account, balance_amount: amount, balance_as_of: new Date().toISOString() };
-    await Promise.all([refetchPeriod(), fetchBalanceHistory(updated)]);
-  }, [updateAccountBalance, refetchPeriod, fetchBalanceHistory]);
+    // 連同其他有設餘額的帳戶一起抓：只抓這一個會讓設定時間更早的帳戶少算一段
+    const others = balanceAccounts.filter((a) => a.id !== account.id);
+    await Promise.all([refetchPeriod(), fetchBalanceHistory([updated, ...others])]);
+  }, [updateAccountBalance, refetchPeriod, fetchBalanceHistory, balanceAccounts]);
 
   useEffect(() => {
     if (user) ensureDefaultDataForOAuth(user.id);
@@ -802,6 +814,7 @@ function DashboardContent() {
                 <PaymentStats
                   history={displayHistory}
                   accounts={accounts}
+                  balanceHistory={balanceHistory}
                   onOpenCreditCard={handleOpenCreditCard}
                   onOpenAccountBalance={handleOpenAccountBalance}
                   onSelectMethod={modals.openCategoryDetailModal}
