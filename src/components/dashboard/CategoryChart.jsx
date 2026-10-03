@@ -8,18 +8,18 @@ import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 
 ChartJS.register(ArcElement, Tooltip);
 
-export default function CategoryChart({ history = [], incomeCategories = [], onSelectCategory, periodName }) {
+export default function CategoryChart({ history = [], onSelectCategory, periodName }) {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const { toDisplay, formatTotal } = useDisplayAmount();
   const palette = getChartPalette(theme);
 
+  // 收入靠 tx.type 排除，不比對分類名稱（支出與收入可以有同名分類，例如預設兩邊都有「其他」）
   const pairs = useMemo(() => {
-    const incomeSet = new Set(incomeCategories);
     const byCat = {};
     (history || []).forEach((tx) => {
+      if (tx.type === 'income') return;
       const cat = (tx.category && String(tx.category).trim()) ? tx.category : t('transaction.uncategorized');
-      if (incomeSet.has(cat)) return;
       const amt = toDisplay(tx).value;
       if (!byCat[cat]) byCat[cat] = { value: 0, txs: [] };
       byCat[cat].value += amt;
@@ -28,7 +28,7 @@ export default function CategoryChart({ history = [], incomeCategories = [], onS
     return Object.entries(byCat)
       .map(([label, { value, txs }]) => ({ label, value, txs }))
       .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-  }, [history, incomeCategories, t, toDisplay]);
+  }, [history, t, toDisplay]);
 
   // 占比分母：與圓餅圖切片一致（都取絕對值）
   const totalExpense = useMemo(
@@ -43,8 +43,8 @@ export default function CategoryChart({ history = [], incomeCategories = [], onS
 
   // 與交易列表共用同一份對應，同一個分類在兩邊必定同色
   const colorMap = useMemo(
-    () => buildCategoryColorMap(history, incomeCategories, palette, t('transaction.uncategorized')),
-    [history, incomeCategories, palette, t]
+    () => buildCategoryColorMap(history, palette, t('transaction.uncategorized')),
+    [history, palette, t]
   );
 
   const chartData = useMemo(() => ({

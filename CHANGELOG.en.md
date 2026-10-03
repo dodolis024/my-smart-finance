@@ -7,6 +7,8 @@ This file records version updates for Smart Finance Tracker.
 - Improved the payment breakdown to keep listing an account that tracks a balance in a month with no transactions
 - Fixed the edit and delete buttons hidden under a transaction card flashing into view while scrolling the mobile list quickly
 - Fixed freeze cards not being granted the moment a logging streak reached the threshold
+- Fixed expenses missing from the category chart when their category name is also used by income, such as Other in both default sets
+- Fixed the chart's percentages being inflated by leaving those expenses out of the total
 
 ## [1.32.1] - Sep-22 2026
 - Added per-expense sync checkboxes in the split sync details; an unchecked expense is removed from your ledger right away and stays out on later syncs

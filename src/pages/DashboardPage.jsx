@@ -605,8 +605,8 @@ function DashboardContent() {
   // 交易列表的分類色點與每日佔比帶，跟旁邊的圓餅圖共用同一份顏色對應。
   // 一定要用未篩選的期間資料算：拿篩選後的資料會改變分類排名，顏色就跟圓餅圖對不起來。
   const categoryColors = useMemo(
-    () => buildCategoryColorMap(displayHistory, categoriesIncome, getChartPalette(theme), t('transaction.uncategorized')),
-    [displayHistory, categoriesIncome, theme, t]
+    () => buildCategoryColorMap(displayHistory, getChartPalette(theme), t('transaction.uncategorized')),
+    [displayHistory, theme, t]
   );
 
   const periodFileLabel = getPeriodFileLabel(period);
@@ -800,7 +800,6 @@ function DashboardContent() {
               ) : (
                 <CategoryChart
                   history={displayHistory}
-                  incomeCategories={categoriesIncome}
                   onSelectCategory={modals.openCategoryDetailModal}
                   periodName={periodName}
                 />

@@ -29,19 +29,20 @@ export function getChartPalette(theme) {
  * 因此這份 map 一定要用「未篩選的期間資料」算——拿篩選後的資料算會改變排名，
  * 列表的顏色就會跟旁邊的圓餅圖對不起來。
  *
+ * 收入靠 tx.type 排除，不比對分類名稱——支出與收入可以有同名分類（預設兩邊都有「其他」），
+ * 比名稱會把該名稱的支出一起濾掉。
+ *
  * @param {Array} history 期間內的完整交易
- * @param {string[]} incomeCategories 收入分類（不進圓餅圖，也就沒有顏色）
  * @param {string[]} palette 見 getChartPalette
  * @param {string} uncategorizedLabel 未分類的顯示名稱
  * @returns {Map<string, string>}
  */
-export function buildCategoryColorMap(history, incomeCategories, palette, uncategorizedLabel) {
-  const incomeSet = new Set(incomeCategories || []);
+export function buildCategoryColorMap(history, palette, uncategorizedLabel) {
   const byCategory = new Map();
 
   for (const tx of history || []) {
+    if (tx.type === 'income') continue;
     const cat = (tx.category && String(tx.category).trim()) ? tx.category : uncategorizedLabel;
-    if (incomeSet.has(cat)) continue;
     const amount = typeof tx.twdAmount === 'number' ? tx.twdAmount : 0;
     byCategory.set(cat, (byCategory.get(cat) || 0) + amount);
   }
