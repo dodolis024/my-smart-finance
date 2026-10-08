@@ -17,23 +17,26 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
     userId: user?.id,
     initial: INITIAL,
     fetcher: async () => {
-      const { data: expenseRows, error } = await supabase
-        .from('split_expenses')
-        .select(`
-          *,
-          split_expense_shares ( id, member_id, share )
-        `)
-        .eq('group_id', groupId)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
+      // 費用與還款紀錄互不相依，一起發出去省一趟往返
+      const [{ data: expenseRows, error }, setRes] = await Promise.all([
+        supabase
+          .from('split_expenses')
+          .select(`
+            *,
+            split_expense_shares ( id, member_id, share )
+          `)
+          .eq('group_id', groupId)
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false }),
+        // 還款紀錄獨立查詢，表不存在時不影響費用載入（沿用現值）
+        supabase
+          .from('split_settlements')
+          .select('*')
+          .eq('group_id', groupId)
+          .order('created_at', { ascending: false }),
+      ]);
       if (error) throw error;
 
-      // 還款紀錄獨立查詢，表不存在時不影響費用載入（沿用現值）
-      const setRes = await supabase
-        .from('split_settlements')
-        .select('*')
-        .eq('group_id', groupId)
-        .order('created_at', { ascending: false });
       return {
         expenses: expenseRows || [],
         settlements: setRes.error ? data.settlements : (setRes.data || []),
@@ -61,10 +64,9 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
     });
     if (error) throw error;
 
-    await fetchExpenses();
-
     // 若新增的費用日期是今天，且用戶是已連結成員，則同步簽到記錄
-    if (actorUserId && date === getTodayYmd()) {
+    const checkinAndReconcile = async () => {
+      if (!actorUserId || date !== getTodayYmd()) return;
       const { error: checkinError } = await supabase.from('checkins').upsert(
         { user_id: actorUserId, date, source: 'onTimeTransaction' },
         { onConflict: 'user_id,date' }
@@ -77,7 +79,10 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
         });
         if (reconcileError) console.error('[useSplitExpenses] reconcile streak freezes failed:', reconcileError);
       }
-    }
+    };
+
+    // 重抓清單與簽到互不相依，同時進行；兩邊都完成才回傳，不留任何事在背景
+    await Promise.all([fetchExpenses(), checkinAndReconcile()]);
 
     notifySplit({
       event: 'expense_added',
