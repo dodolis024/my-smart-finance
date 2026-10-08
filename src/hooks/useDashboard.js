@@ -233,76 +233,85 @@ export function useDashboard() {
   }, []);
 
   const fetchCurrencies = useCallback(async () => {
-    // 幣別清單：以快取即時顯示，同時每次載入都向後端要最新清單（stale-while-revalidate）。
-    // 舊版「有快取就整段跳過」會讓 exchange_rates 之後新增的幣別永遠到不了已載入過的裝置；
-    // 改為背景刷新後，新幣別能擴散到所有裝置，離線/首屏仍以快取（或預設 TWD）顯示。
-    try {
-      const { data: codes, error } = await supabase.rpc('get_available_currencies');
-      const list = Array.isArray(codes) ? codes : codes ? [codes] : [];
-      if (!error && list.length > 0) {
-        const PREFERRED_ORDER = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP', 'HKD'];
-        const upper = list.map((c) => String(c).toUpperCase());
-        upper.sort((a, b) => {
-          const ai = PREFERRED_ORDER.indexOf(a);
-          const bi = PREFERRED_ORDER.indexOf(b);
-          if (ai !== -1 && bi !== -1) return ai - bi;
-          if (ai !== -1) return -1;
-          if (bi !== -1) return 1;
-          return a.localeCompare(b);
-        });
-        if (!upper.includes('TWD')) upper.unshift('TWD');
-        // 僅在清單實際有變動時才更新，避免無謂的重繪與 localStorage 寫入
-        const changed =
-          !cachedCurrencies ||
-          cachedCurrencies.length !== upper.length ||
-          upper.some((c, i) => c !== cachedCurrencies[i]);
-        if (changed) {
-          cachedCurrencies = upper;
-          setCurrencies(upper);
-          saveCurrencies(upper);
-        }
-      }
-    } catch {
-      // 離線或查詢失敗：保留快取（首屏已以 cachedCurrencies 或預設 TWD 顯示）
-    }
-
-    // 預熱匯率快取(離線記帳時換算 TWD 用;exchange_rates 有 authenticated SELECT RLS)
-    if (!ratesPrimed && user) {
-      ratesPrimed = true;
+    // 以下三件事互不相依，一起發出去省兩趟往返；各自吞掉自己的錯誤，Promise.all 不會被拒絕
+    const loadCurrencyList = async () => {
+      // 幣別清單：以快取即時顯示，同時每次載入都向後端要最新清單（stale-while-revalidate）。
+      // 舊版「有快取就整段跳過」會讓 exchange_rates 之後新增的幣別永遠到不了已載入過的裝置；
+      // 改為背景刷新後，新幣別能擴散到所有裝置，離線/首屏仍以快取（或預設 TWD）顯示。
       try {
-        const { data: rateRows } = await supabase
-          .from('exchange_rates')
-          .select('currency_code, rate');
-        if (Array.isArray(rateRows) && rateRows.length > 0) {
-          saveRates(
-            Object.fromEntries(
-              rateRows.map((r) => [String(r.currency_code).toUpperCase(), Number(r.rate)])
-            )
-          );
+        const { data: codes, error } = await supabase.rpc('get_available_currencies');
+        const list = Array.isArray(codes) ? codes : codes ? [codes] : [];
+        if (!error && list.length > 0) {
+          const PREFERRED_ORDER = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP', 'HKD'];
+          const upper = list.map((c) => String(c).toUpperCase());
+          upper.sort((a, b) => {
+            const ai = PREFERRED_ORDER.indexOf(a);
+            const bi = PREFERRED_ORDER.indexOf(b);
+            if (ai !== -1 && bi !== -1) return ai - bi;
+            if (ai !== -1) return -1;
+            if (bi !== -1) return 1;
+            return a.localeCompare(b);
+          });
+          if (!upper.includes('TWD')) upper.unshift('TWD');
+          // 僅在清單實際有變動時才更新，避免無謂的重繪與 localStorage 寫入
+          const changed =
+            !cachedCurrencies ||
+            cachedCurrencies.length !== upper.length ||
+            upper.some((c, i) => c !== cachedCurrencies[i]);
+          if (changed) {
+            cachedCurrencies = upper;
+            setCurrencies(upper);
+            saveCurrencies(upper);
+          }
         }
       } catch {
-        // 離線或查詢失敗:保留上次存的匯率
+        // 離線或查詢失敗：保留快取（首屏已以 cachedCurrencies 或預設 TWD 顯示）
       }
-    }
+    };
 
-    // 載入使用者的預設幣別（帳號切換時重新載入）
-    if (user && (cachedDefaultCurrency === null || cachedDefaultCurrencyUserId !== user.id)) {
-      try {
-        const { data } = await supabase
-          .from('settings')
-          .select('value')
-          .eq('user_id', user.id)
-          .eq('key', 'default_currency')
-          .maybeSingle();
-        const code = data?.value ? String(data.value).toUpperCase() : 'TWD';
-        cachedDefaultCurrency = code;
-        cachedDefaultCurrencyUserId = user.id;
-        setDefaultCurrency(code);
-        notifyDefaultCurrency();
-      } catch {
-        // Keep default 'TWD'
+    const primeRates = async () => {
+      // 預熱匯率快取(離線記帳時換算 TWD 用;exchange_rates 有 authenticated SELECT RLS)
+      if (!ratesPrimed && user) {
+        ratesPrimed = true;
+        try {
+          const { data: rateRows } = await supabase
+            .from('exchange_rates')
+            .select('currency_code, rate');
+          if (Array.isArray(rateRows) && rateRows.length > 0) {
+            saveRates(
+              Object.fromEntries(
+                rateRows.map((r) => [String(r.currency_code).toUpperCase(), Number(r.rate)])
+              )
+            );
+          }
+        } catch {
+          // 離線或查詢失敗:保留上次存的匯率
+        }
       }
-    }
+    };
+
+    const loadDefaultCurrency = async () => {
+      // 載入使用者的預設幣別（帳號切換時重新載入）
+      if (user && (cachedDefaultCurrency === null || cachedDefaultCurrencyUserId !== user.id)) {
+        try {
+          const { data } = await supabase
+            .from('settings')
+            .select('value')
+            .eq('user_id', user.id)
+            .eq('key', 'default_currency')
+            .maybeSingle();
+          const code = data?.value ? String(data.value).toUpperCase() : 'TWD';
+          cachedDefaultCurrency = code;
+          cachedDefaultCurrencyUserId = user.id;
+          setDefaultCurrency(code);
+          notifyDefaultCurrency();
+        } catch {
+          // Keep default 'TWD'
+        }
+      }
+    };
+
+    await Promise.all([loadCurrencyList(), primeRates(), loadDefaultCurrency()]);
   }, [user]);
 
   const saveDefaultCurrency = useCallback(async (code) => {
