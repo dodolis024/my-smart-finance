@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Fixed a transaction occasionally being recorded twice when the connection dropped while saving
+
 ## [1.32.2] - Oct-03 2026
 - Added the current balance beside each payment method in the breakdown, so a tracked account no longer needs opening
 - Added drag-to-reorder to payment method management, which the payment menu in the transaction form follows

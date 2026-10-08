@@ -64,6 +64,10 @@ export function useTransactions() {
 
     const normalizedCurrency = currency.trim().toUpperCase();
 
+    // 新增交易的 id 在送出前產生,線上 insert 與離線入列共用同一個:insert 其實已寫入、
+    // 但回應在路上掉包時會轉入離線佇列,補送要能撞上 23505 才會被認定為已同步而非記成第二筆
+    const newTxId = editId ? null : crypto.randomUUID();
+
     // 離線入列(僅新增):以本地快取解析匯率與帳戶,組出完整 insert payload 暫存,
     // 恢復連線後由 offlineQueue 補送;客戶端自帶 UUID 確保重試不會重複記帳
     const queueOffline = (resolvedRate = null) => {
@@ -88,7 +92,7 @@ export function useTransactions() {
       const queued = enqueueTransaction(
         user.id,
         {
-          id: crypto.randomUUID(),
+          id: newTxId,
           user_id: user.id,
           date,
           time: time || getNowHm(),
@@ -201,7 +205,7 @@ export function useTransactions() {
         throw error;
       }
     } else {
-      const { error } = await supabase.from('transactions').insert(transactionData);
+      const { error } = await supabase.from('transactions').insert({ id: newTxId, ...transactionData });
       if (error) {
         // 送出瞬間斷網:沿用已解析好的匯率轉入離線佇列
         if (isOfflineError(error)) return queueOffline(exchangeRate);
