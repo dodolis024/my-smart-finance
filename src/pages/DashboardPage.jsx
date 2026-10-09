@@ -529,15 +529,19 @@ function DashboardContent() {
     async (id) => {
       const confirmed = await confirm(t('dashboard.deleteTransactionConfirm'), { danger: true });
       if (!confirmed) return false;
-      // 未同步的離線交易:直接從本地佇列移除,不打伺服器
-      if (queuedItems.some((item) => item.id === id)) {
-        removeQueuedItem(id);
-        toast.success(t('dashboard.transactionDeleted'));
-        return true;
-      }
       // 找到要刪除的交易，記錄其付款帳戶（刪除後無法再查）
       // （history 與 accounts 皆來自 RPC，欄位為駝峰 paymentMethod / accountName）
       const txToDelete = displayHistory.find((tx) => tx.id === id);
+      if (queuedItems.some((item) => item.id === id)) {
+        // 先從佇列移除，免得伺服器那筆刪掉後又被補送寫回去
+        removeQueuedItem(id);
+        // 未同步的離線交易:只在本地佇列,不打伺服器
+        if (txToDelete?.pending) {
+          toast.success(t('dashboard.transactionDeleted'));
+          return true;
+        }
+        // 回應掉包的那筆：伺服器其實已寫入，點到的是伺服器那筆（列表或搜尋結果），照一般流程刪
+      }
       const relatedAccount = txToDelete
         ? accounts.find((a) => (a.accountName || a.name) === txToDelete.paymentMethod)
         : null;

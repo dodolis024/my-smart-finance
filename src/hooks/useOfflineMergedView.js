@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
-import { buildQueuedRows, mergeQueuedIntoHistory, mergeQueuedIntoSummary } from '@/lib/offlineMerge';
+import { buildQueuedRows, dropSyncedRows, mergeQueuedIntoHistory, mergeQueuedIntoSummary } from '@/lib/offlineMerge';
 
 /**
  * 離線佇列 → 儀表板畫面的合併層：
@@ -28,8 +28,8 @@ export function useOfflineMergedView({ history, summary, startDate, endDate, onS
   });
 
   const queuedRows = useMemo(
-    () => buildQueuedRows(queuedItems, startDate, endDate),
-    [queuedItems, startDate, endDate]
+    () => dropSyncedRows(buildQueuedRows(queuedItems, startDate, endDate), history),
+    [queuedItems, startDate, endDate, history]
   );
   const displayHistory = useMemo(
     () => mergeQueuedIntoHistory(history, queuedRows),

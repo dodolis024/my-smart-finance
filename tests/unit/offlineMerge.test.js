@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildQueuedRows, mergeQueuedIntoHistory, mergeQueuedIntoSummary } from '@/lib/offlineMerge';
+import { buildQueuedRows, dropSyncedRows, mergeQueuedIntoHistory, mergeQueuedIntoSummary } from '@/lib/offlineMerge';
 
 const makeItem = (over = {}) => ({
   id: over.id ?? 'q1',
@@ -85,6 +85,35 @@ describe('buildQueuedRows', () => {
 
   it('tx 缺 date 時不進列表也不崩潰', () => {
     expect(buildQueuedRows([{ id: 'x', status: 'pending', tx: {} }], '2026-07-01', '2026-07-31')).toEqual([]);
+  });
+});
+
+describe('dropSyncedRows', () => {
+  it('無佇列列時回傳原陣列', () => {
+    const queued = [];
+    expect(dropSyncedRows(queued, [{ id: 't1' }])).toBe(queued);
+  });
+
+  it('伺服器沒有的佇列列原樣保留（同一參考）', () => {
+    const queued = [{ id: 'q1' }, { id: 'q2' }];
+    expect(dropSyncedRows(queued, [{ id: 't1' }])).toBe(queued);
+  });
+
+  // 線上寫入成功但回應掉包：同一 id 同時在伺服器與佇列，畫面只留伺服器那筆
+  it('濾掉伺服器已有的同 id 佇列列，列表與彙總都不重複', () => {
+    const history = [{ id: 'same', date: '2026-07-08', type: 'expense', twdAmount: 120 }];
+    const summary = { totalIncome: 0, totalExpense: 120, balance: -120 };
+    const queued = buildQueuedRows(
+      [makeItem({ id: 'same' }), makeItem({ id: 'q2', tx: { twd_amount: 50, amount: 50 } })],
+      '2026-07-01',
+      '2026-07-31'
+    );
+    const rest = dropSyncedRows(queued, history);
+    expect(rest.map((r) => r.id)).toEqual(['q2']);
+    const merged = mergeQueuedIntoHistory(history, rest);
+    expect(merged.filter((r) => r.id === 'same')).toEqual([history[0]]);
+    expect(merged).toHaveLength(2);
+    expect(mergeQueuedIntoSummary(summary, rest).totalExpense).toBe(170);
   });
 });
 

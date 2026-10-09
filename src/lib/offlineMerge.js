@@ -39,6 +39,18 @@ export function buildQueuedRows(queuedItems, startDate, endDate) {
 }
 
 /**
+ * 濾掉伺服器資料裡已經有的佇列列（同一 id）。
+ * 線上寫入其實成功、只是回應掉包時，同一筆會同時在伺服器與佇列；
+ * 佇列項目要留到補送撞上 23505 時才清（補簽到在那裡），畫面上則只顯示伺服器那筆。
+ */
+export function dropSyncedRows(queuedRows, history) {
+  if (queuedRows.length === 0) return queuedRows;
+  const serverIds = new Set(history.map((tx) => tx.id));
+  const rest = queuedRows.filter((row) => !serverIds.has(row.id));
+  return rest.length === queuedRows.length ? queuedRows : rest;
+}
+
+/**
  * 佇列交易併入交易列表，依日期＋時間新→舊排序（與 get_dashboard_data 的排序邏輯一致）。
  */
 export function mergeQueuedIntoHistory(history, queuedRows) {
