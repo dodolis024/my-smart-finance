@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
-import { hasBalanceTracking, calculateAccountBalance } from '@/lib/accountBalance';
-import { formatMoney } from '@/lib/utils';
+import { useRateTables } from '@/hooks/useDisplayRates';
+import { hasBalanceTracking, calculateAccountBalance, getBalanceCurrency, formatBalanceMoney } from '@/lib/accountBalance';
 
 const accountLabel = (account) => account.name || account.accountName;
 
@@ -29,15 +29,17 @@ export default function PaymentStats({ history = [], accounts = [], balanceHisto
       .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
   }, [history, accounts, t, toDisplay]);
 
-  // 餘額一律以台幣呈現（與餘額彈窗一致，那裡的紀錄也鎖台幣），不跟著顯示幣別換算
+  // 餘額以帳戶自己的幣別呈現（與餘額彈窗一致），不跟著顯示幣別換算
+  const balanceAccounts = useMemo(() => accounts.filter(hasBalanceTracking), [accounts]);
+  const rateTables = useRateTables(balanceAccounts.map(getBalanceCurrency));
   const balances = useMemo(() => {
     const map = new Map();
-    accounts.filter(hasBalanceTracking).forEach((account) => {
-      const data = calculateAccountBalance(account, balanceHistory);
+    balanceAccounts.forEach((account) => {
+      const data = calculateAccountBalance(account, balanceHistory, rateTables[getBalanceCurrency(account)]);
       if (data) map.set(accountLabel(account), data);
     });
     return map;
-  }, [accounts, balanceHistory]);
+  }, [balanceAccounts, balanceHistory, rateTables]);
 
   // 占比分母：本期各支付方式的絕對值總和（這份統計含收入，故不叫支出）
   const totalPayment = useMemo(
@@ -74,9 +76,10 @@ export default function PaymentStats({ history = [], accounts = [], balanceHisto
             onKeyDown={select ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); } } : undefined}
           >
             <span className="pay-name">{p.label}</span>
-            {balance && (
+            {/* 匯率還沒載入時先不印：拿不到換算就不顯示，不拿台幣數字冒充 */}
+            {balance && !balance.ratesPending && (
               <span className={`pay-balance${balance.isOverdrawn ? ' pay-balance--overdrawn' : ''}`}>
-                {t('accountBalance.inline', { amount: formatMoney(balance.balance) })}
+                {t('accountBalance.inline', { amount: formatBalanceMoney(balance.balance, balance.currency) })}
               </span>
             )}
             <span className="pay-amount">{formatTotal(p.value)}</span>

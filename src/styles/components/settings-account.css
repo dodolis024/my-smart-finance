@@ -184,6 +184,17 @@
   box-shadow: var(--shadow-focus);
 }
 
+/* 餘額金額與幣別同一列：金額撐滿，幣別只佔放得下三碼代號的寬度 */
+.account-form__balance-row {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.account-form .form-group .account-form__balance-currency {
+  width: auto;
+  flex-shrink: 0;
+}
+
 .account-form__hint {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;

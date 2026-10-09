@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateAccountBalance,
   getBalanceSettings,
+  getBalanceCurrency,
   hasBalanceTracking,
+  formatBalanceMoney,
 } from '@/lib/accountBalance';
 
 /**
@@ -146,5 +148,90 @@ describe('calculateAccountBalance', () => {
       { type: 'expense', paymentMethod: '現金', date: '2026-09-07', twdAmount: 100 },
     ]);
     expect(result.spent).toBe(100);
+  });
+});
+
+describe('餘額的幣別', () => {
+  // 英鎊錢包：設定 100 鎊。匯率語意同全站：1 英鎊 = 多少台幣
+  const gbpWallet = { ...cashAccount, balance_amount: 100, balance_currency: 'GBP' };
+  const gbpRates = { history: [['2026-09-01', 40], ['2026-09-07', 41]], live: 42 };
+
+  it('沒有幣別欄位的舊帳戶當台幣，駝峰與蛇形都吃得到', () => {
+    expect(getBalanceCurrency(cashAccount)).toBe('TWD');
+    expect(getBalanceCurrency({ balance_currency: null })).toBe('TWD');
+    expect(getBalanceCurrency({ balanceCurrency: 'gbp' })).toBe('GBP');
+    expect(calculateAccountBalance(cashAccount, []).currency).toBe('TWD');
+  });
+
+  it('英鎊錢包付英鎊的帳：扣英鎊，不是扣換算後的台幣', () => {
+    // 花 5 鎊，記帳當時匯率 41 → twd_amount 205；舊版會從 100 扣掉 205
+    const result = calculateAccountBalance(gbpWallet, [
+      tx({ id: 1, date: '2026-09-07', currency: 'GBP', originalAmount: 5, exchangeRate: 41, twdAmount: 205 }),
+    ], gbpRates);
+    expect(result.currency).toBe('GBP');
+    expect(result.spent).toBeCloseTo(5);
+    expect(result.balance).toBeCloseTo(95);
+  });
+
+  it('英鎊錢包只有英鎊交易時，匯率表還沒載入也算得出來（只用交易自己凍結的匯率）', () => {
+    const result = calculateAccountBalance(gbpWallet, [
+      tx({ id: 1, date: '2026-09-07', currency: 'GBP', originalAmount: 5, exchangeRate: 41, twdAmount: 205 }),
+    ], null);
+    expect(result.ratesPending).toBe(false);
+    expect(result.balance).toBeCloseTo(95);
+  });
+
+  it('英鎊錢包付台幣的帳：依交易當天的匯率換成英鎊', () => {
+    const result = calculateAccountBalance(gbpWallet, [
+      // 9/7 的匯率是 41：410 台幣 = 10 鎊
+      tx({ id: 1, date: '2026-09-07', currency: 'TWD', originalAmount: 410, exchangeRate: 1, twdAmount: 410 }),
+    ], gbpRates);
+    expect(result.spent).toBeCloseTo(10);
+    expect(result.balance).toBeCloseTo(90);
+  });
+
+  it('英鎊錢包付日圓的帳：經由台幣換成英鎊', () => {
+    const result = calculateAccountBalance(gbpWallet, [
+      tx({ id: 1, date: '2026-09-07', currency: 'JPY', originalAmount: 2000, exchangeRate: 0.205, twdAmount: 410 }),
+    ], gbpRates);
+    expect(result.spent).toBeCloseTo(10);
+  });
+
+  it('台幣錢包付英鎊的帳：扣這筆換算好的台幣（記帳當時凍結的匯率）', () => {
+    const result = calculateAccountBalance(cashAccount, [
+      tx({ id: 1, date: '2026-09-07', currency: 'GBP', originalAmount: 5, exchangeRate: 41, twdAmount: 205 }),
+    ]);
+    expect(result.currency).toBe('TWD');
+    expect(result.spent).toBe(205);
+    expect(result.balance).toBe(4795);
+  });
+
+  it('收入也換成帳戶幣別往上加', () => {
+    const result = calculateAccountBalance(gbpWallet, [
+      tx({ id: 1, date: '2026-09-07', type: 'income', currency: 'TWD', originalAmount: 820, exchangeRate: 1, twdAmount: 820 }),
+    ], gbpRates);
+    expect(result.received).toBeCloseTo(20);
+    expect(result.balance).toBeCloseTo(120);
+  });
+
+  it('需要換算卻沒有匯率：不顯示數字（ratesPending），絕不拿台幣冒充', () => {
+    const result = calculateAccountBalance(gbpWallet, [
+      tx({ id: 1, date: '2026-09-07', currency: 'TWD', originalAmount: 410, exchangeRate: 1, twdAmount: 410 }),
+    ], null);
+    expect(result.ratesPending).toBe(true);
+    expect(result.balance).toBeNull();
+  });
+
+  it('設定時間之前的跨幣別交易不需要匯率，也不會卡住', () => {
+    const result = calculateAccountBalance(gbpWallet, [
+      tx({ id: 1, date: '2026-08-01', currency: 'TWD', originalAmount: 410, exchangeRate: 1, twdAmount: 410 }),
+    ], null);
+    expect(result.ratesPending).toBe(false);
+    expect(result.balance).toBe(100);
+  });
+
+  it('金額格式：台幣維持整數，其他幣別用該幣別的符號與小數位', () => {
+    expect(formatBalanceMoney(4795, 'TWD')).toBe(formatBalanceMoney(4795));
+    expect(formatBalanceMoney(95, 'GBP')).toMatch(/£\s?95\.00/);
   });
 });

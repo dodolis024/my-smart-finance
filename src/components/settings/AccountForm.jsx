@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { OVERSEAS_FEE_ACCOUNT_TYPES } from '@/lib/overseasFee';
+import { getBalanceCurrency } from '@/lib/accountBalance';
 
 const ACCOUNT_TYPE_KEYS = ['cash', 'credit_card', 'debit_card', 'digital_wallet', 'bank'];
-const EMPTY_FORM = { name: '', type: '', creditLimit: '', billingDay: '', paymentDueDay: '', balanceAmount: '', overseasFeeRate: '', overseasAutoCheck: true, error: '' };
+const EMPTY_FORM = { name: '', type: '', creditLimit: '', billingDay: '', paymentDueDay: '', balanceAmount: '', balanceCurrency: 'TWD', overseasFeeRate: '', overseasAutoCheck: true, error: '' };
 
-export default function AccountForm({ account, onSave, onCancel, loading }) {
+export default function AccountForm({ account, onSave, onCancel, loading, currencies = ['TWD'], defaultCurrency = 'TWD' }) {
   const { t } = useLanguage();
   const [form, setForm] = useState(EMPTY_FORM);
 
@@ -18,13 +19,16 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
         billingDay: account.billing_day != null ? String(account.billing_day) : '',
         paymentDueDay: account.payment_due_day != null ? String(account.payment_due_day) : '',
         balanceAmount: account.balance_amount != null ? String(account.balance_amount) : '',
+        // 舊帳戶沒有幣別欄位：餘額一直是當台幣在扣，照實顯示台幣
+        balanceCurrency: getBalanceCurrency(account),
         overseasFeeRate: account.overseas_fee_rate != null ? String(Number(account.overseas_fee_rate)) : '',
         overseasAutoCheck: account.overseas_fee_auto_check !== false,
       });
     } else {
-      setForm(EMPTY_FORM);
+      // 新帳戶的餘額幣別預設跟記帳的預設幣別走（人在英國，錢包多半也是英鎊）
+      setForm({ ...EMPTY_FORM, balanceCurrency: defaultCurrency });
     }
-  }, [account]);
+  }, [account]); // eslint-disable-line react-hooks/exhaustive-deps -- 只在切換編輯對象時重設，預設幣別較晚載入不該清掉已填的內容
 
   const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
   const setChecked = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.checked }));
@@ -46,10 +50,13 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
     const balanceAmount = form.type !== 'credit_card' && form.balanceAmount !== ''
       ? parseFloat(form.balanceAmount)
       : null;
+    const balanceCurrency = balanceAmount == null ? null : form.balanceCurrency;
     const prevAmount = account?.balance_amount != null ? parseFloat(account.balance_amount) : null;
     // 金額沒動就保留原本的設定時間；改過（或第一次設）才蓋上現在這一刻。
     // 蓋錯的話餘額會從錯的時間點開始重算，等於把已經扣過的帳再扣一次。
-    const balanceChanged = balanceAmount !== prevAmount;
+    // 換幣別也算改過：100 台幣改成 100 英鎊是另一筆錢，要從現在重新數起
+    const balanceChanged = balanceAmount !== prevAmount
+      || (account != null && balanceCurrency !== getBalanceCurrency(account));
     const payload = {
       name: form.name.trim(),
       type: form.type,
@@ -57,6 +64,8 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
       billing_day: form.billingDay ? parseInt(form.billingDay, 10) : null,
       payment_due_day: form.paymentDueDay ? parseInt(form.paymentDueDay, 10) : null,
       balance_amount: balanceAmount,
+      // 台幣存 NULL，與既有帳戶一致（NULL＝台幣）
+      balance_currency: balanceCurrency && balanceCurrency !== 'TWD' ? balanceCurrency : null,
       balance_as_of: balanceAmount == null
         ? null
         : balanceChanged
@@ -88,8 +97,21 @@ export default function AccountForm({ account, onSave, onCancel, loading }) {
         </div>
         {form.type && form.type !== 'credit_card' && (
           <div className="form-group">
-            <label className="form-group__label">{t('settings.account.balanceLabel')}</label>
-            <input className="form-group__input" type="number" step="0.01" value={form.balanceAmount} onChange={set('balanceAmount')} disabled={loading} />
+            <label className="form-group__label" htmlFor="account-balance-amount">{t('settings.account.balanceLabel')}</label>
+            <div className="account-form__balance-row">
+              <input id="account-balance-amount" className="form-group__input" type="number" step="0.01" value={form.balanceAmount} onChange={set('balanceAmount')} disabled={loading} />
+              <select
+                className="form-group__input account-form__balance-currency"
+                aria-label={t('settings.account.balanceCurrencyLabel')}
+                value={form.balanceCurrency}
+                onChange={set('balanceCurrency')}
+                disabled={loading}
+              >
+                {(currencies.includes(form.balanceCurrency) ? currencies : [form.balanceCurrency, ...currencies]).map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
             <p className="account-form__hint">{t('settings.account.balanceHint')}</p>
           </div>
         )}

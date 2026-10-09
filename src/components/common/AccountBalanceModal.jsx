@@ -1,10 +1,13 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import Modal from './Modal';
 import TransactionListPanel from '@/components/transactions/TransactionListPanel';
-import { DisplayAmountTwdScope } from '@/contexts/DisplayAmountContext';
+import { DisplayAmountCurrencyScope } from '@/contexts/DisplayAmountContext';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
-import { formatMoney } from '@/lib/utils';
-import { calculateAccountBalance, getBalanceSettings } from '@/lib/accountBalance';
+import { useRateTables } from '@/hooks/useDisplayRates';
+import { buildDisplayAmount } from '@/lib/displayCurrency';
+import {
+  calculateAccountBalance, getBalanceSettings, getBalanceCurrency, formatBalanceMoney,
+} from '@/lib/accountBalance';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
@@ -45,11 +48,18 @@ export default function AccountBalanceModal({
     : (viewedYear != null && viewedYear !== now.getFullYear()) ||
       (viewedMonth != null && viewedMonth !== now.getMonth() + 1);
 
-  const data = useMemo(() => calculateAccountBalance(account, history), [account, history]);
+  // 金額一律是帳戶自己的幣別：餘額、設定金額、已花費、下方紀錄與合計都一樣
+  const currency = getBalanceCurrency(account);
+  const rateTables = useRateTables([currency]);
+  const rateTable = rateTables[currency] || null;
+  const data = useMemo(() => calculateAccountBalance(account, history, rateTable), [account, history, rateTable]);
   const settings = useMemo(() => getBalanceSettings(account), [account]);
+  const money = (value) => formatBalanceMoney(value, currency);
 
   const rows = txs || [];
-  const rowsTotal = rows.reduce((sum, tx) => sum + (typeof tx.twdAmount === 'number' ? tx.twdAmount : 0), 0);
+  // 與下方清單同一套換算（匯率未到時清單暫以台幣顯示，合計也跟著用台幣，兩邊不會對不上）
+  const rowsDisplay = useMemo(() => buildDisplayAmount({ currency }, rateTable), [currency, rateTable]);
+  const rowsTotal = rows.reduce((sum, tx) => sum + rowsDisplay.toDisplay(tx).value, 0);
 
   if (!account) return null;
   const accountName = account.name || account.accountName || '';
@@ -77,7 +87,11 @@ export default function AccountBalanceModal({
     : '';
 
   const startEditing = () => {
-    setDraft(data ? String(data.balance) : '');
+    // 預填目前餘額；非台幣先進位到分，免得換算出來的長小數直接塞進輸入框
+    const current = data?.balance != null
+      ? (currency === 'TWD' ? data.balance : Math.round(data.balance * 100) / 100)
+      : null;
+    setDraft(current != null ? String(current) : '');
     setSaveError('');
     setEditing(true);
   };
@@ -118,11 +132,13 @@ export default function AccountBalanceModal({
           <div className="balance-header">
             <span className="balance-label">{t('accountBalance.current')}</span>
             <span className={`balance-amount${data?.isOverdrawn ? ' balance-amount--overdrawn' : ''}`}>
-              {data ? formatMoney(data.balance) : t('accountBalance.notTracked')}
+              {!data
+                ? t('accountBalance.notTracked')
+                : data.ratesPending ? t('common.loadingDots') : money(data.balance)}
             </span>
           </div>
 
-          {data && (
+          {data && !data.ratesPending && (
             <>
               <div className="balance-progress-row">
                 <div className="balance-progress">
@@ -131,8 +147,8 @@ export default function AccountBalanceModal({
                 <span className="balance-percent" style={{ color: barColor }}>{percentText}</span>
               </div>
               <div className="balance-detail">
-                <span>{t('accountBalance.setAmount')}{formatMoney(data.initial)}</span>
-                <span>{t('accountBalance.spent')}{formatMoney(data.spent)}</span>
+                <span>{t('accountBalance.setAmount')}{money(data.initial)}</span>
+                <span>{t('accountBalance.spent')}{money(data.spent)}</span>
               </div>
               <p className="balance-as-of">{asOfText}</p>
               {data.isOverdrawn && (
@@ -145,6 +161,7 @@ export default function AccountBalanceModal({
             <div className="balance-edit">
               <label className="balance-edit__label" htmlFor="account-balance-input">
                 {t('accountBalance.updateHint')}
+                {currency !== 'TWD' && ` (${currency})`}
               </label>
               <div className="balance-edit__row">
                 <input
@@ -179,10 +196,10 @@ export default function AccountBalanceModal({
               <h3 className="balance-records__title">{t('accountBalance.records', { period: periodName })}</h3>
               <span className="balance-records__meta">
                 {t('dashboard.categoryDetailCount', { count: rows.length })}
-                {rows.length > 0 && ` · ${formatMoney(rowsTotal)}`}
+                {rows.length > 0 && ` · ${rowsDisplay.formatTotal(rowsTotal)}`}
               </span>
             </div>
-            <DisplayAmountTwdScope>
+            <DisplayAmountCurrencyScope currency={currency} rateTable={rateTable}>
               <TransactionListPanel
                 txs={rows}
                 isOpen={isOpen}
@@ -194,7 +211,7 @@ export default function AccountBalanceModal({
                 onDelete={onDelete}
                 onCloseParent={onClose}
               />
-            </DisplayAmountTwdScope>
+            </DisplayAmountCurrencyScope>
           </section>
         )}
       </div>

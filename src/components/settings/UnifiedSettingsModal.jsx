@@ -168,10 +168,15 @@ function AccountsPanel({ isOpen, confirm, toast }) {
     accounts, loading, loadError,
     loadSettingsData, saveAccount, deleteAccount, reorderAccountsTo,
   } = useSettings();
+  // 餘額幣別的下拉選單與新帳戶的預設值
+  const { currencies, defaultCurrency, fetchCurrencies } = useDashboard();
 
   useEffect(() => {
-    if (isOpen) loadSettingsData();
-  }, [isOpen, loadSettingsData]);
+    if (isOpen) {
+      loadSettingsData();
+      fetchCurrencies().catch(() => {});
+    }
+  }, [isOpen, loadSettingsData, fetchCurrencies]);
 
   return (
     <div className="usm-panel">
@@ -187,6 +192,8 @@ function AccountsPanel({ isOpen, confirm, toast }) {
             loading={loading}
             confirm={confirm}
             onError={(msg) => toast.error(msg)}
+            currencies={currencies}
+            defaultCurrency={defaultCurrency}
           />
         )}
       </section>

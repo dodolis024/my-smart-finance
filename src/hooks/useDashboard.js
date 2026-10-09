@@ -209,7 +209,8 @@ export function useDashboard() {
 
     const { data, error } = await supabase
       .from('transactions')
-      .select('id, type, date, time, account_id, payment_method, twd_amount')
+      // 幣別、原幣與凍結匯率：非台幣帳戶要把每筆換成帳戶的幣別再扣（見 lib/accountBalance.js）
+      .select('id, type, date, time, account_id, payment_method, twd_amount, currency, amount, exchange_rate')
       .gte('date', fromDate);
 
     if (error) return;
@@ -219,6 +220,8 @@ export function useDashboard() {
         ...tx,
         paymentMethod: tx.payment_method,
         twdAmount: tx.twd_amount,
+        originalAmount: tx.amount,
+        exchangeRate: tx.exchange_rate,
       }))
     );
   }, []);

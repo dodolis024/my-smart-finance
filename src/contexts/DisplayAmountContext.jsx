@@ -22,16 +22,20 @@ export function DisplayAmountProvider({ children }) {
 }
 
 /**
- * 區塊內的加總與額度本來就是台幣（信用卡額度、帳戶餘額），清單也要跟著用台幣，
- * 否則同一個彈窗裡上面是台幣、下面是英鎊。「原幣」模式不受影響。
+ * 區塊內的加總與額度有自己固定的幣別（信用卡額度是台幣、帳戶餘額是帳戶的幣別），
+ * 清單也要跟著用同一個幣別，否則同一個彈窗裡上面是台幣、下面是英鎊。「原幣」模式不受影響。
  */
-export function DisplayAmountTwdScope({ children }) {
+export function DisplayAmountCurrencyScope({ currency, rateTable = null, children }) {
   const parent = useContext(DisplayAmountContext);
   const value = useMemo(
-    () => ({ preferences: { ...parent.preferences, currency: 'TWD' }, rateTable: null }),
-    [parent.preferences]
+    () => ({ preferences: { ...parent.preferences, currency }, rateTable: currency === 'TWD' ? null : rateTable }),
+    [parent.preferences, currency, rateTable]
   );
   return <DisplayAmountContext.Provider value={value}>{children}</DisplayAmountContext.Provider>;
+}
+
+export function DisplayAmountTwdScope({ children }) {
+  return <DisplayAmountCurrencyScope currency="TWD">{children}</DisplayAmountCurrencyScope>;
 }
 
 export function useDisplayAmount() {

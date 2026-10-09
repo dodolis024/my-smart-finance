@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added a currency for account balances, with each expense converted to it before being deducted
 - Improved how fast split groups open and new split expenses save, cutting the wait roughly in half
 - Improved how quickly the transaction form switches to your default currency after signing in
 - Improved how fast foreign-currency and edited transactions save

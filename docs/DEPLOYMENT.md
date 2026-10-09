@@ -136,6 +136,7 @@
 | database/supabase-functions.sql | freeze 最長連續改合併分段 | 2026-07-11 |
 | database/supabase-functions.sql | get_dashboard_data 回傳 time 欄位,排序改 date+time+created_at | 2026-08-25 |
 | database/overseas-fee-migration.sql + supabase-functions.sql | accounts／transactions 加海外手續費欄位;get_dashboard_data 回傳手續費欄位 | 2026-09-13 |
+| database/account-balance-currency-migration.sql + supabase-functions.sql | accounts 加 balance_currency(NULL=台幣,CHECK 三碼大寫);get_dashboard_data 回傳 balanceCurrency。腳本內建驗證兩欄皆 true;隨即以測試帳號在本機新前端建英鎊錢包、記一筆英鎊與一筆台幣消費,餘額依帳戶幣別正確扣款 | 2026-10-09 |
 
 > 2026-08-25 這次重跑有副作用:當時檔內的 exchange_rates 種子是
 > `ON CONFLICT DO UPDATE`,把 TWD/USD/JPY/EUR/GBP 五個幣別的真實匯率覆寫回種子值

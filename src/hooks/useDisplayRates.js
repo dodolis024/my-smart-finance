@@ -98,3 +98,42 @@ export function useDisplayRates(currency) {
 
   return state.currency === currency ? state.table : null;
 }
+
+/**
+ * 一次取多個幣別的匯率表：{ [currency]: table }（帳戶餘額用，每個帳戶可能是不同幣別）。
+ * 台幣不需要換算不會出現在結果裡；尚未載入的幣別先給快取，沒有快取就缺席。
+ * 與 useDisplayRates 共用模組快取，同一幣別一次頁面載入只抓一次。
+ */
+export function useRateTables(currencies) {
+  const key = [...new Set((currencies || []).filter((c) => c && c !== 'TWD'))].sort().join(',');
+  const [tables, setTables] = useState(() => readTables(key));
+  const [tablesKey, setTablesKey] = useState(key);
+
+  if (tablesKey !== key) {
+    setTablesKey(key);
+    setTables(readTables(key));
+  }
+
+  useEffect(() => {
+    if (!key) return undefined;
+    let cancelled = false;
+    key.split(',').filter((c) => !memory.has(c)).forEach((c) => {
+      loadRateTable(c)
+        .then((table) => { if (!cancelled) setTables((prev) => ({ ...prev, [c]: table })); })
+        .catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, [key]);
+
+  return tables;
+}
+
+function readTables(key) {
+  const out = {};
+  if (!key) return out;
+  for (const c of key.split(',')) {
+    const table = cachedTable(c);
+    if (table) out[c] = table;
+  }
+  return out;
+}

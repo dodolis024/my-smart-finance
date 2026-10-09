@@ -109,7 +109,7 @@ function SortableAccountItem({ account, loading, t, onEdit, onDelete }) {
   );
 }
 
-export default function AccountManager({ accounts, onSave, onDelete, onReorderTo, loading, confirm, onError }) {
+export default function AccountManager({ accounts, onSave, onDelete, onReorderTo, loading, confirm, onError, currencies, defaultCurrency }) {
   const { t } = useLanguage();
   const [editingAccount, setEditingAccount] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -182,6 +182,8 @@ export default function AccountManager({ accounts, onSave, onDelete, onReorderTo
         onSave={handleSave}
         onCancel={handleCancel}
         loading={loading || saving}
+        currencies={currencies}
+        defaultCurrency={defaultCurrency}
       />
     );
   }

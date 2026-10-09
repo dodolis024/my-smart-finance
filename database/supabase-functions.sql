@@ -127,6 +127,7 @@ BEGIN
             'paymentDueDay', payment_due_day,
             'balanceAmount', balance_amount,
             'balanceAsOf', balance_as_of,
+            'balanceCurrency', balance_currency,
             'overseasFeeRate', overseas_fee_rate,
             'overseasFeeAutoCheck', overseas_fee_auto_check
         ) ORDER BY created_at ASC
