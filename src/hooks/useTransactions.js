@@ -122,6 +122,20 @@ export function useTransactions() {
       return queueOffline();
     }
 
+    // 帳戶查詢與下方的讀原交易／取匯率互不相依，先發出去，用到時再等，省一趟往返
+    const accountPromise = paymentTrimmed
+      ? (async () => {
+        const { data: acc } = await supabase
+          .from('accounts')
+          .select('id, type, overseas_fee_rate')
+          .eq('name', paymentTrimmed)
+          .maybeSingle();
+        return acc;
+      })()
+      : Promise.resolve(null);
+    // 中途提早 return / throw 時不會再 await 它，先掛上 catch 免得變成未處理的拒絕
+    accountPromise.catch(() => {});
+
     // 編輯時沿用原本的匯率，避免用今日匯率改寫歷史台幣金額；只有幣別變更才重新取匯率
     let exchangeRate = null;
     let existingTx = null;
@@ -157,15 +171,7 @@ export function useTransactions() {
       }
     }
 
-    let account = null;
-    if (paymentTrimmed) {
-      const { data: acc } = await supabase
-        .from('accounts')
-        .select('id, type, overseas_fee_rate')
-        .eq('name', paymentTrimmed)
-        .maybeSingle();
-      account = acc;
-    }
+    const account = await accountPromise;
 
     // 編輯時同一個帳戶、原本就是海外消費 → 沿用當時的費率（同匯率鎖定：改備註不該用今天的卡片設定改寫歷史金額）
     let feeRate = null;

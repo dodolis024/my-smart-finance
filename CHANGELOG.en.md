@@ -4,6 +4,7 @@ This file records version updates for Smart Finance Tracker.
 
 - Improved how fast split groups open and new split expenses save, cutting the wait roughly in half
 - Improved how quickly the transaction form switches to your default currency after signing in
+- Improved how fast foreign-currency and edited transactions save
 - Fixed a transaction occasionally being recorded twice when the connection dropped while saving
 
 ## [1.32.2] - Oct-03 2026
