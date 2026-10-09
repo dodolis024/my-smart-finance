@@ -47,6 +47,10 @@ export default function TransactionForm({
   const currencyTouchedRef = useRef(false);
   // 記錄使用者是否親手點過「海外消費」：點過就不再依卡片／幣別自動改它
   const overseasTouchedRef = useRef(false);
+  // 記錄使用者是否親手改過日期時間：沒改過就代表「現在」，不能停在表單打開的那一刻。
+  // 表單常一開就是很久（先去設定加帳戶再回來記帳），舊時間會讓這筆落在錢包餘額的
+  // 設定時間之前而不被扣款，紀錄的時間本身也不準
+  const dateTimeTouchedRef = useRef(false);
   const { handleAmountChange, handleAmountBlur, handleAmountPaste } = useAmountInput(amountRef, setForm);
 
   useEffect(() => {
@@ -80,6 +84,7 @@ export default function TransactionForm({
     } else {
       currencyTouchedRef.current = false;
       overseasTouchedRef.current = false;
+      dateTimeTouchedRef.current = false;
       setForm(makeInitialForm(defaultCurrency));
       setNoteOpen(readNoteOpenPref());
     }
@@ -91,6 +96,18 @@ export default function TransactionForm({
     if (editingTransaction || currencyTouchedRef.current) return;
     setForm((prev) => (prev.currency === defaultCurrency ? prev : { ...prev, currency: defaultCurrency }));
   }, [defaultCurrency, editingTransaction]);
+
+  // 新增模式下沒改過時間時，畫面上的時間跟著走，使用者看到的就是會存下去的時間
+  useEffect(() => {
+    if (editingTransaction) return undefined;
+    const id = setInterval(() => {
+      if (dateTimeTouchedRef.current) return;
+      const date = getTodayYmd();
+      const time = getNowHm();
+      setForm((prev) => (prev.date === date && prev.time === time ? prev : { ...prev, date, time }));
+    }, 15000);
+    return () => clearInterval(id);
+  }, [editingTransaction]);
 
   // 改支付方式／幣別／分類時重算「海外消費」預設值（使用者親手點過就不動）。
   // 只在使用者操作時重算，不可改成監聽 form 的 effect：編輯載入時會把存好的狀態蓋掉
@@ -120,6 +137,7 @@ export default function TransactionForm({
   const handleDateTimeChange = useCallback((e) => {
     const [date, time] = e.target.value.split('T');
     if (!date || !time) return;
+    dateTimeTouchedRef.current = true;
     setForm((prev) => ({ ...prev, date, time }));
   }, []);
 
@@ -128,9 +146,14 @@ export default function TransactionForm({
     if (submitting || disabled) return;
     setSubmitting(true);
     try {
-      await onSubmit({ ...form, overseas: showOverseas && form.overseas }, editingTransaction?.id ?? null);
+      // 計時器最多落後十幾秒，送出時沒改過時間就以送出當下為準
+      const when = !editingTransaction && !dateTimeTouchedRef.current
+        ? { date: getTodayYmd(), time: getNowHm() }
+        : {};
+      await onSubmit({ ...form, ...when, overseas: showOverseas && form.overseas }, editingTransaction?.id ?? null);
       currencyTouchedRef.current = false;
       overseasTouchedRef.current = false;
+      dateTimeTouchedRef.current = false;
       setForm(makeInitialForm(defaultCurrency));
       setNoteOpen(readNoteOpenPref());
     } catch {

@@ -71,6 +71,18 @@ describe('calculateAccountBalance', () => {
     expect(result.balance).toBe(4800);
   });
 
+  it('和設定餘額同一分鐘記的帳要扣（交易時間只到分，設定時間到秒）', () => {
+    // 18:30:15 設定，同一分鐘記的帳存成 18:30:00；逐秒比會被當成設定之前而漏扣
+    const account = { ...cashAccount, balance_as_of: '2026-09-06T18:30:15' };
+    const result = calculateAccountBalance(account, [
+      tx({ id: 1, date: '2026-09-06', time: '18:30:00', twdAmount: 100 }),
+      // 前一分鐘的仍算設定之前
+      tx({ id: 2, date: '2026-09-06', time: '18:29:00', twdAmount: 999 }),
+    ]);
+    expect(result.spent).toBe(100);
+    expect(result.balance).toBe(4900);
+  });
+
   it('事後補記的舊帳落在設定時間之前，不會再扣一次', () => {
     const result = calculateAccountBalance(cashAccount, [
       tx({ id: 1, date: '2026-08-20', twdAmount: 999 }),

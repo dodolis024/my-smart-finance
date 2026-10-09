@@ -6,6 +6,8 @@ This file records version updates for Smart Finance Tracker.
 - Improved how quickly the transaction form switches to your default currency after signing in
 - Improved how fast foreign-currency and edited transactions save
 - Fixed a transaction occasionally being recorded twice when the connection dropped while saving
+- Fixed the transaction time staying at when the form was opened if it was left open before saving
+- Fixed an expense recorded right after setting an account balance not being deducted from it
 
 ## [1.32.2] - Oct-03 2026
 - Added the current balance beside each payment method in the breakdown, so a tracked account no longer needs opening

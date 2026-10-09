@@ -11,6 +11,10 @@
  * 那個數字已經反映了當天稍早的消費。只比日期的話，早上那筆早餐會被重複扣一次。
  * 反過來，事後補記上週的舊帳也會落在設定時間之前而正確地不計入——那筆錢在他數
  * 鈔票的時候本來就已經不在錢包裡了。
+ *
+ * 但交易時間只記到「分」，設定時間記到秒：設定在 18:30:15、同一分鐘記的帳存成
+ * 18:30:00，逐秒比會被當成設定之前而漏扣。所以設定時間先捨去到整分再比，同一分鐘
+ * 的交易一律算在設定之後——剛設好餘額就記的帳，幾乎都是設定之後才花的。
  */
 
 /** 帳戶欄位可能來自 RPC（駝峰）或資料表（蛇形），兩種都要吃得到 */
@@ -23,7 +27,10 @@ export function getBalanceSettings(account) {
   if (!Number.isFinite(initial)) return null;
   const asOfTime = new Date(asOf).getTime();
   if (Number.isNaN(asOfTime)) return null;
-  return { initial, asOf, asOfTime };
+  // 對齊交易時間的精度（見檔頭）。用 Date 捨去而不是對毫秒取整，避免時區偏移不是整分時出錯
+  const asOfMinute = new Date(asOfTime);
+  asOfMinute.setSeconds(0, 0);
+  return { initial, asOf, asOfTime: asOfMinute.getTime() };
 }
 
 /** 這個帳戶有沒有在追蹤餘額（決定點下去要開哪個彈窗） */
@@ -65,7 +72,7 @@ export function calculateAccountBalance(account, history) {
   for (const tx of history || []) {
     if (!matchesAccount(tx, account)) continue;
     const moment = txMoment(tx);
-    if (Number.isNaN(moment) || moment <= settings.asOfTime) continue;
+    if (Number.isNaN(moment) || moment < settings.asOfTime) continue;
     const amount = typeof tx.twdAmount === 'number' ? tx.twdAmount : parseFloat(tx.twdAmount);
     if (!Number.isFinite(amount)) continue;
     // 只認明確的收入與支出。這裡不寫成「不是收入就當支出」——那個寫法在專案裡
