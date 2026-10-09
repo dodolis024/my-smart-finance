@@ -1,7 +1,7 @@
 /**
  * 單元測試 - utils 工具函數
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   debounce,
   formatMoney,
@@ -13,6 +13,7 @@ import {
   isYearLocked,
   isYearlyReviewAnnounceWindow,
   isSafeReturnPath,
+  randomUuid,
 } from '@/lib/utils';
 
 describe('utils - formatMoney', () => {
@@ -207,5 +208,30 @@ describe('utils - isSafeReturnPath', () => {
     expect(isSafeReturnPath('')).toBe(false);
     expect(isSafeReturnPath(null)).toBe(false);
     expect(isSafeReturnPath(undefined)).toBe(false);
+  });
+});
+
+describe('utils - randomUuid', () => {
+  const V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('支援 randomUUID 時直接用它', () => {
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('11111111-1111-4111-8111-111111111111');
+    expect(randomUuid()).toBe('11111111-1111-4111-8111-111111111111');
+  });
+
+  // Safari 15.4 以前、或非 HTTPS 的區網測試沒有 randomUUID
+  it('沒有 randomUUID 時改用 getRandomValues，仍是合法且不重複的 v4 UUID', () => {
+    const original = crypto.randomUUID;
+    Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true });
+    try {
+      expect(crypto.randomUUID).toBeUndefined();
+      const ids = Array.from({ length: 200 }, () => randomUuid());
+      ids.forEach((id) => expect(id).toMatch(V4));
+      expect(new Set(ids).size).toBe(ids.length);
+    } finally {
+      Object.defineProperty(crypto, 'randomUUID', { value: original, configurable: true, writable: true });
+    }
   });
 });

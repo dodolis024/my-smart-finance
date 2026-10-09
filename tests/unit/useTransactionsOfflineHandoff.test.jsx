@@ -109,6 +109,18 @@ describe('線上新增的交易 id', () => {
     await submit(form());
     expect(lastInsert().id).not.toBe(first);
   });
+
+  // Safari 15.4 以前沒有 crypto.randomUUID：不能因此每筆新增都失敗
+  it('瀏覽器沒有 randomUUID 也照樣能新增', async () => {
+    const original = crypto.randomUUID;
+    Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true });
+    try {
+      await submit(form());
+    } finally {
+      Object.defineProperty(crypto, 'randomUUID', { value: original, configurable: true, writable: true });
+    }
+    expect(lastInsert().id).toMatch(UUID_RE);
+  });
 });
 
 describe('insert 回應掉包 → 轉入離線佇列', () => {

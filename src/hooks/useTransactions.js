@@ -5,7 +5,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getTodayYmd, getNowHm, parseFormattedNumber } from '@/lib/utils';
+import { getTodayYmd, getNowHm, parseFormattedNumber, randomUuid } from '@/lib/utils';
 import { loadRates, loadAccounts, isOfflineError } from '@/lib/offlineCache';
 import { enqueueTransaction } from '@/lib/offlineQueue';
 import { getOverseasFeeRate, computeTwdWithFee } from '@/lib/overseasFee';
@@ -66,7 +66,7 @@ export function useTransactions() {
 
     // 新增交易的 id 在送出前產生,線上 insert 與離線入列共用同一個:insert 其實已寫入、
     // 但回應在路上掉包時會轉入離線佇列,補送要能撞上 23505 才會被認定為已同步而非記成第二筆
-    const newTxId = editId ? null : crypto.randomUUID();
+    const newTxId = editId ? null : randomUuid();
 
     // 離線入列(僅新增):以本地快取解析匯率與帳戶,組出完整 insert payload 暫存,
     // 恢復連線後由 offlineQueue 補送;客戶端自帶 UUID 確保重試不會重複記帳
