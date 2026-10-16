@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.32.4] - Oct-16 2026
 - Fixed the category menu in the transaction form sometimes emptying when the settings panel was opened, until the page was reloaded
 
 ## [1.32.3] - Oct-09 2026
