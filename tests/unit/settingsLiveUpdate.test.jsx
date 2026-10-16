@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useEffect } from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
+import { clearAllCaches } from '@/lib/resourceCache';
 
 /**
  * 設定面板的編輯要「即時反映」，使用者不需要重整。
@@ -194,6 +195,8 @@ function SettingsProbe() {
 let container, root;
 beforeEach(() => {
   db.reset();
+  // 模組級快取跨測試共用，不清的話後面的測試都跑在熱快取上（冷掛載的行為就測不到）
+  clearAllCaches();
   const ymd = `${Y}-${pad(M)}-${pad(D)}`;
   db.transactions.forEach((t) => { t.date = ymd; });
   container = document.createElement('div');
@@ -294,6 +297,23 @@ describe('設定改動要即時反映到主畫面（不需重整）', () => {
 
     await run(() => actions.deleteAccount(added.id));
     expect(formProbe().accounts.split(',')).not.toContain('悠遊卡');
+  });
+
+  it('打開設定當下（設定資料還沒回來）→ 分類下拉不可被清空', async () => {
+    // 儀表板先自己載好（分類來自 get_dashboard_data）
+    await act(async () => { root.render(<DashboardPage />); });
+    await settle();
+    expect(formProbe().expense.split(',')).toEqual(['飲食', '交通', '購物']);
+
+    // 使用者打開設定：useSettings 冷掛載，此刻它手上只有空的初始值。
+    // 不 await，停在「資料還在路上」那一刻——以前這裡會把下拉清成空的，
+    // 編輯中的交易因此只剩自己那一個分類可選，要重整才會回來
+    act(() => { root.render(<><DashboardPage /><SettingsProbe /></>); });
+    expect(formProbe().expense.split(','), '設定還在載入就把分類下拉清空了').toEqual(['飲食', '交通', '購物']);
+    expect(formProbe().income.split(',')).toEqual(['薪水']);
+
+    await settle();
+    expect(formProbe().expense.split(',')).toEqual(['飲食', '交通', '購物']);
   });
 
   it('改預設幣別 → 記帳表單的預設幣別立刻改變', async () => {

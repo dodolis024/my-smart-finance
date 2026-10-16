@@ -7,7 +7,8 @@ import { getCached, setCached, subscribe } from '@/lib/resourceCache';
  * 取代各資料 hook 手刻的快取樣板，行為對齊原樣板：
  *   - 初始化：同一 userId 有快取則沿用，否則用 initial
  *   - loading：僅在「冷快取」（未命中）時為 true / 於 load 時轉圈
- *   - 每次 data 變動同步寫回快取（供跨元件、卸載後重掛沿用）
+ *   - 每次 data 變動同步寫回快取（供跨元件、卸載後重掛沿用）；但 initial 這個
+ *     佔位值不寫入，冷快取維持「未命中」，見下方 hydratedRef
  *   - load：非同步取資料；錯誤寫入 error 並重新拋出（讓呼叫端維持原本的拋錯語意）
  *
  * @param {string} key       快取鍵（全域唯一，如 'subscriptions'）
@@ -18,12 +19,22 @@ import { getCached, setCached, subscribe } from '@/lib/resourceCache';
  * @returns {{ data, setData, loading, error, load }}
  */
 export function useCachedResource(key, { userId, initial, fetcher }) {
-  const [data, setData] = useState(() => {
+  const [data, setDataState] = useState(() => {
     const cached = getCached(key, userId);
     return cached !== undefined ? cached : initial;
   });
   const [loading, setLoading] = useState(() => getCached(key, userId) === undefined);
   const [error, setError] = useState(null);
+
+  // data 是否已是真資料（來自快取命中或任何一次寫入）。冷快取時 data 還是 initial，
+  // 那只是張白紙：不可寫進快取，因為 setCached 會同步通知所有訂閱者，把別處已經載好
+  // 的真資料蓋成空的。（實例：第一次打開設定時 useSettings 冷掛載，廣播出空的
+  // expenseCategories，記帳表單的分類下拉整個變空，要重整才會回來）
+  const hydratedRef = useRef(getCached(key, userId) !== undefined);
+  const setData = useCallback((value) => {
+    hydratedRef.current = true;
+    setDataState(value);
+  }, []);
 
   // userId 變更時（同分頁登出→換帳號）於 render 期重置為新使用者的快取/初始值。
   // 沒有這段的話，下方「state → 快取」的同步 effect 會在 data 還是前一位使用者的
@@ -35,7 +46,9 @@ export function useCachedResource(key, { userId, initial, fetcher }) {
   if (prevIdentity !== identity) {
     setPrevIdentity(identity);
     const cached = getCached(key, userId);
-    setData(cached !== undefined ? cached : initial);
+    // 走 setDataState：換到冷快取的帳號時 data 退回 initial，這張白紙同樣不該被寫進快取
+    hydratedRef.current = cached !== undefined;
+    setDataState(cached !== undefined ? cached : initial);
     setLoading(cached === undefined);
     setError(null);
   }
@@ -47,8 +60,9 @@ export function useCachedResource(key, { userId, initial, fetcher }) {
     fetcherRef.current = fetcher;
   });
 
-  // 同步 state → 快取
+  // 同步 state → 快取（尚未有真資料前不寫，維持「未命中」）
   useEffect(() => {
+    if (!hydratedRef.current) return;
     setCached(key, userId, data);
   }, [key, userId, data]);
 
@@ -56,7 +70,7 @@ export function useCachedResource(key, { userId, initial, fetcher }) {
   useEffect(() => subscribe(key, () => {
     const cached = getCached(key, userId);
     if (cached !== undefined) setData(cached);
-  }), [key, userId]);
+  }), [key, userId, setData]);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -72,7 +86,7 @@ export function useCachedResource(key, { userId, initial, fetcher }) {
     } finally {
       setLoading(false);
     }
-  }, [key, userId]);
+  }, [key, userId, setData]);
 
   return { data, setData, loading, error, load };
 }

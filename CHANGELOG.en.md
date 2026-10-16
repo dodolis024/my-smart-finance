@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Fixed the category menu in the transaction form sometimes emptying when the settings panel was opened, until the page was reloaded
+
 ## [1.32.3] - Oct-09 2026
 - Added a currency for account balances, with each expense converted to it before being deducted
 - Improved how fast split groups open and new split expenses save, cutting the wait roughly in half
