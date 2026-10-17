@@ -35,25 +35,44 @@ export function parseAmount(rawAmount) {
 }
 
 /**
- * 取匯率。
+ * 取這筆交易當天該套用的匯率（1 單位該幣別 = 多少 TWD）。
  *
- * 查無匯率時「擋下整筆」是刻意的：get_exchange_rate 查不到會回 NULL 而不是 1.0，
+ * 以交易日期為準而不是現值：補記上週的消費該用上週的匯率，用今天的會把台幣金額記歪。
+ * 取值順序（與前端 src/lib/exchangeRate.js 同語意，改動要兩邊一起改）：
+ *   1. get_exchange_rate_on(幣別, 日期)：歷史表裡「<= 該日期的最新一筆」
+ *   2. 歷史表最早一筆：歷史表 2026-09-09 才建立，早於它的舊帳就用離那天最近的那一筆
+ *   3. exchange_rates 現值：連一列歷史都沒有的幣別（剛加進匯率表、排程還沒跑）
+ *
+ * 查無匯率時「擋下整筆」是刻意的：這些查詢查不到都回 NULL 而不是 1.0，
  * 就是為了讓呼叫端能區分「真的是 1:1」和「沒有這個幣別的資料」。
  * 若在這裡 fallback 成 1，日圓 3000 會被記成台幣 3000，而且事後幾乎看不出來。
  */
-async function resolveExchangeRate(client, currency) {
+async function resolveExchangeRate(client, currency, date) {
   if (currency === 'TWD') return 1.0;
 
-  const { data, error } = await client.rpc('get_exchange_rate', { p_currency: currency });
+  const { data: onDate } = await client.rpc('get_exchange_rate_on', {
+    p_currency: currency,
+    p_date: date,
+  });
+  if (Number(onDate) > 0) return Number(onDate);
 
-  if (error || data == null || Number(data) <= 0) {
-    throw smfError(
-      ErrorCode.RATE_UNAVAILABLE,
-      `查不到 ${currency} 的匯率，為避免記成錯誤金額已停止寫入`,
-      '請確認幣別代碼正確（例如 JPY、USD、GBP），或改用 TWD 記帳'
-    );
-  }
-  return Number(data);
+  const { data: earliest } = await client
+    .from('exchange_rate_history')
+    .select('rate')
+    .eq('currency_code', currency)
+    .order('date', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (Number(earliest?.rate) > 0) return Number(earliest.rate);
+
+  const { data: live } = await client.rpc('get_exchange_rate', { p_currency: currency });
+  if (Number(live) > 0) return Number(live);
+
+  throw smfError(
+    ErrorCode.RATE_UNAVAILABLE,
+    `查不到 ${currency} 的匯率，為避免記成錯誤金額已停止寫入`,
+    '請確認幣別代碼正確（例如 JPY、USD、GBP），或改用 TWD 記帳'
+  );
 }
 
 const OVERSEAS_NO_RATE_HINT = '請使用者先到網頁的帳戶設定填寫手續費率，或拿掉 --overseas';
@@ -109,7 +128,7 @@ export async function addTransaction(input) {
 
   const resolvedCategory = await resolveCategory(category, type);
   const resolvedAccount = await resolveAccount(account);
-  const exchangeRate = await resolveExchangeRate(client, normalizedCurrency);
+  const exchangeRate = await resolveExchangeRate(client, normalizedCurrency, normalizedDate);
   const feeRate = resolveOverseasFeeRate({
     overseas, account: resolvedAccount, currency: normalizedCurrency, type: resolvedCategory.type,
   });
@@ -320,7 +339,7 @@ export async function updateTransaction(id, patch = {}) {
     const exchangeRate =
       !currencyChanged && !existingRateIsBroken
         ? Number(existing.exchange_rate)
-        : await resolveExchangeRate(client, nextCurrency);
+        : await resolveExchangeRate(client, nextCurrency, updates.date ?? existing.date);
 
     updates.amount = amount;
     updates.currency = nextCurrency;

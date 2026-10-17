@@ -95,6 +95,7 @@ describe('addTransaction — 匯率與台幣換算', () => {
 
     // 只斷言沒查匯率：記今天的帳會順帶簽到，簽到成功會再打一次凍結卡對帳的 RPC
     expect(mocks.rpcImpl).not.toHaveBeenCalledWith('get_exchange_rate', expect.anything());
+    expect(mocks.rpcImpl).not.toHaveBeenCalledWith('get_exchange_rate_on', expect.anything());
     expect(lastWrite('transactions', 'insert')).toMatchObject({
       currency: 'TWD',
       amount: 150,
@@ -116,12 +117,82 @@ describe('addTransaction — 匯率與台幣換算', () => {
       currency: 'jpy',
     });
 
-    expect(mocks.rpcImpl).toHaveBeenCalledWith('get_exchange_rate', { p_currency: 'JPY' });
+    expect(mocks.rpcImpl).toHaveBeenCalledWith('get_exchange_rate_on', { p_currency: 'JPY', p_date: today() });
     expect(lastWrite('transactions', 'insert')).toMatchObject({
       currency: 'JPY',
       amount: 1200,
       exchange_rate: 0.21534,
       twd_amount: 258.41,
+    });
+  });
+
+  it('補記舊帳用交易日期的匯率，不是送出當下的現值', async () => {
+    setupHappyPath();
+    // 當天匯率 0.2、現值 0.3：寫進去的必須是 0.2
+    mocks.rpcImpl.mockImplementation((fn) =>
+      Promise.resolve({ data: fn === 'get_exchange_rate_on' ? 0.2 : 0.3, error: null })
+    );
+
+    await addTransaction({
+      itemName: '拉麵',
+      amount: 1000,
+      category: '飲食',
+      account: '現金',
+      currency: 'JPY',
+      date: '2026-09-20',
+    });
+
+    expect(mocks.rpcImpl).toHaveBeenCalledWith('get_exchange_rate_on', {
+      p_currency: 'JPY',
+      p_date: '2026-09-20',
+    });
+    expect(lastWrite('transactions', 'insert')).toMatchObject({
+      exchange_rate: 0.2,
+      twd_amount: 200,
+    });
+  });
+
+  it('早於歷史表建立日的舊帳用歷史表最早一筆，而不是現值', async () => {
+    setupHappyPath();
+    queueResult('exchange_rate_history', { data: { rate: 0.27 }, error: null });
+    mocks.rpcImpl.mockImplementation((fn) =>
+      Promise.resolve({ data: fn === 'get_exchange_rate_on' ? null : 0.3, error: null })
+    );
+
+    await addTransaction({
+      itemName: '拉麵',
+      amount: 1000,
+      category: '飲食',
+      account: '現金',
+      currency: 'JPY',
+      date: '2020-05-01',
+    });
+
+    expect(lastWrite('transactions', 'insert')).toMatchObject({
+      exchange_rate: 0.27,
+      twd_amount: 270,
+    });
+  });
+
+  it('歷史表完全沒有這個幣別時才退回現值', async () => {
+    setupHappyPath();
+    queueResult('exchange_rate_history', { data: null, error: null });
+    mocks.rpcImpl.mockImplementation((fn) =>
+      Promise.resolve({ data: fn === 'get_exchange_rate_on' ? null : 0.3, error: null })
+    );
+
+    await addTransaction({
+      itemName: '拉麵',
+      amount: 1000,
+      category: '飲食',
+      account: '現金',
+      currency: 'JPY',
+      date: '2026-09-20',
+    });
+
+    expect(lastWrite('transactions', 'insert')).toMatchObject({
+      exchange_rate: 0.3,
+      twd_amount: 300,
     });
   });
 
@@ -406,7 +477,11 @@ describe('updateTransaction — 歷史匯率', () => {
 
     await updateTransaction('tx-1', { currency: 'USD' });
 
-    expect(mocks.rpcImpl).toHaveBeenCalledWith('get_exchange_rate', { p_currency: 'USD' });
+    // 用原交易的日期而不是今天：編輯不該把歷史台幣金額改成今日匯率算的
+    expect(mocks.rpcImpl).toHaveBeenCalledWith('get_exchange_rate_on', {
+      p_currency: 'USD',
+      p_date: '2026-01-15',
+    });
   });
 
   it('既有匯率是壞值時，即使只改備註也會重算修復（與網頁編輯行為一致）', async () => {
@@ -416,7 +491,10 @@ describe('updateTransaction — 歷史匯率', () => {
 
     await updateTransaction('tx-1', { note: '好吃' });
 
-    expect(mocks.rpcImpl).toHaveBeenCalledWith('get_exchange_rate', { p_currency: 'JPY' });
+    expect(mocks.rpcImpl).toHaveBeenCalledWith('get_exchange_rate_on', {
+      p_currency: 'JPY',
+      p_date: '2026-01-15',
+    });
     expect(lastWrite('transactions', 'update')).toMatchObject({
       exchange_rate: 0.22,
       twd_amount: 220,

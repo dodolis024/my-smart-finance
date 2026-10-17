@@ -4,6 +4,7 @@
 import { supabase } from '@/lib/supabase';
 import { isOfflineError } from '@/lib/offlineCache';
 import { computeTwdWithFee } from '@/lib/overseasFee';
+import { fetchRateForDate } from '@/lib/exchangeRate';
 
 const QUEUE_PREFIX = 'sf:txq:v1';
 
@@ -120,23 +121,30 @@ async function doFlush(userId, includeFailed) {
     try {
       const tx = { ...item.tx };
 
-      // 入列時取不到匯率的項目,補送前先解析(見 useTransactions 離線路徑)
-      if (tx.exchange_rate == null) {
-        const { data: rate, error: rateErr } = await supabase.rpc('get_exchange_rate', {
-          p_currency: tx.currency,
-        });
-        if (rateErr || rate == null || Number(rate) <= 0) {
-          const err = new Error(rateErr?.message || `no exchange rate for ${tx.currency}`);
-          if (rateErr && isOfflineError(rateErr)) err.__offline = true;
+      // 入列時的匯率是從本地快取解析的,快取可能已經放了好幾天(PWA 常開著不重整),
+      // 所以補送前一律以交易日期重新解析一次並重算台幣金額,不沿用入列時那份。
+      if (tx.currency !== 'TWD') {
+        const { rate, error: rateErr } = await fetchRateForDate(tx.currency, tx.date);
+        // 中途又斷網:整個佇列原封保留,等下次觸發
+        if (rateErr && isOfflineError(rateErr)) {
+          const err = new Error(rateErr.message || `no exchange rate for ${tx.currency}`);
+          err.__offline = true;
           throw err;
         }
-        tx.exchange_rate = Number(rate);
-        // 舊版佇列項目沒有 overseas_fee_rate（undefined）→ 視為非海外，行為與加入手續費前相同
-        const { overseasFee, twdAmount } = computeTwdWithFee(tx.amount, tx.exchange_rate, tx.overseas_fee_rate);
-        tx.twd_amount = twdAmount;
-        tx.overseas_fee = overseasFee;
-        if (overseasFee == null) tx.overseas_fee_rate = null;
+        // 查不到(幣別已從匯率表移除等)就沿用入列時那份,至少是記帳當時的現值;
+        // 連它都沒有才擋下,絕不以 1:1 寫入
+        if (rate > 0) tx.exchange_rate = rate;
+        else if (!(Number(tx.exchange_rate) > 0)) {
+          throw new Error(rateErr?.message || `no exchange rate for ${tx.currency}`);
+        }
+      } else {
+        tx.exchange_rate = 1.0;
       }
+      // 舊版佇列項目沒有 overseas_fee_rate（undefined）→ 視為非海外，行為與加入手續費前相同
+      const { overseasFee, twdAmount } = computeTwdWithFee(tx.amount, tx.exchange_rate, tx.overseas_fee_rate);
+      tx.twd_amount = twdAmount;
+      tx.overseas_fee = overseasFee;
+      if (overseasFee == null) tx.overseas_fee_rate = null;
 
       const { error } = await supabase.from('transactions').insert(tx);
       // 23505 = 此 UUID 已寫入過(上次重試已成功),視為同步完成

@@ -8,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd, getNowHm, parseFormattedNumber, randomUuid } from '@/lib/utils';
 import { loadRates, loadAccounts, isOfflineError } from '@/lib/offlineCache';
 import { enqueueTransaction } from '@/lib/offlineQueue';
+import { fetchRateForDate } from '@/lib/exchangeRate';
 import { getOverseasFeeRate, computeTwdWithFee } from '@/lib/overseasFee';
 
 export function useTransactions() {
@@ -158,16 +159,15 @@ export function useTransactions() {
       if (normalizedCurrency === 'TWD') {
         exchangeRate = 1.0;
       } else {
-        const { data: exchangeRateVal, error: rateErr } = await supabase.rpc('get_exchange_rate', {
-          p_currency: normalizedCurrency,
-        });
+        // 以交易日期取匯率，而不是送出當下的現值：補記舊帳要用那天的匯率（見 lib/exchangeRate.js）
+        const { rate, error: rateErr } = await fetchRateForDate(normalizedCurrency, date);
         // 查無匯率時擋下送出，避免外幣被靜默以 1:1 記成錯誤的台幣金額
-        if (rateErr || exchangeRateVal == null || Number(exchangeRateVal) <= 0) {
+        if (rateErr || !(rate > 0)) {
           // 網路中斷造成的查詢失敗:新增改走離線入列(匯率從本地快取解析)
           if (!editId && rateErr && isOfflineError(rateErr)) return queueOffline();
           throw new Error(t('transaction.rateUnavailable', { currency: normalizedCurrency }));
         }
-        exchangeRate = Number(exchangeRateVal);
+        exchangeRate = rate;
       }
     }
 

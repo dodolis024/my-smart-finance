@@ -8,12 +8,25 @@ const mocks = vi.hoisted(() => ({
   insert: vi.fn(),
   upsert: vi.fn(),
   rpc: vi.fn(),
+  earliestRate: vi.fn(),
   getSession: vi.fn(),
 }));
 
+// exchange_rate_history 是「歷史表建立前的舊帳」才會查到的 fallback（見 lib/exchangeRate.js）
+function historyBuilder() {
+  const builder = {};
+  for (const method of ['select', 'eq', 'order', 'limit']) builder[method] = () => builder;
+  builder.maybeSingle = () => mocks.earliestRate();
+  return builder;
+}
+
 vi.mock('@/lib/supabase', () => ({
   supabase: {
-    from: (table) => (table === 'transactions' ? { insert: mocks.insert } : { upsert: mocks.upsert }),
+    from: (table) => {
+      if (table === 'transactions') return { insert: mocks.insert };
+      if (table === 'exchange_rate_history') return historyBuilder();
+      return { upsert: mocks.upsert };
+    },
     rpc: mocks.rpc,
     auth: { getSession: mocks.getSession },
   },
@@ -55,6 +68,7 @@ beforeEach(() => {
   mocks.getSession.mockResolvedValue({ data: { session: { user: { id: USER_ID } } } });
   mocks.insert.mockResolvedValue({ error: null });
   mocks.upsert.mockResolvedValue({ error: null });
+  mocks.earliestRate.mockResolvedValue({ data: null, error: null });
 });
 
 afterEach(() => {
@@ -204,9 +218,75 @@ describe('offlineQueue - flush', () => {
     const result = await flushQueue(USER_ID);
 
     expect(result.synced).toBe(1);
-    expect(mocks.rpc).toHaveBeenCalledWith('get_exchange_rate', { p_currency: 'JPY' });
+    expect(mocks.rpc).toHaveBeenCalledWith('get_exchange_rate_on', {
+      p_currency: 'JPY',
+      p_date: '2026-07-06',
+    });
     expect(mocks.insert).toHaveBeenCalledWith(
       expect.objectContaining({ exchange_rate: 0.21, twd_amount: 210 })
+    );
+  });
+
+  it('入列時的匯率可能來自過時的快取:補送時一律以交易日期重新解析並覆蓋', async () => {
+    enqueueTransaction(
+      USER_ID,
+      makeTx({ currency: 'JPY', amount: 1000, exchange_rate: 0.19, twd_amount: 190 }),
+      '2026-07-06'
+    );
+    mocks.rpc.mockResolvedValue({ data: 0.21, error: null });
+
+    await flushQueue(USER_ID);
+
+    expect(mocks.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ exchange_rate: 0.21, twd_amount: 210 })
+    );
+  });
+
+  it('重新解析查不到匯率時沿用入列時那份,不讓整筆卡在佇列裡', async () => {
+    enqueueTransaction(
+      USER_ID,
+      makeTx({ currency: 'JPY', amount: 1000, exchange_rate: 0.19, twd_amount: 190 }),
+      '2026-07-06'
+    );
+    mocks.rpc.mockResolvedValue({ data: null, error: null });
+
+    const result = await flushQueue(USER_ID);
+
+    expect(result.synced).toBe(1);
+    expect(mocks.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ exchange_rate: 0.19, twd_amount: 190 })
+    );
+  });
+
+  it('重新解析時又斷網:整筆原封保留,等下次補送', async () => {
+    enqueueTransaction(
+      USER_ID,
+      makeTx({ currency: 'JPY', amount: 1000, exchange_rate: 0.19, twd_amount: 190 }),
+      '2026-07-06'
+    );
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: 'Failed to fetch' } });
+
+    const result = await flushQueue(USER_ID);
+
+    expect(result.offline).toBe(true);
+    expect(mocks.insert).not.toHaveBeenCalled();
+    expect(listQueue(USER_ID)).toHaveLength(1);
+    expect(listQueue(USER_ID)[0].status).toBe('pending');
+  });
+
+  it('歷史表建立前的舊帳:當日查無匯率時用歷史表最早一筆', async () => {
+    enqueueTransaction(
+      USER_ID,
+      makeTx({ date: '2020-05-01', currency: 'JPY', amount: 1000, exchange_rate: 0.19, twd_amount: 190 }),
+      '2020-05-01'
+    );
+    mocks.rpc.mockResolvedValue({ data: null, error: null });
+    mocks.earliestRate.mockResolvedValue({ data: { rate: 0.27 }, error: null });
+
+    await flushQueue(USER_ID);
+
+    expect(mocks.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ exchange_rate: 0.27, twd_amount: 270 })
     );
   });
 

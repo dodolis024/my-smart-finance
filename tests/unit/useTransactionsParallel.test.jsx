@@ -9,7 +9,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
  * 守的是：請求確實重疊、寫入內容不變，以及提早結束的路徑不會留下未處理的拒絕。
  */
 
-const h = vi.hoisted(() => ({ pending: [], writes: [], enqueued: [] }));
+const h = vi.hoisted(() => ({ pending: [], writes: [], enqueued: [], rpcCalls: [] }));
 
 function request(label) {
   return new Promise((resolve) => h.pending.push({ label, resolve }));
@@ -22,6 +22,8 @@ vi.mock('@/lib/supabase', () => {
     const b = {
       select: () => b,
       eq: () => b,
+      order: () => b,
+      limit: () => b,
       maybeSingle: () => b,
       single: () => b,
       insert: (payload) => { op = 'insert'; h.writes.push({ table, op, payload }); return b; },
@@ -37,7 +39,7 @@ vi.mock('@/lib/supabase', () => {
   return {
     supabase: {
       from: (table) => makeBuilder(table),
-      rpc: (fn) => request(`rpc:${fn}`),
+      rpc: (fn, args) => { h.rpcCalls.push({ fn, args }); return request(`rpc:${fn}`); },
     },
   };
 });
@@ -87,6 +89,7 @@ beforeEach(() => {
   h.pending.length = 0;
   h.writes.length = 0;
   h.enqueued.length = 0;
+  h.rpcCalls.length = 0;
   unhandled.length = 0;
   process.on('unhandledRejection', onUnhandled);
   container = document.createElement('div');
@@ -112,10 +115,10 @@ describe('新增外幣', () => {
   it('匯率與帳戶同時查詢，寫入內容與依序查詢時相同', async () => {
     const p = submit(form({ overseas: true }));
     await flush();
-    expect(labels()).toEqual(['rpc:get_exchange_rate', 'select:accounts']);
+    expect(labels()).toEqual(['rpc:get_exchange_rate_on', 'select:accounts']);
 
     respond('select:accounts', { data: CARD, error: null });
-    respond('rpc:get_exchange_rate', { data: 42.105263, error: null });
+    respond('rpc:get_exchange_rate_on', { data: 42.105263, error: null });
     await p;
 
     expect(lastWrite('transactions', 'insert')).toMatchObject({
@@ -132,7 +135,7 @@ describe('新增外幣', () => {
   it('帳戶比匯率早回來也一樣', async () => {
     const p = submit(form());
     await flush();
-    respond('rpc:get_exchange_rate', { data: 40, error: null });
+    respond('rpc:get_exchange_rate_on', { data: 40, error: null });
     await flush();
     respond('select:accounts', { data: CARD, error: null });
     await p;
@@ -142,7 +145,7 @@ describe('新增外幣', () => {
   it('匯率因斷網失敗轉入離線佇列，未回應的帳戶查詢不留下未處理的拒絕', async () => {
     const p = submit(form());
     await flush();
-    respond('rpc:get_exchange_rate', { data: null, error: { message: 'Failed to fetch' } });
+    respond('rpc:get_exchange_rate_on', { data: null, error: { message: 'Failed to fetch' } });
     const result = await p;
     expect(result).toMatchObject({ queued: true });
 
@@ -151,13 +154,42 @@ describe('新增外幣', () => {
     expect(unhandled).toEqual([]);
   });
 
-  it('查無匯率照樣擋下', async () => {
+  it('查無匯率照樣擋下（當日、歷史最早一筆、現值都查不到）', async () => {
     const p = submit(form());
     await flush();
     respond('select:accounts', { data: CARD, error: null });
+    respond('rpc:get_exchange_rate_on', { data: null, error: null });
+    await flush();
+    respond('select:exchange_rate_history', { data: null, error: null });
+    await flush();
     respond('rpc:get_exchange_rate', { data: null, error: null });
     await expect(p).rejects.toThrow('transaction.rateUnavailable');
     expect(lastWrite('transactions', 'insert')).toBeUndefined();
+  });
+
+  it('匯率查的是交易日期，不是送出當下', async () => {
+    const p = submit(form());
+    await flush();
+    expect(h.rpcCalls).toEqual([
+      { fn: 'get_exchange_rate_on', args: { p_currency: 'GBP', p_date: '2020-01-01' } },
+    ]);
+    respond('rpc:get_exchange_rate_on', { data: 40, error: null });
+    respond('select:accounts', { data: CARD, error: null });
+    await p;
+    expect(lastWrite('transactions', 'insert')).toMatchObject({ exchange_rate: 40, twd_amount: 400 });
+  });
+
+  it('早於歷史表建立日的舊帳：用歷史表最早一筆，不退回今天的現值', async () => {
+    const p = submit(form());
+    await flush();
+    respond('rpc:get_exchange_rate_on', { data: null, error: null });
+    await flush();
+    respond('select:exchange_rate_history', { data: { rate: 39 }, error: null });
+    await flush();
+    respond('select:accounts', { data: CARD, error: null });
+    await p;
+    expect(h.rpcCalls.map((c) => c.fn)).toEqual(['get_exchange_rate_on']);
+    expect(lastWrite('transactions', 'insert')).toMatchObject({ exchange_rate: 39, twd_amount: 390 });
   });
 });
 
@@ -209,8 +241,8 @@ describe('編輯', () => {
     await flush();
     respond('select:transactions', { data: { currency: 'GBP', exchange_rate: 41, account_id: 'acc-1' }, error: null });
     await flush();
-    expect(labels()).toEqual(['rpc:get_exchange_rate', 'select:accounts']);
-    respond('rpc:get_exchange_rate', { data: 0.21, error: null });
+    expect(labels()).toEqual(['rpc:get_exchange_rate_on', 'select:accounts']);
+    respond('rpc:get_exchange_rate_on', { data: 0.21, error: null });
     respond('select:accounts', { data: CARD, error: null });
     await p;
     expect(lastWrite('transactions', 'update')).toMatchObject({ exchange_rate: 0.21, twd_amount: 210 });
