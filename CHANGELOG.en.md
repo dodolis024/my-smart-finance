@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Improved the account balance row, with the currency menu moved before the amount
+
 ## [1.32.4] - Oct-16 2026
 - Fixed the category menu in the transaction form sometimes emptying when the settings panel was opened, until the page was reloaded
 

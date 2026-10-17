@@ -99,7 +99,6 @@ export default function AccountForm({ account, onSave, onCancel, loading, curren
           <div className="form-group">
             <label className="form-group__label" htmlFor="account-balance-amount">{t('settings.account.balanceLabel')}</label>
             <div className="account-form__balance-row">
-              <input id="account-balance-amount" className="form-group__input" type="number" step="0.01" value={form.balanceAmount} onChange={set('balanceAmount')} disabled={loading} />
               <select
                 className="form-group__input account-form__balance-currency"
                 aria-label={t('settings.account.balanceCurrencyLabel')}
@@ -111,6 +110,7 @@ export default function AccountForm({ account, onSave, onCancel, loading, curren
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
+              <input id="account-balance-amount" className="form-group__input" type="number" step="0.01" value={form.balanceAmount} onChange={set('balanceAmount')} disabled={loading} />
             </div>
             <p className="account-form__hint">{t('settings.account.balanceHint')}</p>
           </div>
