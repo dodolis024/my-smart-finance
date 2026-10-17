@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirm } from '@/contexts/ConfirmContext';
@@ -20,6 +20,15 @@ let cachedCurrencies = null;
 // 「換算成群組結算幣別」一個用途，但 PWA 常開好幾天，超過一天就重抓
 const RATES_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const initialRates = () => ({ TWD: 1, ...(loadRates() || {}) });
+
+// 讀整張匯率表；離線或查不到時回 null，由呼叫端決定沿用手上那份
+async function fetchRateMap() {
+  const { data } = await supabase.from('exchange_rates').select('currency_code, rate');
+  if (!Array.isArray(data) || data.length === 0) return null;
+  const obj = { TWD: 1 };
+  data.forEach(r => { obj[String(r.currency_code).toUpperCase()] = Number(r.rate); });
+  return obj;
+}
 
 // ── 分帳主頁（/split）────────────────────────────────────────────────────────
 export default function SplitPage() {
@@ -49,21 +58,25 @@ export default function SplitPage() {
     }
   }, [groupId, loading, groups, navigate]);
 
+  // 結清會把換算後的金額寫進資料庫，按下去時一定現抓一次，不吃上面那份期限內的快取
+  const refreshRates = useCallback(async () => {
+    const obj = await fetchRateMap();
+    if (!obj) return null;
+    saveRates(obj);
+    setRates(obj);
+    return obj;
+  }, []);
+
   // 進頁面與 App 切回前景時各檢查一次；還新鮮就不查，查失敗（離線）就沿用手上那份
   useEffect(() => {
     let cancelled = false;
     const refreshIfStale = () => {
       if (Date.now() - loadRatesSavedAt() < RATES_MAX_AGE_MS) return;
-      supabase
-        .from('exchange_rates')
-        .select('currency_code, rate')
-        .then(({ data }) => {
-          if (cancelled || !Array.isArray(data) || data.length === 0) return;
-          const obj = { TWD: 1 };
-          data.forEach(r => { obj[String(r.currency_code).toUpperCase()] = Number(r.rate); });
-          saveRates(obj);
-          setRates(obj);
-        });
+      fetchRateMap().then((obj) => {
+        if (cancelled || !obj) return;
+        saveRates(obj);
+        setRates(obj);
+      });
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') refreshIfStale();
@@ -160,6 +173,7 @@ export default function SplitPage() {
             group={selectedGroup}
             onBack={() => navigate('/split')}
             rates={rates}
+            onRefreshRates={refreshRates}
             currencies={currencies}
             onAddMember={async (id, name) => {
               try {

@@ -16,7 +16,7 @@ import AddExpenseModal from './AddExpenseModal';
 import ManageMembersModal from './ManageMembersModal';
 import GroupSettingsModal from './GroupSettingsModal';
 
-export default function SplitGroupDetail({ group, rates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onUpdateGroup, onArchiveGroup, onUnarchiveGroup }) {
+export default function SplitGroupDetail({ group, rates, onRefreshRates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onUpdateGroup, onArchiveGroup, onUnarchiveGroup }) {
   const toast = useToast();
   const { confirm } = useConfirm();
   const { t } = useLanguage();
@@ -122,9 +122,23 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
   };
 
   const handleSettle = async (transaction) => {
-    const amtStr = transaction.amount % 1 === 0
-      ? transaction.amount.toLocaleString()
-      : transaction.amount.toFixed(2);
+    // 結清的金額會換算成群組幣別寫進資料庫，所以按下去時現抓一次匯率，不吃頁面上那份快取
+    // （費用端的匯率是寫入時凍結的，這裡重算只會動到換成群組幣別那一步）
+    let { amount } = transaction;
+    const latestRates = onRefreshRates ? await onRefreshRates() : null;
+    if (latestRates) {
+      const fresh = calcSettlement(members, expenses, settlements, latestRates, group.currency)
+        .find(tr => tr.fromId === transaction.fromId && tr.toId === transaction.toId);
+      // 匯率一動，誰還給誰的配對理論上可能重排；找不到同一組就讓畫面更新、請使用者重新確認
+      if (!fresh) {
+        toast.info(t('split.settlementAmountChanged'));
+        return;
+      }
+      amount = fresh.amount;
+    }
+    const amtStr = amount % 1 === 0
+      ? amount.toLocaleString()
+      : amount.toFixed(2);
     const ok = await confirm(
       t('split.settleConfirm', {
         from: transaction.from,
@@ -138,7 +152,7 @@ export default function SplitGroupDetail({ group, rates, currencies, onAddMember
       await addSettlement({
         fromMember: transaction.fromId,
         toMember: transaction.toId,
-        amount: transaction.amount,
+        amount,
         currency: group.currency || 'TWD',
         fromName: transaction.from,
         toName: transaction.to,

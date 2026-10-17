@@ -3,6 +3,7 @@
 This file records version updates for Smart Finance Tracker.
 
 - Improved the account balance row, with the currency menu moved before the amount
+- Fixed a split settlement being converted to the group currency with the previous day's exchange rate
 
 ## [1.32.4] - Oct-16 2026
 - Fixed the category menu in the transaction form sometimes emptying when the settings panel was opened, until the page was reloaded

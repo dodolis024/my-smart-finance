@@ -676,6 +676,7 @@ const en = {
     settingsUpdated: 'Group settings updated!',
     settleConfirm: 'Confirm {from} has paid {currency} {amount} to {to}?',
     settlementRecorded: 'Settlement recorded!',
+    settlementAmountChanged: 'Amounts were updated with the latest rates. Please confirm again.',
     settlementFailed: 'Failed to record, please try again.',
     deleteSettlementConfirm: 'Are you sure you want to void this settlement?',
     settlementDeleted: 'Voided.',

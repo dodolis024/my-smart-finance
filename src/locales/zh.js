@@ -679,6 +679,7 @@ const zh = {
     settingsUpdated: '群組設定已更新！',
     settleConfirm: '確認 {from} 已還 {currency} {amount} 給 {to}？',
     settlementRecorded: '已記錄還款！',
+    settlementAmountChanged: '金額已依最新匯率更新，請再確認一次。',
     settlementFailed: '記錄失敗，請稍後再試。',
     deleteSettlementConfirm: '確定要撤銷這筆還款紀錄嗎？',
     settlementDeleted: '已撤銷。',
