@@ -552,6 +552,7 @@ const en = {
       disable: 'Disable',
       monthlyOn: '{day}th of each month',
       yearlyOn: 'Every year on {month}/{day}',
+      nextCharge: 'Next charge {date}',
     },
   },
 
@@ -587,6 +588,7 @@ const en = {
     currentMembers: 'Current Members',
     addNewMemberLabel: 'Add Members',
     memberLinked: 'Linked',
+    renameOwnerOnlyHint: 'Only the group owner can rename members who have not linked an account; you can rename yourself.',
     removeMemberHasRecords: '{name} already appears in {expenses} expense(s) and {settlements} repayment(s). Removing them would leave those records unbalanced, so they cannot be removed.',
     removeMemberConfirm: 'Remove {name}? They have no expenses or repayments yet, and would need to be added again.',
     confirmAdd: 'Confirm Add',

@@ -358,6 +358,12 @@ body.calc-keypad-open .split-modal__dialog {
   margin-top: 0.35rem;
 }
 
+.split-modal__hint {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin: 0.35rem 0 0;
+}
+
 .split-modal__amount-row {
   display: flex;
   gap: 0.5rem;

@@ -3,6 +3,8 @@ import { useSettings } from '@/hooks/useSettings';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getTodayYmd } from '@/lib/utils';
+import { nextChargeDate } from '@/lib/subscriptionSchedule';
 import { IconSubscription } from './UnifiedTabIcons';
 
 const makeEmptyForm = (defaultCurrency = 'TWD') => ({ name: '', amount: '', currency: defaultCurrency, category: '', payment_method: '', billing_cycle: 'monthly', renewal_month: 1, renewal_day: 1 });
@@ -150,6 +152,10 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
                     <div className="subscription-item__main">
                       <span className="subscription-item__name">{sub.name}</span>
                       <span className="subscription-item__meta">{sub.currency} {Number(sub.amount).toLocaleString()} · {sub.billing_cycle === 'yearly' ? t('settings.subscription.yearlyOn', { month: sub.renewal_month, day: sub.renewal_day }) : t('settings.subscription.monthlyOn', { day: sub.renewal_day })}</span>
+                      {/* 「每月 31 號」遇到小月其實是月底扣，直接把下次實際扣款日印出來，免得使用者以為漏扣或提早扣 */}
+                      {sub.is_active && nextChargeDate(sub, getTodayYmd()) && (
+                        <span className="subscription-item__next">{t('settings.subscription.nextCharge', { date: nextChargeDate(sub, getTodayYmd()) })}</span>
+                      )}
                       {sub.payment_method && <span className="subscription-item__payment">{sub.payment_method}</span>}
                     </div>
                     <div className="subscription-item__actions">

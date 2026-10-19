@@ -3,7 +3,9 @@
 This file records version updates for Smart Finance Tracker.
 
 - Added time, exchange rate and fee columns to the CSV export, after the existing columns
+- Added the next actual charge date to the subscription list, so a day-31 subscription shows the month end in short months
 - Improved the account balance row, with the currency menu moved before the amount
+- Improved the manage-members dialog so non-owners see that only the owner can rename unlinked members
 - Improved member renaming so only the group owner can rename unlinked members
 - Improved the message for amounts above the recordable limit, now in plain words and matching the CLI
 - Improved the example placeholders in the split and subscription forms to follow the interface language

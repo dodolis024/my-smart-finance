@@ -130,6 +130,10 @@
   font-size: 0.8rem;
   color: var(--color-text-secondary);
 }
+.subscription-item__next {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
 .subscription-item__payment {
   font-size: 0.78rem;
   color: var(--color-text-muted);

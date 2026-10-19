@@ -127,6 +127,10 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
               </div>
             ))}
           </div>
+          {/* 非群主看不到可編輯狀態，但不說的話他會以為名字是改不了的 */}
+          {!isOwner && onUpdateMemberName && members?.some(m => !m.user_id) && (
+            <p className="split-modal__hint">{t('split.renameOwnerOnlyHint')}</p>
+          )}
         </div>
 
         {/* Add new members */}
