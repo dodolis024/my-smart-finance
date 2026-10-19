@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added time, exchange rate and fee columns to the CSV export, after the existing columns
 - Improved the account balance row, with the currency menu moved before the amount
 - Improved member renaming so only the group owner can rename unlinked members
 - Improved the message for amounts above the recordable limit, now in plain words and matching the CLI

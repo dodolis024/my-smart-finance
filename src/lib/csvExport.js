@@ -21,7 +21,8 @@ export function csvEscape(value) {
 /**
  * @param {Array} rows 駝峰形狀的交易列（displayHistory 或搜尋結果）
  * @param {{ headers: string[], typeLabels: { expense: string, income: string } }} labels
- *   headers 順序固定：日期、類型、分類、項目、支付方式、幣別、金額、台幣金額、備註
+ *   headers 順序固定：日期、類型、分類、項目、支付方式、幣別、金額、台幣金額、備註、時間、匯率、手續費
+ *   （後三欄是後來加的，接在最後，既有的欄位位置不變，之前照欄位位置做的試算表不會跑掉）
  */
 export function buildTransactionsCsv(rows, { headers, typeLabels }) {
   const lines = [headers.map(csvEscape).join(',')];
@@ -31,6 +32,10 @@ export function buildTransactionsCsv(rows, { headers, typeLabels }) {
       row.originalAmount != null ? row.originalAmount
       : row.amount != null ? row.amount
       : '';
+    // 資料庫存 HH:MM:SS，匯出只留到分；舊資料（time 欄位加入前）留空
+    const time = row.time ? String(row.time).slice(0, 5) : '';
+    const exchangeRate = row.exchangeRate ?? row.exchange_rate ?? '';
+    const overseasFee = row.overseasFee ?? row.overseas_fee ?? '';
     lines.push(
       [
         row.date,
@@ -42,6 +47,9 @@ export function buildTransactionsCsv(rows, { headers, typeLabels }) {
         amount,
         row.twdAmount,
         row.note,
+        time,
+        exchangeRate,
+        overseasFee,
       ]
         .map(csvEscape)
         .join(',')

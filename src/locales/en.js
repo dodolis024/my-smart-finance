@@ -198,6 +198,8 @@ const en = {
     tablePayment: 'Payment',
     tableAmount: 'Amount',
     tableType: 'Type',
+    tableTime: 'Time',
+    tableFee: 'Fee',
     currencyLabel: 'Currency',
     filterOptionsAria: 'Filter options',
     selectAll: 'Select all',

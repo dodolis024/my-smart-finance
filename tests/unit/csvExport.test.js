@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildTransactionsCsv, csvEscape } from '@/lib/csvExport';
 
 const labels = {
-  headers: ['日期', '類型', '分類', '項目', '支付方式', '幣別', '金額', '台幣金額', '備註'],
+  headers: ['日期', '類型', '分類', '項目', '支付方式', '幣別', '金額', '台幣金額', '備註', '時間', '匯率', '手續費'],
   typeLabels: { expense: '支出', income: '收入' },
 };
 
@@ -56,7 +56,7 @@ describe('buildTransactionsCsv 公式注入', () => {
     );
     const line = csv.replace('﻿', '').trimEnd().split('\r\n')[1];
     expect(line).toContain('"\'=HYPERLINK(""http://evil"",""晚餐"")"');
-    expect(line.endsWith(",'=1+1")).toBe(true);
+    expect(line).toContain(",'=1+1,");
     expect(line).not.toMatch(/,=HYPERLINK/);
   });
 });
@@ -69,11 +69,19 @@ describe('buildTransactionsCsv', () => {
     expect(csv).toContain('\r\n');
   });
 
-  it('表頭與資料列欄位順序固定為 9 欄', () => {
+  it('表頭與資料列欄位順序固定為 12 欄，前 9 欄位置與舊版相同', () => {
     const csv = buildTransactionsCsv([baseRow], labels);
     const lines = csv.replace('﻿', '').trimEnd().split('\r\n');
-    expect(lines[0]).toBe('日期,類型,分類,項目,支付方式,幣別,金額,台幣金額,備註');
-    expect(lines[1]).toBe('2026-07-01,支出,飲食,拿鐵,信用卡A,TWD,120,120,');
+    expect(lines[0]).toBe('日期,類型,分類,項目,支付方式,幣別,金額,台幣金額,備註,時間,匯率,手續費');
+    expect(lines[1]).toBe('2026-07-01,支出,飲食,拿鐵,信用卡A,TWD,120,120,,,,');
+  });
+
+  it('時間只留到分、匯率與手續費照存的值輸出；離線佇列的蛇形欄位也吃得到', () => {
+    const rpcRow = { ...baseRow, time: '08:30:00', currency: 'GBP', originalAmount: 10, exchangeRate: 42.035, twdAmount: 426.65, overseasFee: 6.31 };
+    const lines = buildTransactionsCsv([rpcRow], labels).replace('﻿', '').trimEnd().split('\r\n');
+    expect(lines[1]).toBe('2026-07-01,支出,飲食,拿鐵,信用卡A,GBP,10,426.65,,08:30,42.035,6.31');
+    const queuedRow = { ...baseRow, time: '21:05', exchange_rate: 1, overseas_fee: null };
+    expect(buildTransactionsCsv([queuedRow], labels)).toContain(',120,120,,21:05,1,');
   });
 
   it('income 對映收入標籤', () => {
@@ -86,7 +94,7 @@ describe('buildTransactionsCsv', () => {
     expect(buildTransactionsCsv([queued], labels)).toContain(',99,120,');
     const none = { ...baseRow, originalAmount: null };
     const lines = buildTransactionsCsv([none], labels).replace('﻿', '').trimEnd().split('\r\n');
-    expect(lines[1]).toBe('2026-07-01,支出,飲食,拿鐵,信用卡A,TWD,,120,');
+    expect(lines[1]).toBe('2026-07-01,支出,飲食,拿鐵,信用卡A,TWD,,120,,,,');
   });
 
   it('備註含逗號與引號時正確跳脫', () => {

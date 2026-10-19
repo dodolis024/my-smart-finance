@@ -71,6 +71,9 @@ function csvOptions(t) {
       t('transaction.tableAmount'),
       t('transaction.twdAmount'),
       t('transaction.note'),
+      t('transaction.tableTime'),
+      t('transaction.exchangeRate'),
+      t('transaction.tableFee'),
     ],
     typeLabels: {
       expense: t('transaction.expenseGroup'),

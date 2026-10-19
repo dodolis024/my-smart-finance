@@ -198,6 +198,8 @@ const zh = {
     tablePayment: '支付方式',
     tableAmount: '金額',
     tableType: '類型',
+    tableTime: '時間',
+    tableFee: '手續費',
     currencyLabel: '幣別',
     filterOptionsAria: '篩選選項',
     selectAll: '全選',
