@@ -8,6 +8,7 @@ This file records version updates for Smart Finance Tracker.
 - Fixed a backdated foreign-currency expense being converted to TWD at today's rate
 - Fixed an offline foreign-currency entry keeping its cached conversion instead of being recomputed at its own date's rate when it synced
 - Fixed a non-owner renaming an unlinked member seeing a success message while nothing was saved
+- Fixed CSV exports letting items or notes starting with =, +, - or @ run as formulas in Excel
 
 ## [1.32.4] - Oct-16 2026
 - Fixed the category menu in the transaction form sometimes emptying when the settings panel was opened, until the page was reloaded

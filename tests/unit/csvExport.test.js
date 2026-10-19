@@ -31,6 +31,34 @@ describe('csvEscape', () => {
     expect(csvEscape(undefined)).toBe('');
     expect(csvEscape(120)).toBe('120');
   });
+
+  it('開頭是 = + - @ 或 tab／CR 的文字前置單引號，Excel 才不會當公式執行', () => {
+    expect(csvEscape('=HYPERLINK("http://x","點我")')).toBe('"\'=HYPERLINK(""http://x"",""點我"")"');
+    expect(csvEscape('=cmd|\' /C calc\'!A0')).toBe("'=cmd|' /C calc'!A0");
+    expect(csvEscape('+1+1')).toBe("'+1+1");
+    expect(csvEscape('-50 折扣')).toBe("'-50 折扣");
+    expect(csvEscape('@SUM(A1)')).toBe("'@SUM(A1)");
+    expect(csvEscape('\t=1')).toBe("'\t=1");
+    expect(csvEscape('\r=1')).toBe('"\'\r=1"');
+  });
+
+  it('數值欄位不會被加單引號（負數金額仍要能運算）', () => {
+    expect(csvEscape(-50)).toBe('-50');
+    expect(csvEscape(0)).toBe('0');
+  });
+});
+
+describe('buildTransactionsCsv 公式注入', () => {
+  it('分帳同步來的項目名稱與備註若以 = 開頭，匯出時會被中和', () => {
+    const csv = buildTransactionsCsv(
+      [{ ...baseRow, itemName: '=HYPERLINK("http://evil","晚餐")', note: '=1+1' }],
+      labels
+    );
+    const line = csv.replace('﻿', '').trimEnd().split('\r\n')[1];
+    expect(line).toContain('"\'=HYPERLINK(""http://evil"",""晚餐"")"');
+    expect(line.endsWith(",'=1+1")).toBe(true);
+    expect(line).not.toMatch(/,=HYPERLINK/);
+  });
 });
 
 describe('buildTransactionsCsv', () => {
