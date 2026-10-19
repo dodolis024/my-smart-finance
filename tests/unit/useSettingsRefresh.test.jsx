@@ -17,6 +17,7 @@ vi.mock('@/lib/supabase', () => {
     const b = {
       select: () => b,
       eq: () => b,
+      or: () => b,
       order: async () => ({ data: [], error: null }),
       single: async () => ({ data: null, error: null }),
       update: () => { h.ops.push(`update:${table}`); return b; },

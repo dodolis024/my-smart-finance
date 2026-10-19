@@ -14,6 +14,11 @@ export const SWIPE = {
 // 這裡只擋 UI 這條路徑，兩邊要一起調才算數。
 export const MIN_PASSWORD_LENGTH = 8;
 
+// transactions.amount 與 twd_amount 都是 NUMERIC(10,2)，超過會被資料庫擋下，但錯誤訊息是
+// 英文的「numeric field overflow」。這裡提前擋並給白話訊息；CLI 的 tools/core/transactions.js
+// 有同一個上限（MAX_AMOUNT），兩邊要一起改。
+export const MAX_TRANSACTION_AMOUNT = 99999999.99;
+
 export const STREAK_MILESTONES = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
 
 export const TIMING = {

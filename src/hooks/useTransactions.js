@@ -10,6 +10,7 @@ import { loadRates, loadAccounts, isOfflineError } from '@/lib/offlineCache';
 import { enqueueTransaction } from '@/lib/offlineQueue';
 import { fetchRateForDate } from '@/lib/exchangeRate';
 import { getOverseasFeeRate, computeTwdWithFee } from '@/lib/overseasFee';
+import { MAX_TRANSACTION_AMOUNT } from '@/lib/constants';
 
 export function useTransactions() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ export function useTransactions() {
     const amountValue = parseFormattedNumber(String(rawAmount));
     const amount = parseFloat(amountValue);
     if (isNaN(amount) || amount <= 0) throw new Error(t('transaction.invalidAmount'));
+    if (amount > MAX_TRANSACTION_AMOUNT) throw new Error(t('transaction.amountTooLarge'));
 
     let type, category;
     if (categoryValue.startsWith('expense:')) {

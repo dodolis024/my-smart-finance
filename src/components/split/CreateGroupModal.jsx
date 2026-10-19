@@ -60,7 +60,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
           <input
             id="group-name"
             className="split-modal__input"
-            placeholder="e.g. Kenting Trip"
+            placeholder={t('split.groupNamePlaceholder')}
             value={name}
             onChange={e => setName(e.target.value)}
           />
@@ -96,7 +96,7 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
           <input
             id="my-name"
             className="split-modal__input"
-            placeholder="e.g. Doris"
+            placeholder={t('split.myNamePlaceholder')}
             value={myName}
             onChange={e => setMyName(e.target.value)}
           />

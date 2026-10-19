@@ -60,7 +60,7 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
           <input
             id="settings-group-name"
             className="split-modal__input"
-            placeholder="e.g. Kenting Trip"
+            placeholder={t('split.groupNamePlaceholder')}
             value={name}
             onChange={e => setName(e.target.value)}
           />

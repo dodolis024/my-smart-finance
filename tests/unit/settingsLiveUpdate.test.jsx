@@ -81,6 +81,14 @@ vi.mock('@/lib/supabase', () => {
         const b = {
           select: (_c, opts) => { q.head = !!opts?.head; return b; },
           eq: (col, val) => { q.eqs[col] = val; return b; },
+          // deleteAccount 用 or 同時比對名稱與 account_id：`payment_method.eq."現金",account_id.eq.a1`
+          or: (expr) => {
+            q.or = [...expr.matchAll(/(\w+)\.eq\.("(?:[^"\\]|\\.)*"|[^,]+)/g)].map(([, col, raw]) => [
+              col,
+              raw.startsWith('"') ? raw.slice(1, -1).replace(/\\(.)/g, '$1') : raw,
+            ]);
+            return b;
+          },
           gte: (_c, v) => { q.gte = v; return b; },
           lte: (_c, v) => { q.lte = v; return b; },
           order: () => b,
@@ -133,6 +141,7 @@ vi.mock('@/lib/supabase', () => {
           if (table === 'accounts') return { data: db.accounts.map((a) => ({ ...a })), error: null };
           if (table === 'transactions') {
             let rows = db.transactions.filter((t) => Object.entries(q.eqs).every(([k, v]) => t[k] === v));
+            if (q.or) rows = rows.filter((t) => q.or.some(([k, v]) => t[k] === v));
             if (q.gte) rows = rows.filter((t) => t.date >= q.gte);
             if (q.lte) rows = rows.filter((t) => t.date <= q.lte);
             if (q.range) rows = rows.slice(q.range[0], q.range[1] + 1);

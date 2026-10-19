@@ -34,9 +34,11 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error(t('settings.subscription.nameRequired')); return; }
     const amount = parseFloat(form.amount);
-    if (isNaN(amount) || amount <= 0) { toast.error(t('settings.subscription.invalidAmount')); return; }
+    if (!Number.isFinite(amount) || amount <= 0) { toast.error(t('settings.subscription.invalidAmount')); return; }
+    // 欄位清空時 parseInt 得到 NaN，NaN 跟 1、31 比大小兩邊都是 false，會溜過範圍檢查
+    // 直接送到資料庫撞 NOT NULL，使用者看到的是英文的資料庫錯誤
     const renewal_day = parseInt(form.renewal_day, 10);
-    if (renewal_day < 1 || renewal_day > 31) { toast.error(t('settings.subscription.invalidRenewalDay')); return; }
+    if (!Number.isInteger(renewal_day) || renewal_day < 1 || renewal_day > 31) { toast.error(t('settings.subscription.invalidRenewalDay')); return; }
     const renewal_month = parseInt(form.renewal_month, 10);
     if (form.billing_cycle === 'yearly' && (isNaN(renewal_month) || renewal_month < 1 || renewal_month > 12)) { toast.error(t('settings.subscription.invalidRenewalMonth')); return; }
     setSaving(true);
@@ -73,7 +75,7 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
           <div className="subscription-form">
             <div className="subscription-form__field">
               <label className="subscription-form__label" htmlFor="sub-name">{t('settings.subscription.nameLabel')}</label>
-              <input id="sub-name" type="text" className="subscription-form__input" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="e.g. Netflix" maxLength={50} />
+              <input id="sub-name" type="text" className="subscription-form__input" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder={t('settings.subscription.namePlaceholder')} maxLength={50} />
             </div>
             <div className="subscription-form__row">
               <div className="subscription-form__field subscription-form__field--fixed">

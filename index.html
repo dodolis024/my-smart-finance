@@ -3,9 +3,11 @@
 <head>
   <script>
     (function() {
-      var t = localStorage.getItem('app-theme');
+      // 瀏覽器封鎖所有網站儲存時，碰 localStorage 會直接丟 SecurityError；這段只是避免首屏閃色，
+      // 讀不到就用預設值，不能讓它炸掉
+      var t = null, l = null;
+      try { t = localStorage.getItem('app-theme'); l = localStorage.getItem('app-lang'); } catch (e) {}
       if (t && t !== 'default') document.documentElement.setAttribute('data-theme', t);
-      var l = localStorage.getItem('app-lang');
       if (l === 'en') {
         document.documentElement.lang = 'en';
         document.documentElement.setAttribute('data-lang', 'en');

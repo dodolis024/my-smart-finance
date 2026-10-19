@@ -4,11 +4,18 @@ This file records version updates for Smart Finance Tracker.
 
 - Improved the account balance row, with the currency menu moved before the amount
 - Improved member renaming so only the group owner can rename unlinked members
+- Improved the message for amounts above the recordable limit, now in plain words and matching the CLI
+- Improved the example placeholders in the split and subscription forms to follow the interface language
 - Fixed a split settlement being converted to the group currency with the previous day's exchange rate
 - Fixed a backdated foreign-currency expense being converted to TWD at today's rate
 - Fixed an offline foreign-currency entry keeping its cached conversion instead of being recomputed at its own date's rate when it synced
 - Fixed a non-owner renaming an unlinked member seeing a success message while nothing was saved
 - Fixed CSV exports letting items or notes starting with =, +, - or @ run as formulas in Excel
+- Fixed the account deletion guard missing split-synced transactions linked only by account
+- Fixed the app getting stuck on the error page when the browser blocks all site storage
+- Fixed clearing a subscription's renewal day and saving showing a raw database error
+- Fixed the credit usage alert not recalculating after deleting a card expense from search results
+- Removed the unused per-user exchange rate defaults seeded for new accounts
 
 ## [1.32.4] - Oct-16 2026
 - Fixed the category menu in the transaction form sometimes emptying when the settings panel was opened, until the page was reloaded

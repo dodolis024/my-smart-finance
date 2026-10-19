@@ -33,14 +33,17 @@ export function useChangelog(userId) {
     fetchLatestVersion().then((version) => {
       if (cancelled || !version) return;
       setLatestVersion(version);
-      setHasUnread(localStorage.getItem(storageKey(userId)) !== version);
+      // 儲存被瀏覽器封鎖時讀不到已讀紀錄，就當作已讀：紅點只是提醒，不值得為它炸掉
+      let seen = version;
+      try { seen = localStorage.getItem(storageKey(userId)); } catch { /* 無痕或封鎖儲存 */ }
+      setHasUnread(seen !== version);
     });
     return () => { cancelled = true; };
   }, [userId]);
 
   const markAsRead = useCallback(() => {
     if (!latestVersion) return;
-    localStorage.setItem(storageKey(userId), latestVersion);
+    try { localStorage.setItem(storageKey(userId), latestVersion); } catch { /* 寫不進去下次再亮一次而已 */ }
     setHasUnread(false);
   }, [userId, latestVersion]);
 

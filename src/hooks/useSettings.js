@@ -152,11 +152,15 @@ export function useSettings() {
   const deleteAccount = useCallback(async (accountId) => {
     const account = accounts.find(a => a.id === accountId);
     if (account && user) {
+      // 交易與帳戶有兩條連結：payment_method 存名稱、account_id 存外鍵（分帳同步進來的交易
+      // 只有後者）。只查名稱會漏掉分帳同步的交易，刪掉帳戶後它們的 account_id 被清成 NULL，
+      // 帳戶餘額就少算這些筆。PostgREST 的 or 濾鏡裡名稱含逗號或括號要用雙引號包住
+      const quoted = `"${String(account.name).replace(/[\\"]/g, (c) => `\\${c}`)}"`;
       const { count, error: countError } = await supabase
         .from('transactions')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('payment_method', account.name);
+        .or(`payment_method.eq.${quoted},account_id.eq.${account.id}`);
       if (!countError && count > 0) {
         throw new Error(t('settings.account.hasTransactions', { name: account.name, count }));
       }

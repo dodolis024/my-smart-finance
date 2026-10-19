@@ -42,12 +42,8 @@ export async function createDefaultData(userId, lang = 'zh') {
     },
   ]);
 
+  // 匯率由全域的 exchange_rates 表供應，不再在 settings 裡種每人一份的匯率列
   const { error: settingsError } = await supabase.from('settings').insert([
-    { user_id: userId, key: 'TWD', value: { rate: 1.0 } },
-    { user_id: userId, key: 'USD', value: { rate: 30.0 } },
-    { user_id: userId, key: 'JPY', value: { rate: 0.2 } },
-    { user_id: userId, key: 'EUR', value: { rate: 32.0 } },
-    { user_id: userId, key: 'GBP', value: { rate: 38.0 } },
     { user_id: userId, key: 'expense_categories', value: data.expenseCategories },
     { user_id: userId, key: 'income_categories', value: data.incomeCategories },
   ]);

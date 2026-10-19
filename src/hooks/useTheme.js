@@ -8,6 +8,16 @@ const SHUFFLE_LAST_KEY = 'theme-shuffle-last';
 
 export const THEMES = ['default', 'rose', 'graphite', 'dawn', 'soda', 'lavender', 'sorbet', 'peach', 'lime', 'maple'];
 
+// 瀏覽器「封鎖所有 cookie／網站資料」時，碰 window.localStorage 會直接丟 SecurityError。
+// 這個 Provider 在 App 最外層的 render 期初始化，沒包住的話整個 App 進不去、只剩錯誤頁，
+// 而主題只是外觀，讀不到就用預設、寫不進去就只是不跨重整保留
+function readStorage(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function writeStorage(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* 無痕、配額滿或儲存被封鎖 */ }
+}
+
 function applyTheme(theme) {
   if (theme === 'default') {
     document.documentElement.removeAttribute('data-theme');
@@ -34,36 +44,41 @@ function pickRandom(themes, current) {
 }
 
 function migrateGrayToGraphite() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === 'gray') localStorage.setItem(STORAGE_KEY, 'graphite');
+  const raw = readStorage(STORAGE_KEY);
+  if (raw === 'gray') writeStorage(STORAGE_KEY, 'graphite');
+}
+
+function readShuffleThemes() {
+  try {
+    const saved = JSON.parse(readStorage(SHUFFLE_THEMES_KEY));
+    if (Array.isArray(saved) && saved.length > 0) return saved;
+  } catch { /* 沒存過或格式壞掉 */ }
+  return [...THEMES];
 }
 
 function initTheme() {
   migrateGrayToGraphite();
   if (_initThemeDone) {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = readStorage(STORAGE_KEY);
     const theme = THEMES.includes(saved) ? saved : 'default';
     applyTheme(theme);
     return theme;
   }
   _initThemeDone = true;
 
-  const saved = localStorage.getItem(STORAGE_KEY);
-  const shuffleEnabled = localStorage.getItem(SHUFFLE_ENABLED_KEY) === 'true';
+  const saved = readStorage(STORAGE_KEY);
+  const shuffleEnabled = readStorage(SHUFFLE_ENABLED_KEY) === 'true';
 
   if (shuffleEnabled) {
-    let shuffleThemes;
-    try { shuffleThemes = JSON.parse(localStorage.getItem(SHUFFLE_THEMES_KEY)); } catch {}
-    if (!Array.isArray(shuffleThemes) || shuffleThemes.length === 0) shuffleThemes = [...THEMES];
-
-    const interval = localStorage.getItem(SHUFFLE_INTERVAL_KEY) || 'daily';
-    const last = localStorage.getItem(SHUFFLE_LAST_KEY);
+    const shuffleThemes = readShuffleThemes();
+    const interval = readStorage(SHUFFLE_INTERVAL_KEY) || 'daily';
+    const last = readStorage(SHUFFLE_LAST_KEY);
 
     if (shouldShuffle(interval, last)) {
       const current = THEMES.includes(saved) ? saved : 'default';
       const next = pickRandom(shuffleThemes, current);
-      localStorage.setItem(STORAGE_KEY, next);
-      localStorage.setItem(SHUFFLE_LAST_KEY, new Date().toISOString());
+      writeStorage(STORAGE_KEY, next);
+      writeStorage(SHUFFLE_LAST_KEY, new Date().toISOString());
       applyTheme(next);
       return next;
     }
@@ -82,17 +97,11 @@ export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => initTheme());
 
   const [shuffleEnabled, setShuffleEnabledState] = useState(() =>
-    localStorage.getItem(SHUFFLE_ENABLED_KEY) === 'true'
+    readStorage(SHUFFLE_ENABLED_KEY) === 'true'
   );
-  const [shuffleThemes, setShuffleThemesState] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(SHUFFLE_THEMES_KEY));
-      if (Array.isArray(saved) && saved.length > 0) return saved;
-    } catch {}
-    return [...THEMES];
-  });
+  const [shuffleThemes, setShuffleThemesState] = useState(readShuffleThemes);
   const [shuffleInterval, setShuffleIntervalState] = useState(() =>
-    localStorage.getItem(SHUFFLE_INTERVAL_KEY) || 'daily'
+    readStorage(SHUFFLE_INTERVAL_KEY) || 'daily'
   );
 
   useEffect(() => {
@@ -101,22 +110,22 @@ export function ThemeProvider({ children }) {
 
   const setTheme = (t) => {
     setThemeState(t);
-    localStorage.setItem(STORAGE_KEY, t);
+    writeStorage(STORAGE_KEY, t);
   };
 
   const setShuffleEnabled = (v) => {
     setShuffleEnabledState(v);
-    localStorage.setItem(SHUFFLE_ENABLED_KEY, String(v));
+    writeStorage(SHUFFLE_ENABLED_KEY, String(v));
   };
 
   const setShuffleThemes = (arr) => {
     setShuffleThemesState(arr);
-    localStorage.setItem(SHUFFLE_THEMES_KEY, JSON.stringify(arr));
+    writeStorage(SHUFFLE_THEMES_KEY, JSON.stringify(arr));
   };
 
   const setShuffleInterval = (v) => {
     setShuffleIntervalState(v);
-    localStorage.setItem(SHUFFLE_INTERVAL_KEY, v);
+    writeStorage(SHUFFLE_INTERVAL_KEY, v);
   };
 
   return createElement(ThemeContext.Provider, {

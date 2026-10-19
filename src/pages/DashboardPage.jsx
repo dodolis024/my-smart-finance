@@ -531,7 +531,10 @@ function DashboardContent() {
       if (!confirmed) return false;
       // 找到要刪除的交易，記錄其付款帳戶（刪除後無法再查）
       // （history 與 accounts 皆來自 RPC，欄位為駝峰 paymentMethod / accountName）
-      const txToDelete = displayHistory.find((tx) => tx.id === id);
+      // 搜尋模式下點到的是搜尋結果裡的列，不在本期 history 內，也要找得到，
+      // 否則刪掉一筆大額信用卡消費後額度警告不會重算
+      const txToDelete = displayHistory.find((tx) => tx.id === id)
+        || searchResults.find((tx) => tx.id === id);
       if (queuedItems.some((item) => item.id === id)) {
         // 先從佇列移除，免得伺服器那筆刪掉後又被補送寫回去
         removeQueuedItem(id);
@@ -561,7 +564,7 @@ function DashboardContent() {
         return false;
       }
     },
-    [confirm, deleteTransaction, removeTransactionLocally, refetchPeriod, user?.id, toast, displayHistory, accounts, checkCreditUsageAlert, queuedItems, removeQueuedItem, refreshSearch, t]
+    [confirm, deleteTransaction, removeTransactionLocally, refetchPeriod, user?.id, toast, displayHistory, searchResults, accounts, checkCreditUsageAlert, queuedItems, removeQueuedItem, refreshSearch, t]
   );
 
   const handleCheckin = useCallback(async () => {
