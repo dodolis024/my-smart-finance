@@ -156,6 +156,19 @@
 
 (以 `supabase functions list` 的 updated_at/version 為準;2026-08-31 已核對)
 
+### CLI(npm `my-smart-finance-cli`)發版紀錄
+
+`tools/core/` 是前端寫入邏輯的第二份實作,外部使用者裝的是 npm 上的版本,不是 repo。
+**凡是改到 `tools/core/` 又會影響寫入結果的 commit,release 前端前必須先升版並發 npm**,
+否則網頁與 CLI 會對同一筆帳算出不同的台幣金額。發版要在真實終端機執行(passkey 2FA)。
+以 `npm view my-smart-finance-cli time` 為準。
+
+| 版本 | npm 發布日期(UTC) | 內容摘要 |
+|---|---|---|
+| 1.3.1 | 2026-09-17 | 同步時間與還款日期改用本地時鐘 |
+| 1.3.2 | 2026-10-16 | 凍結卡達標即發(`97c9599`) |
+| 1.3.3 | **待發** | 外幣記帳改以交易日期查匯率(`bee461a`,2026-10-17 才進 repo,晚於 1.3.2 發布);匯率查詢失敗時區分網路錯誤與查無匯率。**必須與含 `bee461a` 的前端 release 同一輪發出** |
+
 ### Edge Function 的 cron 密鑰(CRON_SECRET)
 
 2026-08-27 起,`update-exchange-rates` 與 `send-streak-reminder`;2026-08-31 起再加上
