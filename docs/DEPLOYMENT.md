@@ -209,7 +209,8 @@
 | send-streak-reminder-hourly | `*/5 * * * *` | true |
 | update-exchange-rates-daily | `0 2 * * *` | true |
 
-> 2026-08-31 核對。注意:`send-streak-reminder-hourly` 命名為 hourly,但實際排程是每 5 分鐘一次——命名與實際排程不符,先如實記錄,是否改名或改頻率待你決定,本次不動它。
+> 2026-08-31 核對。注意:`send-streak-reminder-hourly` 命名為 hourly,但實際排程是每 5 分鐘一次——命名與實際排程不符,先如實記錄。
+> **2026-10-19 定案:維持現狀,不改名也不改頻率。** 每 5 分鐘跑是刻意的:使用者自選提醒時間,函式每次只寄給「現在落在提醒時間窗內」的人,跑得密提醒才會準時;改成每小時會晚最多 59 分鐘。改名得 unschedule 再重建 job(command 內含 anon key 與 cron 密鑰),為一個名字去動 prod 不划算。jobname 就當歷史名稱看,別被它誤導。
 > command 欄位不記錄於此(內含 anon key)。
 >
 > 2026-08-26:`update-exchange-rates-daily` 的 command 內是未替換的
