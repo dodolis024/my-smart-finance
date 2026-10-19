@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -14,9 +15,18 @@ import { TOOLS, TOOL_MAP } from './tools.js';
  *
  * 注意：stdout 是 MCP 協定通道，任何除錯輸出都必須寫到 stderr，否則會弄壞協定。
  */
+// 回報給 MCP 客戶端的版本跟著 package.json 走，排查「使用者裝的是哪版」時才對得上 npm
+function packageVersion() {
+  try {
+    return JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+  } catch {
+    return '0.0.0';
+  }
+}
+
 export async function startMcpServer() {
   const server = new Server(
-    { name: 'my-smart-finance', version: '1.0.0' },
+    { name: 'my-smart-finance', version: packageVersion() },
     { capabilities: { tools: {} } }
   );
 

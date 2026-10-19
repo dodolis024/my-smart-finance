@@ -226,6 +226,19 @@ describe('addTransaction — 匯率與台幣換算', () => {
     ).rejects.toMatchObject({ code: 'RATE_UNAVAILABLE' });
   });
 
+  it('匯率查詢本身失敗（斷網等）時回報的是查詢錯誤，不是「查無匯率」', async () => {
+    queueResult('settings', { data: CATEGORIES, error: null });
+    queueResult('accounts', { data: ACCOUNTS, error: null });
+    mocks.rpcImpl.mockResolvedValue({ data: null, error: { message: 'TypeError: fetch failed' } });
+
+    const err = await addTransaction({ itemName: 'x', amount: 100, category: '飲食', account: '現金', currency: 'USD' })
+      .catch((e) => e);
+    expect(err.code).toBe('DB_ERROR');
+    expect(err.message).toContain('fetch failed');
+    expect(err.hint).toContain('連線');
+    expect(lastWrite('transactions', 'insert')).toBeUndefined();
+  });
+
   it('匯率為 0 也視為查無匯率', async () => {
     queueResult('settings', { data: CATEGORIES, error: null });
     queueResult('accounts', { data: ACCOUNTS, error: null });

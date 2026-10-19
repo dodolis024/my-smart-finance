@@ -46,26 +46,40 @@ export function parseAmount(rawAmount) {
  * 查無匯率時「擋下整筆」是刻意的：這些查詢查不到都回 NULL 而不是 1.0，
  * 就是為了讓呼叫端能區分「真的是 1:1」和「沒有這個幣別的資料」。
  * 若在這裡 fallback 成 1，日圓 3000 會被記成台幣 3000，而且事後幾乎看不出來。
+ *
+ * 「查詢本身失敗」（斷網、伺服器錯誤）和「查到了但沒有資料」要分開報：前者的正確反應是
+ * 確認連線後重試，後者才是幣別代碼有問題。混在一起 agent 會朝錯的方向修。
  */
+function rateLookupError(error, currency) {
+  return smfError(
+    ErrorCode.DB_ERROR,
+    `查詢 ${currency} 匯率失敗：${error.message || '未知錯誤'}`,
+    '多半是網路連線問題。這筆尚未寫入，確認連線後再執行一次即可'
+  );
+}
+
 async function resolveExchangeRate(client, currency, date) {
   if (currency === 'TWD') return 1.0;
 
-  const { data: onDate } = await client.rpc('get_exchange_rate_on', {
+  const { data: onDate, error: onDateError } = await client.rpc('get_exchange_rate_on', {
     p_currency: currency,
     p_date: date,
   });
+  if (onDateError) throw rateLookupError(onDateError, currency);
   if (Number(onDate) > 0) return Number(onDate);
 
-  const { data: earliest } = await client
+  const { data: earliest, error: earliestError } = await client
     .from('exchange_rate_history')
     .select('rate')
     .eq('currency_code', currency)
     .order('date', { ascending: true })
     .limit(1)
     .maybeSingle();
+  if (earliestError) throw rateLookupError(earliestError, currency);
   if (Number(earliest?.rate) > 0) return Number(earliest.rate);
 
-  const { data: live } = await client.rpc('get_exchange_rate', { p_currency: currency });
+  const { data: live, error: liveError } = await client.rpc('get_exchange_rate', { p_currency: currency });
+  if (liveError) throw rateLookupError(liveError, currency);
   if (Number(live) > 0) return Number(live);
 
   throw smfError(
