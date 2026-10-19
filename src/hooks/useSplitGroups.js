@@ -177,11 +177,15 @@ export function useSplitGroups() {
   const updateMemberName = useCallback(async (groupId, memberId, newName) => {
     const trimmed = newName.trim();
     if (!trimmed) throw new Error(t('split.nameEmpty'));
-    const { error } = await supabase
+    // split_members_update policy 只放行群主或本人：其他人送 UPDATE 不會報錯，只是影響 0 列。
+    // 要看回傳列數才知道有沒有真的改到，否則下面的樂觀更新會讓畫面顯示一個資料庫裡不存在的名字
+    const { data: updated, error } = await supabase
       .from('split_members')
       .update({ name: trimmed })
-      .eq('id', memberId);
+      .eq('id', memberId)
+      .select('id');
     if (error) throw error;
+    if (!updated || updated.length === 0) throw new Error('SPLIT_UPDATE_NAME_DENIED');
     setGroups(prev => prev.map(g =>
       g.id === groupId
         ? { ...g, split_members: (g.split_members || []).map(m => m.id === memberId ? { ...m, name: trimmed } : m) }

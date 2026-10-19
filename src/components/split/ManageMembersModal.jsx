@@ -5,7 +5,7 @@ import { resolveRpcError } from '@/lib/splitErrors';
 
 let nextId = 1;
 
-export default function ManageMembersModal({ isOpen, onClose, members, currentUserId, onAddMembers, onRemoveMember, onUpdateMemberName }) {
+export default function ManageMembersModal({ isOpen, onClose, members, currentUserId, isOwner = false, onAddMembers, onRemoveMember, onUpdateMemberName }) {
   const { t } = useLanguage();
   const [newMembers, setNewMembers] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -104,7 +104,9 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
                     }}
                   />
                 ) : (() => {
-                  const canEdit = onUpdateMemberName && (!m.user_id || m.user_id === currentUserId);
+                  // 與 split_members_update policy 一致：群主能改沒連結帳號的成員、本人能改自己。
+                  // 非群主改別人會被 RLS 擋成 0 列，不要讓他點得到
+                  const canEdit = onUpdateMemberName && ((!m.user_id && isOwner) || (m.user_id && m.user_id === currentUserId));
                   return (
                     <span
                       className={`split-modal__member-name${canEdit ? ' split-modal__member-name--editable' : ''}`}

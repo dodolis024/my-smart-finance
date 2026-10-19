@@ -195,8 +195,10 @@ export default function SplitPage() {
               try {
                 await updateMemberName(selectedGroup.id, memberId, newName);
                 toast.success(t('split.memberNameUpdated'));
-              } catch {
-                toast.error(t('split.updateNameFailed'));
+              } catch (err) {
+                toast.error(err?.message === 'SPLIT_UPDATE_NAME_DENIED'
+                  ? t('split.updateNameNotOwner')
+                  : t('split.updateNameFailed'));
               }
             }}
             onUpdateGroup={updateGroup}

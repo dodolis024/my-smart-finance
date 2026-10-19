@@ -3,9 +3,11 @@
 This file records version updates for Smart Finance Tracker.
 
 - Improved the account balance row, with the currency menu moved before the amount
+- Improved member renaming so only the group owner can rename unlinked members
 - Fixed a split settlement being converted to the group currency with the previous day's exchange rate
 - Fixed a backdated foreign-currency expense being converted to TWD at today's rate
 - Fixed an offline foreign-currency entry keeping its cached conversion instead of being recomputed at its own date's rate when it synced
+- Fixed a non-owner renaming an unlinked member seeing a success message while nothing was saved
 
 ## [1.32.4] - Oct-16 2026
 - Fixed the category menu in the transaction form sometimes emptying when the settings panel was opened, until the page was reloaded

@@ -638,6 +638,7 @@ const en = {
     removeMemberFailed: 'Failed to remove, please try again.',
     memberNameUpdated: 'Name updated!',
     updateNameFailed: 'Failed to update, please try again.',
+    updateNameNotOwner: 'Only the group owner can rename other members.',
     editGroupSettings: 'Edit group settings',
     manageMembers: 'Manage members',
     inviteCode: 'Invite Code',

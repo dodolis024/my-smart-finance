@@ -641,6 +641,7 @@ const zh = {
     removeMemberFailed: '移除失敗，請稍後再試。',
     memberNameUpdated: '名稱已更新！',
     updateNameFailed: '更新失敗，請稍後再試。',
+    updateNameNotOwner: '只有群主能修改其他成員的名稱。',
     editGroupSettings: '編輯群組設定',
     manageMembers: '管理成員',
     inviteCode: '邀請代碼',

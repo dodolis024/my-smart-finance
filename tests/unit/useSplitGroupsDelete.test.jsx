@@ -31,6 +31,7 @@ vi.mock('@/lib/supabase', () => {
     supabase: {
       from: () => ({
         delete: () => builder(),
+        update: () => builder(),
         select: () => builder(),
       }),
     },
@@ -89,5 +90,22 @@ describe('removeMember', () => {
     const api = await renderHook();
 
     await expect(api.removeMember('group-1', 'member-1')).resolves.toBeUndefined();
+  });
+});
+
+// split_members_update policy 只放行群主或本人：非群主改別人的名字時 RLS 同樣回「成功、0 列」
+describe('updateMemberName', () => {
+  it('RLS 擋下（0 列）時丟錯，不讓畫面顯示一個資料庫裡不存在的名字', async () => {
+    h.deletedRows = [];
+    const api = await renderHook();
+
+    await expect(api.updateMemberName('group-1', 'member-1', '新名字')).rejects.toThrow('SPLIT_UPDATE_NAME_DENIED');
+  });
+
+  it('真的改到就正常完成', async () => {
+    h.deletedRows = [{ id: 'member-1' }];
+    const api = await renderHook();
+
+    await expect(api.updateMemberName('group-1', 'member-1', '新名字')).resolves.toBeUndefined();
   });
 });

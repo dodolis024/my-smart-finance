@@ -405,6 +405,7 @@ export default function SplitGroupDetail({ group, rates, onRefreshRates, currenc
         onClose={() => setAddMembersOpen(false)}
         members={members}
         currentUserId={user?.id}
+        isOwner={isOwner}
         onAddMembers={async (names) => {
           for (const name of names) {
             await onAddMember(group.id, name);
