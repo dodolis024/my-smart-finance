@@ -133,7 +133,47 @@ describe('fetchCurrencies', () => {
     expect(result.currencies).toEqual(['TWD', 'EUR']);
   });
 
-  it('匯率預熱與預設幣別只抓一次，幣別清單每次都刷新', async () => {
+  it('匯率預熱在表還新鮮時不再抓、預設幣別只抓一次，幣別清單每次都刷新', async () => {
+    await mount();
+    let p = result.fetchCurrencies();
+    await flush();
+    respond('rpc:get_available_currencies', { data: ['TWD'], error: null });
+    // 要回一張非空的表才會存下來；存下的時間就是「現在」，到下一次排程更新前都算新鮮
+    respond('from:exchange_rates', { data: [{ currency_code: 'usd', rate: 32 }], error: null });
+    respond('from:settings:default_currency', { data: { value: 'TWD' }, error: null });
+    await act(async () => { await p; });
+
+    p = result.fetchCurrencies();
+    await flush();
+    expect(h.pending.map((x) => x.label).filter((l) => l !== 'from:settings:account_order'))
+      .toEqual(['rpc:get_available_currencies']);
+    respond('rpc:get_available_currencies', { data: ['TWD'], error: null });
+    await act(async () => { await p; });
+  });
+
+  it('匯率表是資料庫排程更新之前存的，就會再抓一次（不是固定 24 小時）', async () => {
+    const { saveRates } = await import('@/lib/offlineCache');
+    const { lastRateUpdateAt } = await import('@/lib/rateFreshness');
+    // 把存檔時間倒回「最近一次排程更新」之前一分鐘，但距今不到 24 小時
+    const nowSpy = vi.spyOn(Date, 'now');
+    const realNow = Date.now();
+    nowSpy.mockReturnValue(lastRateUpdateAt(realNow) - 60 * 1000);
+    saveRates({ USD: 31 });
+    nowSpy.mockReturnValue(realNow);
+
+    await mount();
+    const p = result.fetchCurrencies();
+    await flush();
+    const labels = h.pending.map((x) => x.label).filter((l) => l !== 'from:settings:account_order');
+    expect(labels).toContain('from:exchange_rates');
+    respond('rpc:get_available_currencies', { data: ['TWD'], error: null });
+    respond('from:exchange_rates', { data: [{ currency_code: 'usd', rate: 32 }], error: null });
+    respond('from:settings:default_currency', { data: { value: 'TWD' }, error: null });
+    await act(async () => { await p; });
+    nowSpy.mockRestore();
+  });
+
+  it('匯率預熱抓到空表或失敗時不算抓過，下次還會再試', async () => {
     await mount();
     let p = result.fetchCurrencies();
     await flush();
@@ -144,9 +184,10 @@ describe('fetchCurrencies', () => {
 
     p = result.fetchCurrencies();
     await flush();
-    expect(h.pending.map((x) => x.label).filter((l) => l !== 'from:settings:account_order'))
-      .toEqual(['rpc:get_available_currencies']);
+    const labels = h.pending.map((x) => x.label).filter((l) => l !== 'from:settings:account_order');
+    expect(labels.sort()).toEqual(['from:exchange_rates', 'rpc:get_available_currencies']);
     respond('rpc:get_available_currencies', { data: ['TWD'], error: null });
+    respond('from:exchange_rates', { data: [{ currency_code: 'usd', rate: 32 }], error: null });
     await act(async () => { await p; });
   });
 });

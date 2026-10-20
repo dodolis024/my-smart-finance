@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { loadRates, loadRatesSavedAt, saveRates } from '@/lib/offlineCache';
+import { ratesStale } from '@/lib/rateFreshness';
 import SplitGroupCard from '@/components/split/SplitGroupCard';
 import SplitGroupDetail from '@/components/split/SplitGroupDetail';
 import CreateGroupModal from '@/components/split/CreateGroupModal';
@@ -17,8 +18,8 @@ const PREFERRED_ORDER = ['TWD', 'USD', 'JPY', 'KRW', 'EUR', 'GBP'];
 // 幣別清單很少變，module-level 快取整個 session 沿用
 let cachedCurrencies = null;
 // 匯率與主畫面共用 offlineCache 那份（含存檔時間）。凍結匯率上線後這裡只剩
-// 「換算成群組結算幣別」一個用途，但 PWA 常開好幾天，超過一天就重抓
-const RATES_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+// 「換算成群組結算幣別」一個用途；過期與否看「資料庫排程更新過了沒」（lib/rateFreshness.js），
+// 不是固定 24 小時，否則更新前幾分鐘存下的表會讓畫面比資料庫晚一整天
 const initialRates = () => ({ TWD: 1, ...(loadRates() || {}) });
 
 // 讀整張匯率表；離線或查不到時回 null，由呼叫端決定沿用手上那份
@@ -71,7 +72,7 @@ export default function SplitPage() {
   useEffect(() => {
     let cancelled = false;
     const refreshIfStale = () => {
-      if (Date.now() - loadRatesSavedAt() < RATES_MAX_AGE_MS) return;
+      if (!ratesStale(loadRatesSavedAt())) return;
       fetchRateMap().then((obj) => {
         if (cancelled || !obj) return;
         saveRates(obj);

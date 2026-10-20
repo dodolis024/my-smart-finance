@@ -12,16 +12,19 @@ import {
   saveRates,
   saveCurrencies,
   loadCurrencies,
+  loadRatesSavedAt,
   saveAccounts,
   isOfflineError,
 } from '@/lib/offlineCache';
+import { ratesStale } from '@/lib/rateFreshness';
 import { subscribe, getCached } from '@/lib/resourceCache';
 
 // Module-level cache for currencies (rarely changes)
 // 離線啟動時以上次存下的清單起始,避免表單只剩 TWD
 let cachedCurrencies = loadCurrencies();
-// 匯率快取每次頁面載入只預熱一次(供離線記帳換算)
-let ratesPrimed = false;
+// 匯率快取供離線記帳換算：資料庫排程更新過之後才重抓（lib/rateFreshness.js），
+// 同一時間只讓一個實例在抓
+let ratesPriming = false;
 // 預設幣別為「每位使用者」的設定，需以 userId 綁定快取，避免切換帳號時沿用他人的值
 let cachedDefaultCurrency = null;
 let cachedDefaultCurrencyUserId = null;
@@ -273,23 +276,25 @@ export function useDashboard() {
     };
 
     const primeRates = async () => {
-      // 預熱匯率快取(離線記帳時換算 TWD 用;exchange_rates 有 authenticated SELECT RLS)
-      if (!ratesPrimed && user) {
-        ratesPrimed = true;
-        try {
-          const { data: rateRows } = await supabase
-            .from('exchange_rates')
-            .select('currency_code, rate');
-          if (Array.isArray(rateRows) && rateRows.length > 0) {
-            saveRates(
-              Object.fromEntries(
-                rateRows.map((r) => [String(r.currency_code).toUpperCase(), Number(r.rate)])
-              )
-            );
-          }
-        } catch {
-          // 離線或查詢失敗:保留上次存的匯率
+      // 預熱匯率快取(離線記帳時換算 TWD 用;exchange_rates 有 authenticated SELECT RLS)。
+      // 還新鮮就不查；查失敗（離線）保留上次那份，下次進來再試
+      if (!user || ratesPriming || !ratesStale(loadRatesSavedAt())) return;
+      ratesPriming = true;
+      try {
+        const { data: rateRows } = await supabase
+          .from('exchange_rates')
+          .select('currency_code, rate');
+        if (Array.isArray(rateRows) && rateRows.length > 0) {
+          saveRates(
+            Object.fromEntries(
+              rateRows.map((r) => [String(r.currency_code).toUpperCase(), Number(r.rate)])
+            )
+          );
         }
+      } catch {
+        // 離線或查詢失敗:保留上次存的匯率
+      } finally {
+        ratesPriming = false;
       }
     };
 

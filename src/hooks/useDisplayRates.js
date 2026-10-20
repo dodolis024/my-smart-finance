@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { loadRates } from '@/lib/offlineCache';
+import { ratesStale } from '@/lib/rateFreshness';
 
 // 顯示幣別的匯率表：{ history: [[date, rate], ...依日期升冪], live: 今日匯率 }。
 // 歷史匯率每天只多一列、全站共用（非個資），所以：
-//   - 模組層級快取：同一次頁面載入內切來切去不重抓
+//   - 模組層級快取：同一次頁面載入內切來切去不重抓；但 PWA 常常好幾天不重新整理，
+//     所以每張表記下抓取時間，資料庫排程更新過之後（lib/rateFreshness.js）就重抓
 //   - localStorage：重新整理或離線時首屏就能換算，背景再抓最新的
 const LOCAL_PREFIX = 'sf:rate-history:v1';
 // PostgREST 單次最多回 1000 列（Supabase 預設），歷史累積超過就要分頁抓
@@ -55,8 +57,11 @@ async function fetchRateTable(currency) {
     .maybeSingle();
   const live = Number(liveRow?.rate) > 0 ? Number(liveRow.rate) : Number(loadRates()?.[currency]) || null;
 
-  return { history, live };
+  return { history, live, fetchedAt: Date.now() };
 }
+
+/** 記憶體裡那張表還能用嗎：抓過、而且資料庫從那之後還沒更新過 */
+const memoryFresh = (currency) => memory.has(currency) && !ratesStale(memory.get(currency)?.fetchedAt);
 
 function loadRateTable(currency) {
   if (!inflight.has(currency)) {
@@ -87,8 +92,8 @@ export function useDisplayRates(currency) {
   useEffect(() => {
     if (!needsRates) return undefined;
     let cancelled = false;
-    // 每次頁面載入各幣別抓一次（memory 命中就不抓）；失敗就沿用快取
-    if (!memory.has(currency)) {
+    // 各幣別抓一次，資料庫更新過之後再抓一次（memory 還新鮮就不抓）；失敗就沿用快取
+    if (!memoryFresh(currency)) {
       loadRateTable(currency)
         .then((table) => { if (!cancelled) setState({ currency, table }); })
         .catch(() => {});
@@ -117,7 +122,7 @@ export function useRateTables(currencies) {
   useEffect(() => {
     if (!key) return undefined;
     let cancelled = false;
-    key.split(',').filter((c) => !memory.has(c)).forEach((c) => {
+    key.split(',').filter((c) => !memoryFresh(c)).forEach((c) => {
       loadRateTable(c)
         .then((table) => { if (!cancelled) setTables((prev) => ({ ...prev, [c]: table })); })
         .catch(() => {});
