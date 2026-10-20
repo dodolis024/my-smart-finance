@@ -54,7 +54,8 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
         <div ref={bodyRef} className="transaction-detail-body scrollbar-on-scroll">
           <div className="transaction-detail-item">
             <div className="transaction-detail-label">{t('transaction.date')}</div>
-            <div className="transaction-detail-value">{tx.date}</div>
+            {/* 時間存 HH:MM:SS，顯示到分；time 欄位加入前的舊資料沒有時間，只顯示日期 */}
+            <div className="transaction-detail-value">{tx.date}{tx.time ? ` ${String(tx.time).slice(0, 5)}` : ''}</div>
           </div>
           <div className="transaction-detail-item">
             <div className="transaction-detail-label">{t('transaction.category')}</div>
