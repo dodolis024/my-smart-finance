@@ -58,7 +58,7 @@
 | scripts/fix-cron-streak-reminder-timeout.sql | 提醒排程的 HTTP 逾時 5 秒放寬為 30 秒(以 alter_job 只覆寫 command,不重建 job) | 2026-08-27 |
 | scripts/add-cron-secret-header.sql | 匯率／提醒兩個排程的 command 加上 `x-cron-secret` header(搭配 Edge Function 驗證) | 2026-08-27 |
 | scripts/fix-split-member-access.sql | 分帳成員存取權收斂:加入群組一律需通過邀請碼驗證,成員查詢範圍限本人相關群組 | 2026-08-31 |
-| scripts/fix-cron-subscriptions-after-rates.sql | `process-subscriptions-daily` 從 01:00 UTC 改到 02:30 UTC,排在匯率更新之後(原本外幣訂閱每天用前一天的匯率入帳);只改 schedule 不動 command | **待執行** |
+| scripts/fix-cron-subscriptions-after-rates.sql | `process-subscriptions-daily` 從 01:00 UTC 改到 02:30 UTC,排在匯率更新之後(原本外幣訂閱每天用前一天的匯率入帳);只改 schedule 不動 command。驗證 ordered_after_rates = true | 2026-10-20 |
 | scripts/fix-split-avatar-rpc.sql | 批次頭像 RPC 的呼叫者權限檢查 | 2026-08-31 |
 | scripts/fix-cron-auth-and-credit-card-schedule.sql | 訂閱排程的 command 加上 `x-cron-secret` header;補建從未建立的 credit-card-reminder-daily 排程 | 2026-08-31 |
 | scripts/fix-invite-code-hardening.sql | 邀請碼查詢加登入檢查;產生器改 10 碼 gen_random_bytes;既有 5 組邀請碼一次性輪換 | 2026-08-31 |
@@ -209,7 +209,7 @@
 | jobname | schedule | active |
 |---|---|---|
 | credit-card-reminder-daily | `0 1 * * *` | true |
-| process-subscriptions-daily | `0 1 * * *`(待改 `30 2 * * *`,見 scripts/fix-cron-subscriptions-after-rates.sql) | true |
+| process-subscriptions-daily | `30 2 * * *`(2026-10-20 起;原 `0 1 * * *`,改排在匯率更新之後) | true |
 | send-streak-reminder-hourly | `*/5 * * * *` | true |
 | update-exchange-rates-daily | `0 2 * * *` | true |
 
