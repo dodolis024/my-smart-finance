@@ -50,13 +50,9 @@ export function useTransactions() {
       type = 'income';
       category = categoryValue.slice(7);
     } else {
-      const { data: incomeCategories } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'income_categories')
-        .single();
-      const incomeCats = incomeCategories?.value || ['薪水', '投資', 'Salary', 'Investment'];
-      type = Array.isArray(incomeCats) && incomeCats.includes(categoryValue) ? 'income' : 'expense';
+      // 表單一律送 expense:／income: 前綴，走到這裡只剩防禦性後備：當支出處理，
+      // 不再為此多查一趟 settings（舊版曾在這裡查收入分類清單，是早已無人走的路徑）
+      type = 'expense';
       category = categoryValue;
     }
 

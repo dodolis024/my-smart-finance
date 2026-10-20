@@ -197,8 +197,10 @@
 > 輪換順序:先改 cron command 內的密鑰,再 `supabase secrets set`(中間有短暫空窗,
 > 詳見 `scripts/add-cron-secret-header.sql` 檔尾)。
 >
-> 已知缺口:`send-split-notification` 與 `send-credit-usage-alert` 的呼叫端是前端,
-> 不適用此方案(密鑰放前端等於公開),待另外評估。
+> `send-split-notification` 與 `send-credit-usage-alert` 的呼叫端是前端,不適用 cron 密鑰
+> (密鑰放前端等於公開)。這兩支改走另一條防線,**已於 2026-08-31(v6)與 2026-09-04(v10)上線**:
+> 從 `Authorization` header 的 JWT 以 `auth.getUser()` 驗明呼叫者身分,推播對象與文案一律
+> 從資料庫查、不信任 body,再驗證帳戶歸屬／群組成員資格。2026-10-19 健檢已重新讀過兩支函式確認。
 
 ### pg_cron 排程
 
