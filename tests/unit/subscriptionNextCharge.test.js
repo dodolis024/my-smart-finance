@@ -1,5 +1,44 @@
 import { describe, it, expect } from 'vitest';
-import { nextChargeDate } from '@/lib/subscriptionSchedule';
+import { nextChargeDate, taipeiClock, chargeDateToday } from '@/lib/subscriptionSchedule';
+import {
+  taipeiClock as edgeTaipeiClock,
+  chargeDateToday as edgeChargeDateToday,
+} from '../../supabase/functions/process-subscriptions/schedule.ts';
+
+/**
+ * 前端新增訂閱時的「今天是不是扣款日」要和排程端給出一樣的答案，
+ * 否則同一筆訂閱可能兩邊都不入帳。這裡直接拿兩份實作對撞，不信任各自的註解。
+ */
+describe('taipeiClock / chargeDateToday 與排程端同語意', () => {
+  const nows = [
+    '2026-09-16T16:00:00Z', '2026-09-16T15:59:00Z', '2025-12-31T16:30:00Z',
+    '2026-02-28T20:05:00Z', '2026-04-30T03:00:00Z', '2028-02-29T10:00:00Z',
+  ];
+  const subs = [
+    { billing_cycle: 'monthly', renewal_day: 1 },
+    { billing_cycle: 'monthly', renewal_day: 17 },
+    { billing_cycle: 'monthly', renewal_day: 31 },
+    { billing_cycle: 'yearly', renewal_month: 3, renewal_day: 1 },
+    { billing_cycle: 'yearly', renewal_month: 2, renewal_day: 30 },
+    { renewal_day: 30 },
+  ];
+
+  it('台灣時鐘逐點相同', () => {
+    for (const n of nows) expect(taipeiClock(new Date(n))).toEqual(edgeTaipeiClock(new Date(n)));
+  });
+
+  it('扣款日判定逐組相同（含月底與年繳）', () => {
+    for (const n of nows) {
+      const clock = taipeiClock(new Date(n));
+      for (const sub of subs) expect(chargeDateToday(sub, clock)).toBe(edgeChargeDateToday(sub, clock));
+    }
+  });
+
+  it('31 號在 4/30 台灣時間當天要扣', () => {
+    expect(chargeDateToday({ renewal_day: 31 }, taipeiClock(new Date('2026-04-30T03:00:00Z')))).toBe('2026-04-30');
+    expect(chargeDateToday({ renewal_day: 31 }, taipeiClock(new Date('2026-04-30T16:30:00Z')))).toBeNull();
+  });
+});
 
 /**
  * 訂閱列表顯示的「下次扣款日」。跟排程端同一套月底規則：

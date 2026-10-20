@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCachedResource } from '@/hooks/useCachedResource';
 import { notifyDataChanged } from '@/lib/dataEvents';
+import { taipeiClock, chargeDateToday } from '@/lib/subscriptionSchedule';
 
 export function useSubscriptions() {
   const { user } = useAuth();
@@ -50,31 +51,15 @@ export function useSubscriptions() {
         .single();
       if (error) throw error;
 
-      // 若今天剛好是扣款日，立刻建立交易
-      // 與 process-subscriptions edge function 同樣以台灣時間(UTC+8)判斷「今天」,
-      // 避免裝置時區不同時兩端判定不一致(最壞情況兩邊都不建立交易)
-      const tw = new Date(Date.now() + 8 * 60 * 60 * 1000);
-      const year = tw.getUTCFullYear();
-      const month = tw.getUTCMonth() + 1;
-      const todayDay = tw.getUTCDate();
+      // 若今天剛好是扣款日，立刻建立交易。
+      // 「今天」與月底夾法和 process-subscriptions 排程共用同一套規則（lib/subscriptionSchedule.js），
+      // 以台灣時間判斷，裝置時區不同時兩端才不會各說各話（最壞情況兩邊都不建立交易）
+      const clock = taipeiClock(new Date());
+      const dateStr = chargeDateToday(formData, clock);
 
-      const cycle = formData.billing_cycle || 'monthly';
-      let isDueToday = false;
-      if (cycle === 'yearly') {
-        // 年繳：需月份相符且日相符（月底自動調整）
-        if (month === formData.renewal_month) {
-          const actualDay = Math.min(formData.renewal_day, new Date(year, month, 0).getDate());
-          isDueToday = todayDay === actualDay;
-        }
-      } else {
-        const actualDay = Math.min(formData.renewal_day, new Date(year, month, 0).getDate());
-        isDueToday = todayDay === actualDay;
-      }
-
-      if (isDueToday) {
-        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
+      if (dateStr) {
         // time 與日期用同一個台灣時鐘；不帶的話資料庫會用它自己的 UTC 時鐘，慢 8 小時
-        const timeStr = `${String(tw.getUTCHours()).padStart(2, '0')}:${String(tw.getUTCMinutes()).padStart(2, '0')}`;
+        const timeStr = clock.time;
 
         // 查無匯率時不建立當日交易（訂閱本身照常保留），避免外幣被靜默以 1:1 記成錯誤的台幣金額
         let exchangeRate = 1;
