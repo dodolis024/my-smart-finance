@@ -43,6 +43,8 @@ import StreakModal from '@/components/streak/StreakModal';
 import YearlyReviewBanner from '@/components/dashboard/YearlyReviewBanner';
 import { hasBalanceTracking } from '@/lib/accountBalance';
 import { isAccountActive } from '@/lib/accountStatus';
+import { useRateStatus } from '@/hooks/useRateStatus';
+import { RATES_STALE_WARN_DAYS } from '@/lib/rateFreshness';
 
 // 交易紀錄每頁筆數：約 3 個手機螢幕，是可以一頁看完的單位
 const PAGE_SIZE = 50;
@@ -339,6 +341,9 @@ function DashboardContent() {
   }, [modals]);
 
   const balanceAccounts = useMemo(() => accounts.filter((a) => hasBalanceTracking(a) && isAccountActive(a)), [accounts]);
+
+  // 資料庫的匯率排程壞掉時沒有任何地方看得出來（曾停擺 53 天），太久沒更新就在這裡提示
+  const { staleDays: rateStaleDays } = useRateStatus();
 
   // 一次抓齊所有有設餘額的帳戶要用的交易。跟著 accounts 重抓：記一筆帳之後 RPC 會重抓
   // 帳戶，餘額也就跟著更新
@@ -783,6 +788,11 @@ function DashboardContent() {
                       minute: '2-digit',
                     }),
                   })}
+                </span>
+              )}
+              {rateStaleDays != null && rateStaleDays >= RATES_STALE_WARN_DAYS && (
+                <span className="offline-badge rates-stale-badge" title={t('dashboard.ratesStaleHint')}>
+                  {t('dashboard.ratesStale', { days: rateStaleDays })}
                 </span>
               )}
               {pendingCount > 0 && (

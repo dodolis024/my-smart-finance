@@ -122,6 +122,8 @@ const en = {
     checkinFailed: 'Check-in failed, please try again.',
     loadFailed: 'Failed to load data.',
     offlineData: 'Offline data · updated {time}',
+    ratesStale: 'Rates not updated for {days} days',
+    ratesStaleHint: 'Exchange rates refresh once a day. A long gap means the scheduled update may be broken, and foreign-currency entries are using old rates meanwhile',
     pendingSync: 'Pending sync',
     pendingSyncCount: '{count} pending sync',
     offlineQueued: 'You are offline. This transaction is saved locally and will sync once you are back online.',

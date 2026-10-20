@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { loadRates } from '@/lib/offlineCache';
-import { ratesStale } from '@/lib/rateFreshness';
+import { ratesStale, scheduleAtNextRateUpdate } from '@/lib/rateFreshness';
 
 // 顯示幣別的匯率表：{ history: [[date, rate], ...依日期升冪], live: 今日匯率 }。
 // 歷史匯率每天只多一列、全站共用（非個資），所以：
@@ -93,12 +93,16 @@ export function useDisplayRates(currency) {
     if (!needsRates) return undefined;
     let cancelled = false;
     // 各幣別抓一次，資料庫更新過之後再抓一次（memory 還新鮮就不抓）；失敗就沿用快取
-    if (!memoryFresh(currency)) {
+    const refresh = () => {
+      if (memoryFresh(currency)) return;
       loadRateTable(currency)
         .then((table) => { if (!cancelled) setState({ currency, table }); })
         .catch(() => {});
-    }
-    return () => { cancelled = true; };
+    };
+    refresh();
+    // 首頁整天開著不重整時，排程更新後也要換成新匯率
+    const cancelTimer = scheduleAtNextRateUpdate(refresh);
+    return () => { cancelled = true; cancelTimer(); };
   }, [currency, needsRates]);
 
   return state.currency === currency ? state.table : null;
@@ -122,12 +126,16 @@ export function useRateTables(currencies) {
   useEffect(() => {
     if (!key) return undefined;
     let cancelled = false;
-    key.split(',').filter((c) => !memoryFresh(c)).forEach((c) => {
-      loadRateTable(c)
-        .then((table) => { if (!cancelled) setTables((prev) => ({ ...prev, [c]: table })); })
-        .catch(() => {});
-    });
-    return () => { cancelled = true; };
+    const refresh = () => {
+      key.split(',').filter((c) => !memoryFresh(c)).forEach((c) => {
+        loadRateTable(c)
+          .then((table) => { if (!cancelled) setTables((prev) => ({ ...prev, [c]: table })); })
+          .catch(() => {});
+      });
+    };
+    refresh();
+    const cancelTimer = scheduleAtNextRateUpdate(refresh);
+    return () => { cancelled = true; cancelTimer(); };
   }, [key]);
 
   return tables;

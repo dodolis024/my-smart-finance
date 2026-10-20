@@ -51,3 +51,49 @@ describe('ratesStale', () => {
     expect(ratesStale(T('2026-10-10T12:00:00Z'), T('2026-10-20T09:00:00Z'))).toBe(true);
   });
 });
+
+describe('nextRateUpdateAt / scheduleAtNextRateUpdate', () => {
+  it('下一次更新點是最近一次加一天', async () => {
+    const { nextRateUpdateAt } = await import('@/lib/rateFreshness');
+    expect(nextRateUpdateAt(T('2026-10-20T09:00:00Z'))).toBe(T('2026-10-21T02:10:00Z'));
+    expect(nextRateUpdateAt(T('2026-10-20T01:00:00Z'))).toBe(T('2026-10-20T02:10:00Z'));
+  });
+
+  it('計時器在下一次更新點叫一次，取消後不叫', async () => {
+    const { scheduleAtNextRateUpdate } = await import('@/lib/rateFreshness');
+    const { vi } = await import('vitest');
+    vi.useFakeTimers();
+    try {
+      const now = T('2026-10-20T09:00:00Z');
+      vi.setSystemTime(now);
+      const cb = vi.fn();
+      scheduleAtNextRateUpdate(cb, now);
+      vi.advanceTimersByTime(T('2026-10-21T02:10:00Z') - now - 1);
+      expect(cb).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(cb).toHaveBeenCalledTimes(1);
+
+      const cb2 = vi.fn();
+      const cancel = scheduleAtNextRateUpdate(cb2, Date.now());
+      cancel();
+      vi.advanceTimersByTime(2 * 24 * 3600 * 1000);
+      expect(cb2).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('daysSinceRateUpdate', () => {
+  it('整數天、無條件捨去；讀不到回 null', async () => {
+    const { daysSinceRateUpdate } = await import('@/lib/rateFreshness');
+    const now = T('2026-10-20T09:00:00Z');
+    expect(daysSinceRateUpdate('2026-10-17T08:00:00Z', now)).toBe(3);
+    expect(daysSinceRateUpdate('2026-10-17T10:00:00Z', now)).toBe(2);
+    expect(daysSinceRateUpdate('2026-10-20T08:00:00Z', now)).toBe(0);
+    expect(daysSinceRateUpdate(null, now)).toBeNull();
+    expect(daysSinceRateUpdate('garbage', now)).toBeNull();
+    // 時鐘偏差讓更新時間在未來也不會變負數
+    expect(daysSinceRateUpdate('2026-10-21T08:00:00Z', now)).toBe(0);
+  });
+});

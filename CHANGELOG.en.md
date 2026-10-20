@@ -9,12 +9,14 @@ This file records version updates for Smart Finance Tracker.
 - Added account deactivation, so a cancelled card keeps its history and statistics but leaves the transaction and subscription pickers
 - Improved the account deletion prompts, suggesting deactivation when transactions exist and dropping the outdated note about removing the account link
 - Improved the account balance row, with the currency menu moved before the amount
-- Improved on-screen conversion rates, which now refresh on the first visit after each daily rate update instead of waiting a fixed 24 hours or a page reload
+- Added a dashboard notice when exchange rates have not been updated for more than 3 days
+- Improved on-screen conversion rates, which now refresh after each daily rate update instead of waiting a fixed 24 hours or a page reload
 - Improved the manage-members dialog so non-owners see that only the owner can rename unlinked members
 - Improved member renaming so only the group owner can rename unlinked members
 - Improved the message for amounts above the recordable limit, now in plain words and matching the CLI
 - Improved the example placeholders in the split and subscription forms to follow the interface language
 - Fixed a split settlement being converted to the group currency with the previous day's exchange rate
+- Fixed automatic subscription charges in foreign currencies using the previous day's rate, by scheduling them after the daily rate update
 - Fixed a backdated foreign-currency expense being converted to TWD at today's rate
 - Fixed an offline foreign-currency entry keeping its cached conversion instead of being recomputed at its own date's rate when it synced
 - Fixed a non-owner renaming an unlinked member seeing a success message while nothing was saved

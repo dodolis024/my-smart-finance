@@ -12,6 +12,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const RATE_UPDATE_UTC_HOUR = 2;
 /** 排程 02:00 起跑，函式抓 API、寫表要幾秒到幾十秒；多留 10 分鐘，太早重抓只會拿到舊表 */
 export const RATE_UPDATE_SLACK_MS = 10 * 60 * 1000;
+/** 資料庫的匯率超過這麼多天沒更新就在首頁提示：排程曾經壞掉 53 天沒人發現 */
+export const RATES_STALE_WARN_DAYS = 3;
 
 /** 最近一次「排程應已跑完」的時間點（ms）：今天 02:10 UTC，還沒到就算昨天的 */
 export function lastRateUpdateAt(now = Date.now()) {
@@ -19,6 +21,11 @@ export function lastRateUpdateAt(now = Date.now()) {
   const todayBoundary = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), RATE_UPDATE_UTC_HOUR)
     + RATE_UPDATE_SLACK_MS;
   return now >= todayBoundary ? todayBoundary : todayBoundary - DAY_MS;
+}
+
+/** 下一次「排程應已跑完」的時間點（ms） */
+export function nextRateUpdateAt(now = Date.now()) {
+  return lastRateUpdateAt(now) + DAY_MS;
 }
 
 /**
@@ -30,4 +37,26 @@ export function ratesStale(savedAt, now = Date.now()) {
   // 裝置時鐘被往回調（存檔時間在未來）就當過期，寧可多抓一次也不要抱著對不上的時間
   if (savedAt > now) return true;
   return savedAt < lastRateUpdateAt(now);
+}
+
+/**
+ * 畫面整天開著、沒切走也沒重整時，visibilitychange 不會觸發；在下一次排程更新的時間點
+ * 叫一次 cb。回傳取消函式。cb 自己要再判斷要不要抓（ratesStale），這裡只負責叫醒。
+ */
+export function scheduleAtNextRateUpdate(cb, now = Date.now()) {
+  // 至少隔 1 秒，避免時鐘誤差讓它在邊界上連續觸發
+  const delay = Math.max(1000, nextRateUpdateAt(now) - now);
+  const id = setTimeout(cb, delay);
+  return () => clearTimeout(id);
+}
+
+/**
+ * 資料庫的匯率距今幾天沒更新（整數天，無條件捨去）；讀不到時間回 null。
+ * @param {string|number|Date|null} updatedAt exchange_rates 最新的 updated_at
+ */
+export function daysSinceRateUpdate(updatedAt, now = Date.now()) {
+  if (updatedAt == null) return null;
+  const ts = new Date(updatedAt).getTime();
+  if (!Number.isFinite(ts)) return null;
+  return Math.max(0, Math.floor((now - ts) / DAY_MS));
 }

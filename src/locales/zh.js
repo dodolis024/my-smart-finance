@@ -122,6 +122,8 @@ const zh = {
     checkinFailed: '簽到失敗，請稍後再試。',
     loadFailed: '無法取得資料',
     offlineData: '離線資料 · 更新於 {time}',
+    ratesStale: '匯率已 {days} 天沒更新',
+    ratesStaleHint: '匯率每天自動更新一次，太久沒更新代表排程可能壞了，這段期間外幣記帳用的是舊匯率',
     pendingSync: '待同步',
     pendingSyncCount: '{count} 筆待同步',
     offlineQueued: '目前離線，已暫存這筆交易，恢復連線後會自動同步。',

@@ -7,7 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { loadRates, loadRatesSavedAt, saveRates } from '@/lib/offlineCache';
-import { ratesStale } from '@/lib/rateFreshness';
+import { ratesStale, scheduleAtNextRateUpdate } from '@/lib/rateFreshness';
 import SplitGroupCard from '@/components/split/SplitGroupCard';
 import SplitGroupDetail from '@/components/split/SplitGroupDetail';
 import CreateGroupModal from '@/components/split/CreateGroupModal';
@@ -84,8 +84,11 @@ export default function SplitPage() {
     };
     refreshIfStale();
     document.addEventListener('visibilitychange', onVisibilityChange);
+    // 分頁整天開著、沒切走也沒重整時 visibilitychange 不會來，排程更新後主動再檢查一次
+    const cancelTimer = scheduleAtNextRateUpdate(refreshIfStale);
     return () => {
       cancelled = true;
+      cancelTimer();
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, []);
