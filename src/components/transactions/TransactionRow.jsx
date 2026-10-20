@@ -142,7 +142,7 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
     );
   }
 
-  /* 桌面版：4 欄（年檢視多一欄日期） */
+  /* 桌面版：5 欄（年檢視多一欄日期）。時間欄只在電腦版：手機版 4 欄 slider 已經塞滿 */
   return (
     <tr
       ref={rowRef}
@@ -158,6 +158,10 @@ export default function TransactionRow({ transaction: tx, isAlt, showDate = fals
           <div className="cell-date-inner">{displayDate}</div>
         </td>
       )}
+      <td className="cell-time">
+        {/* 存 HH:MM:SS，顯示到分；time 欄位加入前的舊資料留空 */}
+        <div className="cell-time-inner">{tx.time ? String(tx.time).slice(0, 5) : ''}</div>
+      </td>
       <td className="cell-category">
         <div className="cell-category-inner">
           {categoryDot}<span className="badge">{tx.category}</span>

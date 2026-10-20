@@ -193,6 +193,16 @@
   text-overflow: ellipsis;
 }
 
+/* 記帳時間：次要資訊，字級與顏色都退一階，不跟品項搶眼 */
+.cell-time {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  text-align: left;
+  padding: 0 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 .cell-category {
   text-align: left;
   padding: 0 0.5rem;

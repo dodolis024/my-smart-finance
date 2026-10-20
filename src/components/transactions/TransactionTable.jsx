@@ -93,8 +93,10 @@ export default function TransactionTable({
   // 年檢視的日期欄改固定寬：原本 16.67% 在寬螢幕留一大片白、1201px 卻連日期都被截。
   // 整張表同一年時省略年份（09-22：>1440px 字級 15px 約 43px + 左右內距 28px = 71px → 4.75rem）；
   // 搜尋結果會跨年，此時保留完整日期（2026-09-22 約 86px + 28px = 114px → 7.25rem）
+  // 時間欄固定 3.5rem（「09:41」約 40px + 內距），寬度由彈性的品項欄讓出，其他欄位比例不變
   const colgroup = groupByDate ? (
     <colgroup>
+      <col style={{ width: '3.5rem' }} />
       <col style={{ width: '20%' }} />
       <col />
       <col style={{ width: '16%' }} />
@@ -103,6 +105,7 @@ export default function TransactionTable({
   ) : (
     <colgroup>
       <col style={{ width: singleYear ? '4.75rem' : '7.25rem' }} />
+      <col style={{ width: '3.5rem' }} />
       <col style={{ width: '20%' }} />
       <col />
       <col style={{ width: '13.89%' }} />
