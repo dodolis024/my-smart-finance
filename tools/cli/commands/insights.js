@@ -27,10 +27,13 @@ export async function accountsCommand({ flags = {} } = {}) {
         fee: a.overseas_fee_rate
           ? `${Number(a.overseas_fee_rate)}%${a.overseas_fee_auto_check === false ? '' : '（外幣自動）'}`
           : '－',
+        // 停用（剪卡）的帳戶不能再記帳，列出來只是讓 agent 知道它存在、別拿來用
+        status: a.is_active === false ? '已停用' : '啟用中',
       })),
       [
         { key: 'name', label: '帳戶名稱' },
         { key: 'type', label: '類型' },
+        { key: 'status', label: '狀態' },
         { key: 'limit', label: '額度', align: 'right' },
         { key: 'billing', label: '結帳日' },
         { key: 'fee', label: '海外手續費' },

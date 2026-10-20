@@ -415,6 +415,25 @@ describe('addTransaction — 帳戶與分類解析', () => {
     ).rejects.toMatchObject({ code: 'ACCOUNT_NOT_FOUND', hint: expect.stringContaining('現金') });
   });
 
+  it('已停用（剪卡）的帳戶不能再記帳：報錯說明已停用，hint 只列啟用中的帳戶', async () => {
+    queueResult('settings', { data: CATEGORIES, error: null });
+    queueResult('accounts', { data: [...ACCOUNTS, { id: 'acc-2', name: '剪掉的卡', type: 'credit_card', is_active: false }], error: null });
+
+    await expect(
+      addTransaction({ itemName: 'x', amount: 100, category: '飲食', account: '剪掉的卡' })
+    ).rejects.toMatchObject({
+      code: 'ACCOUNT_NOT_FOUND',
+      message: expect.stringContaining('已停用'),
+      hint: expect.stringContaining('現金'),
+    });
+    expect(mocks.writes.find((w) => w.table === 'transactions')).toBeUndefined();
+  });
+
+  it('沒有 is_active 欄位（prod 還沒跑 migration）時一律視為啟用，行為與加欄位前相同', async () => {
+    setupHappyPath();
+    await expect(addTransaction({ itemName: 'x', amount: 100, category: '飲食', account: '現金' })).resolves.toBeTruthy();
+  });
+
   it('分類不存在時報錯，並在 hint 附上可用分類', async () => {
     queueResult('settings', { data: CATEGORIES, error: null });
 

@@ -17,6 +17,7 @@
 | 簽到規則 | `maybeCheckIn` |
 | 簽到成功後的凍結卡對帳 | `core/streakFreeze.js`（兩邊都要在簽到成功後呼叫，否則發卡時機會不一致） |
 | 分類或帳戶的解析規則 | `core/categories.js` / `core/accounts.js` |
+| 帳戶啟用狀態（`accounts.is_active`，前端 `src/lib/accountStatus.js`） | `core/accounts.js` 的 `isAccountActive` 與 `resolveAccount`（停用的帳戶兩邊都不能再記帳） |
 
 分帳也是一樣的處境，`core/splitExpenses.js` 是 `src/hooks/useSplitExpenses.js` 的第二份實作：
 

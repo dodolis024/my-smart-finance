@@ -45,6 +45,8 @@ serve(async (req) => {
       .from('accounts')
       .select('id, user_id, name, payment_due_day')
       .eq('type', 'credit_card')
+      // 剪掉的卡（is_active = false）不再提醒繳款；欄位由 database/account-active-migration.sql 加入
+      .eq('is_active', true)
       .not('payment_due_day', 'is', null)
 
     if (cardsError) throw new Error(`Failed to fetch credit card accounts: ${cardsError.message}`)

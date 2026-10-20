@@ -137,7 +137,7 @@ export const TOOLS = [
   },
   {
     name: 'list_accounts',
-    description: '列出使用者所有的帳戶／付款方式。記帳前若不確定帳戶名稱，先呼叫這個。',
+    description: '列出使用者所有的帳戶／付款方式（含 is_active；false 表示已停用，不能再用來記帳）。記帳前若不確定帳戶名稱，先呼叫這個。',
     inputSchema: { type: 'object', properties: {} },
     handler: () => listAccounts(),
   },

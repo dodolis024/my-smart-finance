@@ -5,7 +5,7 @@ export async function listAccounts() {
   const client = await getAuthedClient();
   const { data, error } = await client
     .from('accounts')
-    .select('id, name, type, credit_limit, billing_day, payment_due_day, overseas_fee_rate, overseas_fee_auto_check')
+    .select('id, name, type, credit_limit, billing_day, payment_due_day, overseas_fee_rate, overseas_fee_auto_check, is_active')
     .order('name');
 
   if (error) throw fromSupabaseError(error, '讀取帳戶');
@@ -27,11 +27,26 @@ export async function resolveAccount(name) {
 
   const accounts = await listAccounts();
   const match = accounts.find((a) => a.name === trimmed);
-  if (match) return match;
+  if (match && isAccountActive(match)) return match;
 
+  const usable = accounts.filter(isAccountActive).map((a) => a.name).join('、');
+  // 剪掉的卡在網頁上是「停用」：名稱還在、歷史保留，但新帳不該再記到它名下（與前端下拉一致）
+  if (match) {
+    throw smfError(
+      ErrorCode.ACCOUNT_NOT_FOUND,
+      `帳戶「${trimmed}」已停用，不能再用來記帳`,
+      `可用的帳戶：${usable || '（沒有啟用中的帳戶，請先到網頁設定新增或重新啟用）'}`
+    );
+  }
   throw smfError(
     ErrorCode.ACCOUNT_NOT_FOUND,
     `找不到名稱為「${trimmed}」的帳戶`,
-    `可用的帳戶：${accounts.map((a) => a.name).join('、') || '（尚未建立任何帳戶，請先到網頁設定新增）'}`
+    `可用的帳戶：${usable || '（尚未建立任何帳戶，請先到網頁設定新增）'}`
   );
+}
+
+/** 與前端 src/lib/accountStatus.js 同義：欄位不存在（舊資料庫）一律視為啟用 */
+export function isAccountActive(account) {
+  if (!account) return false;
+  return account.is_active == null ? true : Boolean(account.is_active);
 }
