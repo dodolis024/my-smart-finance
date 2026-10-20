@@ -5,6 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCachedResource } from '@/hooks/useCachedResource';
 import { notifyDataChanged } from '@/lib/dataEvents';
 import { ACCOUNT_ORDER_KEY, sortAccountsByOrder } from '@/lib/accountOrder';
+import { isAccountActive } from '@/lib/accountStatus';
 
 const DEFAULT_EXPENSE_CATEGORIES = {
   zh: ['飲食', '飲料', '交通', '旅遊', '娛樂', '購物', '其他'],
@@ -162,7 +163,9 @@ export function useSettings() {
         .eq('user_id', user.id)
         .or(`payment_method.eq.${quoted},account_id.eq.${account.id}`);
       if (!countError && count > 0) {
-        throw new Error(t('settings.account.hasTransactions', { name: account.name, count }));
+        // 已停用的帳戶不必再勸他去停用
+        const key = isAccountActive(account) ? 'settings.account.hasTransactions' : 'settings.account.hasTransactionsInactive';
+        throw new Error(t(key, { name: account.name, count }));
       }
     }
     const { error: deleteError } = await supabase.from('accounts').delete().eq('id', accountId);

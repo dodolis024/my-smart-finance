@@ -7,7 +7,7 @@ This file records version updates for Smart Finance Tracker.
 - Added the recorded time next to the date in the transaction detail
 - Added a recorded-time column to the transaction list on desktop
 - Added account deactivation, so a cancelled card keeps its history and statistics but leaves the transaction and subscription pickers
-- Improved the message when deleting an account that still has transactions, which now suggests deactivating it
+- Improved the account deletion prompts, suggesting deactivation when transactions exist and dropping the outdated note about removing the account link
 - Improved the account balance row, with the currency menu moved before the amount
 - Improved the manage-members dialog so non-owners see that only the owner can rename unlinked members
 - Improved member renaming so only the group owner can rename unlinked members
