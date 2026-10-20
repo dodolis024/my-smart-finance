@@ -3,6 +3,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import { useRateTables } from '@/hooks/useDisplayRates';
 import { hasBalanceTracking, calculateAccountBalance, getBalanceCurrency, formatBalanceMoney } from '@/lib/accountBalance';
+import { isAccountActive } from '@/lib/accountStatus';
 
 const accountLabel = (account) => account.name || account.accountName;
 
@@ -20,7 +21,8 @@ export default function PaymentStats({ history = [], accounts = [], balanceHisto
     });
     // 有設餘額的帳戶一律列出：這份清單本來只由本期交易反推，錢包這個月沒動就整列消失，
     // 餘額也就沒地方看。本期無交易者金額為 0，排序自然落到最後
-    accounts.filter(hasBalanceTracking).forEach((account) => {
+    // 停用的帳戶不再硬列：本期有交易照樣出現在統計，沒交易就不占一列
+    accounts.filter((a) => hasBalanceTracking(a) && isAccountActive(a)).forEach((account) => {
       const label = accountLabel(account);
       if (label && !byMethod[label]) byMethod[label] = { value: 0, txs: [] };
     });
@@ -30,7 +32,7 @@ export default function PaymentStats({ history = [], accounts = [], balanceHisto
   }, [history, accounts, t, toDisplay]);
 
   // 餘額以帳戶自己的幣別呈現（與餘額彈窗一致），不跟著顯示幣別換算
-  const balanceAccounts = useMemo(() => accounts.filter(hasBalanceTracking), [accounts]);
+  const balanceAccounts = useMemo(() => accounts.filter((a) => hasBalanceTracking(a) && isAccountActive(a)), [accounts]);
   const rateTables = useRateTables(balanceAccounts.map(getBalanceCurrency));
   const balances = useMemo(() => {
     const map = new Map();

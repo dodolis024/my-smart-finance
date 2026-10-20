@@ -260,3 +260,30 @@
 .account-form .btn-save:hover {
   background: var(--color-primary-hover);
 }
+
+/* 停用區：放在啟用清單下面，整張卡退成次要（名稱也用次要色），沒有拖曳把手 */
+.accounts-inactive {
+  margin-top: 1.25rem;
+}
+
+.accounts-inactive__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.account-item--inactive {
+  background: var(--color-card);
+  border-style: dashed;
+}
+
+.account-item--inactive .account-item__name {
+  color: var(--color-text-secondary);
+}
+
+/* 三顆按鈕在窄螢幕排不下時整排換到名稱下面，不要把名稱擠成一個字一行 */
+.account-item__header {
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}

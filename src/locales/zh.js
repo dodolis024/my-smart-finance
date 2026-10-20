@@ -474,7 +474,12 @@ const zh = {
       paymentDueDayDetail: '繳款日：每月 {day} 日',
       deleteConfirm: '確定要刪除帳戶「{name}」嗎？\n注意：既有交易的支付方式名稱會保留，但帳戶連結會移除。',
       nameAlreadyExists: '帳戶名稱「{name}」已存在，請使用不同名稱。',
-      hasTransactions: '「{name}」仍有 {count} 筆交易記錄，請先將這些交易改為其他帳戶後再刪除。',
+      hasTransactions: '「{name}」仍有 {count} 筆交易記錄，無法刪除。不再使用的話請改按「停用」，歷史記錄會保留。',
+      deactivate: '停用',
+      activate: '啟用',
+      inactiveTitle: '已停用',
+      deactivateConfirm: '要停用「{name}」嗎？\n它會從記帳的支付方式選單消失，過去的交易和統計都會保留，隨時可以重新啟用。',
+      deactivateSubscriptions: '另外有 {count} 個訂閱仍以這個帳戶扣款，停用後排程還是會記到它名下，請記得到訂閱設定改掉。',
       typeNames: {
         cash: '現金',
         credit_card: '信用卡',

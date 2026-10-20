@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import AccountForm from './AccountForm';
 import { formatMoney } from '@/lib/utils';
+import { isAccountActive } from '@/lib/accountStatus';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   DndContext,
@@ -26,9 +27,10 @@ const DragHandleIcon = () => (
   </svg>
 );
 
-/** 卡片內容（清單項與拖曳浮層共用，兩者外觀必須一致） */
-function AccountCardBody({ account, loading, t, dragHandle, onEdit, onDelete, interactive = true }) {
+/** 卡片內容（清單項、停用清單與拖曳浮層共用，三者外觀必須一致） */
+function AccountCardBody({ account, loading, t, dragHandle, onEdit, onDelete, onToggleActive, interactive = true }) {
   const typeName = t(`settings.account.typeNames.${account.type}`) || account.type;
+  const active = isAccountActive(account);
   return (
     <>
       <div className="account-item__header">
@@ -46,6 +48,18 @@ function AccountCardBody({ account, loading, t, dragHandle, onEdit, onDelete, in
           >
             {t('common.edit')}
           </button>
+          {/* 剪卡、關戶走停用而不是刪除：歷史交易保留，只是不再出現在記帳表單 */}
+          {onToggleActive && (
+            <button
+              type="button"
+              className="account-item__btn"
+              disabled={loading}
+              tabIndex={interactive ? undefined : -1}
+              onClick={interactive ? () => onToggleActive(account) : undefined}
+            >
+              {active ? t('settings.account.deactivate') : t('settings.account.activate')}
+            </button>
+          )}
           <button
             type="button"
             className="account-item__btn account-item__btn--delete"
@@ -71,7 +85,7 @@ function AccountCardBody({ account, loading, t, dragHandle, onEdit, onDelete, in
   );
 }
 
-function SortableAccountItem({ account, loading, t, onEdit, onDelete }) {
+function SortableAccountItem({ account, loading, t, onEdit, onDelete, onToggleActive }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: account.id,
     disabled: loading,
@@ -91,6 +105,7 @@ function SortableAccountItem({ account, loading, t, onEdit, onDelete }) {
         t={t}
         onEdit={onEdit}
         onDelete={onDelete}
+        onToggleActive={onToggleActive}
         dragHandle={(
           <button
             type="button"
@@ -109,7 +124,7 @@ function SortableAccountItem({ account, loading, t, onEdit, onDelete }) {
   );
 }
 
-export default function AccountManager({ accounts, onSave, onDelete, onReorderTo, loading, confirm, onError, currencies, defaultCurrency }) {
+export default function AccountManager({ accounts, onSave, onDelete, onSetActive, countSubscriptionsUsing, onReorderTo, loading, confirm, onError, currencies, defaultCurrency }) {
   const { t } = useLanguage();
   const [editingAccount, setEditingAccount] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -160,10 +175,29 @@ export default function AccountManager({ accounts, onSave, onDelete, onReorderTo
     }
   };
 
+  const handleToggleActive = async (account) => {
+    const active = isAccountActive(account);
+    if (active) {
+      // 停用不會動到訂閱：排程照樣記到這個帳戶名下，先讓使用者知道有幾個要改
+      let message = t('settings.account.deactivateConfirm', { name: account.name });
+      const subCount = countSubscriptionsUsing ? await countSubscriptionsUsing(account.name).catch(() => 0) : 0;
+      if (subCount > 0) message += '\n' + t('settings.account.deactivateSubscriptions', { count: subCount });
+      const ok = await confirm(message);
+      if (!ok) return;
+    }
+    try {
+      await onSetActive(account.id, !active);
+    } catch (err) {
+      onError?.(err.message || t('common.saveFailed'));
+    }
+  };
+
   const handleDragEnd = async (event) => {
     setActiveId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+    // 排序存的是整份帳戶（含停用）的 id 順序：在整份裡搬動，停用的留在原位，
+    // 啟用中那一段的相對順序就是畫面上拖出來的結果
     const ids = accounts.map((a) => a.id);
     const oldIndex = ids.indexOf(active.id);
     const newIndex = ids.indexOf(over.id);
@@ -189,6 +223,9 @@ export default function AccountManager({ accounts, onSave, onDelete, onReorderTo
   }
 
   const activeAccount = activeId ? accounts.find((a) => a.id === activeId) : null;
+  // 啟用中的可拖曳排序；停用的另成一區放最後，不參與拖曳
+  const enabledAccounts = accounts.filter(isAccountActive);
+  const disabledAccounts = accounts.filter((a) => !isAccountActive(a));
 
   return (
     <div className="account-manager">
@@ -205,9 +242,9 @@ export default function AccountManager({ accounts, onSave, onDelete, onReorderTo
           onDragCancel={() => setActiveId(null)}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext items={accounts.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={enabledAccounts.map((a) => a.id)} strategy={verticalListSortingStrategy}>
             <div className="accounts-list">
-              {accounts.map((account) => (
+              {enabledAccounts.map((account) => (
                 <SortableAccountItem
                   key={account.id}
                   account={account}
@@ -215,10 +252,30 @@ export default function AccountManager({ accounts, onSave, onDelete, onReorderTo
                   t={t}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  onToggleActive={onSetActive ? handleToggleActive : undefined}
                 />
               ))}
             </div>
           </SortableContext>
+          {disabledAccounts.length > 0 && (
+            <div className="accounts-inactive">
+              <h4 className="accounts-inactive__title">{t('settings.account.inactiveTitle')}</h4>
+              <div className="accounts-list">
+                {disabledAccounts.map((account) => (
+                  <div key={account.id} className="account-item account-item--inactive">
+                    <AccountCardBody
+                      account={account}
+                      loading={loading}
+                      t={t}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onToggleActive={onSetActive ? handleToggleActive : undefined}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <DragOverlay>
             {activeAccount ? (
               <div className="account-item account-item--overlay">

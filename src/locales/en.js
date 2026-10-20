@@ -471,7 +471,12 @@ const en = {
       paymentDueDayDetail: 'Due day: {day}th of each month',
       deleteConfirm: 'Delete account "{name}"?\nNote: existing transactions will keep the payment name, but the account link will be removed.',
       nameAlreadyExists: 'Account name "{name}" already exists. Please use a different name.',
-      hasTransactions: '"{name}" still has {count} transaction(s). Please reassign them to another account before deleting.',
+      hasTransactions: '"{name}" still has {count} transaction(s) and cannot be deleted. If you no longer use it, choose "Deactivate" instead; its history is kept.',
+      deactivate: 'Deactivate',
+      activate: 'Activate',
+      inactiveTitle: 'Deactivated',
+      deactivateConfirm: 'Deactivate "{name}"?\nIt disappears from the payment method list when logging transactions. Past transactions and statistics are kept, and you can activate it again at any time.',
+      deactivateSubscriptions: '{count} active subscription(s) still charge this account. The scheduler keeps recording them against it, so update those subscriptions too.',
       typeNames: {
         cash: 'Cash',
         credit_card: 'Credit Card',

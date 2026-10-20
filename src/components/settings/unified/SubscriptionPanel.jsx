@@ -5,6 +5,7 @@ import { useSubscriptions } from '@/hooks/useSubscriptions';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getTodayYmd } from '@/lib/utils';
 import { nextChargeDate } from '@/lib/subscriptionSchedule';
+import { activeAccounts } from '@/lib/accountStatus';
 import { IconSubscription } from './UnifiedTabIcons';
 
 const makeEmptyForm = (defaultCurrency = 'TWD') => ({ name: '', amount: '', currency: defaultCurrency, category: '', payment_method: '', billing_cycle: 'monthly', renewal_month: 1, renewal_day: 1 });
@@ -24,6 +25,7 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
   }, [isOpen, loadSubscriptions, loadSettingsData]);
 
   const setField = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+  const paymentAccounts = activeAccounts(accounts);
 
   const handleOpenAdd = () => { setForm(makeEmptyForm(defaultCurrency)); setEditingId(null); setShowForm(true); };
   const handleOpenEdit = (sub) => {
@@ -103,7 +105,11 @@ export default function SubscriptionPanel({ isOpen, confirm, toast }) {
                 <label className="subscription-form__label" htmlFor="sub-payment">{t('settings.subscription.paymentLabel')}</label>
                 <select id="sub-payment" className="subscription-form__select" value={form.payment_method} onChange={(e) => setField('payment_method', e.target.value)}>
                   <option value="">{t('settings.subscription.selectPayment')}</option>
-                  {accounts.map((a) => <option key={a.id} value={a.accountName ?? a.name}>{a.accountName ?? a.name}</option>)}
+                  {/* 停用的帳戶不列；編輯中的訂閱若還掛在停用帳戶，保留原值讓它能存檔，順便提醒要改 */}
+                  {form.payment_method && !paymentAccounts.some((a) => (a.accountName ?? a.name) === form.payment_method) && (
+                    <option value={form.payment_method}>{form.payment_method}</option>
+                  )}
+                  {paymentAccounts.map((a) => <option key={a.id} value={a.accountName ?? a.name}>{a.accountName ?? a.name}</option>)}
                 </select>
               </div>
             </div>

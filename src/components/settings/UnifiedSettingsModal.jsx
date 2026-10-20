@@ -166,7 +166,7 @@ function AccountsPanel({ isOpen, confirm, toast }) {
   const { t } = useLanguage();
   const {
     accounts, loading, loadError,
-    loadSettingsData, saveAccount, deleteAccount, reorderAccountsTo,
+    loadSettingsData, saveAccount, deleteAccount, setAccountActive, countSubscriptionsUsing, reorderAccountsTo,
   } = useSettings();
   // 餘額幣別的下拉選單與新帳戶的預設值
   const { currencies, defaultCurrency, fetchCurrencies } = useDashboard();
@@ -188,6 +188,8 @@ function AccountsPanel({ isOpen, confirm, toast }) {
             accounts={accounts}
             onSave={saveAccount}
             onDelete={deleteAccount}
+            onSetActive={setAccountActive}
+            countSubscriptionsUsing={countSubscriptionsUsing}
             onReorderTo={reorderAccountsTo}
             loading={loading}
             confirm={confirm}

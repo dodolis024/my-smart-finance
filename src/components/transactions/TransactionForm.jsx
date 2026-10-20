@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getTodayYmd, getNowHm, formatNumberWithCommas } from '@/lib/utils';
 import { useAmountInput } from '@/hooks/useAmountInput';
+import { activeAccounts } from '@/lib/accountStatus';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getOverseasFeeRate, defaultOverseasChecked } from '@/lib/overseasFee';
 
@@ -179,10 +180,13 @@ export default function TransactionForm({
   ];
   const needsExtraCategory =
     isEditing && form.categoryValue && !allCategoryValues.includes(form.categoryValue);
+  // 下拉只列啟用中的帳戶；停用的卡只在編輯它的舊交易時以原值補一個選項（走 needsExtraPayment），
+  // 費率等查找仍用完整的 accounts，編輯舊交易時手續費邏輯不變
+  const selectableAccounts = activeAccounts(accounts);
   const needsExtraPayment =
     isEditing &&
     form.paymentMethod &&
-    !accounts.some((a) => (a.accountName || a.name) === form.paymentMethod);
+    !selectableAccounts.some((a) => (a.accountName || a.name) === form.paymentMethod);
   const needsExtraCurrency = form.currency && !currencies.includes(form.currency);
 
   const selectedAccount = accounts.find((a) => (a.accountName || a.name) === form.paymentMethod);
@@ -309,7 +313,7 @@ export default function TransactionForm({
             {needsExtraPayment && (
               <option value={form.paymentMethod}>{form.paymentMethod}</option>
             )}
-            {accounts.map((acc) => {
+            {selectableAccounts.map((acc) => {
               const name = acc.accountName || acc.name;
               if (!name) return null;
               return (

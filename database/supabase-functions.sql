@@ -129,7 +129,8 @@ BEGIN
             'balanceAsOf', balance_as_of,
             'balanceCurrency', balance_currency,
             'overseasFeeRate', overseas_fee_rate,
-            'overseasFeeAutoCheck', overseas_fee_auto_check
+            'overseasFeeAutoCheck', overseas_fee_auto_check,
+            'isActive', is_active
         ) ORDER BY created_at ASC
     ) INTO v_accounts
     FROM accounts

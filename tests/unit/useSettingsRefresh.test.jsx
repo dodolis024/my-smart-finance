@@ -117,6 +117,16 @@ describe('useSettings 寫入後通知儀表板背景重抓', () => {
     expect(h.ops.at(-1)).toBe('notify');
   });
 
+  it('停用帳戶：只改 accounts 的 is_active，不動交易，寫完後通知儀表板重抓', async () => {
+    await act(async () => {
+      await harness.result.current.setAccountActive(ACCOUNT.id, false);
+    });
+
+    expect(h.ops).toContain('update:accounts');
+    expect(h.ops).not.toContain('update:transactions');
+    expect(h.ops.at(-1)).toBe('notify');
+  });
+
   it('類別改名：等舊交易改寫完才通知（否則會重抓到改寫前的交易）', async () => {
     await act(async () => {
       await harness.result.current.renameCategory('expense', '飲食', '餐飲');

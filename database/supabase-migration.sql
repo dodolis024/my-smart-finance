@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS accounts (
     billing_day INTEGER CHECK (billing_day >= 1 AND billing_day <= 31),
     payment_due_day INTEGER CHECK (payment_due_day >= 1 AND payment_due_day <= 31),
     details JSONB DEFAULT '{}',
+    -- 停用（剪卡、關戶）後為 FALSE：歷史交易保留，但不再出現在記帳表單、訂閱與餘額面板
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

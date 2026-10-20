@@ -172,6 +172,34 @@ export function useSettings() {
   }, [user, accounts, loadSettingsData, t]);
 
   /**
+   * 停用／啟用帳戶（剪卡、關戶）。不動任何交易：歷史與統計全部保留，只是不再出現在
+   * 記帳表單、訂閱、餘額面板。儀表板的帳戶來自 get_dashboard_data，所以要通知它重抓。
+   */
+  const setAccountActive = useCallback(async (accountId, active) => {
+    if (!user) return;
+    const { error: updateError } = await supabase
+      .from('accounts')
+      .update({ is_active: Boolean(active) })
+      .eq('id', accountId)
+      .eq('user_id', user.id);
+    if (updateError) throw updateError;
+    await loadSettingsData();
+    notifyDataChanged();
+  }, [user, loadSettingsData]);
+
+  /** 停用前提醒用：還在扣款、且付款方式是這個帳戶的訂閱有幾個（排程仍會記到它名下） */
+  const countSubscriptionsUsing = useCallback(async (accountName) => {
+    if (!user || !accountName) return 0;
+    const { count, error: countError } = await supabase
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .eq('payment_method', accountName);
+    return countError ? 0 : (count || 0);
+  }, [user]);
+
+  /**
    * 拖曳排序支付工具：以整份 id 順序覆寫 settings 的 account_order。
    * 樂觀更新（同 reorderCategoriesTo）：本地先到位，存檔在背景進行，失敗才回滾。
    */
@@ -211,6 +239,8 @@ export function useSettings() {
     reorderCategoriesTo,
     saveAccount,
     deleteAccount,
+    setAccountActive,
+    countSubscriptionsUsing,
     reorderAccountsTo,
   };
 }

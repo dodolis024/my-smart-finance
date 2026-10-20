@@ -42,6 +42,7 @@ import StreakBadge from '@/components/streak/StreakBadge';
 import StreakModal from '@/components/streak/StreakModal';
 import YearlyReviewBanner from '@/components/dashboard/YearlyReviewBanner';
 import { hasBalanceTracking } from '@/lib/accountBalance';
+import { isAccountActive } from '@/lib/accountStatus';
 
 // 交易紀錄每頁筆數：約 3 個手機螢幕，是可以一頁看完的單位
 const PAGE_SIZE = 50;
@@ -337,7 +338,7 @@ function DashboardContent() {
     modals.openAccountBalanceModal(account, stat?.txs || []);
   }, [modals]);
 
-  const balanceAccounts = useMemo(() => accounts.filter(hasBalanceTracking), [accounts]);
+  const balanceAccounts = useMemo(() => accounts.filter((a) => hasBalanceTracking(a) && isAccountActive(a)), [accounts]);
 
   // 一次抓齊所有有設餘額的帳戶要用的交易。跟著 accounts 重抓：記一筆帳之後 RPC 會重抓
   // 帳戶，餘額也就跟著更新
@@ -485,7 +486,7 @@ function DashboardContent() {
         // 若此筆交易的付款方式為信用卡，檢查使用率並在需要時推播警告
         // （accounts 來自 RPC，欄位為駝峰 accountName）
         const usedAccount = accounts.find((a) => (a.accountName || a.name) === formData.paymentMethod);
-        if (usedAccount?.type === 'credit_card') checkCreditUsageAlert(usedAccount);
+        if (usedAccount?.type === 'credit_card' && isAccountActive(usedAccount)) checkCreditUsageAlert(usedAccount);
       } catch (err) {
         toast.error(err.message || t('dashboard.addTransactionFailed'));
         throw err;
@@ -560,7 +561,7 @@ function DashboardContent() {
         refetchPeriod().catch((err) => console.error('[Dashboard] refetch after write failed:', err));
         refreshSearch();
         // 刪除後重新計算信用卡使用率
-        if (relatedAccount?.type === 'credit_card') checkCreditUsageAlert(relatedAccount);
+        if (relatedAccount?.type === 'credit_card' && isAccountActive(relatedAccount)) checkCreditUsageAlert(relatedAccount);
         return true;
       } catch (err) {
         toast.error(err.message || t('dashboard.deleteTransactionFailed'));
