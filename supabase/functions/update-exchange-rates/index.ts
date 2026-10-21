@@ -5,6 +5,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { cronSecretGuard } from '../_shared/cronAuth.ts'
 import { utcDateString } from './rateHistory.ts'
+import { validateRates, MAX_CHANGE_PERCENT, STALE_AFTER_DAYS } from './validate.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -134,93 +135,47 @@ serve(async (req) => {
 
     console.log('Fetched new exchange rates:', newRates)
 
-    // 防呆機制：檢查新匯率與 Last Known Good 的變動範圍
-    // 如果變動超過 ±20%，拒絕更新並記錄錯誤
-    const MAX_CHANGE_PERCENT = 20
-    const anomalies = []
+    // 防呆機制：與 Last Known Good 比較，單日變動超過 ±20% 拒絕；舊值已陳舊則放行。
+    // 規則與「被拒絕的幣別完全不寫」的理由見 validate.ts
+    const now = new Date()
+    const { toWrite, rejected, anomalies, decisions } = validateRates({
+      newRates,
+      lastKnownGood,
+      lastUpdatedAt,
+      now,
+    })
 
-    // 陳舊值例外：舊匯率若已超過 STALE_AFTER_DAYS 沒更新，本身就不可信，
-    // 此時不該讓 ±20% 防呆把它鎖住——否則排程一旦停擺夠久（如 cron URL 壞掉
-    // 那 53 天），累積偏移就會超過門檻，之後每天「成功執行」卻永遠退回舊值。
-    // 新增幣別時把 updated_at 設為過去時間（見 database/supabase-migration.sql
-    // 的種子註解），即可走這條路徑，讓首次同步直接採用真實匯率。
-    const STALE_AFTER_DAYS = 7
-    const staleCutoff = Date.now() - STALE_AFTER_DAYS * 24 * 60 * 60 * 1000
-    const isStale = (currency: string) => {
-      const ts = lastUpdatedAt[currency]
-      if (!ts) return true
-      const parsed = new Date(ts).getTime()
-      return Number.isNaN(parsed) || parsed < staleCutoff
-    }
-    const validatedRates: { [key: string]: number } = { TWD: 1.0 }
-
-    for (const [currency, newRate] of Object.entries(newRates)) {
-      if (currency === 'TWD') {
-        validatedRates[currency] = 1.0
-        continue
-      }
-
-      const oldRate = lastKnownGood[currency]
-      
-      if (oldRate && oldRate > 0) {
-        const changePercent = Math.abs((newRate - oldRate) / oldRate * 100)
-        
-        if (changePercent > MAX_CHANGE_PERCENT && isStale(currency)) {
-          // 變動超過 20%，但舊匯率已陳舊到不值得保護，改為採用新匯率
-          console.warn(
-            `⚠️ ${currency} changed ${changePercent.toFixed(2)}% ` +
-            `(old: ${oldRate}, new: ${newRate}), but its stored rate is older than ` +
-            `${STALE_AFTER_DAYS} days (${lastUpdatedAt[currency] ?? 'never'}). Accepting new rate.`
-          )
-          anomalies.push({
-            currency,
-            oldRate,
-            newRate,
-            changePercent: changePercent.toFixed(2),
-            action: 'accepted_stale',
-            staleSince: lastUpdatedAt[currency] ?? null,
-          })
-          validatedRates[currency] = newRate
-        } else if (changePercent > MAX_CHANGE_PERCENT) {
-          // 變動超過 20%，視為異常，保留舊匯率
-          console.error(
-            `⚠️ ANOMALY DETECTED: ${currency} changed ${changePercent.toFixed(2)}% ` +
-            `(old: ${oldRate}, new: ${newRate}). Keeping old rate.`
-          )
-          anomalies.push({
-            currency,
-            oldRate,
-            newRate,
-            changePercent: changePercent.toFixed(2),
-            action: 'rejected',
-          })
-          validatedRates[currency] = oldRate // 保留舊匯率
-        } else {
-          // 變動在合理範圍內，使用新匯率
-          console.log(
-            `✓ ${currency} changed ${changePercent.toFixed(2)}% ` +
-            `(old: ${oldRate}, new: ${newRate}). Accepted.`
-          )
-          validatedRates[currency] = newRate
-        }
-      } else {
-        // 第一次設定，沒有舊匯率可比較，直接使用新匯率
-        console.log(`✓ ${currency}: First time setup, using ${newRate}`)
-        validatedRates[currency] = newRate
+    for (const d of decisions) {
+      const pct = d.changePercent != null ? `${d.changePercent.toFixed(2)}%` : ''
+      if (d.action === 'rejected') {
+        console.error(
+          `⚠️ ANOMALY DETECTED: ${d.currency} changed ${pct} ` +
+          `(old: ${d.oldRate}, new: ${d.newRate}). Rejected; stored rate and updated_at left untouched.`
+        )
+      } else if (d.action === 'accepted_stale') {
+        console.warn(
+          `⚠️ ${d.currency} changed ${pct} (old: ${d.oldRate}, new: ${d.newRate}), ` +
+          `but its stored rate is older than ${STALE_AFTER_DAYS} days ` +
+          `(${d.staleSince ?? 'never'}). Accepting new rate.`
+        )
+      } else if (d.action === 'first_time') {
+        console.log(`✓ ${d.currency}: First time setup, using ${d.newRate}`)
+      } else if (d.action === 'accepted') {
+        console.log(`✓ ${d.currency} changed ${pct} (old: ${d.oldRate}, new: ${d.newRate}). Accepted.`)
       }
     }
 
-    console.log('Validated exchange rates:', validatedRates)
+    console.log('Exchange rates to write:', toWrite)
 
-    // 更新資料庫中的匯率
+    // 更新資料庫中的匯率（被拒絕的幣別不在 toWrite 裡，updated_at 保持原值）
     const updates = []
-    for (const [currency, rate] of Object.entries(validatedRates)) {
+    for (const [currency, rate] of Object.entries(toWrite)) {
       const { error } = await supabase
         .from('exchange_rates')
         .upsert({
           currency_code: currency,
           rate: rate,
-          updated_at: new Date().toISOString(),
+          updated_at: now.toISOString(),
         })
 
       if (error) {
@@ -233,28 +188,25 @@ serve(async (req) => {
     }
 
     // 歷史匯率：一天一列，供事後查詢「當時到底是多少」。
-    // 存的是 validatedRates 而不是 API 原始的 newRates——±20% 防呆擋下異常值時，
-    // 系統當天實際採用的是舊匯率。歷史表要跟系統的真相一致，不是跟 API 一致，
-    // 否則回頭對帳會發現歷史說的跟當時算出來的金額兜不起來。
-    const historyDate = utcDateString(new Date())
-    const { error: historyError } = await supabase
-      .from('exchange_rate_history')
-      .upsert(
-        Object.entries(validatedRates).map(([currency_code, rate]) => ({
-          currency_code,
-          date: historyDate,
-          rate,
-        })),
-        { onConflict: 'currency_code,date' }
-      )
+    // 只寫實際採用的幣別：被拒絕的幣別當天不寫，查詢是「<= 該日期的最新一筆」，
+    // 自然沿用前一天的值——歷史表要跟系統的真相一致，不是跟 API 一致。
+    const historyDate = utcDateString(now)
+    const historyRows = Object.entries(toWrite).map(([currency_code, rate]) => ({
+      currency_code,
+      date: historyDate,
+      rate,
+    }))
+    const { error: historyError } = historyRows.length > 0
+      ? await supabase
+          .from('exchange_rate_history')
+          .upsert(historyRows, { onConflict: 'currency_code,date' })
+      : { error: null }
 
     // 歷史寫入失敗不該讓整趟失敗：現值已經更新成功，記帳照常運作。
     // 但一定要留痕跡，否則歷史悄悄斷了好幾天完全看不出來。
     if (historyError) {
       console.error('Failed to record exchange rate history:', historyError.message)
     }
-
-    const rejected = anomalies.filter(a => a.action === 'rejected')
 
     return new Response(
       JSON.stringify({
@@ -269,8 +221,11 @@ serve(async (req) => {
           recorded: !historyError,
         },
         anomalies: anomalies.length > 0 ? anomalies : undefined,
+        rejected: rejected.length > 0 ? rejected : undefined,
         warning: rejected.length > 0
-          ? 'Some rates changed more than 20% and were rejected. Last known good rates were kept.'
+          ? `Some rates changed more than ${MAX_CHANGE_PERCENT}% and were rejected. ` +
+            'They were not written, so their updated_at keeps aging (badge after 3 days, ' +
+            `stale override after ${STALE_AFTER_DAYS} days).`
           : undefined,
       }),
       {

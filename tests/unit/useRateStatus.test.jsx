@@ -9,10 +9,10 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
  * 只在資料庫的 updated_at 太舊時提示；查不到就不提示、不丟錯。
  */
 
-const h = vi.hoisted(() => ({ result: { data: null, error: null }, calls: 0 }));
+const h = vi.hoisted(() => ({ result: { data: null, error: null }, calls: 0, orders: [] }));
 vi.mock('@/lib/supabase', () => {
   const b = {
-    select: () => b, order: () => b, limit: () => b,
+    select: () => b, order: (...args) => { h.orders.push(args); return b; }, limit: () => b,
     maybeSingle: async () => { h.calls += 1; return h.result; },
   };
   return { supabase: { from: () => b } };
@@ -33,6 +33,7 @@ async function mountHook() {
 
 beforeEach(async () => {
   h.calls = 0;
+  h.orders = [];
   const { _resetRateStatusCache } = await import('@/hooks/useRateStatus');
   _resetRateStatusCache();
 });
@@ -55,6 +56,13 @@ describe('useRateStatus', () => {
     h.result = { data: null, error: { message: 'offline' } };
     await mountHook();
     expect(hook.staleDays).toBeNull();
+  });
+
+  // TWD 每天都會被寫入，看最新的永遠是今天；被 ±20% 防呆拒絕的幣別不寫，要看最舊的才會亮
+  it('看的是最久沒更新的幣別（updated_at 由舊到新取第一筆）', async () => {
+    h.result = { data: { updated_at: new Date().toISOString() }, error: null };
+    await mountHook();
+    expect(h.orders).toEqual([['updated_at', { ascending: true }]]);
   });
 
   it('同一次載入只查一次', async () => {

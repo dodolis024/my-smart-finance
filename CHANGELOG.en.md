@@ -7,7 +7,7 @@ This file records version updates for Smart Finance Tracker.
 - Added the recorded time next to the date in the transaction detail
 - Added a recorded-time column to the transaction list on desktop
 - Added account deactivation, so a cancelled card keeps its history and statistics but leaves the transaction and subscription pickers
-- Added a dashboard notice when exchange rates have not been updated for more than 3 days
+- Added a dashboard notice when any currency's exchange rate has not been updated for more than 3 days
 - Added a "Leave group" action so non-owners can unlink themselves from a split group
 - Improved the account deletion prompts, suggesting deactivation when transactions exist and dropping the outdated note about removing the account link
 - Improved the account balance row, with the currency menu moved before the amount
@@ -17,6 +17,7 @@ This file records version updates for Smart Finance Tracker.
 - Improved the message for amounts above the recordable limit, now in plain words and matching the CLI
 - Improved the example placeholders in the split and subscription forms to follow the interface language
 - Fixed group members being able to add someone else's account to their split group
+- Fixed a currency possibly staying on an old rate after the anomaly guard rejected a new one
 - Fixed a split settlement being converted to the group currency with the previous day's exchange rate
 - Fixed automatic subscription charges in foreign currencies using the previous day's rate, by scheduling them after the daily rate update
 - Fixed a backdated foreign-currency expense being converted to TWD at today's rate
