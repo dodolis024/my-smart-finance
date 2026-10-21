@@ -17,17 +17,20 @@ export interface SplitTextParams {
   expenseAmount?: number | string | null
 }
 
-// 呼叫端傳入、後端無從查證的欄位（刪除類事件的名稱）在進文案前一律過這關。
-// 通知標題固定是 Smart Finance，內文會被當成官方訊息讀，所以不能讓同群組的人
-// 塞進換行或一整段誘導文字。
-export const NOTIFY_TEXT_MAX = 60
+// 進推播的每一段字串（成員名、群組名、費用標題、幣別，不論來自資料庫或呼叫端）都過這關。
+// 通知標題固定是 Smart Finance，內文會被當成官方訊息讀；資料庫的值也不可信——
+// 成員可以把自己的名字、費用標題改成任意文字——所以不能讓同群組的人塞進換行或一整段誘導文字。
+// 40 字放得下正常的名字與標題，放不下一段像樣的釣魚文。
+export const NOTIFY_TEXT_MAX = 40
 
 export function sanitizeNotifyText(value: unknown): string {
   if (typeof value !== 'string') return ''
   // 換行、Tab 與各類控制字元(含 U+2028/2029 行分隔)一律壓成空白,避免偽造多行系統訊息
   const flattened = value.replace(/[\u0000-\u001F\u007F-\u009F\u2028\u2029]/g, ' ')
   const collapsed = flattened.replace(/\s+/g, ' ').trim()
-  return collapsed.length > NOTIFY_TEXT_MAX ? collapsed.slice(0, NOTIFY_TEXT_MAX) + '…' : collapsed
+  // 以字元（code point）計長，截斷時才不會把 emoji 切成半個亂碼
+  const chars = Array.from(collapsed)
+  return chars.length > NOTIFY_TEXT_MAX ? chars.slice(0, NOTIFY_TEXT_MAX).join('') + '…' : collapsed
 }
 
 export function splitNotifyBody(event: string, lang: Lang, p: SplitTextParams): string {
@@ -39,12 +42,15 @@ export function splitNotifyBody(event: string, lang: Lang, p: SplitTextParams): 
       case 'expense_updated':
         return `${p.actorName} updated "${p.expenseTitle}"`
       case 'expense_deleted':
-        return `${p.actorName} deleted "${p.expenseTitle}"`
+        // 費用已不在資料庫，標題只能信呼叫端，所以刻意不帶標題
+        return `An expense was deleted in "${p.groupName}"`
       case 'member_added':
         return `${p.actorName} added "${p.memberName}" to "${p.groupName}"`
       case 'member_removed':
         return `"${p.memberName}" was removed from "${p.groupName}"`
       case 'settlement_added':
+        // 查不到還款紀錄（舊版 CLI 沒帶 settlement_id）時沒有可信的金額與人名，只說有一筆
+        if (p.expenseAmount == null) return `New repayment recorded in "${p.groupName}"`
         return `${p.actorName} recorded a repayment "${p.fromName}" → "${p.toName}": ${p.currency || 'TWD'} ${p.expenseAmount}`
       default:
         return `New activity in "${p.groupName}"`
@@ -56,12 +62,13 @@ export function splitNotifyBody(event: string, lang: Lang, p: SplitTextParams): 
     case 'expense_updated':
       return `${p.actorName} 更新了費用「${p.expenseTitle}」`
     case 'expense_deleted':
-      return `${p.actorName} 刪除了費用「${p.expenseTitle}」`
+      return `「${p.groupName}」有一筆費用被刪除`
     case 'member_added':
       return `${p.actorName} 將「${p.memberName}」加入了「${p.groupName}」`
     case 'member_removed':
       return `「${p.memberName}」已從「${p.groupName}」被移除`
     case 'settlement_added':
+      if (p.expenseAmount == null) return `「${p.groupName}」有一筆新的還款`
       return `${p.actorName} 記錄了「${p.fromName}」→「${p.toName}」的還款 ${p.currency || 'TWD'} ${p.expenseAmount}`
     default:
       return `${p.groupName} 有新的異動`

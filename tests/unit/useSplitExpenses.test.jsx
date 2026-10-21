@@ -24,8 +24,9 @@ vi.mock('@/lib/supabase', () => {
       eq: () => b,
       order: () => b,
       upsert: async () => ({ error: null }),
-      // addSettlement 的 insert 直接被 await，回同一個 thenable 即可
+      // addSettlement 的 insert 接 .select('id').single() 拿回新紀錄的 id（推播要帶 settlement_id）
       insert: (row) => { h.inserts.push({ table, row }); return b; },
+      single: async () => ({ data: { id: 'settlement-1' }, error: null }),
       then: (resolve) => { resolve({ data: [], error: null }); },
     };
     return b;
@@ -50,6 +51,7 @@ vi.mock('@/lib/splitNotify', () => ({
 }));
 
 import { useSplitExpenses } from '@/hooks/useSplitExpenses';
+import { notifySplit } from '@/lib/splitNotify';
 import { clearAllCaches } from '@/lib/resourceCache';
 import { getTodayYmd } from '@/lib/utils';
 
@@ -178,5 +180,22 @@ describe('useSplitExpenses.addSettlement', () => {
         row: { date: getTodayYmd(), group_id: GROUP_ID, from_member: 'm2', to_member: 'm1', amount: 500, currency: 'TWD' },
       },
     ]);
+  });
+
+  // 金額、幣別、雙方名稱由推播函式依 settlement_id 從資料庫讀；呼叫端帶了也不會被採用，乾脆不帶
+  it('推播只帶 settlement_id，不帶金額與人名', async () => {
+    harness = renderSplitExpenses();
+
+    await act(async () => {
+      await harness.result.current.addSettlement({
+        fromMember: 'm2', toMember: 'm1', amount: 500, currency: 'TWD',
+      });
+    });
+
+    const payload = notifySplit.mock.calls.at(-1)[0];
+    expect(payload).toMatchObject({ event: 'settlement_added', group_id: GROUP_ID, settlement_id: 'settlement-1' });
+    for (const key of ['expense_amount', 'currency', 'from_member', 'to_member', 'from_name', 'to_name']) {
+      expect(payload).not.toHaveProperty(key);
+    }
   });
 });

@@ -348,12 +348,9 @@ export async function addSettlement({ group, fromMember, toMember, amount, curre
     group_name: group.name,
     actor_name: actorName,
     actor_user_id: actorUserId,
-    expense_amount: amount,
-    currency: currency || 'TWD',
-    from_member: fromMember.id,
-    to_member: toMember.id,
-    from_name: fromMember.name,
-    to_name: toMember.name,
+    // 金額、幣別、雙方名稱由 send-split-notification 依 settlement_id 從資料庫讀，不信呼叫端。
+    // 舊版 CLI 沒帶 settlement_id，函式會退回不帶金額的通用句
+    settlement_id: data?.id,
   });
 
   return { settlement: data };

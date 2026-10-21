@@ -154,8 +154,6 @@ export default function SplitGroupDetail({ group, rates, onRefreshRates, currenc
         toMember: transaction.toId,
         amount,
         currency: group.currency || 'TWD',
-        fromName: transaction.from,
-        toName: transaction.to,
       });
       toast.success(t('split.settlementRecorded'));
     } catch {

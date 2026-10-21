@@ -38,9 +38,10 @@ describe('splitNotifyBody', () => {
     expect(splitNotifyBody('expense_updated', 'en', p)).toBe('Alice updated "晚餐"');
   });
 
-  it('expense_deleted: zh/en', () => {
-    expect(splitNotifyBody('expense_deleted', 'zh', p)).toBe('Alice 刪除了費用「晚餐」');
-    expect(splitNotifyBody('expense_deleted', 'en', p)).toBe('Alice deleted "晚餐"');
+  // 費用已不在資料庫，標題只能信呼叫端，所以通用句刻意不帶標題
+  it('expense_deleted: zh/en 只說群組裡有一筆費用被刪除', () => {
+    expect(splitNotifyBody('expense_deleted', 'zh', p)).toBe('「日本旅遊」有一筆費用被刪除');
+    expect(splitNotifyBody('expense_deleted', 'en', p)).toBe('An expense was deleted in "日本旅遊"');
   });
 
   it('member_added: zh/en', () => {
@@ -62,6 +63,13 @@ describe('splitNotifyBody', () => {
     expect(splitNotifyBody('settlement_added', 'en', p)).toBe(
       'Alice recorded a repayment "Alice" → "Bob": TWD 1200'
     );
+  });
+
+  // 舊版 CLI 沒帶 settlement_id、或查不到還款紀錄：沒有可信的金額與人名
+  it('settlement_added 沒有金額時退回通用句: zh/en', () => {
+    const generic = { actorName: 'Alice', groupName: '日本旅遊', expenseAmount: null };
+    expect(splitNotifyBody('settlement_added', 'zh', generic)).toBe('「日本旅遊」有一筆新的還款');
+    expect(splitNotifyBody('settlement_added', 'en', generic)).toBe('New repayment recorded in "日本旅遊"');
   });
 
   it('未知 event 落 default: zh/en', () => {
@@ -161,6 +169,26 @@ describe('sanitizeNotifyText', () => {
     const out = sanitizeNotifyText(long);
     expect(out).toHaveLength(NOTIFY_TEXT_MAX + 1);
     expect(out.endsWith('…')).toBe(true);
+  });
+
+  it('上限是 40 字：放得下名字與標題，放不下一段釣魚文', () => {
+    expect(NOTIFY_TEXT_MAX).toBe(40);
+    const phishing = '系統通知：您的帳戶已被凍結，請立即點擊以下連結並輸入密碼以恢復使用權限，否則將於24小時內永久停用';
+    const out = sanitizeNotifyText(phishing);
+    expect(Array.from(out)).toHaveLength(41);
+    expect(out).toBe(Array.from(phishing).slice(0, 40).join('') + '…');
+  });
+
+  it('多行釣魚名稱先壓成一行再截斷', () => {
+    const name = 'Alice\n\n【Smart Finance 官方】\n您的帳號異常，請至 evil.example 重新登入以免停權';
+    const out = sanitizeNotifyText(name);
+    expect(out).not.toMatch(/[\n\r]/);
+    expect(Array.from(out).length).toBeLessThanOrEqual(NOTIFY_TEXT_MAX + 1);
+  });
+
+  it('截斷不會把 emoji 切成半個', () => {
+    const out = sanitizeNotifyText('😀'.repeat(NOTIFY_TEXT_MAX + 5));
+    expect(out).toBe('😀'.repeat(NOTIFY_TEXT_MAX) + '…');
   });
 
   it('剛好等於上限不截斷', () => {

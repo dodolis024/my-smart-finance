@@ -6,7 +6,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import webpush from 'npm:web-push'
-import { splitNotifyBody, sanitizeNotifyText } from '../_shared/notificationTexts.ts'
+import { splitNotifyBody } from '../_shared/notificationTexts.ts'
+import { decideSplitNotification } from './decide.ts'
 import { getUserLangs } from '../_shared/userLang.ts'
 
 const corsHeaders = {
@@ -51,19 +52,9 @@ serve(async (req) => {
       event,
       group_id,
       expense_id,
+      settlement_id,
       member_id,
-      from_member,
-      to_member,
     } = body
-
-    // 呼叫端給的顯示字串一律先消毒:這些欄位只在查不到來源時才會被用上
-    // (刪除類事件的名稱,以及尚未帶識別碼的舊版前端/CLI)
-    const expense_title = sanitizeNotifyText(body.expense_title)
-    const member_name = sanitizeNotifyText(body.member_name)
-    const from_name = sanitizeNotifyText(body.from_name)
-    const to_name = sanitizeNotifyText(body.to_name)
-    const currency = sanitizeNotifyText(body.currency)
-    const expense_amount = typeof body.expense_amount === 'number' ? body.expense_amount : null
 
     if (!event || !group_id) {
       return new Response(
@@ -99,63 +90,82 @@ serve(async (req) => {
         )
       }
       group_name = ownedGroup.name
-      // 擁有者已退出成員名單時資料庫查不到名字,只能用傳入值,同樣要消毒
-      actor_name = sanitizeNotifyText(body.actor_name)
+      // 擁有者已退出成員名單時資料庫查不到名字，只能用傳入值（decide.ts 會消毒、限長）
+      actor_name = body.actor_name
     }
 
-    // 能查證的一律以資料庫為準,呼叫端傳的同名欄位只在查不到時才頂上。
-    // 刪除類事件(expense_deleted/member_removed)的來源列已不存在,只能沿用消毒後的傳入值。
-    // 每次查詢都綁 group_id,否則可拿別的群組的名稱來組通知。
-    let resolvedTitle = expense_title
-    let resolvedAmount = expense_amount
-    let resolvedCurrency = currency
-    let resolvedMemberName = member_name
-    let resolvedFromName = from_name
-    let resolvedToName = to_name
-
-    if (expense_id) {
-      const { data: expense } = await supabase
+    // 文案只用資料庫查得到的紀錄組，呼叫端傳的標題、金額、幣別、還款雙方一律不用。
+    // 每次查詢都綁 group_id，否則可拿別的群組的紀錄來組通知。
+    let expense = null
+    if ((event === 'expense_added' || event === 'expense_updated') && typeof expense_id === 'string') {
+      const { data } = await supabase
         .from('split_expenses')
-        .select('title, amount, currency')
+        .select('title, amount, currency, created_at')
         .eq('id', expense_id)
         .eq('group_id', group_id)
         .maybeSingle()
-      if (expense) {
-        resolvedTitle = sanitizeNotifyText(expense.title)
-        resolvedAmount = expense.amount
-        resolvedCurrency = sanitizeNotifyText(expense.currency)
+      expense = data ?? null
+    }
+
+    let settlement = null
+    let fromName = ''
+    let toName = ''
+    if (event === 'settlement_added' && typeof settlement_id === 'string') {
+      const { data } = await supabase
+        .from('split_settlements')
+        .select('amount, currency, from_member, to_member, created_at')
+        .eq('id', settlement_id)
+        .eq('group_id', group_id)
+        .maybeSingle()
+      settlement = data ?? null
+      if (settlement) {
+        const { data: parties } = await supabase
+          .from('split_members')
+          .select('id, name')
+          .eq('group_id', group_id)
+          .in('id', [settlement.from_member, settlement.to_member])
+        const nameById = new Map((parties ?? []).map((m) => [m.id, m.name]))
+        fromName = nameById.get(settlement.from_member) ?? ''
+        toName = nameById.get(settlement.to_member) ?? ''
       }
     }
 
-    const memberIds = [member_id, from_member, to_member].filter(Boolean)
-    if (memberIds.length > 0) {
-      const { data: namedMembers } = await supabase
+    // member_added 查得到就用資料庫的名字；member_removed 的來源列已不在，只能用傳入值
+    let memberName = body.member_name
+    if (typeof member_id === 'string') {
+      const { data: member } = await supabase
         .from('split_members')
-        .select('id, name')
+        .select('name')
+        .eq('id', member_id)
         .eq('group_id', group_id)
-        .in('id', memberIds)
-      const nameById = new Map((namedMembers ?? []).map((m) => [m.id, sanitizeNotifyText(m.name)]))
-      if (nameById.has(member_id)) resolvedMemberName = nameById.get(member_id)
-      if (nameById.has(from_member)) resolvedFromName = nameById.get(from_member)
-      if (nameById.has(to_member)) resolvedToName = nameById.get(to_member)
+        .maybeSingle()
+      if (member) memberName = member.name
+    }
+
+    const decision = decideSplitNotification({
+      event,
+      now: new Date(),
+      actorName: actor_name,
+      groupName: group_name,
+      expense,
+      settlement,
+      fromName,
+      toName,
+      memberName,
+    })
+
+    if (!decision.send) {
+      // 查不到紀錄或紀錄不是剛建立的：不送，也不算錯（前端與 CLI 都是 fire-and-forget）
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: decision.reason }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // 組合通知文字（依收件者語言，預組兩份）
-    const amountStr = resolvedAmount != null ? ` ${resolvedCurrency || 'TWD'} ${resolvedAmount}` : ''
-    const textParams = {
-      actorName: actor_name,
-      groupName: group_name,
-      expenseTitle: resolvedTitle,
-      memberName: resolvedMemberName,
-      fromName: resolvedFromName,
-      toName: resolvedToName,
-      amountStr,
-      currency: resolvedCurrency,
-      expenseAmount: resolvedAmount,
-    }
     const bodyByLang = {
-      zh: splitNotifyBody(event, 'zh', textParams),
-      en: splitNotifyBody(event, 'en', textParams),
+      zh: splitNotifyBody(event, 'zh', decision.params),
+      en: splitNotifyBody(event, 'en', decision.params),
     }
 
     // 查詢群組內有 user_id 的成員，排除操作者本人

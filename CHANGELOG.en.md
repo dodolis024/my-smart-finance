@@ -18,6 +18,7 @@ This file records version updates for Smart Finance Tracker.
 - Improved the example placeholders in the split and subscription forms to follow the interface language
 - Fixed group members being able to add someone else's account to their split group
 - Fixed a currency possibly staying on an old rate after the anomaly guard rejected a new one
+- Fixed split push notifications being forgeable by group members
 - Fixed a split settlement being converted to the group currency with the previous day's exchange rate
 - Fixed automatic subscription charges in foreign currencies using the previous day's rate, by scheduling them after the daily rate update
 - Fixed a backdated foreign-currency expense being converted to TWD at today's rate

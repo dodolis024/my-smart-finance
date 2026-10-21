@@ -254,7 +254,7 @@ describe('deleteExpense', () => {
 });
 
 describe('addSettlement', () => {
-  it('寫入的是成員 id，通知帶付款與收款雙方的名字', async () => {
+  it('寫入的是成員 id，通知只帶 settlement_id（金額與人名由推播函式從資料庫讀）', async () => {
     await addSettlement({
       group: GROUP,
       fromMember: MEMBERS[1],
@@ -270,10 +270,12 @@ describe('addSettlement', () => {
     });
     expect(calls.invoke[0].body).toMatchObject({
       event: 'settlement_added',
-      from_name: '小明',
-      to_name: 'Doris',
-      expense_amount: 500,
+      group_id: 'group-1',
+      settlement_id: 'settlement-1',
     });
+    for (const key of ['expense_amount', 'currency', 'from_member', 'to_member', 'from_name', 'to_name']) {
+      expect(calls.invoke[0].body).not.toHaveProperty(key);
+    }
   });
 });
 

@@ -144,8 +144,9 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
 
   // 新增還款紀錄
   // date 一定要自己帶：交給資料庫預設等於用 UTC 時鐘，台灣凌晨 0～8 點記的還款會變成前一天
-  const addSettlement = useCallback(async ({ fromMember, toMember, amount, currency, fromName = '', toName = '' }) => {
-    const { error } = await supabase
+  // 推播只帶 settlement_id：金額、幣別、雙方名稱由 send-split-notification 從資料庫讀，不信呼叫端
+  const addSettlement = useCallback(async ({ fromMember, toMember, amount, currency }) => {
+    const { data: settlement, error } = await supabase
       .from('split_settlements')
       .insert({
         date: getTodayYmd(),
@@ -154,7 +155,9 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
         to_member: toMember,
         amount,
         currency: currency || 'TWD',
-      });
+      })
+      .select('id')
+      .single();
     if (error) throw error;
     await fetchExpenses();
     notifySplit({
@@ -163,12 +166,7 @@ export function useSplitExpenses(groupId, { actorName = '', actorUserId = '', gr
       group_name: groupName,
       actor_name: actorName,
       actor_user_id: actorUserId,
-      expense_amount: amount,
-      currency: currency || 'TWD',
-      from_member: fromMember,
-      to_member: toMember,
-      from_name: fromName,
-      to_name: toName,
+      settlement_id: settlement?.id,
     });
   }, [groupId, groupName, actorName, actorUserId, fetchExpenses]);
 
