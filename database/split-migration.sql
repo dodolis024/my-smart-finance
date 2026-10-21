@@ -231,18 +231,32 @@ CREATE POLICY "split_members_select" ON split_members
   );
 
 -- 群組成員或 owner 可新增成員
--- 安全性：不可加上 OR user_id = auth.uid()。那等於只檢查「寫入的列是不是自己」
+-- 安全性：不可把 user_id = auth.uid() 用 OR 接在外面。那等於只檢查「寫入的列是不是自己」
 -- 而不檢查 group_id，任何登入用戶知道群組 id 就能自行加入，繞過
 -- join_split_group_as_new_member 只收邀請碼的防護（見該函式註解）。
+-- 新增的列只能是「沒連結帳號的空位」或「自己」：少了這條，任何成員都能把別人的
+-- user_id 塞進自己的群組，對方的分帳列表就多出一個他沒加入過的群組，而他身為
+-- 非群主也無法刪掉那一列（split_members_delete 限群主）。
+-- 正常流程都符合：前端／CLI 加成員寫 NULL、create_split_group 寫建立者自己；
+-- 兩支 SECURITY DEFINER 的加入 RPC 以擁有者身分執行，不受 RLS 影響（寫的也是 auth.uid()）。
 CREATE POLICY "split_members_insert" ON split_members
   FOR INSERT WITH CHECK (
     can_access_split_group(group_id, auth.uid())
+    AND (user_id IS NULL OR user_id = auth.uid())
   );
 
+-- WITH CHECK 要明寫：省略時 Postgres 拿 USING 檢查新列，非群主把自己那列的 user_id
+-- 改成 NULL（離開群組）時 user_id = auth.uid() 不再成立而被擋。
+-- 這裡的 user_id IS NULL 只會是「解除連結」：USING 已限定只能動自己那列或自己當群主的群組，
+-- trigger（protect_split_member_identity）又鎖死 group_id 與 user_id 的變更方式。
 CREATE POLICY "split_members_update" ON split_members
   FOR UPDATE USING (
     EXISTS (SELECT 1 FROM split_groups WHERE id = group_id AND owner_id = auth.uid())
     OR user_id = auth.uid()
+  ) WITH CHECK (
+    EXISTS (SELECT 1 FROM split_groups WHERE id = group_id AND owner_id = auth.uid())
+    OR user_id = auth.uid()
+    OR user_id IS NULL
   );
 
 CREATE POLICY "split_members_delete" ON split_members
@@ -255,7 +269,9 @@ CREATE POLICY "split_members_delete" ON split_members
 -- 也無解——它看不到舊值，無法表達「這個欄位不准動」。與 protect_split_group_ownership
 -- 同理，改用 trigger。
 --
--- user_id 只允許三種變更：owner 調整、認領空位、自行解除連結。
+-- user_id 只允許三種變更：群主解除某位成員的連結、認領空位、自行解除連結。
+-- 群主只能「解除」，不能把成員連到別的帳號：否則群主可把任意 UUID 連進自己的群組，
+-- 對方的分帳列表就多出一個他沒加入過的群組（與 split_members_insert 的 user_id 限制同理）。
 -- 「認領空位」是 link_self_to_split_member 走的路徑，該函式雖為 SECURITY DEFINER
 -- 但 trigger 一樣會觸發，少了這條會讓「加入既有成員位置」直接壞掉。
 --
@@ -275,7 +291,8 @@ BEGIN
   END IF;
 
   IF NEW.user_id IS DISTINCT FROM OLD.user_id AND NOT (
-       EXISTS (SELECT 1 FROM split_groups WHERE id = OLD.group_id AND owner_id = auth.uid())
+       (NEW.user_id IS NULL
+        AND EXISTS (SELECT 1 FROM split_groups WHERE id = OLD.group_id AND owner_id = auth.uid()))
     OR (OLD.user_id IS NULL      AND NEW.user_id = auth.uid())
     OR (OLD.user_id = auth.uid() AND NEW.user_id IS NULL)
   ) THEN

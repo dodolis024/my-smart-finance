@@ -220,6 +220,32 @@ export function useSplitGroups() {
     });
   }, [groups, user, setGroups]);
 
+  // 離開群組＝把自己那列的 user_id 設回 NULL。成員列與帳目都留著（分攤與還款的外鍵指向它，
+  // 刪掉會讓帳兜不起來），只是變回「沒連結帳號的空位」，之後可再用邀請連結認領回來。
+  // 群主不走這裡（UI 不給）：群主離開會留下一個沒人管得了的群組，群主有自己的刪除群組流程。
+  // 被 RLS 擋下時 PostgREST 回「成功、0 列」，要看回傳列數才知道有沒有真的離開（同 removeMember）
+  const leaveGroup = useCallback(async (groupId) => {
+    if (!user) throw new Error(t('auth.loginRequired'));
+    const self = groups.find(g => g.id === groupId)?.split_members?.find(m => m.user_id === user.id);
+    if (!self) throw new Error('SPLIT_LEAVE_GROUP_DENIED');
+    const { data: left, error } = await supabase
+      .from('split_members')
+      .update({ user_id: null })
+      .eq('id', self.id)
+      .eq('user_id', user.id)
+      .select('id');
+    if (error) throw error;
+    if (!left || left.length === 0) throw new Error('SPLIT_LEAVE_GROUP_DENIED');
+    // 離開後就讀不到這個群組了：先從列表拿掉，再重抓一次讓列表與快取以資料庫為準。
+    // 重抓失敗不能讓「已經離開」看起來像失敗，留痕跡就好
+    setGroups(prev => prev.filter(g => g.id !== groupId));
+    try {
+      await fetchGroups();
+    } catch (err) {
+      console.warn('[useSplitGroups] 離開群組後重抓列表失敗:', err?.message);
+    }
+  }, [groups, user, setGroups, fetchGroups, t]);
+
   // 用邀請代碼查詢群組（RPC，任何登入用戶皆可）
   const getGroupByCode = useCallback(async (code) => {
     const { data, error } = await supabase.rpc('get_group_by_invite_code', { p_code: code });
@@ -260,6 +286,7 @@ export function useSplitGroups() {
     addMember,
     updateMemberName,
     removeMember,
+    leaveGroup,
     getGroupByCode,
     linkSelfToMember,
     joinGroupAsNewMember,

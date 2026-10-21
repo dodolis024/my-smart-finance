@@ -5,7 +5,7 @@ import { resolveRpcError } from '@/lib/splitErrors';
 
 let nextId = 1;
 
-export default function ManageMembersModal({ isOpen, onClose, members, currentUserId, isOwner = false, onAddMembers, onRemoveMember, onUpdateMemberName }) {
+export default function ManageMembersModal({ isOpen, onClose, members, currentUserId, isOwner = false, onAddMembers, onRemoveMember, onUpdateMemberName, onLeaveGroup }) {
   const { t } = useLanguage();
   const [newMembers, setNewMembers] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -117,6 +117,14 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
                   );
                 })()}
                 {m.user_id && <span className="split-modal__member-linked">{t('split.memberLinked')}</span>}
+                {/* 離開群組只出現在自己那列；群主不給（上層不傳 onLeaveGroup），群主有自己的刪除群組流程 */}
+                {onLeaveGroup && !isOwner && m.user_id && m.user_id === currentUserId && (
+                  <button type="button" className="split-modal__member-remove" onClick={onLeaveGroup} aria-label={t('split.leaveGroup')} title={t('split.leaveGroup')}>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                    </svg>
+                  </button>
+                )}
                 {onRemoveMember && !m.user_id && (
                   <button type="button" className="split-modal__member-remove" onClick={() => onRemoveMember(m.id)} aria-label={t('common.delete')}>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">

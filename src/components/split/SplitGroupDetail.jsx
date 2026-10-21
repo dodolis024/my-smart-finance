@@ -16,7 +16,7 @@ import AddExpenseModal from './AddExpenseModal';
 import ManageMembersModal from './ManageMembersModal';
 import GroupSettingsModal from './GroupSettingsModal';
 
-export default function SplitGroupDetail({ group, rates, onRefreshRates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onUpdateGroup, onArchiveGroup, onUnarchiveGroup }) {
+export default function SplitGroupDetail({ group, rates, onRefreshRates, currencies, onAddMember, onRemoveMember, onUpdateMemberName, onLeaveGroup, onUpdateGroup, onArchiveGroup, onUnarchiveGroup }) {
   const toast = useToast();
   const { confirm } = useConfirm();
   const { t } = useLanguage();
@@ -199,6 +199,14 @@ export default function SplitGroupDetail({ group, rates, onRefreshRates, currenc
     const ok = await confirm(t('split.removeMemberConfirm', { name: member?.name ?? '' }));
     if (!ok) return;
     await onRemoveMember(memberId);
+  };
+
+  // 離開＝解除自己那列的帳號連結，成員列與帳目都留著，所以不需要像移除成員那樣先數帳目
+  const handleLeaveGroup = async () => {
+    const ok = await confirm(t('split.leaveGroupConfirm', { name: group.name ?? '' }), { danger: true });
+    if (!ok) return;
+    setAddMembersOpen(false);
+    await onLeaveGroup();
   };
 
   const handleCopyLink = () => {
@@ -414,6 +422,7 @@ export default function SplitGroupDetail({ group, rates, onRefreshRates, currenc
         // 移除成員限群主（split_members_delete policy）；非群主按了也只會失敗
         onRemoveMember={isOwner ? handleRemoveMember : undefined}
         onUpdateMemberName={onUpdateMemberName}
+        onLeaveGroup={!isOwner && actorMember && onLeaveGroup ? handleLeaveGroup : undefined}
       />
 
       <GroupSettingsModal

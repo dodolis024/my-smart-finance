@@ -37,7 +37,7 @@ export default function SplitPage() {
   const { groupId } = useParams();
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { groups, loading, fetchGroups, createGroup, updateGroup, archiveGroup, unarchiveGroup, togglePin, deleteGroup, addMember, updateMemberName, removeMember } = useSplitGroups();
+  const { groups, loading, fetchGroups, createGroup, updateGroup, archiveGroup, unarchiveGroup, togglePin, deleteGroup, addMember, updateMemberName, removeMember, leaveGroup } = useSplitGroups();
   const [createOpen, setCreateOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [rates, setRates] = useState(initialRates);
@@ -203,6 +203,15 @@ export default function SplitPage() {
                 toast.error(err?.message === 'SPLIT_UPDATE_NAME_DENIED'
                   ? t('split.updateNameNotOwner')
                   : t('split.updateNameFailed'));
+              }
+            }}
+            onLeaveGroup={async () => {
+              try {
+                await leaveGroup(selectedGroup.id);
+                navigate('/split', { replace: true });
+                toast.success(t('split.groupLeft'));
+              } catch {
+                toast.error(t('split.leaveGroupFailed'));
               }
             }}
             onUpdateGroup={updateGroup}

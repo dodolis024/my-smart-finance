@@ -29,7 +29,9 @@
 SELECT * FROM (
   -- ── fix-split-member-access.sql ──────────────────────────────────────────
   SELECT 1 AS 序, 'member-access' AS 腳本, 'INSERT policy 已移除側門' AS 檢查項目,
-    (SELECT (with_check NOT LIKE '%user_id = auth.uid()%')::text FROM pg_policies
+    -- 側門的樣子是頂層的 OR (user_id = auth.uid())；fix-split-member-insert-guard.sql 之後
+    -- with_check 會多一段 AND ((user_id IS NULL) OR (user_id = auth.uid()))，那是收緊不是側門
+    (SELECT (with_check NOT LIKE '%auth.uid()) OR (user_id = auth.uid())%')::text FROM pg_policies
       WHERE tablename = 'split_members' AND policyname = 'split_members_insert') AS 結果,
     'true' AS 預期
   UNION ALL SELECT 2, 'member-access', 'protect_split_member_identity trigger 啟用中',
