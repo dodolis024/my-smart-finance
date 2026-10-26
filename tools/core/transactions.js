@@ -315,12 +315,6 @@ export async function updateTransaction(id, patch = {}) {
     if (patch.overseas === true) throw smfError(ErrorCode.INVALID_INPUT, '收入不適用海外手續費', '拿掉 --overseas');
     wantOverseas = false;
   }
-  if (wantOverseas && !wasOverseas) {
-    // 分帳同步交易重新同步時 RPC 會改寫 twd_amount，手續費會被洗掉，所以不支援
-    const { data: sync } = await client.from('split_ledger_syncs').select('id').eq('transaction_id', id).maybeSingle();
-    if (sync) throw smfError(ErrorCode.INVALID_INPUT, '分帳同步進來的交易不支援海外手續費', '拿掉 --overseas');
-  }
-
   let nextFeeRate = null;
   if (wantOverseas) {
     if (!accountChanged && wasOverseas) {

@@ -736,7 +736,6 @@ describe('海外手續費', () => {
 
     it('--overseas 開啟一筆原本非海外的交易 → 用卡片目前的費率', async () => {
       setupUpdate(PLAIN_TX);
-      queueResult('split_ledger_syncs', { data: null, error: null });
 
       await updateTransaction('tx-9', { overseas: true });
 
@@ -803,15 +802,16 @@ describe('海外手續費', () => {
       });
     });
 
-    it('分帳同步交易＋--overseas → 報錯', async () => {
+    it('分帳同步交易＋--overseas → 照卡片費率算手續費', async () => {
       setupUpdate(PLAIN_TX);
-      queueResult('split_ledger_syncs', { data: { id: 'sync-1' }, error: null });
 
-      await expect(updateTransaction('tx-9', { overseas: true })).rejects.toMatchObject({
-        code: 'INVALID_INPUT',
-        message: expect.stringContaining('分帳'),
+      await updateTransaction('tx-9', { overseas: true });
+
+      expect(lastWrite('transactions', 'update')).toMatchObject({
+        twd_amount: 426.66,
+        overseas_fee_rate: 1.5,
+        overseas_fee: 6.31,
       });
-      expect(lastWrite('transactions', 'update')).toBeUndefined();
     });
   });
 });

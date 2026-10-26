@@ -229,6 +229,8 @@ export default function SplitGroupDetail({ group, rates, onRefreshRates, currenc
       } else {
         toast.success(t('split.syncSuccess'));
       }
+      // 重新同步會保留使用者在帳本改過的名稱／分類／備註，告訴使用者哪些沒跟著分帳更新
+      if (result?.kept > 0) toast.info(t('split.keptLedgerEdits', { count: result.kept }));
     } catch (err) {
       console.error(err);
       toast.error(resolveRpcError(err, t) || t('split.syncFailed'));

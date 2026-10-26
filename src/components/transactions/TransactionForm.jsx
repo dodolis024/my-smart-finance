@@ -193,7 +193,7 @@ export default function TransactionForm({
   const isIncome = String(form.categoryValue).startsWith('income:');
   // 選到有費率的卡才出現；編輯一筆原本就是海外消費的帳（卡片費率後來被刪掉）時也要出現，才能取消
   const showOverseas =
-    !paymentOptional && !isIncome &&
+    !isIncome &&
     (getOverseasFeeRate(selectedAccount) != null || (isEditing && form.overseas));
 
   return (

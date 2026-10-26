@@ -1,5 +1,6 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Modal from '@/components/common/Modal';
+import { supabase } from '@/lib/supabase';
 import { formatMoney, formatCurrencyAmount } from '@/lib/utils';
 import { useScrollbarOnScroll } from '@/hooks/useScrollbarOnScroll';
 import LinkifiedText from '@/components/common/LinkifiedText';
@@ -9,6 +10,29 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
   const { t } = useLanguage();
   const bodyRef = useRef(null);
   useScrollbarOnScroll(bodyRef, isOpen && !!tx);
+
+  // 分帳同步進來的交易標出來源群組：使用者改過分類或名稱後（重新同步會保留），
+  // 畫面上就看不出它來自哪個分帳了。查不到或失敗就不顯示
+  const [splitGroupName, setSplitGroupName] = useState(null);
+  const txId = tx?.id;
+  useEffect(() => {
+    setSplitGroupName(null);
+    if (!isOpen || !txId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('split_ledger_syncs')
+          .select('split_groups(name)')
+          .eq('transaction_id', txId)
+          .maybeSingle();
+        if (!cancelled && data?.split_groups?.name) setSplitGroupName(data.split_groups.name);
+      } catch {
+        // 來源群組只是輔助資訊，查詢失敗不影響詳情
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, txId]);
 
   if (!tx) return null;
 
@@ -63,6 +87,12 @@ export default function TransactionDetail({ transaction: tx, isOpen, onClose, on
               <span className="badge">{tx.category}</span>
             </div>
           </div>
+          {splitGroupName && (
+            <div className="transaction-detail-item">
+              <div className="transaction-detail-label">{t('transaction.splitGroup')}</div>
+              <div className="transaction-detail-value">{splitGroupName}</div>
+            </div>
+          )}
           <div className="transaction-detail-item">
             <div className="transaction-detail-label">{t('transaction.tableItem')}</div>
             <div className="transaction-detail-value">{tx.itemName}</div>

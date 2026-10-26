@@ -237,8 +237,13 @@ describe('編輯交易', () => {
     expect((await submit()).overseas).toBe(false);
   });
 
-  it('分帳同步交易（paymentOptional）→ 不出現', () => {
+  it('分帳同步交易（paymentOptional）選了有費率的卡 → 出現', () => {
     render({ editingTransaction: { ...overseasTx, overseasFeeRate: null }, paymentOptional: true });
+    expect(toggle()).not.toBeNull();
+  });
+
+  it('分帳同步交易沒選支付方式 → 不出現', () => {
+    render({ editingTransaction: { ...overseasTx, overseasFeeRate: null, paymentMethod: '' }, paymentOptional: true });
     expect(toggle()).toBeNull();
   });
 });

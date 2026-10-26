@@ -161,11 +161,11 @@ describe('編輯', () => {
     expect(lastWrite('update')).toMatchObject({ account_id: 'acc-3', overseas_fee_rate: 2, overseas_fee: 8.41 });
   });
 
-  it('分帳同步交易 → 不算手續費', async () => {
+  it('分帳同步交易勾選海外 → 照卡片費率算手續費', async () => {
     mocks.results.transactions = { data: { ...existing, overseas_fee_rate: null }, error: null };
 
     await submit(form(), 'tx-1', { isSplitSynced: true });
 
-    expect(lastWrite('update')).toMatchObject({ overseas_fee_rate: null, overseas_fee: null });
+    expect(lastWrite('update')).toMatchObject({ twd_amount: 426.66, overseas_fee_rate: 1.5, overseas_fee: 6.31 });
   });
 });

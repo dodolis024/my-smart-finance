@@ -58,8 +58,8 @@ export function useTransactions() {
 
     if (!user) throw new Error(t('auth.loginRequired'));
 
-    // 分帳同步交易不支援：重新同步時 RPC 會改寫 twd_amount，手續費會被洗掉（見 docs/specs/overseas-fee.md）
-    const wantsOverseas = Boolean(overseas) && type === 'expense' && !isSplitSynced;
+    // 分帳同步交易也可以：重新同步時 RPC 會照記下的費率重算手續費（database/split-sync-preserve-user-edits-migration.sql）
+    const wantsOverseas = Boolean(overseas) && type === 'expense';
 
     const normalizedCurrency = currency.trim().toUpperCase();
 

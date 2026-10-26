@@ -21,6 +21,12 @@ CREATE TABLE IF NOT EXISTS split_ledger_syncs (
   synced_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   -- 該筆費用的明細快照：[{expense_id, title, share, currency, date}]
   expense_snapshot JSONB NOT NULL DEFAULT '[]',
+  -- 上次同步寫進帳本的名稱／分類／備註（分帳那一側的值）。重新同步時拿來判斷
+  -- 使用者有沒有在帳本改過：帳本現值 ≠ 這裡的值 → 改過，保留不覆蓋。
+  -- 見 database/split-sync-preserve-user-edits-migration.sql
+  synced_item_name TEXT,
+  synced_category  TEXT,
+  synced_note      TEXT,
   -- 一列 = 一筆費用（見 database/split-sync-per-expense-migration.sql）。
   -- 不用 ON DELETE CASCADE：費用被刪除時若同步記錄跟著消失，就找不到該收掉
   -- 哪一筆帳本交易了；留成 NULL 當線索，由 sync_split_to_ledger 下次清理。
@@ -95,6 +101,7 @@ DECLARE
   v_user_id        UUID;
   v_member_id      UUID;
   v_group_currency TEXT;
+  v_group_name     TEXT;
   v_current_total  NUMERIC(12, 2);
   v_synced_total   NUMERIC(12, 2);
   v_synced_count   INT;
@@ -116,7 +123,7 @@ BEGIN
     RETURN json_build_object('synced', false, 'has_member', false);
   END IF;
 
-  SELECT sg.currency INTO v_group_currency
+  SELECT sg.currency, sg.name INTO v_group_currency, v_group_name
   FROM split_groups sg
   WHERE sg.id = p_group_id;
 
@@ -253,10 +260,15 @@ BEGIN
       WHERE s.user_id = v_user_id AND s.group_id = p_group_id
         AND (
           t.date <> se3.date
-          OR t.item_name IS DISTINCT FROM se3.title
+          -- 名稱、備註、分類比的是「分帳現值 vs 上次同步寫入的值」，不是帳本現值：
+          -- 使用者在帳本改過的內容會被保留，拿帳本比會永遠顯示「需要更新」。
+          -- 沒有比較基準的舊列（synced_item_name 為 NULL）退回比帳本現值。
+          OR se3.title IS DISTINCT FROM COALESCE(s.synced_item_name, t.item_name)
+          OR (s.synced_category IS NOT NULL AND s.synced_category IS DISTINCT FROM v_group_name)
           OR t.currency <> se3.currency
           OR ROUND(t.amount, 2) <> ROUND(ses.share, 2)
-          OR t.note IS DISTINCT FROM NULLIF(TRIM(se3.note), '')
+          OR NULLIF(TRIM(se3.note), '') IS DISTINCT FROM
+             CASE WHEN s.synced_item_name IS NULL THEN t.note ELSE s.synced_note END
         )
     )
   INTO v_needs_update;
@@ -308,6 +320,14 @@ DECLARE
   v_created    INT := 0;
   v_updated    INT := 0;
   v_removed    INT := 0;
+  v_kept       INT := 0;
+  v_cur_item   TEXT;
+  v_cur_cat    TEXT;
+  v_cur_note   TEXT;
+  v_new_note   TEXT;
+  v_item       TEXT;
+  v_cat        TEXT;
+  v_note       TEXT;
 BEGIN
   v_user_id := auth.uid();
   IF v_user_id IS NULL THEN
@@ -394,8 +414,11 @@ BEGIN
         (SELECT er.rate FROM exchange_rates er WHERE er.currency_code = se.currency),
         1.0
       ) AS rate,
-      s.id             AS sync_id,
-      s.transaction_id AS transaction_id
+      s.id               AS sync_id,
+      s.transaction_id   AS transaction_id,
+      s.synced_item_name AS synced_item_name,
+      s.synced_category  AS synced_category,
+      s.synced_note      AS synced_note
     FROM split_expense_shares ses
     JOIN split_expenses se ON se.id = ses.expense_id
     LEFT JOIN split_ledger_syncs s
@@ -408,17 +431,55 @@ BEGIN
     v_rate := CASE WHEN v_row.currency = 'TWD' THEN 1.0 ELSE v_row.rate END;
     v_twd  := ROUND(v_row.share * v_rate, 2);
 
+    v_new_note := NULLIF(TRIM(v_row.note), '');
+
     IF v_row.sync_id IS NOT NULL THEN
-      -- category 一併更新：群組改名後，同一個群組不該在圓餅圖上裂成新舊兩塊
+      -- 名稱、分類、備註採三方比較：帳本現值 = 上次同步寫入的值 → 使用者沒動過，
+      -- 跟著分帳更新（群組改名後分類也跟著改，圓餅圖不會裂成新舊兩塊）；
+      -- 不相等 → 使用者改過，保留。日期、金額、幣別、匯率一律跟分帳走。
+      -- synced_item_name 為 NULL 表示這列沒有比較基準（理論上不會發生，
+      -- 遷移時已回填），退回舊行為：全部跟著分帳。
+      SELECT t.item_name, t.category, t.note
+      INTO v_cur_item, v_cur_cat, v_cur_note
+      FROM transactions t
+      WHERE t.id = v_row.transaction_id AND t.user_id = v_user_id;
+
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'SPLIT_SYNC_TX_NOT_OWNED';
+      END IF;
+
+      IF v_row.synced_item_name IS NULL THEN
+        v_item := v_row.title;
+        v_cat  := v_group_name;
+        v_note := v_new_note;
+      ELSE
+        v_item := CASE WHEN v_cur_item IS DISTINCT FROM v_row.synced_item_name THEN v_cur_item ELSE v_row.title END;
+        v_cat  := CASE WHEN v_cur_cat  IS DISTINCT FROM v_row.synced_category  THEN v_cur_cat  ELSE v_group_name END;
+        v_note := CASE WHEN v_cur_note IS DISTINCT FROM v_row.synced_note      THEN v_cur_note ELSE v_new_note END;
+      END IF;
+
+      -- 只算「保留的內容和分帳現在不一樣」的筆數，前端據此提示
+      IF v_item IS DISTINCT FROM v_row.title
+         OR v_cat IS DISTINCT FROM v_group_name
+         OR v_note IS DISTINCT FROM v_new_note THEN
+        v_kept := v_kept + 1;
+      END IF;
+
       UPDATE transactions SET
         date          = v_row.expense_date,
-        item_name     = v_row.title,
-        category      = v_group_name,
+        item_name     = v_item,
+        category      = v_cat,
         currency      = v_row.currency,
         amount        = v_row.share,
         exchange_rate = v_rate,
-        twd_amount    = v_twd,
-        note          = NULLIF(TRIM(v_row.note), ''),
+        -- 使用者勾了海外消費的交易：照當時記下的費率重算手續費，併入台幣金額。
+        -- 算法與 src/lib/overseasFee.js 的 computeTwdWithFee 相同（本體 × 費率取到分）。
+        -- SET 裡引用的 overseas_fee_rate 是更新前的值，同步不會改動費率本身。
+        overseas_fee  = CASE WHEN overseas_fee_rate IS NULL THEN NULL
+                             ELSE ROUND(v_twd * overseas_fee_rate) / 100 END,
+        twd_amount    = CASE WHEN overseas_fee_rate IS NULL THEN v_twd
+                             ELSE ROUND(v_twd + ROUND(v_twd * overseas_fee_rate) / 100, 2) END,
+        note          = v_note,
         updated_at    = NOW()
       WHERE id = v_row.transaction_id
         AND user_id = v_user_id;
@@ -434,6 +495,10 @@ BEGIN
         synced_amount   = v_row.share,
         synced_currency = v_row.currency,
         synced_at       = NOW(),
+        -- 記分帳這一側的值（不是保留下來的帳本值），下次才比得出使用者有沒有改過
+        synced_item_name = v_row.title,
+        synced_category  = v_group_name,
+        synced_note      = v_new_note,
         expense_snapshot = jsonb_build_array(jsonb_build_object(
           'expense_id', v_row.expense_id,
           'title',      v_row.title,
@@ -462,13 +527,14 @@ BEGIN
         v_row.share,
         v_rate,
         v_twd,
-        NULLIF(TRIM(v_row.note), '')
+        v_new_note
       )
       RETURNING id INTO v_tx_id;
 
       INSERT INTO split_ledger_syncs (
         user_id, group_id, expense_id, transaction_id,
-        synced_amount, synced_currency, expense_snapshot
+        synced_amount, synced_currency, expense_snapshot,
+        synced_item_name, synced_category, synced_note
       ) VALUES (
         v_user_id, p_group_id, v_row.expense_id, v_tx_id,
         v_row.share, v_row.currency,
@@ -478,7 +544,8 @@ BEGIN
           'share',      v_row.share,
           'currency',   v_row.currency,
           'date',       v_row.expense_date
-        ))
+        )),
+        v_row.title, v_group_name, v_new_note
       );
 
       v_created := v_created + 1;
@@ -490,7 +557,8 @@ BEGIN
     'group_name', v_group_name,
     'created',    v_created,
     'updated',    v_updated,
-    'removed',    v_removed
+    'removed',    v_removed,
+    'kept',       v_kept
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
