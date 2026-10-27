@@ -29,9 +29,28 @@ function compact(value) {
   return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
 }
 
+/** 旅程那段的斜線填色：淡底＋斜線，不用另一個色相也分得出來 */
+function stripes(background, line) {
+  const size = 8;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = line;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-2, size + 2); ctx.lineTo(size + 2, -2);
+  ctx.moveTo(-2, 2); ctx.lineTo(2, -2);
+  ctx.moveTo(size - 2, size + 2); ctx.lineTo(size + 2, size - 2);
+  ctx.stroke();
+  return ctx.createPattern(canvas, 'repeat');
+}
+
 /**
- * 近 6 個月的日常支出長條（不含大額單筆）。這個月還沒過完時，長條上方疊一段淡色的「月底預估」；
- * 「平常」畫成一條橫向虛線。點長條會打開那個月的明細。
+ * 近 6 個月的日常支出長條（不含大額單筆）。有旅程的月份上面疊一段斜線；這個月還沒過完時，
+ * 再疊一段淡色的「月底預估」；「平常」（不含旅程）畫成一條橫向虛線。點長條會打開那個月的明細。
  */
 export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth }) {
   const { t } = useLanguage();
@@ -61,6 +80,21 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth }) {
         maxBarThickness: 48,
       },
     ];
+    if (months.some((m) => m.trip > 0)) {
+      const current = stripes(colors.tintLight, colors.primary);
+      const other = stripes(colors.tintLight, colors.tint);
+      datasets.push({
+        type: 'bar',
+        label: t('spendingAnalysis.chart.trip'),
+        data: months.map((m) => (m.beforeStart || !m.trip ? null : m.trip)),
+        backgroundColor: months.map((_, i) => (i === last ? current : other)),
+        borderColor: months.map((_, i) => (i === last ? colors.primary : colors.tint)),
+        borderWidth: 1,
+        borderRadius: 4,
+        stack: 'spend',
+        maxBarThickness: 48,
+      });
+    }
     // 月初資料太少不推估，只畫到目前為止的金額
     if (isCurrent && !isEarly) {
       datasets.push({
@@ -146,7 +180,9 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth }) {
   return (
     <section className="analysis-card analysis-chart">
       <h3 className="analysis-card__title">{t('spendingAnalysis.chart.title')}</h3>
-      <p className="analysis-card__subtitle">{t('spendingAnalysis.chart.subtitle')}</p>
+      <p className="analysis-card__subtitle">
+        {t(months.some((m) => m.trip > 0) ? 'spendingAnalysis.chart.subtitleTrips' : 'spendingAnalysis.chart.subtitle')}
+      </p>
       <div className="analysis-chart__canvas">
         <Chart type="bar" data={data} options={options} />
       </div>

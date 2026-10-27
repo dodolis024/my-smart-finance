@@ -26,7 +26,7 @@ export function sumTransactions(rows) {
 }
 const SEARCH_COLUMNS = ['item_name', 'category', 'note', 'payment_method'];
 // 兩個查詢（跨月搜尋 / 自訂區間匯出）共用同一份欄位定義，避免日後漂移
-const SELECT_COLUMNS = 'id, date, time, type, item_name, category, payment_method, currency, amount, exchange_rate, twd_amount, overseas_fee_rate, overseas_fee, note';
+export const SELECT_COLUMNS = 'id, date, time, type, item_name, category, payment_method, currency, amount, exchange_rate, twd_amount, overseas_fee_rate, overseas_fee, note';
 
 /**
  * 消毒搜尋字（export 供測試直接驗）：

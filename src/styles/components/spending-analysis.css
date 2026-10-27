@@ -311,3 +311,302 @@
   background: var(--color-primary-tint-hover);
   border-color: var(--color-primary-tint-border);
 }
+
+/* 共用按鈕：外觀同「算進分析」那顆 */
+.analysis-btn {
+  padding: 0.3rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-card);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.analysis-btn:hover:not(:disabled) {
+  background: var(--color-primary-tint-hover);
+  border-color: var(--color-primary-tint-border);
+}
+
+.analysis-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.analysis-btn--quiet {
+  border-color: transparent;
+  background: none;
+}
+
+.analysis-btn--primary,
+.analysis-btn--primary:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.analysis-btn--small {
+  padding: 0.15rem 0.6rem;
+}
+
+.analysis-link--muted {
+  color: var(--color-text-secondary);
+}
+
+/* 旅程卡片 */
+.analysis-trips {
+  margin-bottom: var(--space-sm);
+}
+
+.analysis-trips__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.analysis-trips__suggestion {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 8px;
+  background: var(--color-primary-tint-light);
+}
+
+.analysis-trips__suggestion-text {
+  flex: 1;
+  color: var(--color-text);
+  font-size: 0.9375rem;
+}
+
+.analysis-trips__list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.analysis-trips__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) auto 1rem;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  border: none;
+  border-bottom: 1px solid var(--color-border-light);
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.analysis-trips__list li:last-child .analysis-trips__row {
+  border-bottom: none;
+}
+
+.analysis-trips__row:hover {
+  background: var(--color-row-hover);
+}
+
+.analysis-trips__name-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.analysis-trips__name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.analysis-trips__meta,
+.analysis-trips__cats {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-trips__cats {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-trips__total {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.analysis-trips__chevron {
+  color: var(--color-text-muted);
+}
+
+/* 旅程表單與明細（外框沿用分類明細的彈窗） */
+.category-detail-modal__dialog.analysis-trip-form {
+  width: min(460px, calc(100% - 2rem));
+}
+
+.category-detail-modal__dialog.analysis-trip-detail {
+  width: min(680px, calc(100% - 2rem));
+}
+
+.analysis-field {
+  display: block;
+  margin-bottom: 0.875rem;
+}
+
+.analysis-field__label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-field__hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.analysis-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-card);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.analysis-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.analysis-trip-form__dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.analysis-trip-form__note {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-trip-form__error {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-danger);
+}
+
+.analysis-trip-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.analysis-trip-detail__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.analysis-trip-detail__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.analysis-trip-detail__actions .analysis-link {
+  margin-top: 0;
+}
+
+.analysis-trip-detail__list {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+
+.analysis-trip-entry {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto 5.5rem 4.5rem;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.9375rem;
+}
+
+.analysis-trip-entry > .analysis-btn {
+  justify-self: end;
+}
+
+.analysis-trip-entry.is-out {
+  opacity: 0.55;
+}
+
+.analysis-trip-entry.is-out .analysis-trip-entry__amount {
+  text-decoration: line-through;
+}
+
+.analysis-trip-entry__date {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.analysis-trip-entry__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.analysis-trip-entry__cat {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.analysis-trip-entry__state {
+  margin-left: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-trip-entry__original {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.analysis-trip-entry__amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.analysis-trip-detail__add-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.analysis-trip-detail__search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}

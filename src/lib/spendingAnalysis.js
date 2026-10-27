@@ -11,6 +11,9 @@
  * 4. 這個月還沒過完時，用「推估的月底金額」跟平常比：一般消費照每天的速度放大，
  *    固定支出與改回算進去的大額單筆只算一次；上個月有、這個月還沒到日子的固定支出先照上個月的金額算進去。
  *    月初前幾天資料太少（吃一頓 3,000 的晚餐就會推成 9 萬），不推估也不跟平常比。
+ * 5. 旅程（見 lib/trips.js）只從「平常」扣掉：正在看的月份照樣算進去，長條圖另畫一段；
+ *    旅程裡的交易不會再被抓成大額單筆，其他筆是不是大額也照「沒有這趟旅程」的日常支出判斷，
+ *    跟沒有旅行的月份同一把尺；月底推估也只算一次；旅行的那幾天不算進「每天的花法」，免得剛旅行回來時推估被稀釋。
  */
 
 export const LARGE_ITEM_RULE = { shareOfMonth: 0.25, minTwd: 10000 };
@@ -166,6 +169,7 @@ export function risingStreak(values) {
  * @param {Set<string>} [params.includedIds] 使用者改回「算進去」的大額單筆
  * @param {(tx: object) => number} [params.toValue] 單筆換算成顯示幣別的金額，預設用台幣
  * @param {string} [params.uncategorizedLabel]
+ * @param {Map<string, {id: string, name: string}>} [params.tripOf] 交易 id → 所屬旅程
  */
 export function buildSpendingAnalysis({
   expenses,
@@ -175,9 +179,12 @@ export function buildSpendingAnalysis({
   includedIds = new Set(),
   toValue = twdOf,
   uncategorizedLabel = '',
+  tripOf = new Map(),
 }) {
   const months = chartMonths(targetYm);
   const inWindow = (expenses || []).filter((tx) => months.includes(ymOf(tx.date)));
+  const isTrip = (tx) => tripOf.has(tx.id);
+  const notTrip = inWindow.filter((tx) => !isTrip(tx));
   // 固定支出用全部傳進來的交易判斷：只看圖表 6 個月的話，最早幾個月往前比不到，換個月份看結果就會不同
   const fixed = detectFixedItems(expenses);
 
@@ -187,39 +194,54 @@ export function buildSpendingAnalysis({
   const dim = daysInMonth(targetYm);
   const daysElapsed = isCurrent ? Number(todayYmd.slice(8, 10)) : dim;
   const isEarly = isCurrent && daysElapsed < EARLY_MONTH_DAYS;
-  // 只有「這個月」要推估；過去的月份已經是完整金額
-  const pace = isCurrent ? dim / daysElapsed : 1;
+  // 只有「這個月」要推估；過去的月份已經是完整金額。
+  // 旅行的日子日常支出幾乎是 0，不算進天數：已經過的非旅行天數花了多少，推到整個月的非旅行天數
+  const tripDays = new Set();
+  for (const trip of new Map([...tripOf.values()].map((tr) => [tr.id, tr])).values()) {
+    for (let d = 1; d <= dim; d++) {
+      const ymd = `${targetYm}-${pad(d)}`;
+      if (ymd >= trip.start && ymd <= trip.end) tripDays.add(d);
+    }
+  }
+  const countDays = (upTo) => Array.from({ length: upTo }, (_, i) => i + 1).filter((d) => !tripDays.has(d)).length;
+  const elapsedNonTrip = countDays(daysElapsed);
+  const pace = isCurrent && elapsedNonTrip > 0 ? countDays(dim) / elapsedNonTrip : 1;
 
   const catOf = (tx) => (tx.category && String(tx.category).trim()) || uncategorizedLabel;
   const sumOf = (txs) => txs.reduce((sum, tx) => sum + toValue(tx), 0);
   const candidates = baselineMonths(targetYm, firstYm);
 
+  // 旅程裡的交易歸旅程，不參加大額判斷（機票不會同時出現在大額清單），也不算在分母：
+  // 放進分母的話，一筆很大的旅程支出會讓同月其他大筆都不到門檻，全部留在日常支出裡
   // 還沒過完的這個月，大額的分母至少用平常（台幣）。每個月各自判斷，之前月份的結果不受這一步影響，
   // 所以先照一般規則抓一次、算出平常，再只重抓這個月
-  let detected = detectLargeItems(inWindow, LARGE_ITEM_RULE, fixed);
+  let detected = detectLargeItems(notTrip, LARGE_ITEM_RULE, fixed);
   if (isCurrent) {
     const pastDaily = candidates
-      .map((ym) => inWindow.filter((tx) => ymOf(tx.date) === ym))
+      .map((ym) => notTrip.filter((tx) => ymOf(tx.date) === ym))
       .filter((txs) => txs.length > 0)
       .map((txs) => txs.filter((tx) => !detected.has(tx.id) || includedIds.has(tx.id)).reduce((sum, tx) => sum + twdOf(tx), 0));
     if (pastDaily.length) {
       const floor = pastDaily.reduce((sum, v) => sum + v, 0) / pastDaily.length;
-      detected = detectLargeItems(inWindow, LARGE_ITEM_RULE, fixed, { [targetYm]: floor });
+      detected = detectLargeItems(notTrip, LARGE_ITEM_RULE, fixed, { [targetYm]: floor });
     }
   }
   const isExcluded = (tx) => detected.has(tx.id) && !includedIds.has(tx.id);
-  // 只算一次、不照每天速度放大的：固定支出，以及使用者改回「算進去」的大額單筆
-  const isOnce = (tx) => fixed.has(tx.id) || detected.has(tx.id);
+  // 只算一次、不照每天速度放大的：固定支出、使用者改回「算進去」的大額單筆、旅程
+  const isOnce = (tx) => fixed.has(tx.id) || detected.has(tx.id) || isTrip(tx);
 
   const monthly = months.map((ym) => {
     const txs = inWindow.filter((tx) => ymOf(tx.date) === ym);
-    const daily = txs.filter((tx) => !isExcluded(tx));
-    const large = txs.filter(isExcluded);
+    const daily = txs.filter((tx) => !isTrip(tx) && !isExcluded(tx));
+    const large = txs.filter((tx) => !isTrip(tx) && isExcluded(tx));
+    const tripTxs = txs.filter(isTrip);
     return {
       ym,
       dailyTxs: daily,
       daily: sumOf(daily),
       large: sumOf(large),
+      tripTxs,
+      trip: sumOf(tripTxs),
       hasRecords: txs.length > 0,
       beforeStart: !firstYm || ym < firstYm,
     };
@@ -249,7 +271,7 @@ export function buildSpendingAnalysis({
   // 平常是 0（那幾個月只有另列的大額單筆）就跟沒有平常一樣，不比較
   const baseline = baseRows.length && baseTotal > 0 ? baseTotal / baseRows.length : null;
 
-  const projected = projectOf(target.dailyTxs);
+  const projected = projectOf([...target.dailyTxs, ...target.tripTxs]);
   // 月初不比：比例留空，畫面改說「第 7 天起開始比」
   const ratio = baseline && !isEarly ? projected / baseline - 1 : null;
   // 「連續上升」只看完整的月份：帳本第一個月與沒記帳的月份偏低，從那裡往上算不是真的變多
@@ -282,6 +304,17 @@ export function buildSpendingAnalysis({
   });
   categories.sort((a, b) => (b.diff ?? b.current) - (a.diff ?? a.current));
 
+  // 這個月的旅程：每趟一列，平常沒有旅程，所以整趟金額就是多花的部分
+  const tripTotals = new Map();
+  for (const tx of target.tripTxs) {
+    const trip = tripOf.get(tx.id);
+    if (!tripTotals.has(trip.id)) tripTotals.set(trip.id, { trip, value: 0, txs: [] });
+    const row = tripTotals.get(trip.id);
+    row.value += toValue(tx);
+    row.txs.push(tx);
+  }
+  const targetTrips = [...tripTotals.values()].sort((a, b) => b.value - a.value);
+
   const largeItems = inWindow
     .filter((tx) => detected.has(tx.id))
     // 新 → 舊；同一天的大筆在前
@@ -297,10 +330,11 @@ export function buildSpendingAnalysis({
     daysInMonth: dim,
     pace,
     months: monthly,
-    toDate: target.daily,
+    toDate: target.daily + target.trip,
     projected,
     pendingFixed,
     targetLarge: target.large,
+    targetTrips,
     baseline,
     baselineMonths: baseYms,
     ratio,

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import { EARLY_MONTH_DAYS } from '@/lib/spendingAnalysis';
+import { formatTripRange } from '@/lib/trips';
 
 const COLLAPSED_COUNT = 6;
 const SPARK_W = 72;
@@ -44,17 +45,21 @@ function ChangePill({ ratio }) {
 }
 
 /**
- * 每個分類：本月金額、跟平常比的變化、近幾個月的小走勢線。
+ * 每個分類：本月金額、跟平常比的變化、近幾個月的小走勢線。這個月的旅程整趟算一列（平常沒有旅程，整趟都是多花的）。
  * 排序與結論句同一個標準（多花的金額），預設只顯示前幾名。
  */
-export default function CategoryChanges({ analysis, onSelectCategory }) {
+export default function CategoryChanges({ analysis, currentYear, onSelectCategory, onSelectTrip }) {
   const { t } = useLanguage();
   const { formatTotal } = useDisplayAmount();
   const [expanded, setExpanded] = useState(false);
-  const { categories, months, isCurrent, isEarly, baseline } = analysis;
+  const { categories, targetTrips, months, isCurrent, isEarly, baseline } = analysis;
   // 這個月還沒過完時用月底預估；月初還不推估，就顯示到目前為止，走勢線只畫到上個月
   const estimating = isCurrent && !isEarly;
-  const rows = expanded ? categories : categories.slice(0, COLLAPSED_COUNT);
+  const all = [
+    ...targetTrips.map((row) => ({ kind: 'trip', key: `trip:${row.trip.id}`, sortBy: row.value, row })),
+    ...categories.map((cat) => ({ kind: 'category', key: cat.name, sortBy: cat.diff ?? cat.current, cat })),
+  ].sort((a, b) => b.sortBy - a.sortBy);
+  const rows = expanded ? all : all.slice(0, COLLAPSED_COUNT);
   const startIndex = months.findIndex((m) => !m.beforeStart);
 
   const subline = (cat) => {
@@ -73,12 +78,32 @@ export default function CategoryChanges({ analysis, onSelectCategory }) {
         {isEarly
           ? t('spendingAnalysis.categories.subtitleEarly', { day: EARLY_MONTH_DAYS })
           : t('spendingAnalysis.categories.subtitle')}
+        {targetTrips.length > 0 && t('spendingAnalysis.categories.tripNote')}
       </p>
-      {categories.length === 0 ? (
+      {all.length === 0 ? (
         <p className="analysis-empty">{t('spendingAnalysis.categories.empty')}</p>
       ) : (
         <ul className="analysis-cat-list">
-          {rows.map((cat) => {
+          {rows.map((item) => {
+            if (item.kind === 'trip') {
+              const { trip, value } = item.row;
+              return (
+                <li key={item.key}>
+                  <button type="button" className="analysis-cat" onClick={() => onSelectTrip(trip.id)}>
+                    <span className="analysis-cat__name-wrap">
+                      <span className="analysis-cat__name">✈︎ {trip.name}</span>
+                      <span className="analysis-cat__sub">
+                        {t('spendingAnalysis.categories.tripSub', { range: formatTripRange(trip.start, trip.end, currentYear) })}
+                      </span>
+                    </span>
+                    <span className="analysis-spark" />
+                    <span className="analysis-cat__amount">{formatTotal(value)}</span>
+                    <span className="analysis-pill">{t('spendingAnalysis.categories.tripPill')}</span>
+                  </button>
+                </li>
+              );
+            }
+            const { cat } = item;
             const trend = cat.series.slice(Math.max(startIndex, 0), isEarly ? -1 : undefined);
             if (estimating && trend.length) trend[trend.length - 1] = cat.projected;
             return (
@@ -107,11 +132,11 @@ export default function CategoryChanges({ analysis, onSelectCategory }) {
           })}
         </ul>
       )}
-      {categories.length > COLLAPSED_COUNT && (
+      {all.length > COLLAPSED_COUNT && (
         <button type="button" className="analysis-link" onClick={() => setExpanded((v) => !v)}>
           {expanded
             ? t('spendingAnalysis.categories.showLess')
-            : t('spendingAnalysis.categories.showAll', { count: categories.length })}
+            : t(targetTrips.length ? 'spendingAnalysis.categories.showAllWithTrips' : 'spendingAnalysis.categories.showAll', { count: all.length })}
         </button>
       )}
     </section>
