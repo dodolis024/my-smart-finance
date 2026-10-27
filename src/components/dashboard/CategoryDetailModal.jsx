@@ -7,6 +7,7 @@ import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 
 // 分類明細，也服務支付方式明細（category.kind === 'payment'）：
 // 兩者結構一樣（標題 + 總額 + 清單），只有占比那句文案不同。
+// 消費分析頁點長條時是整個月的明細（category.kind === 'period'），占比恆為 100%，不顯示。
 export default function CategoryDetailModal({ isOpen, onClose, category, onEdit, onDelete, periodName }) {
   const { t } = useLanguage();
   const { formatTotal } = useDisplayAmount();
@@ -34,8 +35,12 @@ export default function CategoryDetailModal({ isOpen, onClose, category, onEdit,
           <span className="category-detail-modal__total">{formatTotal(category.value)}</span>
           <span className="category-detail-modal__meta">
             {t('dashboard.categoryDetailCount', { count: rows.length })}
-            {' · '}
-            {t(isPayment ? 'dashboard.paymentDetailShare' : 'dashboard.categoryDetailShare', { percent: shareText, period: periodName })}
+            {category.kind !== 'period' && (
+              <>
+                {' · '}
+                {t(isPayment ? 'dashboard.paymentDetailShare' : 'dashboard.categoryDetailShare', { percent: shareText, period: periodName })}
+              </>
+            )}
           </span>
         </div>
 

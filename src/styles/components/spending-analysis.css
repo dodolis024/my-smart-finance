@@ -1,0 +1,313 @@
+/* ============================================
+   消費分析頁（電腦版限定，>1200px 才進得來）
+   ============================================ */
+
+.analysis-page {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-lg) 2rem;
+  box-sizing: border-box;
+}
+
+.analysis-page__header {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-bottom: var(--space-sm);
+}
+
+.analysis-page__header h2 {
+  margin: 0;
+}
+
+.analysis-status {
+  color: var(--color-text-secondary);
+}
+
+.analysis-card {
+  background: var(--color-card);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  padding: var(--space-md);
+  min-width: 0;
+}
+
+.analysis-card__title {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.analysis-card__subtitle {
+  margin: 0.25rem 0 var(--space-sm);
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-empty {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+/* 結論句 */
+.analysis-headline {
+  margin-bottom: var(--space-sm);
+}
+
+.analysis-headline__text {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.analysis-headline__note {
+  margin: 0.375rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+/* 三張數字卡 */
+.analysis-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.analysis-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--color-card);
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  padding: var(--space-md);
+  min-width: 0;
+}
+
+.analysis-kpi__label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-kpi__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.analysis-kpi__value.is-up {
+  color: var(--color-danger);
+}
+
+.analysis-kpi__sub,
+.analysis-kpi__note {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-kpi__note {
+  color: var(--color-text-muted);
+}
+
+/* 長條圖＋分類清單：兩張卡片同高，以比較高的那張為準；長條圖跟著撐滿卡片 */
+.analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.48fr) minmax(0, 0.52fr);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  align-items: stretch;
+}
+
+/* 分類展開成全部時清單會很長，長條圖不跟著拉成細長一條，維持原本大小 */
+.analysis-grid:has(.analysis-cats.is-expanded) .analysis-chart {
+  align-self: start;
+}
+
+.analysis-chart {
+  display: flex;
+  flex-direction: column;
+}
+
+.analysis-chart__canvas {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+}
+
+.analysis-cat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.analysis-cat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 6.5rem 4.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 0.25rem;
+  border: none;
+  border-bottom: 1px solid var(--color-border-light);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: var(--transition);
+}
+
+.analysis-cat:hover:not(:disabled) {
+  background: var(--color-row-hover);
+}
+
+.analysis-cat:disabled {
+  cursor: default;
+}
+
+.analysis-cat__name-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.analysis-cat__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-cat__sub {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-cat__sub.is-alert {
+  color: var(--color-danger);
+}
+
+.analysis-cat__amount {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.analysis-spark {
+  display: block;
+  width: 72px;
+  height: 24px;
+}
+
+.analysis-spark polyline,
+.analysis-spark line {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.analysis-spark circle {
+  fill: var(--color-primary);
+}
+
+.analysis-pill {
+  justify-self: end;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: var(--color-primary-tint-light);
+  white-space: nowrap;
+}
+
+.analysis-pill.is-up {
+  color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+
+.analysis-link {
+  margin-top: 0.5rem;
+  padding: 0.25rem 0;
+  border: none;
+  background: none;
+  color: var(--color-primary-dark);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.analysis-link:hover {
+  text-decoration: underline;
+}
+
+/* 大額單筆 */
+.analysis-large__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.analysis-large__row {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.9375rem;
+}
+
+.analysis-large__row:last-child {
+  border-bottom: none;
+}
+
+.analysis-large__date {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.analysis-large__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-large__amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.analysis-large__row.is-included .analysis-large__amount {
+  color: var(--color-text-secondary);
+}
+
+.analysis-large__state {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-large__toggle {
+  grid-column: 5;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-card);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.analysis-large__toggle:hover {
+  background: var(--color-primary-tint-hover);
+  border-color: var(--color-primary-tint-border);
+}

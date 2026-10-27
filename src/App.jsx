@@ -20,6 +20,7 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const SplitPage = lazy(() => import('@/pages/SplitPage'));
 const JoinPage = lazy(() => import('@/pages/JoinSplitPage'));
 const YearlyReviewPage = lazy(() => import('@/pages/YearlyReviewPage'));
+const SpendingAnalysisPage = lazy(() => import('@/pages/SpendingAnalysisPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 
@@ -110,6 +111,16 @@ function AppShell() {
               <ProtectedRoute>
                 <AppLayout>
                   <SplitPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <SpendingAnalysisPage />
                 </AppLayout>
               </ProtectedRoute>
             }

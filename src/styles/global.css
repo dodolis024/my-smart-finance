@@ -11,6 +11,7 @@
 @import url('./base.css');
 @import url('./layout.css');
 @import url('./components/dashboard-widgets.css');
+@import url('./components/spending-analysis.css');
 @import url('./components/form.css');
 @import url('./components/settings-panel.css');
 @import url('./components/settings-theme.css');

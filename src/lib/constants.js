@@ -1,6 +1,8 @@
 export const LAYOUT = {
   VERTICAL_MAX_WIDTH: 870,
   MOBILE_MAX_WIDTH: 600,
+  // 側欄在這個寬度以上才出現（nav.css 的 max-width: 1200px），消費分析頁只開放給這個寬度
+  SIDEBAR_MIN_WIDTH: 1201,
 };
 
 export const SWIPE = {

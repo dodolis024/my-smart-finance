@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added a desktop Spending Analysis page showing whether you're spending more or less than usual this month, and in which categories
+- Added large one-off items such as tuition being listed separately in Spending Analysis, with the option to include each one
 - Fixed the pie chart and payment breakdown briefly showing the wrong content when returning to the dashboard from another page
 
 ## [1.33.0] - Oct-27 2026
