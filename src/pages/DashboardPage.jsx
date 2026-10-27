@@ -235,14 +235,12 @@ function DashboardContent() {
 
   // 年模式的交易列：月 RPC 只回當月，年檢視改走區間查詢（不動資料庫函式，CLI 也在用）
   const [yearData, setYearData] = useState(null); // { rows, total } | { rows: [], total: 0, failed: true }
-  const [yearLoading, setYearLoading] = useState(false);
   // 快速連點不同年份時擋掉晚回來的舊請求（StrictMode 下 effect 跑兩次也一併擋掉）
   const yearReqIdRef = useRef(0);
 
-  const loadYearData = useCallback(async ({ silent = false } = {}) => {
+  const loadYearData = useCallback(async () => {
     if (!user?.id) return;
     const reqId = ++yearReqIdRef.current;
-    if (!silent) setYearLoading(true);
     const { startDate, endDate } = getPeriodRange({ granularity: 'year', year: yearAnchor.year });
     try {
       const { rows, count, error } = await fetchTransactionsByDateRange(user.id, startDate, endDate, {
@@ -267,8 +265,6 @@ function DashboardContent() {
         // 非離線錯誤停在年模式並顯示錯誤，不自動切走，避免使用者搞不清楚發生什麼事
         setYearData({ rows: [], total: 0, failed: true });
       }
-    } finally {
-      if (reqId === yearReqIdRef.current) setYearLoading(false);
     }
   }, [user?.id, yearAnchor.year, changeGranularity]);
 
@@ -281,8 +277,9 @@ function DashboardContent() {
   }, [isYearMode, loadYearData]);
 
   // 畫面資料來源：統計卡/圓餅圖/支付統計/明細表都只吃「一個交易陣列 + 一個 summary」，與粒度無關。
-  // 年資料還沒回來時沿用上一份（月列表或前一年），圓餅圖才不會被卸載再重掛——
-  // 那會變成「整個消失再跳出來」，而不是 Chart.js 的比例過渡動畫
+  // 換年份時新資料還沒回來，沿用前一年，圓餅圖才不會被卸載再重掛——
+  // 那會變成「整個消失再跳出來」，而不是 Chart.js 的比例過渡動畫。
+  // 還沒有任何年資料時（剛進頁面、剛從月切過來）不拿月列表頂替，由 viewLoading 顯示載入中
   const yearRows = useMemo(() => yearData?.rows ?? [], [yearData]);
   const periodHistory = isYearMode && yearData ? yearRows : transactionHistoryFull;
   const periodSummary = useMemo(
@@ -294,7 +291,7 @@ function DashboardContent() {
   // 年模式還要一併重抓年區間，否則畫面數字不會更新
   const refetchPeriod = useCallback(async () => {
     const data = await fetchDashboardData(monthAnchor.year, monthAnchor.month, { silent: true });
-    if (isYearMode) loadYearData({ silent: true });
+    if (isYearMode) loadYearData();
     return data;
   }, [fetchDashboardData, monthAnchor.year, monthAnchor.month, isYearMode, loadYearData]);
 
@@ -626,8 +623,9 @@ function DashboardContent() {
   );
 
   const periodFileLabel = getPeriodFileLabel(period);
-  // 只有真的沒東西可顯示時才換成載入佔位；有舊資料就讓它留著等新資料進來（見 periodHistory）
-  const viewLoading = loading || (isYearMode && yearLoading && periodHistory.length === 0);
+  // 年模式還沒有年資料時，月列表是錯的期間，不能先畫出來（切回主畫面時會先閃當月的圓餅圖）；
+  // 換年份時有前一年的資料就讓它留著等新資料進來（見 periodHistory）
+  const viewLoading = loading || (isYearMode && !yearData);
   // 年資料被筆數上限截斷 / 載入失敗（非離線）時要明講，不可靜默
   const yearCapped = isYearMode && !!yearData && !yearData.failed && yearData.total > yearData.rows.length;
   const yearFailed = isYearMode && !!yearData?.failed;

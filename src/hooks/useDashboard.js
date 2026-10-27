@@ -51,7 +51,9 @@ export function useDashboard() {
   const [defaultCurrency, setDefaultCurrency] = useState(() =>
     (cachedDefaultCurrency && cachedDefaultCurrencyUserId === user?.id) ? cachedDefaultCurrency : 'TWD'
   );
-  const [loading, setLoading] = useState(false);
+  // 起始就算載入中：主畫面掛載後才發第一次請求，起始 false 會先閃一格「本月尚無資料」。
+  // 第一次 fetchDashboardData 不論成敗都會在 finally 收掉；其他用這個 hook 的地方不讀 loading
+  const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
   // 非 null 表示目前顯示的是離線快照:{ savedAt }
   const [offlineSnapshot, setOfflineSnapshot] = useState(null);
