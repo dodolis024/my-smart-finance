@@ -150,9 +150,9 @@
 
 | 函式 | 最後部署 | version | 備註 |
 |---|---|---|---|
-| update-exchange-rates | 2026-09-14 | v21 | 拿掉 exchange_rate_history 的 400 天清理,歷史改為永久保留(回傳也不再帶 retention_days)。v20(2026-09-09)起每日更新後多寫一筆 exchange_rate_history(存 validatedRates 即實際採用值,非 API 原始值);歷史寫入失敗只記 log 不中斷主線。搭配 database/exchange-rate-history-migration.sql。x-cron-secret 驗證原樣保留,verify_jwt 維持 false(以 `--no-verify-jwt` 部署) |
+| update-exchange-rates | 2026-10-27 | v22 | 被 ±20% 防呆拒絕的幣別完全不寫(exchange_rates 不 upsert、當天不寫 exchange_rate_history),updated_at 才會照實變舊:連續被拒 3 天首頁徽章亮、7 天陳舊放行;以前拒絕時仍把舊值連同 updated_at = now() 寫回,幣別會永久鎖在舊值(`cb4fd25`)。判斷邏輯抽成 validate.ts,回傳多 `rejected`。以 `--no-verify-jwt --use-api` 部署(本機 Docker 拉 edge-runtime 映像被限流,改雲端打包);部署後不帶 x-cron-secret 呼叫回 401。v21(2026-09-14)起歷史永久保留,不再清理 |
 | send-streak-reminder | 2026-08-27 | v26 | 加 `x-cron-secret` 驗證(取代 2026-07-11 v24 的通知多語化版,該邏輯保留) |
-| send-split-notification | 2026-09-04 | v10 | 推播文案改從資料庫紀錄組,不再信任 body 帶來的名稱與金額(`f30dc2d`,安全稽核 M-5)。原本漏記為 07-11 v9,2026-09-17 以 `supabase functions list` 核對補正 |
+| send-split-notification | 2026-10-27 | v11 | 推播內文只用資料庫紀錄組成並全部消毒、限 40 字(含資料庫裡的成員名與群組名);查不到費用就不送;還款改依 settlement_id 讀金額、幣別與雙方,舊版 CLI 沒帶時退回不帶金額的通用句;expense_added 與 settlement_added 只在紀錄建立 10 分鐘內送(`481795a`)。以 `--no-verify-jwt --use-api` 部署,維持 verify_jwt=false(身分在函式內以 auth.getUser 驗);部署後匿名呼叫回 401。**前端 release 必須在此之後**。v10(2026-09-04)為安全稽核 M-5 |
 | send-credit-card-reminder | 2026-10-20 | v7 | 只提醒 `is_active = true` 的卡(帳戶停用功能;同日稍早已跑 `account-active-migration.sql`)。v6(2026-08-31)的 `x-cron-secret` 驗證與「未設定過即視同未啟用」原樣保留 |
 | send-credit-usage-alert | 2026-08-31 | v6 | 額度警告改為未設定過即視同未啟用(呼叫端是前端,不加 cron 密鑰) |
 | process-subscriptions | 2026-09-17 | v11 | 自動入帳補上 `time`(台灣時鐘,原本落在資料庫的 UTC 時鐘),未填分類的後備分類改為跟隨使用者語言(`_shared/categoryLabels.ts`);到期日判斷抽成 `schedule.ts` 供單元測試(`e523396`,純重構);`x-cron-secret` 驗證與 verify_jwt=true 原樣保留。同日 v10 為 `91802e4`(尚未含 schedule.ts) |
