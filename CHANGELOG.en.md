@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.33.0] - Oct-27 2026
 - Added time, exchange rate and fee columns to the CSV export, after the existing columns
 - Added the next actual charge date to the subscription list, so a day-31 subscription shows the month end in short months
 - Added the recorded time next to the date in the transaction detail
