@@ -171,6 +171,7 @@
 | 1.3.1 | 2026-09-17 | 同步時間與還款日期改用本地時鐘 |
 | 1.3.2 | 2026-10-16 | 凍結卡達標即發(`97c9599`) |
 | 1.4.0 | 2026-10-20 | 原 1.3.3 的內容(外幣記帳改以交易日期查匯率 `bee461a`;匯率查詢失敗時區分網路錯誤與查無匯率)併入;新增帳戶停用:`listAccounts` select `is_active`、停用的帳戶不能再記帳、`accounts` 指令多一欄狀態。發在 `account-active-migration.sql` 之後、前端 release 之前。注意:npm 登入過期時 publish 會報 404 而不是 401,先 `npm login` 再發 |
+| 1.5.0 | 2026-10-27 | 分帳同步進來的交易可加 `--overseas`(拿掉 `split_ledger_syncs` 檢查,`2d4c7c9`);分帳推播內文只從資料庫紀錄組出(`481795a`)。發在前端 v1.33.0 release 之後(手續費重算靠的 SQL 已於 10/26 上 prod,舊 CLI 只會擋下、不會算錯) |
 
 ### Edge Function 的 cron 密鑰(CRON_SECRET)
 
