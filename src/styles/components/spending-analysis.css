@@ -271,6 +271,11 @@
   padding: 0;
 }
 
+/* 分隔線畫在外層：畫在有圓角的按鈕上，線的兩端會跟著圓角往上翹 */
+.analysis-cat-list > li {
+  border-bottom: 1px solid var(--color-border-light);
+}
+
 .analysis-cat {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 6.5rem 4.5rem;
@@ -279,7 +284,6 @@
   width: 100%;
   padding: 0.625rem 0.25rem;
   border: none;
-  border-bottom: 1px solid var(--color-border-light);
   background: transparent;
   color: var(--color-text);
   font: inherit;
