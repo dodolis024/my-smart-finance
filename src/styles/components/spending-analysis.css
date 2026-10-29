@@ -98,6 +98,13 @@
   overflow-wrap: anywhere;
 }
 
+.analysis-kpi__value-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-sm);
+}
+
 .analysis-kpi__value.is-up {
   color: var(--color-danger);
 }
@@ -167,6 +174,17 @@
 
 .analysis-cat:disabled {
   cursor: default;
+}
+
+/* 用鍵盤（含 Esc 關彈窗回來）時的焦點框，跟 App 其他按鈕一樣用主題色光暈，不用瀏覽器預設的藍框 */
+.analysis-cat:focus-visible,
+.analysis-trips__row:focus-visible,
+.analysis-btn:focus-visible,
+.analysis-icon-btn:focus-visible,
+.analysis-link:focus-visible,
+.analysis-trip-detail__toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
 .analysis-cat__name-wrap {
@@ -352,10 +370,6 @@
   padding: 0.15rem 0.6rem;
 }
 
-.analysis-link--muted {
-  color: var(--color-text-secondary);
-}
-
 /* 旅程卡片 */
 .analysis-trips {
   margin-bottom: var(--space-sm);
@@ -470,13 +484,6 @@
   color: var(--color-text-secondary);
 }
 
-.analysis-field__hint {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-}
-
 .analysis-input {
   width: 100%;
   box-sizing: border-box;
@@ -525,14 +532,82 @@
   margin-bottom: 0.5rem;
 }
 
-.analysis-trip-detail__actions {
+/* 標題列：名稱＋編輯、刪除 icon；右邊留給關閉鈕 */
+.analysis-trip-detail__head {
   display: flex;
-  gap: 0.75rem;
-  margin-left: auto;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  padding-right: 3rem;
 }
 
-.analysis-trip-detail__actions .analysis-link {
-  margin-top: 0;
+.analysis-trip-detail__head .category-detail-modal__title {
+  margin: 0 0.5rem 0 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* icon-only 按鈕：照側欄，預設透明、滑過才有底色 */
+.analysis-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.analysis-icon-btn:hover {
+  background: var(--color-primary-tint-hover);
+  color: var(--color-primary);
+}
+
+.analysis-icon-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* 已排除的接在同一個清單最下面，點了才展開 */
+.analysis-trip-detail__toggle-row {
+  padding: 0.375rem 0;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.analysis-trip-detail__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0.25rem 0;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.analysis-trip-detail__toggle:hover {
+  color: var(--color-text);
+}
+
+.analysis-trip-detail__chevron {
+  display: inline-block;
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+}
+
+/* 收起時朝下（下面還有）、展開時朝上（可以收回） */
+.analysis-trip-detail__chevron.is-open {
+  transform: rotate(-90deg);
 }
 
 .analysis-trip-detail__list {
@@ -609,4 +684,44 @@
   display: flex;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+}
+
+.analysis-trip-detail__category {
+  width: auto;
+  flex: 0 0 auto;
+  max-width: 9rem;
+}
+
+/* 點分類打開的走勢放大版 */
+.category-detail-modal__dialog.analysis-cat-trend {
+  width: min(680px, calc(100% - 2rem));
+}
+
+.analysis-cat-trend__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.analysis-cat-trend__canvas {
+  position: relative;
+  height: 260px;
+  margin: 1rem 0 0;
+}
+
+.analysis-cat-trend__list {
+  margin: 2rem 0 0;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.analysis-cat-trend__tx {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto 5.5rem;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.9375rem;
 }

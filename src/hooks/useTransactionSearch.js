@@ -91,6 +91,36 @@ export async function fetchTransactionMatches(userId, rawQuery, { limit, count =
 }
 
 /**
+ * 消費分析的旅程明細「加入日期範圍外的交易」：分類、關鍵字可以單用或一起用。
+ * 只選分類不打字時，列出出發日之前的（離出發日最近的在前），找出發前訂的機票、飯店；
+ * 有打字就跟一般搜尋一樣不限日期。只查支出。
+ * @param {string} userId
+ * @param {{ query?: string, category?: string, before: string, limit?: number }} options before 為出發日 'YYYY-MM-DD'
+ */
+export async function fetchTripAddCandidates(userId, { query, category, before, limit }) {
+  const sanitized = sanitizeSearchQuery(query);
+  if (!userId || (!sanitized && !category)) {
+    return { rows: [], error: null };
+  }
+  let queryBuilder = supabase
+    .from('transactions')
+    .select(SELECT_COLUMNS)
+    .eq('user_id', userId)
+    .neq('type', 'income');
+  if (category) queryBuilder = queryBuilder.eq('category', category);
+  if (sanitized) {
+    const pattern = `%${sanitized}%`;
+    queryBuilder = queryBuilder.or(SEARCH_COLUMNS.map((c) => `${c}.ilike.${pattern}`).join(','));
+  } else {
+    queryBuilder = queryBuilder.lt('date', before);
+  }
+  queryBuilder = queryBuilder.order('date', { ascending: false }).order('time', { ascending: false });
+  if (limit != null) queryBuilder = queryBuilder.limit(limit);
+  const { data, error } = await queryBuilder;
+  return { rows: (data || []).map(mapSearchRow), error };
+}
+
+/**
  * 依日期區間（含端點）查詢交易，供「自訂區間匯出 CSV」與主畫面年檢視使用。
  * 日期舊→新排序（匯出的 CSV 順序依賴這個排序，年檢視在呼叫端自行排成新→舊），
  * 與跨月搜尋共用同一份欄位定義（SELECT_COLUMNS）。

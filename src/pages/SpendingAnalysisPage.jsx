@@ -14,17 +14,22 @@ import { DisplayAmountProvider, useDisplayAmount } from '@/contexts/DisplayAmoun
 import { buildSpendingAnalysis, EARLY_MONTH_DAYS } from '@/lib/spendingAnalysis';
 import { buildTripIndex, summarizeTrips, suggestTrips } from '@/lib/trips';
 import { getTodayYmd } from '@/lib/utils';
+import { getCached, setCached } from '@/lib/resourceCache';
 import { LAYOUT } from '@/lib/constants';
 import zh from '@/locales/zh';
 import en from '@/locales/en';
 import PeriodPicker from '@/components/dashboard/PeriodPicker';
 import CategoryDetailModal from '@/components/dashboard/CategoryDetailModal';
 import MonthlyBarsChart from '@/components/spending-analysis/MonthlyBarsChart';
-import CategoryChanges from '@/components/spending-analysis/CategoryChanges';
+import CategoryChanges, { ChangePill } from '@/components/spending-analysis/CategoryChanges';
+import CategoryTrendModal from '@/components/spending-analysis/CategoryTrendModal';
 import LargeItemsList from '@/components/spending-analysis/LargeItemsList';
 import TripsCard from '@/components/spending-analysis/TripsCard';
 import TripDetailModal from '@/components/spending-analysis/TripDetailModal';
 import TripFormModal from '@/components/spending-analysis/TripFormModal';
+
+// 切到別頁再回來時，停在原本看的月份
+const PERIOD_CACHE_KEY = 'spending-analysis:period';
 
 // 跟平常差不到這個比例，就說「差不多」，不報 2%、3% 這種雜訊
 const SAME_AS_USUAL = 0.05;
@@ -33,6 +38,7 @@ const SAME_AS_USUAL = 0.05;
 function headlineText(a, monthName, t) {
   if (!a.hasAnyData) return t('spendingAnalysis.headline.noData');
   if (a.isFuture) return t('spendingAnalysis.headline.future', { month: monthName });
+  if (a.isBeforeStart) return t('spendingAnalysis.headline.beforeStart', { month: monthName });
   if (a.isEarly && a.baseline != null) return t('spendingAnalysis.headline.early', { day: EARLY_MONTH_DAYS });
   if (a.ratio == null) return t('spendingAnalysis.headline.noBaseline');
   const tense = a.isCurrent ? 'Current' : 'Past';
@@ -51,11 +57,14 @@ function headlineText(a, monthName, t) {
     + (saved ? t('spendingAnalysis.headline.mainlyLess', { category: saved.name }) : '');
 }
 
-function KpiCard({ label, value, sub, notes = [], tone }) {
+function KpiCard({ label, value, pill, sub, notes = [], tone }) {
   return (
     <div className="analysis-kpi">
       <span className="analysis-kpi__label">{label}</span>
-      <span className={`analysis-kpi__value${tone ? ` is-${tone}` : ''}`}>{value}</span>
+      <span className="analysis-kpi__value-row">
+        <span className={`analysis-kpi__value${tone ? ` is-${tone}` : ''}`}>{value}</span>
+        {pill}
+      </span>
       {sub && <span className="analysis-kpi__sub">{sub}</span>}
       {notes.filter(Boolean).map((note) => <span key={note} className="analysis-kpi__note">{note}</span>)}
     </div>
@@ -69,11 +78,17 @@ function SpendingAnalysisContent() {
   const { confirm } = useConfirm();
   const { toDisplay, formatTotal } = useDisplayAmount();
   const [period, setPeriod] = useState(() => {
+    const cached = getCached(PERIOD_CACHE_KEY, user?.id);
+    if (cached) return cached;
     const now = new Date();
     return { granularity: 'month', year: now.getFullYear(), month: now.getMonth() + 1 };
   });
+  useEffect(() => {
+    if (user?.id) setCached(PERIOD_CACHE_KEY, user.id, period);
+  }, [user?.id, period]);
   const [pickerYear, setPickerYear] = useState(period.year);
   const [detail, setDetail] = useState(null);
+  const [trendName, setTrendName] = useState(null);
   const yearRange = useTransactionYearRange(user?.id);
   const monthsWithData = useTransactionMonthsInYear(user?.id, pickerYear);
   const { targetYm, expenses, firstYm, includedIds, loading: analysisLoading, error: analysisError, capped, setLargeItemIncluded } =
@@ -122,9 +137,9 @@ function SpendingAnalysisContent() {
     });
   }, [labelOf, t]);
 
-  const handleSelectCategory = useCallback((cat) => {
-    setDetail({ label: cat.name, value: cat.current, txs: cat.txs, totalExpense: analysis.toDate });
-  }, [analysis.toDate]);
+  // 點分類看它的走勢放大版；存名稱，資料更新（背景重抓、改大額設定）時跟著換
+  const handleSelectCategory = useCallback((cat) => setTrendName(cat.name), []);
+  const trendCategory = analysis.categories.find((c) => c.name === trendName) || null;
 
   const handleToggleLarge = useCallback((txId, include) => {
     setLargeItemIncluded(txId, include).catch(() => toast.error(t('spendingAnalysis.large.saveFailed')));
@@ -172,7 +187,14 @@ function SpendingAnalysisContent() {
       ? t('spendingAnalysis.kpi.tripsNote', { amount: formatTotal(tripTotal), names: a.targetTrips.map((row) => row.trip.name).join(lang === 'en' ? ', ' : '、') })
       : null;
   const [, monthNum] = targetYm.split('-').map(Number);
-  const showBody = !loading && !error && a.hasAnyData && !a.isFuture;
+  const showBody = !loading && !error && a.hasAnyData && !a.isFuture && !a.isBeforeStart;
+  // 這個月還沒過完：結論、分類都跟「平常同期」比（月初還不比，照樣顯示整個月的平常）
+  const toDateCompare = a.isCurrent && !a.isEarly && a.baseline != null;
+  // 有大額單筆改成算進分析：說明改說「不含另外列的」，這個月的卡片也寫出算進去多少
+  const largeWord = t(a.largeItems.some((item) => item.included) ? 'spendingAnalysis.largeWordSome' : 'spendingAnalysis.largeWord');
+  const includedLarge = a.largeItems
+    .filter((item) => item.included && item.tx.date.startsWith(targetYm))
+    .reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className="analysis-page">
@@ -197,7 +219,9 @@ function SpendingAnalysisContent() {
           <p className="analysis-headline__text">{headlineText(a, monthName, t)}</p>
           {showBody && a.baseline != null && (
             <p className="analysis-headline__note">
-              {t(trips.length ? 'spendingAnalysis.headline.noteTrips' : 'spendingAnalysis.headline.note', { count: a.baselineMonths.length })}
+              {toDateCompare
+                ? t(trips.length ? 'spendingAnalysis.headline.noteToDateTrips' : 'spendingAnalysis.headline.noteToDate', { count: a.baselineMonths.length, day: a.daysElapsed, large: largeWord })
+                : t(trips.length ? 'spendingAnalysis.headline.noteTrips' : 'spendingAnalysis.headline.note', { count: a.baselineMonths.length, large: largeWord })}
               {' · '}
               {t('spendingAnalysis.headline.clickHint')}
             </p>
@@ -214,16 +238,34 @@ function SpendingAnalysisContent() {
             <KpiCard
               label={a.isCurrent ? t('spendingAnalysis.kpi.toDate') : t('spendingAnalysis.kpi.monthTotal', { month: monthName })}
               value={formatTotal(a.toDate)}
+              // 跟旁邊那張（平常同期／平常）比，跟分類清單同一個標記
+              pill={a.ratio != null && <ChangePill ratio={a.ratio} />}
               sub={`${monthNum}/1 – ${monthNum}/${a.daysElapsed}`}
-              notes={[tripNote, a.targetLarge > 0 ? t('spendingAnalysis.kpi.largeNote', { amount: formatTotal(a.targetLarge) }) : null]}
+              notes={[
+                tripNote,
+                includedLarge > 0 ? t('spendingAnalysis.kpi.largeIncludedNote', { amount: formatTotal(includedLarge) }) : null,
+                a.targetLarge > 0 ? t('spendingAnalysis.kpi.largeNote', { amount: formatTotal(a.targetLarge) }) : null,
+              ]}
             />
-            <KpiCard
-              label={t('spendingAnalysis.kpi.baseline')}
-              value={a.baseline == null ? '—' : formatTotal(a.baseline)}
-              sub={a.baseline == null
-                ? t('spendingAnalysis.kpi.baselineNone')
-                : t(trips.length ? 'spendingAnalysis.kpi.baselineSubTrips' : 'spendingAnalysis.kpi.baselineSub', { count: a.baselineMonths.length })}
-            />
+            {toDateCompare ? (
+              <KpiCard
+                label={t('spendingAnalysis.kpi.baselineToDate')}
+                value={formatTotal(a.baselineToDate)}
+                sub={t(trips.length ? 'spendingAnalysis.kpi.baselineToDateSubTrips' : 'spendingAnalysis.kpi.baselineToDateSub', {
+                  count: a.baselineMonths.length,
+                  day: a.daysElapsed,
+                })}
+                notes={[t('spendingAnalysis.kpi.baselineMonthNote', { amount: formatTotal(a.baseline) })]}
+              />
+            ) : (
+              <KpiCard
+                label={t('spendingAnalysis.kpi.baseline')}
+                value={a.baseline == null ? '—' : formatTotal(a.baseline)}
+                sub={a.baseline == null
+                  ? t('spendingAnalysis.kpi.baselineNone')
+                  : t(trips.length ? 'spendingAnalysis.kpi.baselineSubTrips' : 'spendingAnalysis.kpi.baselineSub', { count: a.baselineMonths.length })}
+              />
+            )}
             {a.isEarly ? (
               <KpiCard
                 label={t('spendingAnalysis.kpi.projected')}
@@ -234,11 +276,9 @@ function SpendingAnalysisContent() {
               <KpiCard
                 label={t('spendingAnalysis.kpi.projected')}
                 value={formatTotal(a.projected)}
-                sub={t('spendingAnalysis.kpi.projectedSub')}
-                notes={[a.pendingFixed.length > 0 ? t('spendingAnalysis.kpi.pendingFixed', {
-                  amount: formatTotal(a.pendingFixed.reduce((sum, p) => sum + p.value, 0)),
-                  items: a.pendingFixed.map((p) => p.tx.itemName).join(lang === 'en' ? ', ' : '、'),
-                }) : null]}
+                sub={a.daysElapsed < a.daysInMonth
+                  ? t('spendingAnalysis.kpi.projectedSub', { from: a.daysElapsed + 1, to: a.daysInMonth })
+                  : t('spendingAnalysis.kpi.projectedSubLast')}
                 tone={a.ratio != null && a.ratio >= SAME_AS_USUAL ? 'up' : null}
               />
             ) : (
@@ -273,6 +313,7 @@ function SpendingAnalysisContent() {
       <TripDetailModal
         userId={user?.id}
         summary={tripDetail}
+        tripOf={tripIndex}
         currentYear={currentYear}
         onClose={() => setTripDetailId(null)}
         onEntry={handleTripEntry}
@@ -284,6 +325,12 @@ function SpendingAnalysisContent() {
       />
       <TripFormModal form={tripForm} onClose={closeTripForm} onSave={handleSaveTrip} />
 
+      <CategoryTrendModal
+        category={trendCategory}
+        analysis={analysis}
+        labelOf={labelOf}
+        onClose={() => setTrendName(null)}
+      />
       <CategoryDetailModal
         isOpen={!!detail}
         onClose={() => setDetail(null)}

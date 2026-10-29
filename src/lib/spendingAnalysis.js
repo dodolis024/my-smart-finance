@@ -1,19 +1,19 @@
 /**
  * 消費分析頁的計算（純函式，不碰畫面與資料庫）。
  *
- * 四個核心規則：
+ * 核心規則：
  * 1. 大額單筆另列：學費、一次繳兩個月房租這種一次性大筆會把「這個月花多少」扯歪，
  *    自動找出來另外列，不算進結論、長條圖與分類比較；使用者可以逐筆改回「算進去」。
  *    判斷一律用台幣（twdAmount），換顯示幣別不會改變哪幾筆被抓出來。
  * 2. 固定支出（房租、訂閱、保險這種每個月都付一次的）不是一次性大筆：再大也留在日常支出裡。
  * 3. 平常 = 目標月份之前最近 3 個完整月份的日常支出平均；帳本第一個月多半是月中才開始記，
  *    金額偏低，不算；一筆支出都沒有的月份多半是沒記帳，也不算。不滿 3 個月就用現有的月份，一個都沒有就不比較。
- * 4. 這個月還沒過完時，用「推估的月底金額」跟平常比：一般消費照每天的速度放大，
- *    固定支出與改回算進去的大額單筆只算一次；上個月有、這個月還沒到日子的固定支出先照上個月的金額算進去。
- *    月初前幾天資料太少（吃一頓 3,000 的晚餐就會推成 9 萬），不推估也不跟平常比。
+ * 4. 這個月還沒過完時，跟「平常同期」比：近 3 個月各自 1 號到今天這一天花了多少的平均，不把已經花的放大成整個月
+ *    （一次買一雙鞋的分類照天數放大，會變成「月底前還會再買」）。月底預估 = 已經花的 + 平常在今天之後會花的。
+ *    月初前幾天資料太少，不跟平常比。
  * 5. 旅程（見 lib/trips.js）只從「平常」扣掉：正在看的月份照樣算進去，長條圖另畫一段；
  *    旅程裡的交易不會再被抓成大額單筆，其他筆是不是大額也照「沒有這趟旅程」的日常支出判斷，
- *    跟沒有旅行的月份同一把尺；月底推估也只算一次；旅行的那幾天不算進「每天的花法」，免得剛旅行回來時推估被稀釋。
+ *    跟沒有旅行的月份同一把尺。
  */
 
 export const LARGE_ITEM_RULE = { shareOfMonth: 0.25, minTwd: 10000 };
@@ -194,18 +194,9 @@ export function buildSpendingAnalysis({
   const dim = daysInMonth(targetYm);
   const daysElapsed = isCurrent ? Number(todayYmd.slice(8, 10)) : dim;
   const isEarly = isCurrent && daysElapsed < EARLY_MONTH_DAYS;
-  // 只有「這個月」要推估；過去的月份已經是完整金額。
-  // 旅行的日子日常支出幾乎是 0，不算進天數：已經過的非旅行天數花了多少，推到整個月的非旅行天數
-  const tripDays = new Set();
-  for (const trip of new Map([...tripOf.values()].map((tr) => [tr.id, tr])).values()) {
-    for (let d = 1; d <= dim; d++) {
-      const ymd = `${targetYm}-${pad(d)}`;
-      if (ymd >= trip.start && ymd <= trip.end) tripDays.add(d);
-    }
-  }
-  const countDays = (upTo) => Array.from({ length: upTo }, (_, i) => i + 1).filter((d) => !tripDays.has(d)).length;
-  const elapsedNonTrip = countDays(daysElapsed);
-  const pace = isCurrent && elapsedNonTrip > 0 ? countDays(dim) / elapsedNonTrip : 1;
+  // 這個月還沒過完：平常只取每個月 1 號到今天這一天（平常同期），過去的月份整個月比
+  const dayOf = (tx) => Number(String(tx.date).slice(8, 10));
+  const inPeriod = (tx) => !isCurrent || dayOf(tx) <= daysElapsed;
 
   const catOf = (tx) => (tx.category && String(tx.category).trim()) || uncategorizedLabel;
   const sumOf = (txs) => txs.reduce((sum, tx) => sum + toValue(tx), 0);
@@ -227,8 +218,6 @@ export function buildSpendingAnalysis({
     }
   }
   const isExcluded = (tx) => detected.has(tx.id) && !includedIds.has(tx.id);
-  // 只算一次、不照每天速度放大的：固定支出、使用者改回「算進去」的大額單筆、旅程
-  const isOnce = (tx) => fixed.has(tx.id) || detected.has(tx.id) || isTrip(tx);
 
   const monthly = months.map((ym) => {
     const txs = inWindow.filter((tx) => ymOf(tx.date) === ym);
@@ -248,58 +237,53 @@ export function buildSpendingAnalysis({
   });
   const target = monthly[monthly.length - 1];
 
-  // 這個月還沒付的固定支出：上個月有、這個月還沒出現，而且上個月付款的日子還沒到。
-  // 已經過了那一天還沒出現，可能退租、取消訂閱或改了日子，不自動補。
-  const pendingFixed = [];
-  if (isCurrent) {
-    const seen = new Set(inWindow.filter((tx) => ymOf(tx.date) === targetYm).map(fixedKeyOf));
-    const prevYm = addMonths(targetYm, -1);
-    for (const tx of inWindow) {
-      if (ymOf(tx.date) !== prevYm || !fixed.has(tx.id) || seen.has(fixedKeyOf(tx))) continue;
-      if (Number(tx.date.slice(8, 10)) < daysElapsed) continue;
-      pendingFixed.push({ tx, category: catOf(tx), value: toValue(tx) });
-    }
-  }
-  const projectOf = (txs, category) =>
-    sumOf(txs.filter((tx) => !isOnce(tx))) * pace
-    + sumOf(txs.filter(isOnce))
-    + pendingFixed.filter((p) => category == null || p.category === category).reduce((sum, p) => sum + p.value, 0);
-
   const baseRows = monthly.filter((m) => m.hasRecords && candidates.includes(m.ym));
   const baseYms = baseRows.map((m) => m.ym).reverse();
+  const avgOf = (pickTxs) => (baseRows.length
+    ? baseRows.reduce((sum, m) => sum + sumOf(pickTxs(m)), 0) / baseRows.length
+    : 0);
   const baseTotal = baseRows.reduce((sum, m) => sum + m.daily, 0);
   // 平常是 0（那幾個月只有另列的大額單筆）就跟沒有平常一樣，不比較
   const baseline = baseRows.length && baseTotal > 0 ? baseTotal / baseRows.length : null;
+  // 平常同期：拿來比的金額。過去的月份就是整個月的平常
+  const baselineToDate = baseline == null ? null : avgOf((m) => m.dailyTxs.filter(inPeriod));
 
-  const projected = projectOf([...target.dailyTxs, ...target.tripTxs]);
+  // 月底預估 = 已經花的 + 平常在今天之後會花的。不把已經花的照天數放大：買了一雙鞋不代表月底前還會再買。
+  // 固定支出這個月已經記了（例如先記好月底的房租），平常剩下日子裡的那一筆就不再算一次
+  const seenFixed = new Set(target.dailyTxs.filter((tx) => fixed.has(tx.id)).map(fixedKeyOf));
+  const restOf = (m) => (isCurrent
+    ? m.dailyTxs.filter((tx) => !inPeriod(tx) && !(fixed.has(tx.id) && seenFixed.has(fixedKeyOf(tx))))
+    : []);
+  const toDate = target.daily + target.trip;
+  const projected = toDate + avgOf(restOf);
   // 月初不比：比例留空，畫面改說「第 7 天起開始比」
-  const ratio = baseline && !isEarly ? projected / baseline - 1 : null;
+  const ratio = baselineToDate && !isEarly ? toDate / baselineToDate - 1 : null;
   // 「連續上升」只看完整的月份：帳本第一個月與沒記帳的月份偏低，從那裡往上算不是真的變多
   const trendMonth = (m) => m === target || (m.hasRecords && !m.beforeStart && m.ym !== firstYm);
 
-  // 分類：本月推估值 vs 該分類的平常，依「多花的金額」排序（跟結論句的「主要是哪個分類」同一個標準）
+  // 分類：本月到目前 vs 該分類的平常同期，依「多花的金額」排序（跟結論句的「主要是哪個分類」同一個標準）。
+  // 顯示的金額就是實際花的，點進去看到的明細加起來一樣；走勢線最後一點才用月底預估（虛線）
   const names = new Set();
   for (const m of [target, ...baseRows]) for (const tx of m.dailyTxs) names.add(catOf(tx));
-  for (const p of pendingFixed) names.add(p.category);
   const categories = [...names].map((name) => {
-    const series = monthly.map((m) => sumOf(m.dailyTxs.filter((tx) => catOf(tx) === name)));
+    const ofCat = (txs) => txs.filter((tx) => catOf(tx) === name);
+    const series = monthly.map((m) => sumOf(ofCat(m.dailyTxs)));
     const current = series[series.length - 1];
-    const base = baseline == null
-      ? null
-      : baseRows.reduce((sum, m) => sum + series[monthly.indexOf(m)], 0) / baseRows.length;
-    const txs = target.dailyTxs.filter((tx) => catOf(tx) === name);
-    const catProjected = projectOf(txs, name);
+    const usual = baseline == null ? null : avgOf((m) => ofCat(m.dailyTxs));
+    const base = baseline == null ? null : avgOf((m) => ofCat(m.dailyTxs).filter(inPeriod));
+    const catProjected = current + avgOf((m) => ofCat(restOf(m)));
     const trend = [...series.slice(0, -1), catProjected].filter((_, i) => trendMonth(monthly[i]));
     return {
       name,
       current,
       projected: catProjected,
+      usual,
       baseline: base,
-      diff: base == null || isEarly ? null : catProjected - base,
-      ratio: base && !isEarly ? catProjected / base - 1 : null,
+      diff: base == null || isEarly ? null : current - base,
+      ratio: base && !isEarly ? current / base - 1 : null,
       series,
       risingMonths: isEarly ? 0 : risingStreak(trend),
-      txs,
+      txs: ofCat(target.dailyTxs),
     };
   });
   categories.sort((a, b) => (b.diff ?? b.current) - (a.diff ?? a.current));
@@ -325,17 +309,18 @@ export function buildSpendingAnalysis({
     targetYm,
     isCurrent,
     isFuture,
+    // 開始記帳之前的月份：沒有資料，不是「還不能比」
+    isBeforeStart: !!firstYm && targetYm < firstYm,
     isEarly,
     daysElapsed,
     daysInMonth: dim,
-    pace,
     months: monthly,
-    toDate: target.daily + target.trip,
+    toDate,
     projected,
-    pendingFixed,
     targetLarge: target.large,
     targetTrips,
     baseline,
+    baselineToDate,
     baselineMonths: baseYms,
     ratio,
     categories,

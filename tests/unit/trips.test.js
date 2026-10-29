@@ -46,11 +46,11 @@ describe('哪些交易算進旅程', () => {
     expect([...index.keys()].sort()).toEqual([inRange.id, flight.id].sort());
   });
 
-  it('明細列出每一筆的狀態，依日期排', () => {
+  it('明細列出每一筆的狀態，日期新 → 舊', () => {
     const index = buildTripIndex([t1], rows);
     const entries = tripEntries(t1, rows, index);
     expect(entries.map((e) => [e.tx.id, e.status])).toEqual([
-      [flight.id, 'added'], [excluded.id, 'excluded'], [rent.id, 'fixed'], [inRange.id, 'in'],
+      [inRange.id, 'in'], [rent.id, 'fixed'], [excluded.id, 'excluded'], [flight.id, 'added'],
     ]);
   });
 
@@ -199,21 +199,23 @@ describe('旅程對消費分析的影響', () => {
     expect(a.largeItems).toEqual([]);
   });
 
-  it('月中正在旅行：旅程只算一次；旅行的日子不算進每天的花法', () => {
+  it('月中正在旅行：旅程照實際金額算一次，跟平常同期比', () => {
     const a = buildSpendingAnalysis({ ...base, targetYm: '2026-09', todayYmd: '2026-09-25' });
-    // 已過 25 天扣掉旅行的 9/24、9/25 → 23 天花了 1 萬；整個月扣掉旅行 3 天 → 27 天
-    expect(a.projected).toBeCloseTo(10000 * (27 / 23) + 20000);
+    // 平常 7、8 月都在 1–10 號花完 → 同期 1 萬、之後 0
+    expect(a.baselineToDate).toBe(10000);
+    expect(a.projected).toBe(30000);
+    expect(a.ratio).toBeCloseTo(2);
   });
 
-  it('剛旅行回來：推估不會被旅行那幾天稀釋', () => {
+  it('剛旅行回來：旅程不放大，月底預估 = 已經花的 + 平常之後會花的', () => {
     // 10/1–10/10 旅行每天 5,000；10/11–10/15 日常每天 1,000；今天 10/15
     const tripRows = Array.from({ length: 10 }, (_, i) => tx(`2026-10-${String(i + 1).padStart(2, '0')}`, 5000, { itemName: `trip${i}` }));
     const home = Array.from({ length: 5 }, (_, i) => tx(`2026-10-${11 + i}`, 1000, { itemName: `home${i}` }));
     const t2 = trip({ id: 't2', start: '2026-10-01', end: '2026-10-10' });
     const all = [...daily('2026-07'), ...daily('2026-08'), ...tripRows, ...home];
     const a = buildSpendingAnalysis({ expenses: all, firstYm: '2026-06', tripOf: buildTripIndex([t2], all), targetYm: '2026-10', todayYmd: '2026-10-15' });
-    // 非旅行的日子：已過 5 天花 5,000，整個月 21 天 → 21,000，再加旅程 50,000
-    expect(a.projected).toBeCloseTo(71000);
+    expect(a.toDate).toBe(55000);
+    expect(a.projected).toBe(55000);
   });
 
   it('建了旅程之後，其他筆是不是大額照「沒有這趟旅程」判斷：一筆很大的旅程支出不會讓同月其他大筆躲過', () => {

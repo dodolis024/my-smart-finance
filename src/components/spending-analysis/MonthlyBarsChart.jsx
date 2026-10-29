@@ -129,6 +129,8 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth }) {
   const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    // 換主題時的換色跟頁面其他元素的轉場一樣 0.2 秒（Chart.js 預設 1 秒）
+    animations: { colors: { duration: 200 } },
     interaction: { mode: 'index', intersect: false },
     onClick: (_, elements) => {
       const index = elements[0]?.index;
@@ -177,11 +179,20 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth }) {
     },
   }), [months, last, projected, colors, formatTotal, onSelectMonth, t]);
 
+  const legends = [
+    months.some((m) => m.trip > 0) && t('spendingAnalysis.chart.legendTrip'),
+    isCurrent && !isEarly && projected > toDate && t('spendingAnalysis.chart.legendProjected'),
+    baseline != null && t('spendingAnalysis.chart.legendUsual'),
+  ].filter(Boolean);
+  const subtitle = t('spendingAnalysis.chart.subtitle', {
+    large: t(analysis.largeItems.some((item) => item.included) ? 'spendingAnalysis.largeWordSome' : 'spendingAnalysis.largeWord'),
+  }) + (legends.length ? t('spendingAnalysis.chart.legendSep') + legends.join(t('spendingAnalysis.chart.legendJoin')) : '');
+
   return (
     <section className="analysis-card analysis-chart">
       <h3 className="analysis-card__title">{t('spendingAnalysis.chart.title')}</h3>
       <p className="analysis-card__subtitle">
-        {t(months.some((m) => m.trip > 0) ? 'spendingAnalysis.chart.subtitleTrips' : 'spendingAnalysis.chart.subtitle')}
+        {subtitle}
       </p>
       <div className="analysis-chart__canvas">
         <Chart type="bar" data={data} options={options} />

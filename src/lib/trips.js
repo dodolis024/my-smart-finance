@@ -84,7 +84,8 @@ export function tripEntries(trip, rows, index) {
       else status = ownedElsewhere ? 'other' : 'in';
       return { tx, status, otherTrip: status === 'other' ? owner : null };
     })
-    .sort((a, b) => `${a.tx.date} ${a.tx.time || ''}`.localeCompare(`${b.tx.date} ${b.tx.time || ''}`));
+    // 新 → 舊，跟 App 其他交易列表一樣
+    .sort((a, b) => `${b.tx.date} ${b.tx.time || ''}`.localeCompare(`${a.tx.date} ${a.tx.time || ''}`));
 }
 
 /** 每趟旅程的總額、筆數、排除筆數與前幾大分類；新 → 舊 */

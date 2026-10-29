@@ -2,7 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
-- Added a desktop Spending Analysis page showing whether you're spending more or less than usual this month, and in which categories
+- Added a desktop Spending Analysis page comparing this month with the same days of a usual month, and showing which categories drive the difference
+- Added a line chart of a category's recent months when you open it in Spending Analysis
 - Added large one-off items such as tuition being listed separately in Spending Analysis, with the option to include each one
 - Added trips to Spending Analysis, showing what each trip cost in total and leaving trip spending out of your usual
 - Added a prompt to create a trip when you spend in a foreign currency several days in a row

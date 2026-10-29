@@ -30,7 +30,7 @@ function Sparkline({ values, lastIsEstimate }) {
   );
 }
 
-function ChangePill({ ratio }) {
+export function ChangePill({ ratio }) {
   // 新出現的分類沒有比例可比；左邊的小字已經寫了「新出現的分類」，這裡留白
   if (ratio == null) return <span />;
   const percent = Math.round(Math.abs(ratio) * 100);
@@ -53,7 +53,7 @@ export default function CategoryChanges({ analysis, currentYear, onSelectCategor
   const { formatTotal } = useDisplayAmount();
   const [expanded, setExpanded] = useState(false);
   const { categories, targetTrips, months, isCurrent, isEarly, baseline } = analysis;
-  // 這個月還沒過完時用月底預估；月初還不推估，就顯示到目前為止，走勢線只畫到上個月
+  // 這個月還沒過完：跟平常同期比，走勢線最後一點用月底預估（虛線）；月初還不比，走勢線只畫到上個月
   const estimating = isCurrent && !isEarly;
   const all = [
     ...targetTrips.map((row) => ({ kind: 'trip', key: `trip:${row.trip.id}`, sortBy: row.value, row })),
@@ -67,8 +67,14 @@ export default function CategoryChanges({ analysis, currentYear, onSelectCategor
       return <span className="analysis-cat__sub is-alert">{t('spendingAnalysis.categories.rising', { count: cat.risingMonths })}</span>;
     }
     if (baseline == null) return null;
-    if (!cat.baseline) return <span className="analysis-cat__sub">{t('spendingAnalysis.categories.new')}</span>;
-    return <span className="analysis-cat__sub">{t('spendingAnalysis.categories.usual', { amount: formatTotal(cat.baseline) })}</span>;
+    if (!cat.usual) return <span className="analysis-cat__sub">{t('spendingAnalysis.categories.new')}</span>;
+    return (
+      <span className="analysis-cat__sub">
+        {estimating
+          ? t('spendingAnalysis.categories.usualToDate', { amount: formatTotal(cat.baseline) })
+          : t('spendingAnalysis.categories.usual', { amount: formatTotal(cat.usual) })}
+      </span>
+    );
   };
 
   return (
@@ -119,12 +125,8 @@ export default function CategoryChanges({ analysis, currentYear, onSelectCategor
                     {subline(cat)}
                   </span>
                   <Sparkline values={trend} lastIsEstimate={estimating} />
-                  {/* 這個月還沒過完時顯示月底預估，跟右邊的百分比、走勢線最後一點同一個基準 */}
-                  <span className="analysis-cat__amount">
-                    {estimating
-                      ? t('spendingAnalysis.categories.projectedAmount', { amount: formatTotal(cat.projected) })
-                      : formatTotal(cat.current)}
-                  </span>
+                  {/* 一律顯示實際花的，跟點進去的明細加起來一樣；還沒過完的月份，百分比是跟平常同期比 */}
+                  <span className="analysis-cat__amount">{formatTotal(cat.current)}</span>
                   <ChangePill ratio={cat.ratio} />
                 </button>
               </li>

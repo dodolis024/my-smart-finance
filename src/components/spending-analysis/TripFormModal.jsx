@@ -3,7 +3,7 @@ import Modal from '@/components/common/Modal';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
- * 建立或編輯旅程：名稱＋起訖日期。從系統提示開的會先帶好日期，並提醒可以往前後拉。
+ * 建立或編輯旅程：名稱＋起訖日期。從系統提示開的會先帶好日期，並提醒可以自己調整。
  * form：{ mode: 'create' | 'edit', name, start, end, fromSuggestion }；null 表示關閉。
  */
 export default function TripFormModal({ form, onClose, onSave }) {
@@ -50,8 +50,14 @@ export default function TripFormModal({ form, onClose, onSave }) {
 
         <label className="analysis-field">
           <span className="analysis-field__label">{t('spendingAnalysis.tripForm.name')}</span>
-          <input className="analysis-input" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} autoFocus />
-          <span className="analysis-field__hint">{t('spendingAnalysis.tripForm.nameHint')}</span>
+          <input
+            className="analysis-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t('spendingAnalysis.tripForm.namePlaceholder')}
+            maxLength={40}
+            autoFocus
+          />
         </label>
         <div className="analysis-trip-form__dates">
           <label className="analysis-field">
@@ -64,7 +70,6 @@ export default function TripFormModal({ form, onClose, onSave }) {
           </label>
         </div>
         {form.fromSuggestion && <p className="analysis-trip-form__note">{t('spendingAnalysis.tripForm.suggestedHint')}</p>}
-        <p className="analysis-trip-form__note">{t('spendingAnalysis.tripForm.rangeHint')}</p>
         {error && <p className="analysis-trip-form__error" role="alert">{error}</p>}
 
         <div className="analysis-trip-form__actions">
