@@ -7,7 +7,7 @@ import { convertTx, isRateTableUsable } from '@/lib/displayCurrency';
  * 核心規則：
  * 1. 每一筆都照實際金額算：大額單筆、旅程都算進「平常」、本月與長條圖，數字就是實際花的錢。
  * 2. 大額單筆只標示：單筆金額達到使用者設的門檻（預設 NT$10,000）就列出來、在卡片上提一句。
- *    固定支出（房租、訂閱、保險這種每個月都付一次的）再大也不標；旅程裡的交易歸旅程，也不標。
+ *    沒有其他例外（房租超過門檻也會列，不想看到就把門檻調高）；旅程裡的交易歸旅程，不標。
  * 3. 平常 = 目標月份前 N 個月（使用者選一季／半年／一年，N = 3／6／12）每個月支出的平均。
  *    卡片、長條圖的虛線、各分類的平常都是這一個數字；長條圖畫的就是這 N 個月加上目標月份。
  *    分析起點是下限：比它早的月份不算、也不畫（月份，從 1 號算起）；沒設定就從帳本第二個月起算：
@@ -21,8 +21,6 @@ import { convertTx, isRateTableUsable } from '@/lib/displayCurrency';
 
 // 大額單筆門檻的預設值；twd 是存設定當下換成台幣的金額，門檻幣別的匯率讀不到時拿來比
 export const DEFAULT_LARGE_THRESHOLD = { amount: 10000, currency: 'TWD', twd: 10000 };
-// 固定支出：前後 3 個月內至少另有 2 個月「剛好出現一次」而且金額跟這筆差不到 30%
-export const FIXED_ITEM_RULE = { withinMonths: 3, minOtherMonths: 2, amountTolerance: 0.3 };
 // 平常拿幾個月來平均（一季／半年／一年），長條圖跟著畫這幾個月；預設半年
 export const CHART_SPANS = [3, 6, 12];
 export const DEFAULT_CHART_SPAN = 6;
@@ -104,52 +102,6 @@ export function baselineStartOf(firstYm, startYm) {
 
 const twdOf = (tx) => (typeof tx.twdAmount === 'number' ? tx.twdAmount : 0);
 
-/** 同一項固定支出的辨識鍵：分類＋項目名稱（忽略大小寫與多餘空白）；沒有名稱就無從比對 */
-function fixedKeyOf(tx) {
-  const name = String(tx.itemName ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
-  if (!name) return null;
-  return `${String(tx.category ?? '').trim()}\u0000${name}`;
-}
-
-/**
- * 找出固定支出（房租、訂閱、保險），回傳交易 id 的 Set。
- *
- * 條件三個都要成立：
- * - 這一筆所在的月份，同名項目只出現這一次（每天都買的便當、捷運一個月很多筆，是日常消費，不算）
- * - 前後 withinMonths 個月內，至少另有 minOtherMonths 個月也「剛好出現一次」，而且金額跟這筆差不到 amountTolerance
- *   （平常 2 千的 Uniqlo 某月買了 1.5 萬：那一筆找不到金額相近的月份，不算固定；
- *   逐月各自比對而不是跟平均比，那一個暴增的月份才不會把其他正常月份也拉出固定支出）
- * 前後都看：長條圖最早的月份往前沒有資料，靠之後的月份也認得出來；正在看的這個月只有之前的月份可比。
- */
-export function detectFixedItems(expenses, rule = FIXED_ITEM_RULE) {
-  const byKey = new Map();
-  for (const tx of expenses || []) {
-    const key = fixedKeyOf(tx);
-    if (!key) continue;
-    if (!byKey.has(key)) byKey.set(key, new Map());
-    const months = byKey.get(key);
-    const ym = ymOf(tx.date);
-    if (!months.has(ym)) months.set(ym, []);
-    months.get(ym).push(tx);
-  }
-
-  const ids = new Set();
-  for (const months of byKey.values()) {
-    for (const [ym, txs] of months) {
-      if (txs.length !== 1) continue;
-      const amount = twdOf(txs[0]);
-      let similarMonths = 0;
-      for (const [otherYm, otherTxs] of months) {
-        if (otherYm === ym || otherTxs.length !== 1) continue;
-        if (Math.abs(monthGap(otherYm, ym)) > rule.withinMonths) continue;
-        if (Math.abs(twdOf(otherTxs[0]) - amount) <= Math.abs(amount) * rule.amountTolerance) similarMonths++;
-      }
-      if (similarMonths >= rule.minOtherMonths) ids.add(txs[0].id);
-    }
-  }
-  return ids;
-}
-
 /** 設定裡存的門檻 → { amount, currency, twd }；格式不對就用預設值 */
 export function normalizeLargeThreshold(value) {
   const amount = Number(value?.amount);
@@ -228,12 +180,11 @@ export function thresholdForDisplay(threshold, currency, thresholdTable, display
 /**
  * 找出大額單筆，回傳交易 id 的 Set：金額達到門檻就算，跟當月總共花多少無關
  * （用比例的話，同一筆會隨著月中累積越來越多，一下是大額、一下又不是）。
- * exemptIds（固定支出）不算。
  */
-export function detectLargeItems(expenses, measure = largeMeasure(DEFAULT_LARGE_THRESHOLD), exemptIds = new Set()) {
+export function detectLargeItems(expenses, measure = largeMeasure(DEFAULT_LARGE_THRESHOLD)) {
   const ids = new Set();
   for (const tx of expenses || []) {
-    if (!exemptIds.has(tx.id) && measure.valueOf(tx) >= measure.min) ids.add(tx.id);
+    if (measure.valueOf(tx) >= measure.min) ids.add(tx.id);
   }
   return ids;
 }
@@ -266,8 +217,8 @@ export function risingStreak(values) {
  * 組出整頁要的數字。
  *
  * @param {object} params
- * @param {object[]} params.expenses     支出交易（駝峰形狀，含 id/date/category/itemName/twdAmount）：分析起點到目標月份，
- *                                       最好再多前後 3 個月，固定支出才認得出來；範圍外的只用來辨認固定支出
+ * @param {object[]} params.expenses     支出交易（駝峰形狀，含 id/date/category/itemName/twdAmount）：分析起點到目標月份；
+ *                                       範圍外的用不到
  * @param {string}   params.targetYm     正在看的月份 'YYYY-MM'
  * @param {string}   params.todayYmd     今天 'YYYY-MM-DD'（客戶端日期）
  * @param {string|null} params.firstYm   帳本第一筆交易所在月份；沒有任何交易時為 null
@@ -300,8 +251,6 @@ export function buildSpendingAnalysis({
   const byMonth = new Map(allYms.map((ym) => [ym, []]));
   for (const tx of expenses || []) byMonth.get(ymOf(tx.date))?.push(tx);
   const isTrip = (tx) => tripOf.has(tx.id);
-  // 固定支出用全部傳進來的交易判斷：只看分析範圍的話，最早幾個月往前比不到，換個月份看結果就會不同
-  const fixed = detectFixedItems(expenses);
 
   const todayYm = ymOf(todayYmd);
   const isCurrent = targetYm === todayYm;
@@ -348,12 +297,8 @@ export function buildSpendingAnalysis({
   // 平常同期：拿來比的金額。過去的月份就是整個月的平常
   const baselineToDate = baseline == null ? null : avgOf((m) => allOf(m).filter(inPeriod));
 
-  // 月底預估 = 已經花的 + 平常在今天之後會花的。不把已經花的照天數放大：買了一雙鞋不代表月底前還會再買。
-  // 固定支出這個月已經記了（例如先記好月底的房租），平常剩下日子裡的那一筆就不再算一次
-  const seenFixed = new Set(target.dailyTxs.filter((tx) => fixed.has(tx.id)).map(fixedKeyOf));
-  const restOf = (txs) => (isCurrent
-    ? txs.filter((tx) => !inPeriod(tx) && !(fixed.has(tx.id) && seenFixed.has(fixedKeyOf(tx))))
-    : []);
+  // 月底預估 = 已經花的 + 平常在今天之後會花的。不把已經花的照天數放大：買了一雙鞋不代表月底前還會再買
+  const restOf = (txs) => (isCurrent ? txs.filter((tx) => !inPeriod(tx)) : []);
   const toDate = target.daily + target.trip;
   const projected = toDate + avgOf((m) => restOf(allOf(m)));
   // 月初不比：比例留空，畫面改說「第 7 天起開始比」
@@ -404,7 +349,7 @@ export function buildSpendingAnalysis({
   const tripExtra = target.trip - avgOf((m) => m.tripTxs.filter(inPeriod));
 
   // 正在看的這個月的大額單筆：新 → 舊；同一天的大筆在前。旅程裡的交易歸旅程，不標大額（機票不會同時出現在旅程和大額清單）
-  const detected = detectLargeItems(target.dailyTxs, measure, fixed);
+  const detected = detectLargeItems(target.dailyTxs, measure);
   const largeItems = target.dailyTxs.filter((tx) => detected.has(tx.id))
     .sort((a, b) => (a.date === b.date ? twdOf(b) - twdOf(a) : a.date < b.date ? 1 : -1))
     .map((tx) => ({ tx, value: toValue(tx) }));

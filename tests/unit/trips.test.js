@@ -4,7 +4,6 @@ import {
   buildTripIndex,
   tripEntries,
   summarizeTrips,
-  fixedIdsInRange,
   suggestTrips,
   suggestionKey,
   formatTripRange,
@@ -12,9 +11,9 @@ import {
 import { buildSpendingAnalysis } from '@/lib/spendingAnalysis';
 
 let seq = 0;
-const tx = (date, twdAmount, { category = '飲食', itemName = 'x', currency = 'GBP', type = 'expense', time } = {}) =>
-  ({ id: `t${++seq}`, date, time, twdAmount, category, itemName, currency, type });
-const trip = (over = {}) => ({ id: 'trip1', name: '比利時', start: '2026-09-20', end: '2026-09-26', excludedIds: [], fixedIds: [], includedIds: [], ...over });
+const tx = (date, twdAmount, { category = '飲食', itemName = 'x', currency = 'GBP', type = 'expense', time, subscriptionId = null } = {}) =>
+  ({ id: `t${++seq}`, date, time, twdAmount, category, itemName, currency, type, subscriptionId });
+const trip = (over = {}) => ({ id: 'trip1', name: '比利時', start: '2026-09-20', end: '2026-09-26', excludedIds: [], includedIds: [], ...over });
 
 describe('normalizeTripsSetting', () => {
   it('沒有設定時回傳空的', () => {
@@ -26,7 +25,7 @@ describe('normalizeTripsSetting', () => {
       trips: [{ id: 'a', name: ' 比利時 ', start: '2026-09-20', end: '2026-09-26' }, { id: 'b', start: 'bad', end: '2026-01-01' }, null],
       dismissed: ['EUR:2026-09-24:2026-09-26', 3],
     });
-    expect(s.trips).toEqual([{ id: 'a', name: '比利時', start: '2026-09-20', end: '2026-09-26', excludedIds: [], fixedIds: [], keptIds: [], includedIds: [] }]);
+    expect(s.trips).toEqual([{ id: 'a', name: '比利時', start: '2026-09-20', end: '2026-09-26', excludedIds: [], includedIds: [] }]);
     expect(s.dismissed).toEqual(['EUR:2026-09-24:2026-09-26']);
   });
 });
@@ -39,9 +38,9 @@ describe('哪些交易算進旅程', () => {
   const rent = tx('2026-09-22', 15000, { category: '居住', itemName: '房租' });
   const income = tx('2026-09-25', 50000, { type: 'income' });
   const rows = [inRange, before, flight, excluded, rent, income];
-  const t1 = trip({ excludedIds: [excluded.id], fixedIds: [rent.id], includedIds: [flight.id] });
+  const t1 = trip({ excludedIds: [excluded.id, rent.id], includedIds: [flight.id] });
 
-  it('日期範圍內＋手動加入的；排除的、固定支出、收入都不算', () => {
+  it('日期範圍內＋手動加入的；排除的（例如旅途中扣的房租）、收入都不算', () => {
     const index = buildTripIndex([t1], rows);
     expect([...index.keys()].sort()).toEqual([inRange.id, flight.id].sort());
   });
@@ -50,7 +49,7 @@ describe('哪些交易算進旅程', () => {
     const index = buildTripIndex([t1], rows);
     const entries = tripEntries(t1, rows, index);
     expect(entries.map((e) => [e.tx.id, e.status])).toEqual([
-      [inRange.id, 'in'], [rent.id, 'fixed'], [excluded.id, 'excluded'], [flight.id, 'added'],
+      [inRange.id, 'in'], [rent.id, 'excluded'], [excluded.id, 'excluded'], [flight.id, 'added'],
     ]);
   });
 
@@ -87,19 +86,6 @@ describe('哪些交易算進旅程', () => {
   });
 });
 
-describe('fixedIdsInRange', () => {
-  const rents = ['2026-07-01', '2026-08-01', '2026-09-22', '2026-10-01'].map((d) => tx(d, 15000, { category: '居住', itemName: '房租' }));
-
-  it('只回傳範圍內被認成固定支出的', () => {
-    const meal = tx('2026-09-23', 800);
-    expect(fixedIdsInRange([...rents, meal], '2026-09-20', '2026-09-26')).toEqual([rents[2].id]);
-  });
-
-  it('使用者加回來的（keptIds）不再排除', () => {
-    expect(fixedIdsInRange(rents, '2026-09-20', '2026-09-26', [rents[2].id])).toEqual([]);
-  });
-});
-
 describe('suggestTrips', () => {
   const gbp = (date) => tx(date, 300);
   const eur = (date) => tx(date, 300, { currency: 'EUR' });
@@ -130,13 +116,19 @@ describe('suggestTrips', () => {
     expect(suggestTrips([...rows, eur('2026-09-27')], [], [suggestionKey(s)])).toEqual([]);
   });
 
-  it('外幣訂閱剛好連續幾天扣款不算旅程', () => {
-    const subs = ['06', '07', '08', '09'].flatMap((m) => [
-      tx(`2026-${m}-05`, 300, { currency: 'USD', category: '訂閱', itemName: 'Spotify' }),
-      tx(`2026-${m}-06`, 500, { currency: 'USD', category: '訂閱', itemName: 'ChatGPT' }),
-      tx(`2026-${m}-06`, 400, { currency: 'USD', category: '訂閱', itemName: 'Netflix' }),
-    ]);
-    expect(suggestTrips([...usual, ...subs], [], [])).toEqual([]);
+  // 好幾個外幣訂閱剛好扣在相鄰兩天
+  const subsOf = (subscriptionId) => ['06', '07', '08', '09'].flatMap((m) => [
+    tx(`2026-${m}-05`, 300, { currency: 'USD', category: '訂閱', itemName: 'Spotify', subscriptionId: subscriptionId && 's1' }),
+    tx(`2026-${m}-06`, 500, { currency: 'USD', category: '訂閱', itemName: 'ChatGPT', subscriptionId: subscriptionId && 's2' }),
+    tx(`2026-${m}-06`, 400, { currency: 'USD', category: '訂閱', itemName: 'Netflix', subscriptionId: subscriptionId && 's3' }),
+  ]);
+
+  it('訂閱管理自動記的外幣扣款，剛好連續幾天也不算旅程', () => {
+    expect(suggestTrips([...usual, ...subsOf(true)], [], [])).toEqual([]);
+  });
+
+  it('自己手動記的外幣訂閱分不出來，連續幾天就會提示（規則只看訂閱管理）', () => {
+    expect(suggestTrips([...usual, ...subsOf(false)], [], [])).toHaveLength(4);
   });
 
   it('搬到國外換了幣別：兩個幣別都常用，都不當成旅程', () => {

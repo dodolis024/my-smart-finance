@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getCached, setCached } from '@/lib/resourceCache';
-import { fetchTransactionsByDateRange, mapSearchRow, RANGE_FETCH_LIMIT, SELECT_COLUMNS } from '@/hooks/useTransactionSearch';
-import { addMonths, daysInMonth, ymOf, FIXED_ITEM_RULE } from '@/lib/spendingAnalysis';
-import { normalizeTripsSetting, fixedIdsInRange } from '@/lib/trips';
+import { mapSearchRow, RANGE_FETCH_LIMIT, SELECT_COLUMNS } from '@/hooks/useTransactionSearch';
+import { normalizeTripsSetting } from '@/lib/trips';
 
 // 旅程與「不是旅程」的提示紀錄；存在 settings 跨裝置同步，不另開資料表
 export const TRIPS_SETTING_KEY = 'spending_analysis_trips';
@@ -13,17 +12,6 @@ const EMPTY = { trips: [], dismissed: [] };
 // 切到別頁再回來時先用上次的設定與交易畫，背景再重抓
 const SETTING_CACHE_KEY = 'spending-analysis:trips';
 const ROWS_CACHE_KEY = 'spending-analysis:trip-rows';
-
-/** 某段日期前後各多抓幾個月：判斷固定支出要比得到其他月份 */
-async function fetchAround(userId, start, end) {
-  const startYm = addMonths(ymOf(start), -FIXED_ITEM_RULE.withinMonths);
-  const endYm = addMonths(ymOf(end), FIXED_ITEM_RULE.withinMonths);
-  const { rows, error } = await fetchTransactionsByDateRange(
-    userId, `${startYm}-01`, `${endYm}-${daysInMonth(endYm)}`, { limit: RANGE_FETCH_LIMIT },
-  );
-  if (error) throw error;
-  return rows;
-}
 
 /**
  * 消費分析頁的旅程：讀寫設定、抓每趟旅程相關的交易（日期範圍內＋手動加入的），
@@ -153,33 +141,17 @@ export function useTrips(userId) {
     trips: s.trips.map((trip) => (trip.id === tripId ? { ...trip, ...change(trip) } : trip)),
   })), [mutate]);
 
-  /** 建立旅程：先抓前後幾個月的交易，找出範圍內的固定支出自動排除 */
+  /** 建立旅程：日期內的支出全部算進去，要排除的由使用者在明細裡排除 */
   const createTrip = useCallback(async ({ name, start, end }) => {
-    const around = await fetchAround(userId, start, end);
-    const trip = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      start,
-      end,
-      excludedIds: [],
-      fixedIds: fixedIdsInRange(around, start, end),
-      keptIds: [],
-      includedIds: [],
-    };
+    const trip = { id: crypto.randomUUID(), name: name.trim(), start, end, excludedIds: [], includedIds: [] };
     await mutate((s) => ({ ...s, trips: [...s.trips, trip] }));
     return trip;
-  }, [userId, mutate]);
+  }, [mutate]);
 
-  /** 改名稱或日期；日期變了就重新找固定支出（使用者加回來的不再排除），手動排除與加入的照舊 */
+  /** 改名稱或日期；手動排除與加入的照舊 */
   const editTrip = useCallback(async (tripId, { name, start, end }) => {
-    const current = settingRef.current.trips.find((trip) => trip.id === tripId);
-    if (!current) return;
-    const datesChanged = current.start !== start || current.end !== end;
-    const fixedIds = datesChanged
-      ? fixedIdsInRange(await fetchAround(userId, start, end), start, end, current.keptIds)
-      : current.fixedIds;
-    await updateTrip(tripId, () => ({ name: name.trim(), start, end, fixedIds }));
-  }, [userId, updateTrip]);
+    await updateTrip(tripId, () => ({ name: name.trim(), start, end }));
+  }, [updateTrip]);
 
   const deleteTrip = useCallback((tripId) => mutate((s) => ({
     ...s,
@@ -188,20 +160,12 @@ export function useTrips(userId) {
 
   /**
    * 明細裡的單筆操作：
-   * exclude 排除、restore 加回（手動排除或自動排除的固定支出都適用）、add 加入範圍外的交易、remove 移除手動加入的
+   * exclude 排除、restore 加回、add 加入範圍外的交易、remove 移除手動加入的
    */
   const setEntry = useCallback((tripId, txId, action) => updateTrip(tripId, (trip) => {
     const without = (list) => list.filter((id) => id !== txId);
     if (action === 'exclude') return { excludedIds: [...without(trip.excludedIds), txId] };
-    if (action === 'restore') {
-      // 自動排除的固定支出被加回來，記在 keptIds，改日期重新判斷時才不會又被排除
-      const wasFixed = trip.fixedIds.includes(txId);
-      return {
-        excludedIds: without(trip.excludedIds),
-        fixedIds: without(trip.fixedIds),
-        keptIds: wasFixed ? [...without(trip.keptIds), txId] : trip.keptIds,
-      };
-    }
+    if (action === 'restore') return { excludedIds: without(trip.excludedIds) };
     if (action === 'add') return { includedIds: [...without(trip.includedIds), txId] };
     if (action === 'remove') return { includedIds: without(trip.includedIds) };
     return {};

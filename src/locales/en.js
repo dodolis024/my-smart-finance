@@ -845,7 +845,7 @@ const en = {
     },
     large: {
       title: 'Large purchases',
-      subtitle: 'Single purchases of {amount} or more are listed here and still counted in the analysis above. Fixed monthly costs like rent or subscriptions are not counted as large, and trip spending stays with the trip.',
+      subtitle: 'Single purchases of {amount} or more are listed here and still counted in the analysis above. Trip spending stays with the trip.',
       empty: 'No single purchase of {amount} or more this month',
       approx: 'about {amount}',
       convertedFrom: 'Converted from the {amount} you set, so it moves with exchange rates; large purchases are always judged against {amount}.',
@@ -901,7 +901,6 @@ const en = {
       restore: 'Include',
       remove: 'Remove',
       excluded: 'Excluded',
-      fixed: 'Fixed cost, excluded',
       added: 'Added from outside the dates',
       other: 'Counted in "{name}"',
       addTitle: 'Add transactions outside the dates',

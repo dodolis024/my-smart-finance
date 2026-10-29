@@ -849,7 +849,7 @@ const zh = {
     },
     large: {
       title: '大額消費',
-      subtitle: '單筆 {amount} 以上的消費列在這裡，上面的分析照樣算進去。房租、訂閱這類每月固定的不算大額，旅程裡的歸旅程。',
+      subtitle: '單筆 {amount} 以上的消費列在這裡，上面的分析照樣算進去。旅程裡的歸旅程。',
       empty: '這個月沒有 {amount} 以上的單筆',
       // 門檻換算成其他幣別時：數字取整數、前面加「約」，小 i 再說明是從哪個金額換算的
       approx: '約 {amount}',
@@ -906,7 +906,6 @@ const zh = {
       restore: '加回',
       remove: '移除',
       excluded: '已排除',
-      fixed: '固定支出，已排除',
       added: '範圍外加入',
       other: '算在旅程「{name}」',
       addTitle: '加入日期範圍外的交易',

@@ -20,7 +20,6 @@ import {
   thresholdForDisplay,
   baselineStartOf,
   EARLY_MONTH_DAYS,
-  FIXED_ITEM_RULE,
 } from '@/lib/spendingAnalysis';
 import { buildTripIndex, summarizeTrips, suggestTrips } from '@/lib/trips';
 import { getTodayYmd } from '@/lib/utils';
@@ -155,10 +154,10 @@ function SpendingAnalysisContent() {
     toValue,
     uncategorizedLabel: t('transaction.uncategorized'),
   }), [trips, tripRows, tripIndex, toValue, t]);
-  // 旅程建議只看正在看的月份前後一段（跟以前一次只讀這段時一樣），起點設很早也不會冒出一堆舊旅程
+  // 旅程建議只看正在看的月份往前 8 個月到往後 3 個月，起點設很早也不會冒出一堆舊旅程
   const suggestions = useMemo(() => {
-    const from = addMonths(targetYm, -5 - FIXED_ITEM_RULE.withinMonths);
-    const to = addMonths(targetYm, FIXED_ITEM_RULE.withinMonths);
+    const from = addMonths(targetYm, -8);
+    const to = addMonths(targetYm, 3);
     const nearby = expenses.filter((tx) => ymOf(tx.date) >= from && ymOf(tx.date) <= to);
     return suggestTrips(nearby, trips, dismissed);
   }, [expenses, targetYm, trips, dismissed]);

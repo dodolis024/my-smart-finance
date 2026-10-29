@@ -7,7 +7,6 @@ import {
   addMonths,
   daysInMonth,
   ymOf,
-  FIXED_ITEM_RULE,
   analysisStartOf,
   normalizeLargeThreshold,
   normalizeStartYm,
@@ -46,7 +45,7 @@ async function fetchExpenses(userId, fromYm, toYm) {
   for (let from = 0; from < ANALYSIS_FETCH_LIMIT; from += PAGE_SIZE) {
     const { data, error } = await supabase
       .from('transactions')
-      .select(SELECT_COLUMNS)
+      .select(`${SELECT_COLUMNS}, subscription_id`)
       .eq('user_id', userId)
       .eq('type', 'expense')
       .gte('date', `${fromYm}-01`)
@@ -56,7 +55,8 @@ async function fetchExpenses(userId, fromYm, toYm) {
       .order('id', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
     if (error) throw error;
-    rows.push(...(data || []).map(mapSearchRow));
+    // subscriptionId：訂閱管理自動記的扣款，旅程提示不把它當成出國
+    rows.push(...(data || []).map((row) => ({ ...mapSearchRow(row), subscriptionId: row.subscription_id ?? null })));
     if (!data || data.length < PAGE_SIZE) return { expenses: rows.reverse(), coveredFromYm: null };
   }
   const coveredFromYm = addMonths(ymOf(rows[rows.length - 1].date), 1);
@@ -64,7 +64,7 @@ async function fetchExpenses(userId, fromYm, toYm) {
 }
 
 /**
- * 消費分析頁的資料：分析起點（往前多 3 個月，用來認固定支出）到這個月往後 3 個月的支出、
+ * 消費分析頁的資料：分析起點到這個月的支出、
  * 帳本第一筆交易的月份，以及這頁的設定（大額門檻、分析起點、長條圖月數）。計算交給 lib/spendingAnalysis.js。
  * 支出一次讀整段，換月份不用重讀；起點改早才要讀更早的部分。
  * 抓過的都記在記憶體（resourceCache，登出時清掉）：再回到這頁，先用記著的畫，背景重抓到了再換。
@@ -92,8 +92,8 @@ export function useSpendingAnalysis(userId, year, month) {
 
   const ready = firstYm !== undefined && prefs !== undefined;
   const viewStart = ready ? analysisStartOf(firstYm, prefs.startYm) : null;
-  const fetchFromYm = viewStart ? addMonths(viewStart, -FIXED_ITEM_RULE.withinMonths) : null;
-  const fetchToYm = addMonths(ymOf(getTodayYmd()), FIXED_ITEM_RULE.withinMonths);
+  const fetchFromYm = viewStart;
+  const fetchToYm = ymOf(getTodayYmd());
   const ledgerReady = covers(ledger, fetchFromYm, fetchToYm);
 
   useEffect(() => {

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   addMonths,
   monthGap,
-  detectFixedItems,
   daysInMonth,
   chartMonths,
   monthAxisLabels,
@@ -83,10 +82,10 @@ describe('detectLargeItems', () => {
     expect(detectLargeItems([tx('2026-08-02', 150), tx('2026-08-08', -25000)]).size).toBe(0);
   });
 
-  it('固定支出不會被抓', () => {
+  it('沒有例外：每個月固定付的房租超過門檻也會被標', () => {
     const rent = tx('2026-10-05', 12000, '居住', '房租');
     const phone = tx('2026-10-18', 32900, '購物', 'iPhone');
-    expect(detectLargeItems([rent, phone], undefined, new Set([rent.id]))).toEqual(new Set([phone.id]));
+    expect(detectLargeItems([rent, phone])).toEqual(new Set([rent.id, phone.id]));
   });
 
   it('使用者自己設的門檻', () => {
@@ -193,52 +192,6 @@ describe('大額門檻與匯率', () => {
     expect(normalizeLargeThreshold(null)).toBe(DEFAULT_LARGE_THRESHOLD);
     expect(normalizeLargeThreshold({ amount: -5, currency: 'TWD', twd: 5 })).toBe(DEFAULT_LARGE_THRESHOLD);
     expect(normalizeLargeThreshold({ amount: 250, currency: 'gbp', twd: 10250 })).toEqual({ amount: 250, currency: 'GBP', twd: 10250 });
-  });
-});
-
-describe('detectFixedItems', () => {
-  it('每個月付一次、金額差不多的是固定支出', () => {
-    const rent = ['2026-07-05', '2026-08-05', '2026-09-05', '2026-10-05'].map((d) => tx(d, 12000, '居住', '房租'));
-    expect(detectFixedItems(rent)).toEqual(new Set(rent.map((r) => r.id)));
-  });
-
-  it('一個月出現很多次的（每天的便當）不是固定支出', () => {
-    const lunch = ['07', '08', '09'].flatMap((m) => [tx(`2026-${m}-02`, 100, '飲食', '便當'), tx(`2026-${m}-03`, 100, '飲食', '便當')]);
-    expect(detectFixedItems(lunch).size).toBe(0);
-  });
-
-  it('同名但金額突然暴增的那一筆不算固定（平常 2 千的 Uniqlo，某月買了 1.5 萬）', () => {
-    const a = tx('2026-07-10', 2000, '購物', 'Uniqlo');
-    const b = tx('2026-08-10', 2100, '購物', 'Uniqlo');
-    const c = tx('2026-09-10', 1900, '購物', 'Uniqlo');
-    const spike = tx('2026-10-10', 15000, '購物', 'Uniqlo');
-    const ids = detectFixedItems([a, b, c, spike]);
-    expect(ids.has(spike.id)).toBe(false);
-    expect(ids.has(a.id)).toBe(true);
-  });
-
-  it('只有另一個月出現過，還不夠認定', () => {
-    const rows = [tx('2026-09-05', 12000, '居住', '房租'), tx('2026-10-05', 12000, '居住', '房租')];
-    expect(detectFixedItems(rows).size).toBe(0);
-  });
-
-  it('前後都看：最早的月份靠之後的月份認出來', () => {
-    const rows = ['2026-05-05', '2026-06-05', '2026-07-05'].map((d) => tx(d, 12000, '居住', '房租'));
-    expect(detectFixedItems(rows).has(rows[0].id)).toBe(true);
-  });
-
-  it('隔太遠的月份不算（超過前後 3 個月）', () => {
-    const rows = [tx('2026-01-05', 5000, '保險', '年繳保費'), tx('2026-05-05', 5000, '保險', '年繳保費'), tx('2026-09-05', 5000, '保險', '年繳保費')];
-    expect(detectFixedItems(rows).size).toBe(0);
-  });
-
-  it('沒有名稱無從比對；同名不同分類分開看；名稱忽略大小寫與空白', () => {
-    const noName = ['07', '08', '09'].map((m) => tx(`2026-${m}-05`, 500, '訂閱'));
-    const netflix = [tx('2026-07-01', 390, '訂閱', 'Netflix'), tx('2026-08-01', 390, '訂閱', ' netflix '), tx('2026-09-01', 390, '娛樂', 'Netflix')];
-    const ids = detectFixedItems([...noName, ...netflix]);
-    expect(noName.some((r) => ids.has(r.id))).toBe(false);
-    // 訂閱類只有 7、8 月兩筆（9 月那筆分類不同），彼此只各有一個「其他月份」→ 不夠
-    expect(netflix.some((r) => ids.has(r.id))).toBe(false);
   });
 });
 
@@ -493,7 +446,7 @@ describe('buildSpendingAnalysis', () => {
   });
 });
 
-describe('一般用戶的帳：房租與訂閱是固定支出', () => {
+describe('一般用戶的帳：房租、訂閱、每天的午餐', () => {
   // 台北上班族：房租每月 5 號 12,000、Netflix 每月 1 號 390，日常消費每月約 2 萬；10 月換手機
   function ledger(lastDay = 31) {
     const rows = [];
@@ -506,11 +459,12 @@ describe('一般用戶的帳：房租與訂閱是固定支出', () => {
     return rows;
   }
 
-  it('房租超過門檻也不會被標成大額；手機照樣標，金額都算進本月', () => {
+  it('房租超過門檻也照樣標成大額（新 → 舊），金額都算進本月', () => {
     const rows = ledger(27);
     const phone = tx('2026-10-18', 32900, '購物', 'iPhone 17');
     const a = buildSpendingAnalysis({ expenses: [...rows, phone], targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2026-03' });
-    expect(a.largeItems.map((l) => l.tx.id)).toEqual([phone.id]);
+    const rent = rows.find((r) => r.itemName === '房租' && r.date === '2026-10-05');
+    expect(a.largeItems.map((l) => l.tx.id)).toEqual([phone.id, rent.id]);
     expect(a.toDate).toBe(12000 + 390 + 27 * 700 + 32900);
   });
 
@@ -537,16 +491,6 @@ describe('一般用戶的帳：房租與訂閱是固定支出', () => {
   it('付款日已經過了還沒出現，不自動補（可能退租或改了日子）', () => {
     const a = buildSpendingAnalysis({ expenses: ledger(3), targetYm: '2026-10', todayYmd: '2026-10-08', firstYm: '2026-03' });
     expect(a.categories.find((c) => c.name === '居住').projected).toBe(0);
-  });
-
-  it('先記好的月底房租，月底預估不會再算一次', () => {
-    const rows = ['07', '08', '09'].flatMap((m) => [
-      tx(`2026-${m}-28`, 12000, '居住', '房租'), ...Array.from({ length: 27 }, (_, i) => tx(`2026-${m}-${String(i + 1).padStart(2, '0')}`, 700, '飲食', '午餐')),
-    ]);
-    rows.push(tx('2026-10-28', 12000, '居住', '房租'), ...Array.from({ length: 27 }, (_, i) => tx(`2026-10-${String(i + 1).padStart(2, '0')}`, 700, '飲食', '午餐')));
-    const a = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2026-06' });
-    expect(a.toDate).toBe(12000 + 27 * 700);
-    expect(a.projected).toBe(a.toDate);
   });
 
   it('看過去的月份：月底預估就是整個月的金額', () => {
@@ -577,23 +521,6 @@ describe('審查後修正的邊界情況', () => {
     const a = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-11-02', firstYm: '2026-08' });
     expect(a.baseline).toBeNull();
     expect(a.ratio).toBeNull();
-  });
-
-  it('圖表窗口外的月份也拿來認固定支出：最早一個月的房租不會因為往前看不到就被當成大額', () => {
-    const rent = (date) => tx(date, 15000, '居住', '房租');
-    const rows = [
-      rent('2026-02-01'), rent('2026-03-01'), rent('2026-04-01'), rent('2026-05-01'),
-      tx('2026-05-12', 3000), rent('2026-06-01'), rent('2026-07-01'), rent('2026-08-01'),
-      rent('2026-09-01'), rent('2026-10-01'),
-    ];
-    // 窗口 5–10 月（前 5 個月加上 10 月）；房租 6 月起漲價，5 月的 1 萬只比得上窗口外的 2–4 月
-    rows.slice(0, 4).forEach((r) => { r.twdAmount = 10000; });
-    const a = buildSpendingAnalysis({
-      expenses: rows, targetYm: '2026-10', todayYmd: '2026-11-02', firstYm: '2026-01', chartSpan: 5,
-    });
-    expect(a.largeItems).toEqual([]);
-    expect(a.months[0].ym).toBe('2026-05');
-    expect(a.months[0].daily).toBe(13000);
   });
 });
 

@@ -1,16 +1,12 @@
 /**
  * 旅程（消費分析第二階段）的計算，純函式。
  *
- * 一趟旅程 = 起訖日期內的支出，扣掉排除的交易，再加上手動加入的範圍外交易（例如出發前訂的機票）。
- * 排除分兩種：使用者手動排除（excludedIds），以及建立或改日期時自動排除的固定支出（fixedIds，
- * 例如旅途中剛好扣的房租）。固定支出在建立當下就算好存起來，之後換哪個月份看，旅程的內容都一樣；
- * 代價是建立之後才記進來的房租不會自動排除，要使用者自己排除。
- * 使用者把自動排除的固定支出加回來時記在 keptIds，之後改日期重新判斷也不會再排除它。
+ * 一趟旅程 = 起訖日期內的支出，扣掉使用者排除的（excludedIds，例如旅途中剛好扣的房租），
+ * 再加上手動加入的範圍外交易（includedIds，例如出發前訂的機票）。沒有自動排除，算進哪些都是看得到、改得掉的。
  *
  * 設定存在 settings（key: spending_analysis_trips）：
- *   { trips: [{ id, name, start, end, excludedIds, fixedIds, keptIds, includedIds }], dismissed: ['EUR:2026-09-24:2026-09-26'] }
+ *   { trips: [{ id, name, start, end, excludedIds, includedIds }], dismissed: ['EUR:2026-09-24:2026-09-26'] }
  */
-import { detectFixedItems } from '@/lib/spendingAnalysis';
 
 // 系統提示：連續 2 天以上出現平常不用的幣別、總共至少 3 筆，就問要不要建成旅程。
 // 「平常用的幣別」：用得最多的那個，加上有記帳的日子裡至少 homeDayShare 的天數都有用到的（搬家換了幣別時兩個都算）
@@ -29,8 +25,6 @@ export function normalizeTripsSetting(value) {
       start: trip.start,
       end: trip.end,
       excludedIds: ids(trip.excludedIds),
-      fixedIds: ids(trip.fixedIds),
-      keptIds: ids(trip.keptIds),
       includedIds: ids(trip.includedIds),
     }));
   return { trips, dismissed: ids(value?.dismissed) };
@@ -48,7 +42,7 @@ function byStart(a, b) {
  */
 export function buildTripIndex(trips, rows) {
   const sorted = [...(trips || [])].sort(byStart);
-  const prepared = sorted.map((trip) => ({ trip, out: new Set([...trip.excludedIds, ...trip.fixedIds]) }));
+  const prepared = sorted.map((trip) => ({ trip, out: new Set(trip.excludedIds) }));
   const expenses = (rows || []).filter((tx) => tx.type !== 'income');
   const index = new Map();
   const rowIds = new Set(expenses.map((tx) => tx.id));
@@ -65,12 +59,11 @@ export function buildTripIndex(trips, rows) {
 
 /**
  * 旅程明細要列的每一筆：日期範圍內的支出（含被排除的）＋手動加入的。
- * status：in 算進這趟、added 範圍外手動加入、excluded 手動排除、fixed 自動排除的固定支出、other 歸另一趟重疊的旅程。
+ * status：in 算進這趟、added 範圍外手動加入、excluded 手動排除、other 歸另一趟重疊的旅程。
  * 在這趟排除的，即使因此落到另一趟重疊的旅程，這裡仍顯示「已排除」，才找得到「加回」。
  */
 export function tripEntries(trip, rows, index) {
   const excluded = new Set(trip.excludedIds);
-  const fixed = new Set(trip.fixedIds);
   const included = new Set(trip.includedIds);
   return (rows || [])
     .filter((tx) => tx.type !== 'income' && (included.has(tx.id) || (tx.date >= trip.start && tx.date <= trip.end)))
@@ -79,7 +72,6 @@ export function tripEntries(trip, rows, index) {
       const ownedElsewhere = !!owner && owner.id !== trip.id;
       let status;
       if (included.has(tx.id)) status = ownedElsewhere ? 'other' : 'added';
-      else if (fixed.has(tx.id)) status = 'fixed';
       else if (excluded.has(tx.id)) status = 'excluded';
       else status = ownedElsewhere ? 'other' : 'in';
       return { tx, status, otherTrip: status === 'other' ? owner : null };
@@ -104,21 +96,10 @@ export function summarizeTrips(trips, rows, index, { toValue, uncategorizedLabel
         members,
         total: members.reduce((sum, tx) => sum + toValue(tx), 0),
         count: members.length,
-        excludedCount: entries.filter((e) => e.status === 'excluded' || e.status === 'fixed').length,
+        excludedCount: entries.filter((e) => e.status === 'excluded').length,
         categories: [...byCategory].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
       };
     });
-}
-
-/**
- * 範圍內哪些是固定支出（房租、訂閱）：rows 要涵蓋前後幾個月，才比得出「每個月都有」。
- * keptIds 是使用者加回來的，不再排除。
- */
-export function fixedIdsInRange(rows, start, end, keptIds = []) {
-  const expenses = (rows || []).filter((tx) => tx.type !== 'income');
-  const fixed = detectFixedItems(expenses);
-  const kept = new Set(keptIds);
-  return expenses.filter((tx) => fixed.has(tx.id) && !kept.has(tx.id) && tx.date >= start && tx.date <= end).map((tx) => tx.id);
 }
 
 const dayIndex = (ymd) => Math.round(Date.UTC(Number(ymd.slice(0, 4)), Number(ymd.slice(5, 7)) - 1, Number(ymd.slice(8, 10))) / 86400000);
@@ -133,15 +114,12 @@ function parseSuggestionKey(key) {
 
 /**
  * 系統提示的旅程：平常用的幣別以外，其他幣別連續出現 minDays 天以上、總共至少 minCount 筆就提示。
- * 固定支出（例如外幣訂閱剛好連續幾天扣款）不算。跟現有旅程日期重疊的不提示；
+ * 訂閱管理自動記的扣款（subscriptionId，例如好幾個外幣訂閱剛好扣在相鄰兩天）不算。跟現有旅程日期重疊的不提示；
  * 使用者按過「不是旅程」的，同一幣別、日期有重疊就不再提示（之後多記一天、或換個月份看邊界被截在別處，都不會又跳出來）。
  * 國內旅行（幣別跟平常一樣）偵測不到，只能手動建立。新 → 舊。
  */
 export function suggestTrips(expenses, trips, dismissed, rule = TRIP_SUGGEST_RULE) {
-  const all = (expenses || []).filter((tx) => tx.type !== 'income' && tx.currency);
-  if (!all.length) return [];
-  const fixed = detectFixedItems(all);
-  const list = all.filter((tx) => !fixed.has(tx.id));
+  const list = (expenses || []).filter((tx) => tx.type !== 'income' && tx.currency && !tx.subscriptionId);
   if (!list.length) return [];
   const usage = new Map();
   const daysByCurrency = new Map();

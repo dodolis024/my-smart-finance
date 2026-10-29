@@ -23,7 +23,7 @@ const DeleteIcon = () => (
   </svg>
 );
 
-const isOut = (entry) => entry.status === 'excluded' || entry.status === 'fixed';
+const isOut = (entry) => entry.status === 'excluded';
 
 /**
  * 一趟旅程的明細：日期範圍內每一筆可以排除／加回，手動加入的可以移除；排除的接在同一個清單最下面，預設摺起來。
@@ -104,14 +104,13 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
 
   const stateLabel = (entry) => {
     if (entry.status === 'excluded') return t('spendingAnalysis.tripDetail.excluded');
-    if (entry.status === 'fixed') return t('spendingAnalysis.tripDetail.fixed');
     if (entry.status === 'added') return t('spendingAnalysis.tripDetail.added');
     if (entry.status === 'other') return t('spendingAnalysis.tripDetail.other', { name: entry.otherTrip.name });
     return null;
   };
   const action = (entry) => {
     if (entry.status === 'in') return ['exclude', t('spendingAnalysis.tripDetail.exclude')];
-    if (entry.status === 'excluded' || entry.status === 'fixed') return ['restore', t('spendingAnalysis.tripDetail.restore')];
+    if (entry.status === 'excluded') return ['restore', t('spendingAnalysis.tripDetail.restore')];
     if (entry.status === 'added') return ['remove', t('spendingAnalysis.tripDetail.remove')];
     return null;
   };
