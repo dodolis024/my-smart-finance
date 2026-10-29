@@ -829,6 +829,8 @@ const zh = {
       subtitle: '本月 vs 平常，多花最多的排前面',
       usual: '平常 {amount}',
       rising: '連續 {count} 個月上升',
+      // 看這個月時，還沒過完的這個月不算進去，寫清楚是數到上個月
+      risingToLast: '到上個月連續 {count} 個月上升',
       new: '新出現的分類',
       empty: '這個月還沒有日常支出',
       showAll: '顯示全部 {count} 個分類',

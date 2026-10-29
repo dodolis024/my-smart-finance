@@ -7,8 +7,11 @@ const COLLAPSED_COUNT = 6;
 const SPARK_W = 72;
 const SPARK_H = 24;
 
-/** 分類的小走勢線：最後一點是這個月實際花的（還沒過完就是到目前為止） */
-function Sparkline({ values }) {
+/**
+ * 分類的小走勢線：最後一點是這個月實際花的。還沒過完（inProgress）時最後一段畫虛線，
+ * 表示這一點還在變、不是突然少花了（數字不推估，照實際的）
+ */
+function Sparkline({ values, inProgress }) {
   if (values.length < 2) return <span className="analysis-spark" />;
   const max = Math.max(...values);
   const min = Math.min(...values);
@@ -16,10 +19,14 @@ function Sparkline({ values }) {
     (i / (values.length - 1)) * (SPARK_W - 6) + 3,
     SPARK_H - 3 - ((v - min) / (max - min || 1)) * (SPARK_H - 6),
   ]);
+  const solid = inProgress ? pts.slice(0, -1) : pts;
   const [lx, ly] = pts[pts.length - 1];
   return (
     <svg className="analysis-spark" width={SPARK_W} height={SPARK_H} aria-hidden="true">
-      <polyline points={pts.map((p) => p.join(',')).join(' ')} />
+      {solid.length > 1 && <polyline points={solid.map((p) => p.join(',')).join(' ')} />}
+      {inProgress && (
+        <line x1={pts[pts.length - 2][0]} y1={pts[pts.length - 2][1]} x2={lx} y2={ly} strokeDasharray="3 3" />
+      )}
       <circle cx={lx} cy={ly} r="2.5" />
     </svg>
   );
@@ -47,12 +54,14 @@ export default function CategoryChanges({ analysis, onSelectCategory }) {
   const { t } = useLanguage();
   const { formatTotal } = useDisplayAmount();
   const [expanded, setExpanded] = useState(false);
-  const { categories, baseline } = analysis;
+  const { categories, baseline, isCurrent } = analysis;
   const rows = expanded ? categories : categories.slice(0, COLLAPSED_COUNT);
 
   const subline = (cat) => {
     if (cat.risingMonths >= 2) {
-      return <span className="analysis-cat__sub is-alert">{t('spendingAnalysis.categories.rising', { count: cat.risingMonths })}</span>;
+      // 這個月還沒過完不算進去，看這個月時寫明是數到上個月
+      const key = isCurrent ? 'spendingAnalysis.categories.risingToLast' : 'spendingAnalysis.categories.rising';
+      return <span className="analysis-cat__sub is-alert">{t(key, { count: cat.risingMonths })}</span>;
     }
     if (baseline == null) return null;
     if (!cat.usual) return <span className="analysis-cat__sub">{t('spendingAnalysis.categories.new')}</span>;
@@ -82,7 +91,7 @@ export default function CategoryChanges({ analysis, onSelectCategory }) {
                     <span className="analysis-cat__name">{cat.name}</span>
                     {subline(cat)}
                   </span>
-                  <Sparkline values={cat.series} />
+                  <Sparkline values={cat.series} inProgress={isCurrent} />
                   {/* 一律顯示實際花的，跟點進去的明細加起來一樣；百分比直接跟平常整個月比 */}
                   <span className="analysis-cat__amount">{formatTotal(cat.current)}</span>
                   <ChangePill ratio={cat.ratio} />

@@ -134,6 +134,8 @@ export default function CategoryTrendModal({ category, analysis, labelOf, labelO
       // 剛好落在縱軸最底（$0）的點不要被圖表邊界切掉一半
       clip: false,
       tension: 0,
+      // 這個月還沒過完：最後一段畫虛線，表示這一點還在變（數字照實際的，不推估）
+      segment: { borderDash: (ctx) => (isCurrent && ctx.p1DataIndex === last ? [6, 5] : undefined) },
     }, ...(usual ? [{
       data: series.map(() => usual),
       borderColor: colors.muted,
@@ -142,7 +144,7 @@ export default function CategoryTrendModal({ category, analysis, labelOf, labelO
       pointRadius: 0,
       pointHoverRadius: 0,
     }] : [])],
-  }), [name, series, months, last, usual, colors, labelOf]);
+  }), [name, series, months, last, isCurrent, usual, colors, labelOf]);
 
   const yRange = useMemo(() => (series.length ? axisRange(usual ? [...series, usual] : series) : { min: 0 }), [series, usual]);
 

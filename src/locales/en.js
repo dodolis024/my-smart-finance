@@ -825,6 +825,7 @@ const en = {
       subtitle: 'This month vs. usual, biggest increases first',
       usual: 'Usual {amount}',
       rising: 'Up {count} months in a row',
+      risingToLast: 'Up {count} months in a row through last month',
       new: 'New category',
       empty: 'No everyday spending this month yet',
       showAll: 'Show all {count} categories',
