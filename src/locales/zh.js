@@ -856,17 +856,15 @@ const zh = {
       // 門檻換算成其他幣別時：數字取整數、前面加「約」，小 i 再說明是從哪個金額換算的
       approx: '約 {amount}',
       convertedFrom: '這是依你設定的 {amount} 換算的，匯率變動時會跟著變；判斷哪幾筆算大額，一律照 {amount}。',
-      setThreshold: '設定大額門檻',
+      saveFailed: '儲存失敗，請稍後再試',
+    },
+    settings: {
+      title: '分析設定',
+      startLabel: '起始月份',
+      startAuto: '自動（記帳第二個月起）',
       thresholdLabel: '大額單筆交易門檻',
       thresholdInvalid: '請輸入大於 0 的金額',
       thresholdNoRate: '{currency} 的匯率還沒讀到，請稍後再試',
-      save: '儲存',
-      saveFailed: '儲存失敗，請稍後再試',
-    },
-    start: {
-      set: '設定分析起點',
-      label: '從哪個月開始分析',
-      auto: '自動（記帳第二個月起）',
       save: '儲存',
     },
     monthDetail: '{month}的日常支出',

@@ -38,7 +38,7 @@ import TripsCard from '@/components/spending-analysis/TripsCard';
 import TripDetailModal from '@/components/spending-analysis/TripDetailModal';
 import TripFormModal from '@/components/spending-analysis/TripFormModal';
 import InfoTip from '@/components/spending-analysis/InfoTip';
-import AnalysisStartForm from '@/components/spending-analysis/AnalysisStartForm';
+import AnalysisSettings from '@/components/spending-analysis/AnalysisSettings';
 
 // 切到別頁再回來時，停在原本看的月份
 const PERIOD_CACHE_KEY = 'spending-analysis:period';
@@ -52,12 +52,6 @@ const ChevronLeft = () => (
 const ChevronRight = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
     <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-  </svg>
-);
-
-const SettingsIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
   </svg>
 );
 
@@ -89,27 +83,20 @@ function headlineText(a, monthName, startName, t) {
     + (saved ? t('spendingAnalysis.headline.mainlyLess', { category: saved.name }) : '');
 }
 
-/**
- * info：這張卡怎麼算的，收在標題旁的小 i；sub、notes 是畫面上直接顯示的日期與金額。
- * action 是標題列右邊的按鈕，children 放在卡片最下面（例如改設定的小框）
- */
-function KpiCard({ label, info, value, pill, sub, notes = [], tone, action, children }) {
+/** info：這張卡怎麼算的，收在標題旁的小 i；sub、notes 是畫面上直接顯示的日期與金額 */
+function KpiCard({ label, info, value, pill, sub, notes = [], tone }) {
   return (
     <div className="analysis-kpi">
-      <div className="analysis-kpi__head">
-        <span className="analysis-kpi__label">
-          {label}
-          {info && <InfoTip>{info}</InfoTip>}
-        </span>
-        {action}
-      </div>
+      <span className="analysis-kpi__label">
+        {label}
+        {info && <InfoTip>{info}</InfoTip>}
+      </span>
       <span className="analysis-kpi__value-row">
         <span className={`analysis-kpi__value${tone ? ` is-${tone}` : ''}`}>{value}</span>
         {pill}
       </span>
       {sub && <span className="analysis-kpi__sub">{sub}</span>}
       {notes.filter(Boolean).map((note) => <span key={note} className="analysis-kpi__note">{note}</span>)}
-      {children}
     </div>
   );
 }
@@ -138,7 +125,6 @@ function SpendingAnalysisContent() {
     targetYm, expenses, firstYm, threshold, startYm, chartSpan, coveredFromYm,
     loading: analysisLoading, error: analysisError, savePref,
   } = useSpendingAnalysis(user?.id, period.year, period.month);
-  const [editingStart, setEditingStart] = useState(false);
   // 門檻幣別（比大額用）與顯示幣別（改門檻時換算用）的匯率表；跟顯示幣別共用快取，不會重抓
   const rateTables = useRateTables([threshold.currency, currency]);
   const thresholdTable = rateTables[threshold.currency] ?? null;
@@ -206,19 +192,19 @@ function SpendingAnalysisContent() {
   const trendCategory = analysis.categories.find((c) => c.name === trendName) || null;
 
   const saveFailed = useCallback(() => toast.error(t('spendingAnalysis.large.saveFailed')), [toast, t]);
-  // 門檻用正在顯示的幣別輸入；外幣同時用今天的匯率換一份台幣存著。
-  // 畫面當下就換成新門檻、雲端在背景存，存失敗會退回原本的門檻並跳提示。匯率讀不到就不存，回傳訊息給表單顯示
-  const handleSaveThreshold = useCallback((amount) => {
-    const next = thresholdFromInput(amount, currency, displayTable);
-    if (!next) return t('spendingAnalysis.large.thresholdNoRate', { currency });
-    savePref('threshold', next).catch(saveFailed);
+  // 右上角設定面板只送有改的欄位。門檻用正在顯示的幣別輸入；外幣同時用今天的匯率換一份台幣存著。
+  // 畫面當下就換成新設定、雲端在背景存，存失敗會退回原本的值並跳提示。匯率讀不到就整個不存，回傳訊息給面板顯示
+  const handleSaveSettings = useCallback((changes) => {
+    let nextThreshold = null;
+    if (changes.thresholdAmount !== undefined) {
+      nextThreshold = thresholdFromInput(changes.thresholdAmount, currency, displayTable);
+      if (!nextThreshold) return t('spendingAnalysis.settings.thresholdNoRate', { currency });
+    }
+    if (changes.startYm !== undefined) savePref('startYm', changes.startYm).catch(saveFailed);
+    if (nextThreshold) savePref('threshold', nextThreshold).catch(saveFailed);
     return null;
   }, [currency, displayTable, savePref, saveFailed, t]);
-  // 起點、長條圖月數也一樣：畫面先換，存失敗才退回並提示
-  const handleSaveStart = useCallback((next) => {
-    setEditingStart(false);
-    savePref('startYm', next).catch(saveFailed);
-  }, [savePref, saveFailed]);
+  // 長條圖月數也一樣：畫面先換，存失敗才退回並提示
   const handleChangeSpan = useCallback((next) => {
     savePref('chartSpan', next).catch(saveFailed);
   }, [savePref, saveFailed]);
@@ -285,29 +271,7 @@ function SpendingAnalysisContent() {
     : null;
   // 平常從哪個月起算（baselineMonths 是新 → 舊）
   const since = a.baselineMonths.length ? shortLabelOfYm(a.baselineMonths[a.baselineMonths.length - 1]) : '';
-  // 「平常」卡片標題旁改分析起點的按鈕與小框
-  const startButton = (
-    <button
-      type="button"
-      className="analysis-icon-btn"
-      aria-label={t('spendingAnalysis.start.set')}
-      title={t('spendingAnalysis.start.set')}
-      aria-expanded={editingStart}
-      onClick={() => setEditingStart((v) => !v)}
-    >
-      <SettingsIcon />
-    </button>
-  );
-  const startForm = editingStart && firstYm && (
-    <AnalysisStartForm
-      startYm={startYm}
-      firstYm={firstYm}
-      currentYm={ymOf(todayYmd)}
-      labelOfYm={labelOfYm}
-      onSave={handleSaveStart}
-      onCancel={() => setEditingStart(false)}
-    />
-  );
+  const shownThreshold = thresholdForDisplay(threshold, currency, thresholdTable, displayTable);
 
   return (
     <div className="analysis-page">
@@ -343,6 +307,17 @@ function SpendingAnalysisContent() {
             <ChevronRight />
           </button>
         </div>
+        {/* 這一頁要設定的都收在右上角這一個按鈕；起點之前的月份也打得開，才改得回來 */}
+        {!loading && !error && firstYm && (
+          <AnalysisSettings
+            startYm={startYm}
+            firstYm={firstYm}
+            currentYm={ymOf(todayYmd)}
+            labelOfYm={labelOfYm}
+            shown={shownThreshold}
+            onSave={handleSaveSettings}
+          />
+        )}
       </header>
 
       {loading ? (
@@ -391,10 +366,7 @@ function SpendingAnalysisContent() {
                   day: a.daysElapsed,
                 })}
                 notes={[t('spendingAnalysis.kpi.baselineMonthNote', { amount: formatTotal(a.baseline) })]}
-                action={startButton}
-              >
-                {startForm}
-              </KpiCard>
+              />
             ) : (
               <KpiCard
                 label={t('spendingAnalysis.kpi.baseline')}
@@ -402,10 +374,7 @@ function SpendingAnalysisContent() {
                 info={a.baseline != null
                   && t('spendingAnalysis.kpi.baselineSub', { since, count: a.baselineMonths.length })}
                 sub={a.baseline == null ? t('spendingAnalysis.kpi.baselineNone') : null}
-                action={startButton}
-              >
-                {startForm}
-              </KpiCard>
+              />
             )}
             {a.isEarly ? (
               <KpiCard
@@ -453,13 +422,8 @@ function SpendingAnalysisContent() {
             onSelect={setTripDetailId}
           />
 
-          {/* 沒有大額單筆的月份也顯示，改門檻的按鈕才一直找得到 */}
-          <LargeItemsList
-            items={a.largeItems}
-            threshold={threshold}
-            shown={thresholdForDisplay(threshold, currency, thresholdTable, displayTable)}
-            onSaveThreshold={handleSaveThreshold}
-          />
+          {/* 沒有大額單筆的月份也顯示，看得到門檻是多少 */}
+          <LargeItemsList items={a.largeItems} threshold={threshold} shown={shownThreshold} />
         </>
       )}
 

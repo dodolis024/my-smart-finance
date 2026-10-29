@@ -17,8 +17,26 @@
   margin-bottom: var(--space-sm);
 }
 
-.analysis-page__header h2 {
+/* 只管頁面標題：設定彈窗也長在 header 裡，它的標題要照彈窗原本的間距 */
+.analysis-page__header > h2 {
   margin: 0;
+}
+
+/* 右上角的設定按鈕推到最右邊，點了開彈窗（外框沿用旅程表單） */
+.analysis-settings__btn {
+  margin-left: auto;
+}
+
+/* 門檻欄：幣別接在輸入框前面 */
+.analysis-settings__amount {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.analysis-settings__currency {
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .analysis-status {
@@ -151,46 +169,9 @@
   min-width: 0;
 }
 
-/* 標題列：標題（＋小 i）在左，設定按鈕在右；按鈕不撐高這一行，三張卡的數字才對齊 */
-.analysis-kpi__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.analysis-kpi__head > .analysis-icon-btn {
-  margin: -0.35rem -0.5rem -0.35rem 0;
-}
-
 .analysis-kpi__label {
   font-size: 0.875rem;
   color: var(--color-text-secondary);
-}
-
-/* 改分析起點的小框：跟大額門檻的小框同一個樣子，卡片窄所以上下排 */
-.analysis-start__form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: var(--space-xs);
-  padding: 0.75rem;
-  border-radius: 8px;
-  background: var(--color-primary-tint-light);
-  font-size: 0.875rem;
-}
-
-.analysis-start__label {
-  color: var(--color-text-secondary);
-}
-
-.analysis-start__form .analysis-start__select {
-  padding: 0.35rem 0.6rem;
-}
-
-.analysis-start__actions {
-  display: flex;
-  gap: 0.5rem;
 }
 
 .analysis-kpi__value {
@@ -411,48 +392,6 @@
   text-decoration: underline;
 }
 
-/* 大額消費：只列出來，標題旁的按鈕改門檻 */
-.analysis-large__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-sm);
-}
-
-.analysis-large__form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: var(--space-sm);
-  padding: 0.75rem;
-  border-radius: 8px;
-  background: var(--color-primary-tint-light);
-  font-size: 0.875rem;
-}
-
-.analysis-large__form-label {
-  color: var(--color-text-secondary);
-}
-
-.analysis-large__form-currency {
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-/* 共用輸入框預設佔滿整行（.analysis-input 寫在後面），這裡要跟按鈕排在同一行 */
-.analysis-large__form .analysis-large__form-input {
-  width: 9rem;
-  padding: 0.35rem 0.6rem;
-}
-
-.analysis-large__form-error {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--color-danger);
-}
-
 .analysis-large__list {
   list-style: none;
   margin: 0;
@@ -657,6 +596,15 @@
 .analysis-input:focus {
   outline: none;
   border-color: var(--color-primary);
+}
+
+/* 下拉選單：瀏覽器內建的箭頭會貼著框線，跟記帳表單一樣換成主題的箭頭、右邊留空間 */
+select.analysis-input {
+  padding-right: 2.25rem;
+  background: var(--color-card) var(--select-arrow) right 0.75rem center / 16px no-repeat;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
 }
 
 .analysis-trip-form__dates {
