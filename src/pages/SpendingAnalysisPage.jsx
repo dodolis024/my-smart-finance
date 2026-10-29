@@ -180,12 +180,13 @@ function SpendingAnalysisContent() {
   const handleSelectMonth = useCallback((m) => {
     setDetail({
       kind: 'period',
-      label: t('spendingAnalysis.monthDetail', { month: labelOf(m.ym) }),
+      // 長條圖可能從去年同月畫起：不是正在看的那一年就寫上年份
+      label: t('spendingAnalysis.monthDetail', { month: m.ym.slice(0, 4) === targetYm.slice(0, 4) ? labelOf(m.ym) : labelOfYm(m.ym) }),
       value: m.daily,
       txs: m.dailyTxs,
       totalExpense: m.daily,
     });
-  }, [labelOf, t]);
+  }, [labelOf, labelOfYm, targetYm, t]);
 
   // 點分類看它的走勢放大版；存名稱，資料更新（背景重抓、改大額設定）時跟著換
   const handleSelectCategory = useCallback((cat) => setTrendName(cat.name), []);
@@ -405,6 +406,7 @@ function SpendingAnalysisContent() {
             <MonthlyBarsChart
               analysis={a}
               labelOf={labelOf}
+              labelOfYm={labelOfYm}
               onSelectMonth={handleSelectMonth}
               span={chartSpan}
               onChangeSpan={handleChangeSpan}
@@ -446,6 +448,7 @@ function SpendingAnalysisContent() {
         category={trendCategory}
         analysis={analysis}
         labelOf={labelOf}
+        labelOfYm={labelOfYm}
         onClose={() => setTrendName(null)}
       />
       <CategoryDetailModal

@@ -52,11 +52,10 @@ export default function CategoryChanges({ analysis, onSelectCategory }) {
   const { t } = useLanguage();
   const { formatTotal } = useDisplayAmount();
   const [expanded, setExpanded] = useState(false);
-  const { categories, months, isCurrent, isEarly, baseline } = analysis;
+  const { categories, isCurrent, isEarly, baseline } = analysis;
   // 這個月還沒過完：跟平常同期比，走勢線最後一點用月底預估（虛線）；月初還不比，走勢線只畫到上個月
   const estimating = isCurrent && !isEarly;
   const rows = expanded ? categories : categories.slice(0, COLLAPSED_COUNT);
-  const startIndex = months.findIndex((m) => !m.beforeStart);
 
   const subline = (cat) => {
     if (cat.risingMonths >= 2) {
@@ -88,7 +87,7 @@ export default function CategoryChanges({ analysis, onSelectCategory }) {
       ) : (
         <ul className="analysis-cat-list">
           {rows.map((cat) => {
-            const trend = cat.series.slice(Math.max(startIndex, 0), isEarly ? -1 : undefined);
+            const trend = cat.series.slice(0, isEarly ? -1 : undefined);
             if (estimating && trend.length) trend[trend.length - 1] = cat.projected;
             return (
               <li key={cat.name}>

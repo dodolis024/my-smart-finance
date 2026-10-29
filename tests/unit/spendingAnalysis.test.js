@@ -5,6 +5,7 @@ import {
   detectFixedItems,
   daysInMonth,
   chartMonths,
+  monthAxisLabels,
   detectLargeItems,
   baselineMonths,
   monthsBetween,
@@ -44,10 +45,10 @@ describe('月份小工具', () => {
     expect(daysInMonth('2028-02')).toBe(29);
   });
 
-  it('chartMonths 預設是舊到新的 6 個月，也可以指定月數', () => {
-    expect(chartMonths('2026-02')).toEqual(['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02']);
-    expect(chartMonths('2026-02', 3)).toEqual(['2025-12', '2026-01', '2026-02']);
-    expect(chartMonths('2026-02', 12)).toHaveLength(12);
+  it('chartMonths：前面幾個月（預設 6）加上目標月份，舊到新', () => {
+    expect(chartMonths('2026-02')).toEqual(['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02']);
+    expect(chartMonths('2026-02', 3)).toEqual(['2025-11', '2025-12', '2026-01', '2026-02']);
+    expect(chartMonths('2026-02', 12)).toHaveLength(13);
   });
 
   it('monthsBetween 含頭尾、跨年；起點比終點晚就是空的', () => {
@@ -242,9 +243,11 @@ describe('detectFixedItems', () => {
 });
 
 describe('baselineMonths', () => {
-  it('沒設起點：從帳本第二個月一路累積到上個月', () => {
+  it('前 N 個月（預設半年）；沒設起點時不早於帳本第二個月', () => {
     expect(baselineMonths('2026-10', '2026-07')).toEqual(['2026-09', '2026-08']);
-    expect(baselineMonths('2026-10', '2026-01')).toEqual(
+    expect(baselineMonths('2026-10', '2026-01')).toEqual(['2026-09', '2026-08', '2026-07', '2026-06', '2026-05', '2026-04']);
+    expect(baselineMonths('2026-10', '2026-01', null, 3)).toEqual(['2026-09', '2026-08', '2026-07']);
+    expect(baselineMonths('2026-10', '2026-01', null, 12)).toEqual(
       ['2026-09', '2026-08', '2026-07', '2026-06', '2026-05', '2026-04', '2026-03', '2026-02'],
     );
   });
@@ -296,22 +299,24 @@ describe('分析起點與長條圖月數', () => {
     expenses: moved(), targetYm: '2026-10', todayYmd: '2026-11-02', firstYm: '2026-01', ...extra,
   });
 
-  it('平常從起點一路累積：沒設定從 2 月起，設 4 月就不算搬家前', () => {
-    const auto = build();
-    expect(auto.baselineMonths).toHaveLength(8);
-    expect(auto.baselineMonths.at(-1)).toBe('2026-02');
-    const fromApril = build({ startYm: '2026-04' });
-    expect(fromApril.baselineMonths).toEqual(['2026-09', '2026-08', '2026-07', '2026-06', '2026-05', '2026-04']);
-    // 居住 1 萬 × 6 個月；午餐 4–9 月 1,300…1,800 的平均 1,550
-    expect(fromApril.baseline).toBeCloseTo(10000 + 1550, 6);
+  it('平常是前 N 個月的平均：一年碰到帳本第二個月就停，起點設 8 月就只算 8 月以後', () => {
+    const year = build({ chartSpan: 12 });
+    expect(year.baselineMonths).toHaveLength(8);
+    expect(year.baselineMonths.at(-1)).toBe('2026-02');
+    // 居住 2、3 月 3 萬、4–9 月 1 萬；午餐 2–9 月 1,100…1,800 的平均 1,450
+    expect(year.baseline).toBeCloseTo((30000 * 2 + 10000 * 6) / 8 + 1450, 6);
+    // 半年 4–9 月：居住 1 萬、午餐 1,300…1,800 的平均 1,550
+    expect(build().baseline).toBeCloseTo(10000 + 1550, 6);
+    // 一季 7–9 月：午餐 1,600…1,800 的平均 1,700
+    expect(build({ chartSpan: 3 }).baseline).toBeCloseTo(10000 + 1700, 6);
+    const fromAug = build({ startYm: '2026-08', chartSpan: 12 });
+    expect(fromAug.baselineMonths).toEqual(['2026-09', '2026-08']);
   });
 
-  it('起點以前的月份：不算平常，長條圖上標成分析起點之前（不是還沒記帳）', () => {
+  it('長條圖只畫拿來算平常的月份加上正在看的月份：起點以前的不畫', () => {
     const a = build({ startYm: '2026-07' });
-    expect(a.months.map((m) => [m.ym, m.beforeStart, m.beforeRecords])).toEqual([
-      ['2026-05', true, false], ['2026-06', true, false],
-      ['2026-07', false, false], ['2026-08', false, false], ['2026-09', false, false], ['2026-10', false, false],
-    ]);
+    expect(a.months.map((m) => m.ym)).toEqual(['2026-07', '2026-08', '2026-09', '2026-10']);
+    expect(a.categories.find((c) => c.name === '飲食').series).toEqual([1600, 1700, 1800, 1900]);
     expect(a.analysisStartYm).toBe('2026-07');
   });
 
@@ -324,17 +329,16 @@ describe('分析起點與長條圖月數', () => {
     expect(b.isBeforeRecords).toBe(true);
   });
 
-  it('長條圖月數只影響圖表：平常、比例、連續上升都一樣', () => {
+  it('選幾個月：平常、分類的平常、長條數一起換；連續上升照樣數到起點', () => {
     const results = [3, 6, 12].map((chartSpan) => build({ chartSpan }));
-    expect(results.map((a) => a.months.length)).toEqual([3, 6, 12]);
+    // 一年往前推到 2025 年 10 月，但帳本第一個月 1 月不算，從 2 月畫起
+    expect(results.map((a) => a.months.length)).toEqual([4, 7, 9]);
     const lunch = results.map((a) => a.categories.find((c) => c.name === '飲食'));
-    expect(lunch.map((c) => c.series.length)).toEqual([3, 6, 12]);
+    expect(lunch.map((c) => c.series.length)).toEqual([4, 7, 9]);
+    expect(lunch.map((c) => c.usual)).toEqual([1700, 1550, 1450]);
     // 午餐 2 月起每個月都比前一個月多（帳本第一個月 1 月不算）：連續 8 個月上升，選一季也照樣是 8
     expect(lunch.map((c) => c.risingMonths)).toEqual([8, 8, 8]);
-    expect(new Set(results.map((a) => a.baseline)).size).toBe(1);
-    expect(new Set(results.map((a) => a.ratio)).size).toBe(1);
-    // 一年的圖表比開始記帳還早的那兩個月，標成還沒記帳
-    expect(results[2].months.slice(0, 2).map((m) => m.beforeRecords)).toEqual([true, true]);
+    expect(new Set(results.map((a) => a.baseline)).size).toBe(3);
   });
 });
 
@@ -582,10 +586,13 @@ describe('審查後修正的邊界情況', () => {
       tx('2026-05-12', 3000), rent('2026-06-01'), rent('2026-07-01'), rent('2026-08-01'),
       rent('2026-09-01'), rent('2026-10-01'),
     ];
-    // 窗口 5–10 月；房租 6 月起漲價，5 月的 1 萬只比得上窗口外的 2–4 月
+    // 窗口 5–10 月（前 5 個月加上 10 月）；房租 6 月起漲價，5 月的 1 萬只比得上窗口外的 2–4 月
     rows.slice(0, 4).forEach((r) => { r.twdAmount = 10000; });
-    const a = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-11-02', firstYm: '2026-01' });
+    const a = buildSpendingAnalysis({
+      expenses: rows, targetYm: '2026-10', todayYmd: '2026-11-02', firstYm: '2026-01', chartSpan: 5,
+    });
     expect(a.largeItems).toEqual([]);
+    expect(a.months[0].ym).toBe('2026-05');
     expect(a.months[0].daily).toBe(13000);
   });
 });
@@ -618,5 +625,17 @@ describe('月初第一週不推估、不比較', () => {
     const a = buildSpendingAnalysis({ expenses: usual(), targetYm: '2026-09', todayYmd: '2026-10-02', firstYm: '2026-06' });
     expect(a.isEarly).toBe(false);
     expect(a.ratio).toBe(0);
+  });
+});
+
+describe('monthAxisLabels', () => {
+  const labelOf = (ym) => `${Number(ym.slice(5, 7))}月`;
+  it('跨年：第一個月和 1 月下面多一行年份', () => {
+    expect(monthAxisLabels(['2025-11', '2025-12', '2026-01', '2026-02'], labelOf))
+      .toEqual([['11月', '2025'], '12月', ['1月', '2026'], '2月']);
+  });
+  it('同一年內只寫月份', () => {
+    expect(monthAxisLabels(['2026-01', '2026-02', '2026-03'], labelOf)).toEqual(['1月', '2月', '3月']);
+    expect(monthAxisLabels([], labelOf)).toEqual([]);
   });
 });

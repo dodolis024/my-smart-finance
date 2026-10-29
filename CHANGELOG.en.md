@@ -7,8 +7,8 @@ This file records version updates for Smart Finance Tracker.
 - Added a list of this month's large purchases in Spending Analysis, with a threshold amount you can set
 - Added trips to Spending Analysis, showing what each trip cost in total
 - Added a prompt to create a trip when you spend in a foreign currency several days in a row
-- Added choosing which month Spending Analysis starts from, with your usual building up from that month
-- Added a 3-month, 6-month and 1-year switch to the Spending Analysis bar chart
+- Added a 3-month, 6-month and 1-year switch for how Spending Analysis works out your usual, with the bar chart showing those months
+- Added a start month setting to Spending Analysis; months before it are left out of your usual
 - Added arrows to step to the previous or next month in Spending Analysis
 - Fixed charts not switching colors right away when you change the theme
 - Fixed Esc also closing the dialog underneath when one dialog is opened on top of another

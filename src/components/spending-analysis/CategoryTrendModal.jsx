@@ -14,6 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import { formatOriginalMoney } from '@/lib/utils';
+import { monthAxisLabels } from '@/lib/spendingAnalysis';
 import { ChangePill } from '@/components/spending-analysis/CategoryChanges';
 
 ChartJS.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip);
@@ -92,7 +93,7 @@ const valueLabels = {
  * 平常一個月花多少畫成淡灰色虛線當參考，金額滑過圖表時才在提示框裡出現。
  * 交易收在最下面，點了才展開。
  */
-export default function CategoryTrendModal({ category, analysis, labelOf, onClose }) {
+export default function CategoryTrendModal({ category, analysis, labelOf, labelOfYm, onClose }) {
   const { t, lang } = useLanguage();
   const { theme } = useTheme();
   const { toDisplay, formatTotal } = useDisplayAmount();
@@ -113,15 +114,13 @@ export default function CategoryTrendModal({ category, analysis, labelOf, onClos
   }), [theme]); // eslint-disable-line react-hooks/exhaustive-deps -- theme 僅作觸發器，主題切換時需重新讀取 cssVar 顏色
 
   const { months, isCurrent, daysElapsed, targetYm } = analysis;
-  const start = Math.max(months.findIndex((m) => !m.beforeStart), 0);
-  const shown = useMemo(() => months.slice(start), [months, start]);
-  const last = shown.length - 1;
-  const series = useMemo(() => (category ? category.series.slice(start) : []), [category, start]);
+  const last = months.length - 1;
+  const series = useMemo(() => (category ? category.series : []), [category]);
   // 平常一個月；沒有平常可比（帳本剛開始）就不畫
   const usual = category?.usual || null;
 
   const data = useMemo(() => ({
-    labels: shown.map((m) => labelOf(m.ym)),
+    labels: monthAxisLabels(months.map((m) => m.ym), labelOf),
     datasets: [{
       label: name,
       data: series,
@@ -143,7 +142,7 @@ export default function CategoryTrendModal({ category, analysis, labelOf, onClos
       pointRadius: 0,
       pointHoverRadius: 0,
     }] : [])],
-  }), [name, series, shown, last, usual, colors, labelOf]);
+  }), [name, series, months, last, usual, colors, labelOf]);
 
   const yRange = useMemo(() => (series.length ? axisRange(usual ? [...series, usual] : series) : { min: 0 }), [series, usual]);
 
@@ -165,6 +164,7 @@ export default function CategoryTrendModal({ category, analysis, labelOf, onClos
         caretPadding: 32,
         footerFont: { weight: 400 },
         callbacks: {
+          title: (items) => (items.length ? labelOfYm(months[items[0].dataIndex].ym) : ''),
           label: (ctx) => formatTotal(ctx.parsed.y),
           footer: () => (usual ? t('spendingAnalysis.categories.usual', { amount: formatTotal(usual) }) : ''),
         },
@@ -183,6 +183,9 @@ export default function CategoryTrendModal({ category, analysis, labelOf, onClos
         ticks: {
           // 有 $0 的月份，金額標在點下方，月份往下讓出位置
           padding: hasZero ? 24 : 3,
+          // 每個月都寫、不轉斜：寫著年份的那個月才不會被跳過
+          autoSkip: false,
+          maxRotation: 0,
           color: (ctx) => (ctx.index === last ? colors.text : colors.muted),
           font: (ctx) => ({ size: 12, weight: ctx.index === last ? 700 : 400 }),
         },
@@ -197,7 +200,7 @@ export default function CategoryTrendModal({ category, analysis, labelOf, onClos
         ticks: { color: colors.muted, font: { size: 11 }, callback: compact, maxTicksLimit: 6, stepSize: yRange.stepSize },
       },
     },
-  }), [last, colors, formatTotal, yRange, usual, hasZero, t]);
+  }), [months, last, colors, formatTotal, labelOfYm, yRange, usual, hasZero, t]);
 
   if (!category) return null;
 

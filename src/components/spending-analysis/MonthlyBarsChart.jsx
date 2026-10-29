@@ -3,9 +3,6 @@ import {
   Chart as ChartJS,
   BarController,
   BarElement,
-  LineController,
-  LineElement,
-  PointElement,
   CategoryScale,
   LinearScale,
   Tooltip,
@@ -15,9 +12,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import InfoTip from '@/components/spending-analysis/InfoTip';
-import { CHART_SPANS } from '@/lib/spendingAnalysis';
+import { CHART_SPANS, monthAxisLabels } from '@/lib/spendingAnalysis';
 
-ChartJS.register(BarController, BarElement, LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip);
+ChartJS.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip);
 
 function cssVar(name, fallback) {
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -50,15 +47,39 @@ function stripes(background, line) {
   return ctx.createPattern(canvas, 'repeat');
 }
 
-// 起點以前的月份可能讀到了資料（認固定支出用），但不在分析範圍，不開明細
-const canOpen = (m) => !!m && !m.beforeStart && m.dailyTxs.length > 0;
+/**
+ * 「平常」的橫向虛線：直接畫在圖上，不當成一組資料。這樣從圖的最左邊畫到最右邊，
+ * 切換一季／一年時長度不變、也不跑動畫；畫在長條之後，超過平常的長條不會把線蓋住。
+ * 高度與顏色從 options.plugins.usualLine 讀（value 是 null 就不畫）。
+ */
+const usualLinePlugin = {
+  id: 'usualLine',
+  afterDatasetsDraw(chart, _args, opts) {
+    if (opts.value == null) return;
+    const { ctx, chartArea, scales } = chart;
+    // 對齊半個像素，1.5px 的線才不會糊
+    const y = Math.round(scales.y.getPixelForValue(opts.value)) + 0.5;
+    ctx.save();
+    ctx.strokeStyle = opts.color;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(chartArea.left, y);
+    ctx.lineTo(chartArea.right, y);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
+const chartPlugins = [usualLinePlugin];
+
+const canOpen = (m) => !!m && m.dailyTxs.length > 0;
 
 /**
- * 每個月花多少（大額單筆照樣算在長條裡），標題旁可以切換一季／半年／一年。有旅程的月份上面疊一段斜線；
- * 這個月還沒過完時，再疊一段淡色的「月底預估」；「平常」畫成一條橫向虛線。點長條會打開那個月的明細。
- * 分析起點以前的月份不畫長條，滑過時說明原因。
+ * 每個月花多少（大額單筆照樣算在長條裡）：拿來算平常的那幾個月加上正在看的月份。標題旁切換一季／半年／一年，
+ * 平常也跟著換成那幾個月的平均。有旅程的月份上面疊一段斜線；這個月還沒過完時，再疊一段淡色的「月底預估」；
+ * 「平常」畫成一條橫向虛線。點長條會打開那個月的明細。
  */
-export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth, span, onChangeSpan }) {
+export default function MonthlyBarsChart({ analysis, labelOf, labelOfYm, onSelectMonth, span, onChangeSpan }) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const { formatTotal } = useDisplayAmount();
@@ -79,7 +100,7 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth, spa
       {
         type: 'bar',
         label: t('spendingAnalysis.chart.everyday'),
-        data: months.map((m) => (m.beforeStart ? null : m.daily)),
+        data: months.map((m) => m.daily),
         backgroundColor: months.map((_, i) => (i === last ? colors.primary : colors.tint)),
         borderRadius: 4,
         stack: 'spend',
@@ -92,7 +113,7 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth, spa
       datasets.push({
         type: 'bar',
         label: t('spendingAnalysis.chart.trip'),
-        data: months.map((m) => (m.beforeStart || !m.trip ? null : m.trip)),
+        data: months.map((m) => (m.trip ? m.trip : null)),
         backgroundColor: months.map((_, i) => (i === last ? current : other)),
         borderColor: months.map((_, i) => (i === last ? colors.primary : colors.tint)),
         borderWidth: 1,
@@ -116,21 +137,8 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth, spa
         maxBarThickness: 48,
       });
     }
-    if (baseline != null) {
-      datasets.push({
-        type: 'line',
-        label: t('spendingAnalysis.chart.usual'),
-        data: months.map(() => baseline),
-        borderColor: colors.text,
-        borderDash: [5, 4],
-        borderWidth: 1.5,
-        pointRadius: 0,
-        pointHoverRadius: 0,
-        stack: 'usual',
-      });
-    }
-    return { labels: months.map((m) => labelOf(m.ym)), datasets };
-  }, [months, last, isCurrent, isEarly, projected, toDate, baseline, colors, labelOf, t]);
+    return { labels: monthAxisLabels(months.map((m) => m.ym), labelOf), datasets };
+  }, [months, last, isCurrent, isEarly, projected, toDate, colors, labelOf, t]);
 
   const options = useMemo(() => ({
     responsive: true,
@@ -150,26 +158,29 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth, spa
       legend: { display: false },
       tooltip: {
         callbacks: {
+          // 橫軸只在換年的地方寫年份，提示框一律寫完整的年月
+          title: (items) => (items.length ? labelOfYm(months[items[0].dataIndex].ym) : ''),
           label: (ctx) => {
             if (ctx.parsed.y == null) return null;
             // 預估那段只是疊在上面的差額，提示框直接講預估的總數比較好懂
             const value = ctx.dataset.isProjection ? projected : ctx.parsed.y;
             return ` ${ctx.dataset.label}: ${formatTotal(value)}`;
           },
-          afterBody: (items) => {
-            const m = months[items[0]?.dataIndex];
-            if (!m?.beforeStart) return [];
-            return [t(m.beforeRecords ? 'spendingAnalysis.chart.beforeStart' : 'spendingAnalysis.chart.beforeAnalysis')];
-          },
+          // 虛線不是一組資料，平常多少另外接在各段金額後面
+          afterBody: () => (baseline == null ? [] : [` ${t('spendingAnalysis.chart.usual')}: ${formatTotal(baseline)}`]),
           footer: (items) => (canOpen(months[items[0]?.dataIndex]) ? t('spendingAnalysis.chart.clickHint') : ''),
         },
       },
+      usualLine: { value: baseline, color: colors.text },
     },
     scales: {
       x: {
         stacked: true,
         grid: { display: false },
         ticks: {
+          // 一年有 13 根：不准 Chart.js 自己跳著顯示或轉斜，不然寫著年份的那個月可能被跳過
+          autoSkip: false,
+          maxRotation: 0,
           color: (ctx) => (ctx.index === last ? colors.text : colors.muted),
           font: (ctx) => ({ size: 12, weight: ctx.index === last ? 700 : 400 }),
         },
@@ -177,12 +188,14 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth, spa
       y: {
         stacked: true,
         beginAtZero: true,
+        // 平常比每根長條都高時，刻度也要容得下那條虛線
+        suggestedMax: baseline ?? undefined,
         grid: { color: colors.grid },
         border: { display: false },
         ticks: { color: colors.muted, font: { size: 10 }, callback: compact, maxTicksLimit: 5 },
       },
     },
-  }), [months, last, projected, colors, formatTotal, onSelectMonth, t]);
+  }), [months, last, projected, baseline, colors, formatTotal, labelOfYm, onSelectMonth, t]);
 
   const legends = [
     months.some((m) => m.trip > 0) && t('spendingAnalysis.chart.legendTrip'),
@@ -215,7 +228,7 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth, spa
         </div>
       </div>
       <div className="analysis-chart__canvas">
-        <Chart type="bar" data={data} options={options} />
+        <Chart type="bar" data={data} options={options} plugins={chartPlugins} />
       </div>
     </section>
   );
