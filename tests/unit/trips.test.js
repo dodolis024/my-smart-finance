@@ -204,15 +204,15 @@ describe('旅程對消費分析的影響', () => {
     expect(a.largeItems).toEqual([]);
   });
 
-  it('月中正在旅行：旅程照實際金額算一次，跟平常同期比', () => {
+  it('月中正在旅行：旅程照實際金額算一次，直接跟平常整個月比', () => {
     const a = buildSpendingAnalysis({ ...base, targetYm: '2026-09', todayYmd: '2026-09-25' });
-    // 平常 7、8 月都在 1–10 號花完 → 同期 1 萬、之後 0
-    expect(a.baselineToDate).toBe(10000);
-    expect(a.projected).toBe(30000);
+    // 平常 7、8 月各 1 萬；9 月到目前日常 1 萬＋旅程 2 萬
+    expect(a.baseline).toBe(10000);
+    expect(a.toDate).toBe(30000);
     expect(a.ratio).toBeCloseTo(2);
   });
 
-  it('剛旅行回來：旅程不放大，月底預估 = 已經花的 + 平常之後會花的', () => {
+  it('剛旅行回來：旅程不放大，就是實際花的', () => {
     // 10/1–10/10 旅行每天 5,000；10/11–10/15 日常每天 1,000；今天 10/15
     const tripRows = Array.from({ length: 10 }, (_, i) => tx(`2026-10-${String(i + 1).padStart(2, '0')}`, 5000, { itemName: `trip${i}` }));
     const home = Array.from({ length: 5 }, (_, i) => tx(`2026-10-${11 + i}`, 1000, { itemName: `home${i}` }));
@@ -220,7 +220,7 @@ describe('旅程對消費分析的影響', () => {
     const all = [...daily('2026-07'), ...daily('2026-08'), ...tripRows, ...home];
     const a = buildSpendingAnalysis({ expenses: all, firstYm: '2026-06', tripOf: buildTripIndex([t2], all), targetYm: '2026-10', todayYmd: '2026-10-15' });
     expect(a.toDate).toBe(55000);
-    expect(a.projected).toBe(55000);
+    expect(a.ratio).toBeCloseTo(55000 / 10000 - 1);
   });
 
   it('同月有很大的旅程支出，其他大筆照樣標成大額', () => {

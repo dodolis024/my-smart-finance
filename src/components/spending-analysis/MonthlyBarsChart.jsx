@@ -76,14 +76,14 @@ const canOpen = (m) => !!m && m.dailyTxs.length > 0;
 
 /**
  * 每個月花多少（大額單筆照樣算在長條裡）：拿來算平常的那幾個月加上正在看的月份。標題旁切換一季／半年／一年，
- * 平常也跟著換成那幾個月的平均。有旅程的月份上面疊一段斜線；這個月還沒過完時，再疊一段淡色的「月底預估」；
+ * 平常也跟著換成那幾個月的平均。有旅程的月份上面疊一段斜線；這個月還沒過完就畫到目前為止花的；
  * 「平常」畫成一條橫向虛線。點長條會打開那個月的明細。
  */
 export default function MonthlyBarsChart({ analysis, labelOf, labelOfYm, onSelectMonth, span, onChangeSpan }) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const { formatTotal } = useDisplayAmount();
-  const { months, isCurrent, isEarly, projected, toDate, baseline } = analysis;
+  const { months, baseline } = analysis;
   const last = months.length - 1;
 
   const colors = useMemo(() => ({
@@ -122,23 +122,8 @@ export default function MonthlyBarsChart({ analysis, labelOf, labelOfYm, onSelec
         maxBarThickness: 48,
       });
     }
-    // 月初資料太少不推估，只畫到目前為止的金額
-    if (isCurrent && !isEarly) {
-      datasets.push({
-        type: 'bar',
-        label: t('spendingAnalysis.chart.projected'),
-        data: months.map((_, i) => (i === last ? Math.max(0, projected - toDate) : null)),
-        isProjection: true,
-        backgroundColor: colors.tintLight,
-        borderColor: colors.primary,
-        borderWidth: 1,
-        borderRadius: 4,
-        stack: 'spend',
-        maxBarThickness: 48,
-      });
-    }
     return { labels: monthAxisLabels(months.map((m) => m.ym), labelOf), datasets };
-  }, [months, last, isCurrent, isEarly, projected, toDate, colors, labelOf, t]);
+  }, [months, last, colors, labelOf, t]);
 
   const options = useMemo(() => ({
     responsive: true,
@@ -160,12 +145,7 @@ export default function MonthlyBarsChart({ analysis, labelOf, labelOfYm, onSelec
         callbacks: {
           // 橫軸只在換年的地方寫年份，提示框一律寫完整的年月
           title: (items) => (items.length ? labelOfYm(months[items[0].dataIndex].ym) : ''),
-          label: (ctx) => {
-            if (ctx.parsed.y == null) return null;
-            // 預估那段只是疊在上面的差額，提示框直接講預估的總數比較好懂
-            const value = ctx.dataset.isProjection ? projected : ctx.parsed.y;
-            return ` ${ctx.dataset.label}: ${formatTotal(value)}`;
-          },
+          label: (ctx) => (ctx.parsed.y == null ? null : ` ${ctx.dataset.label}: ${formatTotal(ctx.parsed.y)}`),
           // 虛線不是一組資料，平常多少另外接在各段金額後面
           afterBody: () => (baseline == null ? [] : [` ${t('spendingAnalysis.chart.usual')}: ${formatTotal(baseline)}`]),
           footer: (items) => (canOpen(months[items[0]?.dataIndex]) ? t('spendingAnalysis.chart.clickHint') : ''),
@@ -195,11 +175,10 @@ export default function MonthlyBarsChart({ analysis, labelOf, labelOfYm, onSelec
         ticks: { color: colors.muted, font: { size: 10 }, callback: compact, maxTicksLimit: 5 },
       },
     },
-  }), [months, last, projected, baseline, colors, formatTotal, labelOfYm, onSelectMonth, t]);
+  }), [months, last, baseline, colors, formatTotal, labelOfYm, onSelectMonth, t]);
 
   const legends = [
     months.some((m) => m.trip > 0) && t('spendingAnalysis.chart.legendTrip'),
-    isCurrent && !isEarly && projected > toDate && t('spendingAnalysis.chart.legendProjected'),
     baseline != null && t('spendingAnalysis.chart.legendUsual'),
   ].filter(Boolean);
   // 英文的圖例是從句子中間拆出來的小寫片段，自己成一句時首字母大寫

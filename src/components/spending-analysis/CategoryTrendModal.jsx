@@ -206,11 +206,7 @@ export default function CategoryTrendModal({ category, analysis, labelOf, labelO
 
   const [, monthNum] = targetYm.split('-').map(Number);
   const range = isCurrent ? `${monthNum}/1 – ${monthNum}/${daysElapsed}` : labelOf(targetYm);
-  const compareText = category.baseline == null
-    ? null
-    : isCurrent && !analysis.isEarly
-      ? t('spendingAnalysis.categories.usualToDate', { amount: formatTotal(category.baseline) })
-      : t('spendingAnalysis.categories.usual', { amount: formatTotal(category.usual) });
+  const compareText = category.usual == null ? null : t('spendingAnalysis.categories.usual', { amount: formatTotal(category.usual) });
   const sep = lang === 'en' ? ' · ' : '・';
   const txs = [...category.txs].sort((a, b) => `${b.date} ${b.time || ''}`.localeCompare(`${a.date} ${a.time || ''}`));
   const dateOf = (tx) => {

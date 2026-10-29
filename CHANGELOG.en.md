@@ -2,13 +2,14 @@
 
 This file records version updates for Smart Finance Tracker.
 
-- Added a desktop Spending Analysis page comparing this month with the same days of a usual month, and showing which categories drive the difference
+- Added a desktop Spending Analysis page comparing this month with your usual month, and showing which categories drive the difference
 - Added a line chart of a category's recent months when you open it in Spending Analysis
 - Added a list of this month's large purchases in Spending Analysis, with a threshold amount you can set
 - Added trips to Spending Analysis, showing what each trip cost in total
 - Added a prompt to create a trip when you spend in a foreign currency several days in a row
 - Added a 3-month, 6-month and 1-year switch for how Spending Analysis works out your usual, with the bar chart showing those months
 - Added a start month setting to Spending Analysis; months before it are left out of your usual
+- Added last year's spending for the same month to Spending Analysis
 - Added arrows to step to the previous or next month in Spending Analysis
 - Improved dropdown arrows to be slightly smaller, and no longer touching the border in Settings
 - Fixed the missing dropdown arrows in the account form

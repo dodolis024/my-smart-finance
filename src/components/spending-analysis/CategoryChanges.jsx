@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
-import { EARLY_MONTH_DAYS } from '@/lib/spendingAnalysis';
 import InfoTip from '@/components/spending-analysis/InfoTip';
 
 const COLLAPSED_COUNT = 6;
 const SPARK_W = 72;
 const SPARK_H = 24;
 
-/** 分類的小走勢線：最後一點是這個月（還沒過完時用推估值，那一段畫虛線，免得看起來像在下滑） */
-function Sparkline({ values, lastIsEstimate }) {
+/** 分類的小走勢線：最後一點是這個月實際花的（還沒過完就是到目前為止） */
+function Sparkline({ values }) {
   if (values.length < 2) return <span className="analysis-spark" />;
   const max = Math.max(...values);
   const min = Math.min(...values);
@@ -17,14 +16,10 @@ function Sparkline({ values, lastIsEstimate }) {
     (i / (values.length - 1)) * (SPARK_W - 6) + 3,
     SPARK_H - 3 - ((v - min) / (max - min || 1)) * (SPARK_H - 6),
   ]);
-  const solid = lastIsEstimate ? pts.slice(0, -1) : pts;
   const [lx, ly] = pts[pts.length - 1];
   return (
     <svg className="analysis-spark" width={SPARK_W} height={SPARK_H} aria-hidden="true">
-      {solid.length > 1 && <polyline points={solid.map((p) => p.join(',')).join(' ')} />}
-      {lastIsEstimate && (
-        <line x1={pts[pts.length - 2][0]} y1={pts[pts.length - 2][1]} x2={lx} y2={ly} strokeDasharray="3 3" />
-      )}
+      <polyline points={pts.map((p) => p.join(',')).join(' ')} />
       <circle cx={lx} cy={ly} r="2.5" />
     </svg>
   );
@@ -52,9 +47,7 @@ export default function CategoryChanges({ analysis, onSelectCategory }) {
   const { t } = useLanguage();
   const { formatTotal } = useDisplayAmount();
   const [expanded, setExpanded] = useState(false);
-  const { categories, isCurrent, isEarly, baseline } = analysis;
-  // 這個月還沒過完：跟平常同期比，走勢線最後一點用月底預估（虛線）；月初還不比，走勢線只畫到上個月
-  const estimating = isCurrent && !isEarly;
+  const { categories, baseline } = analysis;
   const rows = expanded ? categories : categories.slice(0, COLLAPSED_COUNT);
 
   const subline = (cat) => {
@@ -63,32 +56,20 @@ export default function CategoryChanges({ analysis, onSelectCategory }) {
     }
     if (baseline == null) return null;
     if (!cat.usual) return <span className="analysis-cat__sub">{t('spendingAnalysis.categories.new')}</span>;
-    return (
-      <span className="analysis-cat__sub">
-        {estimating
-          ? t('spendingAnalysis.categories.usualToDate', { amount: formatTotal(cat.baseline) })
-          : t('spendingAnalysis.categories.usual', { amount: formatTotal(cat.usual) })}
-      </span>
-    );
+    return <span className="analysis-cat__sub">{t('spendingAnalysis.categories.usual', { amount: formatTotal(cat.usual) })}</span>;
   };
 
   return (
     <section className={`analysis-card analysis-cats${expanded ? ' is-expanded' : ''}`}>
       <h3 className="analysis-card__title">
         {t('spendingAnalysis.categories.title')}
-        <InfoTip>
-          {isEarly
-            ? t('spendingAnalysis.categories.subtitleEarly', { day: EARLY_MONTH_DAYS })
-            : t('spendingAnalysis.categories.subtitle')}
-        </InfoTip>
+        <InfoTip>{t('spendingAnalysis.categories.subtitle')}</InfoTip>
       </h3>
       {categories.length === 0 ? (
         <p className="analysis-empty">{t('spendingAnalysis.categories.empty')}</p>
       ) : (
         <ul className="analysis-cat-list">
           {rows.map((cat) => {
-            const trend = cat.series.slice(0, isEarly ? -1 : undefined);
-            if (estimating && trend.length) trend[trend.length - 1] = cat.projected;
             return (
               <li key={cat.name}>
                 <button
@@ -101,8 +82,8 @@ export default function CategoryChanges({ analysis, onSelectCategory }) {
                     <span className="analysis-cat__name">{cat.name}</span>
                     {subline(cat)}
                   </span>
-                  <Sparkline values={trend} lastIsEstimate={estimating} />
-                  {/* 一律顯示實際花的，跟點進去的明細加起來一樣；還沒過完的月份，百分比是跟平常同期比 */}
+                  <Sparkline values={cat.series} />
+                  {/* 一律顯示實際花的，跟點進去的明細加起來一樣；百分比直接跟平常整個月比 */}
                   <span className="analysis-cat__amount">{formatTotal(cat.current)}</span>
                   <ChangePill ratio={cat.ratio} />
                 </button>

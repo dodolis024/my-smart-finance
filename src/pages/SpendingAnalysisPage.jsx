@@ -19,7 +19,6 @@ import {
   thresholdFromInput,
   thresholdForDisplay,
   baselineStartOf,
-  EARLY_MONTH_DAYS,
 } from '@/lib/spendingAnalysis';
 import { buildTripIndex, summarizeTrips, suggestTrips } from '@/lib/trips';
 import { getTodayYmd } from '@/lib/utils';
@@ -63,7 +62,6 @@ function headlineText(a, monthName, startName, t) {
   if (a.isFuture) return t('spendingAnalysis.headline.future', { month: monthName });
   if (a.isBeforeRecords) return t('spendingAnalysis.headline.beforeStart', { month: monthName });
   if (a.isBeforeStart) return t('spendingAnalysis.headline.beforeAnalysis', { month: monthName, start: startName });
-  if (a.isEarly && a.baseline != null) return t('spendingAnalysis.headline.early', { day: EARLY_MONTH_DAYS });
   if (a.ratio == null) return t('spendingAnalysis.headline.noBaseline');
   const tense = a.isCurrent ? 'Current' : 'Past';
   const percent = Math.round(Math.abs(a.ratio) * 100);
@@ -83,7 +81,7 @@ function headlineText(a, monthName, startName, t) {
 }
 
 /** info：這張卡怎麼算的，收在標題旁的小 i；sub、notes 是畫面上直接顯示的日期與金額 */
-function KpiCard({ label, info, value, pill, sub, notes = [], tone }) {
+function KpiCard({ label, info, value, pill, sub, notes = [] }) {
   return (
     <div className="analysis-kpi">
       <span className="analysis-kpi__label">
@@ -91,7 +89,7 @@ function KpiCard({ label, info, value, pill, sub, notes = [], tone }) {
         {info && <InfoTip>{info}</InfoTip>}
       </span>
       <span className="analysis-kpi__value-row">
-        <span className={`analysis-kpi__value${tone ? ` is-${tone}` : ''}`}>{value}</span>
+        <span className="analysis-kpi__value">{value}</span>
         {pill}
       </span>
       {sub && <span className="analysis-kpi__sub">{sub}</span>}
@@ -259,8 +257,6 @@ function SpendingAnalysisContent() {
     setPeriod({ granularity: 'month', year: y, month: m });
   };
   const showBody = !loading && !error && a.hasAnyData && !a.isFuture && !a.isBeforeStart;
-  // 這個月還沒過完：結論、分類都跟「平常同期」比（月初還不比，照樣顯示整個月的平常）
-  const toDateCompare = a.isCurrent && !a.isEarly && a.baseline != null;
   // 大額單筆照樣算在金額裡，卡片上只提一句有幾筆
   const largeNote = a.largeItems.length > 0
     ? t(a.isCurrent ? 'spendingAnalysis.kpi.largeCount' : 'spendingAnalysis.kpi.largeCountPast', {
@@ -330,11 +326,7 @@ function SpendingAnalysisContent() {
             {headlineText(a, monthName, a.analysisStartYm && labelOfYm(a.analysisStartYm), t)}
             {/* 「平常」怎麼算的收在小 i 裡，畫面上只留結論 */}
             {showBody && a.baseline != null && (
-              <InfoTip>
-                {toDateCompare
-                  ? t('spendingAnalysis.headline.noteToDate', { since, count: a.baselineMonths.length, day: a.daysElapsed })
-                  : t('spendingAnalysis.headline.note', { since, count: a.baselineMonths.length })}
-              </InfoTip>
+              <InfoTip>{t('spendingAnalysis.headline.note', { since, count: a.baselineMonths.length })}</InfoTip>
             )}
           </p>
           {showBody && coveredFromYm && (
@@ -351,54 +343,24 @@ function SpendingAnalysisContent() {
             <KpiCard
               label={a.isCurrent ? t('spendingAnalysis.kpi.toDate') : t('spendingAnalysis.kpi.monthTotal', { month: monthName })}
               value={formatTotal(a.toDate)}
-              // 跟旁邊那張（平常同期／平常）比，跟分類清單同一個標記
+              // 不管這個月過完了沒，都直接跟平常整個月比，跟分類清單同一個標記
               pill={a.ratio != null && <ChangePill ratio={a.ratio} />}
               sub={`${monthNum}/1 – ${monthNum}/${a.daysElapsed}`}
               notes={[tripNote, largeNote]}
             />
-            {toDateCompare ? (
-              <KpiCard
-                label={t('spendingAnalysis.kpi.baselineToDate')}
-                value={formatTotal(a.baselineToDate)}
-                info={t('spendingAnalysis.kpi.baselineToDateSub', {
-                  since,
-                  count: a.baselineMonths.length,
-                  day: a.daysElapsed,
-                })}
-                notes={[t('spendingAnalysis.kpi.baselineMonthNote', { amount: formatTotal(a.baseline) })]}
-              />
-            ) : (
-              <KpiCard
-                label={t('spendingAnalysis.kpi.baseline')}
-                value={a.baseline == null ? '—' : formatTotal(a.baseline)}
-                info={a.baseline != null
-                  && t('spendingAnalysis.kpi.baselineSub', { since, count: a.baselineMonths.length })}
-                sub={a.baseline == null ? t('spendingAnalysis.kpi.baselineNone') : null}
-              />
-            )}
-            {a.isEarly ? (
-              <KpiCard
-                label={t('spendingAnalysis.kpi.projected')}
-                value="—"
-                sub={t('spendingAnalysis.kpi.projectedEarly', { day: EARLY_MONTH_DAYS })}
-              />
-            ) : a.isCurrent ? (
-              <KpiCard
-                label={t('spendingAnalysis.kpi.projected')}
-                value={formatTotal(a.projected)}
-                info={a.daysElapsed < a.daysInMonth
-                  ? t('spendingAnalysis.kpi.projectedSub', { from: a.daysElapsed + 1, to: a.daysInMonth })
-                  : t('spendingAnalysis.kpi.projectedSubLast')}
-                tone={a.ratio != null && a.ratio >= SAME_AS_USUAL ? 'up' : null}
-              />
-            ) : (
-              <KpiCard
-                label={t('spendingAnalysis.kpi.vsBaseline')}
-                value={a.baseline == null ? '—' : formatTotal(a.projected - a.baseline, { prefix: a.projected >= a.baseline ? '+' : '' })}
-                info={t('spendingAnalysis.kpi.vsBaselineSub')}
-                tone={a.ratio != null && a.ratio >= SAME_AS_USUAL ? 'up' : null}
-              />
-            )}
+            <KpiCard
+              label={t('spendingAnalysis.kpi.baseline')}
+              value={a.baseline == null ? '—' : formatTotal(a.baseline)}
+              info={a.baseline != null
+                && t('spendingAnalysis.kpi.baselineSub', { since, count: a.baselineMonths.length })}
+              sub={a.baseline == null ? t('spendingAnalysis.kpi.baselineNone') : null}
+            />
+            {/* 去年這個月整個月花多少：看季節性（年底、過年本來就花比較多）；只列金額，自己對照 */}
+            <KpiCard
+              label={t('spendingAnalysis.kpi.lastYear')}
+              value={a.lastYear ? formatTotal(a.lastYear.total) : '—'}
+              sub={a.lastYear ? labelOfYm(a.lastYear.ym) : t('spendingAnalysis.kpi.lastYearNone')}
+            />
           </div>
 
           <div className="analysis-grid">

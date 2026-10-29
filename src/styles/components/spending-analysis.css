@@ -188,10 +188,6 @@
   gap: var(--space-xs) var(--space-sm);
 }
 
-.analysis-kpi__value.is-up {
-  color: var(--color-danger);
-}
-
 .analysis-kpi__sub,
 .analysis-kpi__note {
   font-size: 0.8125rem;
