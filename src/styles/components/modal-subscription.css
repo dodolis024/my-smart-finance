@@ -255,6 +255,14 @@
   transition: var(--transition);
   box-sizing: border-box;
 }
+/* 下拉選單：瀏覽器內建的箭頭會貼著框線，換成主題的箭頭、右邊留空間 */
+.subscription-form__select {
+  padding-right: 2.25rem;
+  background: var(--color-card) var(--select-arrow) right 0.75rem center / 12px no-repeat;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
 .subscription-form__input:focus,
 .subscription-form__select:focus {
   outline: none;

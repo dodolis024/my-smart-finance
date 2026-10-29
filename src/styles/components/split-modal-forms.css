@@ -111,7 +111,7 @@ body.calc-keypad-open .split-modal__dialog {
   border-radius: 9px;
   font-size: 0.9rem;
   color: var(--color-text);
-  background: var(--color-bg) var(--select-arrow) right 0.6rem center / 16px no-repeat;
+  background: var(--color-bg) var(--select-arrow) right 0.6rem center / 12px no-repeat;
   appearance: none;
   outline: none;
   cursor: pointer;

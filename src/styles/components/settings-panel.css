@@ -59,17 +59,22 @@
   color: var(--color-text);
 }
 
+/* 瀏覽器內建的箭頭會貼著框線：跟記帳表單一樣換成主題的箭頭、右邊留空間 */
 .settings-currency__select {
   flex: 0 0 auto;
   min-width: 120px;
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--color-border-input);
-  background: var(--color-card);
   color: var(--color-text);
   font-size: 0.9rem;
   transition: var(--transition);
   box-sizing: border-box;
+  padding-right: 2.25rem;
+  background: var(--color-card) var(--select-arrow) right 0.75rem center / 12px no-repeat;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
 }
 
 .settings-currency__select:focus {

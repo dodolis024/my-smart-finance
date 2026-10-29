@@ -180,7 +180,7 @@
   background-image: var(--select-arrow);
   background-repeat: no-repeat;
   background-position: right 0.5rem center;
-  background-size: 1rem;
+  background-size: 12px;
   -webkit-appearance: none;
   appearance: none;
   cursor: pointer;

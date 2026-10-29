@@ -171,6 +171,15 @@
   color: var(--color-text);
 }
 
+/* 下拉選單：上面的 background 簡寫會把 form.css 的箭頭蓋掉，這裡補回主題的箭頭、右邊留空間 */
+.account-form .form-group select {
+  padding-right: 2.25rem;
+  background: var(--color-card) var(--select-arrow) right 0.75rem center / 12px no-repeat;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
 /* 範例提示（如手續費的 1.5）要淡到一看就知道不是已填的值；瀏覽器預設的灰太接近輸入文字 */
 .account-form .form-group input::placeholder {
   color: var(--color-text-muted);

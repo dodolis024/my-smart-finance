@@ -601,7 +601,7 @@
 /* 下拉選單：瀏覽器內建的箭頭會貼著框線，跟記帳表單一樣換成主題的箭頭、右邊留空間 */
 select.analysis-input {
   padding-right: 2.25rem;
-  background: var(--color-card) var(--select-arrow) right 0.75rem center / 16px no-repeat;
+  background: var(--color-card) var(--select-arrow) right 0.75rem center / 12px no-repeat;
   -webkit-appearance: none;
   appearance: none;
   cursor: pointer;
