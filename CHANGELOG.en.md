@@ -7,6 +7,8 @@ This file records version updates for Smart Finance Tracker.
 - Added large one-off items such as tuition being listed separately in Spending Analysis, with the option to include each one
 - Added trips to Spending Analysis, showing what each trip cost in total and leaving trip spending out of your usual
 - Added a prompt to create a trip when you spend in a foreign currency several days in a row
+- Fixed charts not switching colors right away when you change the theme
+- Fixed Esc also closing the dialog underneath when one dialog is opened on top of another
 - Fixed the pie chart and payment breakdown briefly showing the wrong content when returning to the dashboard from another page
 
 ## [1.33.0] - Oct-27 2026

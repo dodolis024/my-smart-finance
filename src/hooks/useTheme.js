@@ -109,6 +109,8 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   const setTheme = (t) => {
+    // 先套到 <html> 再更新 state：圖表在 render 時讀 CSS 變數取色，等 effect 才套的話會讀到舊主題的顏色
+    applyTheme(t);
     setThemeState(t);
     writeStorage(STORAGE_KEY, t);
   };

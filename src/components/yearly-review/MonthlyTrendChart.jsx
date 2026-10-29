@@ -84,6 +84,8 @@ export default function MonthlyTrendChart({ data = [], loading, forExport = fals
     responsive: true,
     maintainAspectRatio: false,
     animation: forExport ? false : undefined,
+    // 換主題時的換色跟頁面其他元素的轉場一樣 0.2 秒（Chart.js 預設 1 秒）
+    animations: { colors: { duration: 200 } },
     interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: {

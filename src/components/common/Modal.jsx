@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
+// 目前開著的彈窗，越後面越上層
+const openStack = [];
+
 export default function Modal({ isOpen, onClose, className = '', titleId, children }) {
   const overlayRef = useRef(null);
   const openedAtRef = useRef(0);
@@ -33,14 +36,24 @@ export default function Modal({ isOpen, onClose, className = '', titleId, childr
     return () => { if (closingTimerRef.current) clearTimeout(closingTimerRef.current); };
   }, []);
 
+  // onClose 每次重繪都可能是新的函式；放 ref，開著的期間不用重新排進堆疊
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!isOpen) return;
+    const token = {};
+    openStack.push(token);
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      // 疊了好幾層（例如明細上再開交易詳情），Esc 只關最上面那層
+      if (e.key === 'Escape' && openStack[openStack.length - 1] === token) onCloseRef.current();
     };
     document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [isOpen, onClose]);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      openStack.splice(openStack.indexOf(token), 1);
+    };
+  }, [isOpen]);
 
   // Render if open (immediate, no extra render cycle) OR if in closing fade-out
   if (!isOpen && !closingVisible) return null;
