@@ -14,6 +14,8 @@ import { Chart } from 'react-chartjs-2';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
+import InfoTip from '@/components/spending-analysis/InfoTip';
+import { CHART_SPANS } from '@/lib/spendingAnalysis';
 
 ChartJS.register(BarController, BarElement, LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip);
 
@@ -48,11 +50,15 @@ function stripes(background, line) {
   return ctx.createPattern(canvas, 'repeat');
 }
 
+// 起點以前的月份可能讀到了資料（認固定支出用），但不在分析範圍，不開明細
+const canOpen = (m) => !!m && !m.beforeStart && m.dailyTxs.length > 0;
+
 /**
- * 近 6 個月的日常支出長條（不含大額單筆）。有旅程的月份上面疊一段斜線；這個月還沒過完時，
- * 再疊一段淡色的「月底預估」；「平常」（不含旅程）畫成一條橫向虛線。點長條會打開那個月的明細。
+ * 每個月花多少（大額單筆照樣算在長條裡），標題旁可以切換一季／半年／一年。有旅程的月份上面疊一段斜線；
+ * 這個月還沒過完時，再疊一段淡色的「月底預估」；「平常」畫成一條橫向虛線。點長條會打開那個月的明細。
+ * 分析起點以前的月份不畫長條，滑過時說明原因。
  */
-export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth }) {
+export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth, span, onChangeSpan }) {
   const { t } = useLanguage();
   const { theme } = useTheme();
   const { formatTotal } = useDisplayAmount();
@@ -134,11 +140,11 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth }) {
     interaction: { mode: 'index', intersect: false },
     onClick: (_, elements) => {
       const index = elements[0]?.index;
-      if (index != null && months[index]?.dailyTxs.length) onSelectMonth(months[index]);
+      if (index != null && canOpen(months[index])) onSelectMonth(months[index]);
     },
     onHover: (event, elements) => {
       const index = elements[0]?.index;
-      event.native.target.style.cursor = index != null && months[index]?.dailyTxs.length ? 'pointer' : 'default';
+      event.native.target.style.cursor = index != null && canOpen(months[index]) ? 'pointer' : 'default';
     },
     plugins: {
       legend: { display: false },
@@ -152,11 +158,10 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth }) {
           },
           afterBody: (items) => {
             const m = months[items[0]?.dataIndex];
-            if (!m) return [];
-            if (m.beforeStart) return [t('spendingAnalysis.chart.beforeStart')];
-            return m.large > 0 ? [` ${t('spendingAnalysis.chart.large')}: ${formatTotal(m.large)}`] : [];
+            if (!m?.beforeStart) return [];
+            return [t(m.beforeRecords ? 'spendingAnalysis.chart.beforeStart' : 'spendingAnalysis.chart.beforeAnalysis')];
           },
-          footer: (items) => (months[items[0]?.dataIndex]?.dailyTxs.length ? t('spendingAnalysis.chart.clickHint') : ''),
+          footer: (items) => (canOpen(months[items[0]?.dataIndex]) ? t('spendingAnalysis.chart.clickHint') : ''),
         },
       },
     },
@@ -184,16 +189,31 @@ export default function MonthlyBarsChart({ analysis, labelOf, onSelectMonth }) {
     isCurrent && !isEarly && projected > toDate && t('spendingAnalysis.chart.legendProjected'),
     baseline != null && t('spendingAnalysis.chart.legendUsual'),
   ].filter(Boolean);
-  const subtitle = t('spendingAnalysis.chart.subtitle', {
-    large: t(analysis.largeItems.some((item) => item.included) ? 'spendingAnalysis.largeWordSome' : 'spendingAnalysis.largeWord'),
-  }) + (legends.length ? t('spendingAnalysis.chart.legendSep') + legends.join(t('spendingAnalysis.chart.legendJoin')) : '');
+  // 英文的圖例是從句子中間拆出來的小寫片段，自己成一句時首字母大寫
+  const legendText = legends.join(t('spendingAnalysis.chart.legendJoin'));
+  const legendSentence = legendText.charAt(0).toUpperCase() + legendText.slice(1);
 
   return (
     <section className="analysis-card analysis-chart">
-      <h3 className="analysis-card__title">{t('spendingAnalysis.chart.title')}</h3>
-      <p className="analysis-card__subtitle">
-        {subtitle}
-      </p>
+      <div className="analysis-chart__head">
+        <h3 className="analysis-card__title">
+          {t('spendingAnalysis.chart.title')}
+          {legends.length > 0 && <InfoTip>{legendSentence}</InfoTip>}
+        </h3>
+        <div className="analysis-segment" role="group" aria-label={t('spendingAnalysis.chart.spanLabel')}>
+          {CHART_SPANS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={`analysis-segment__btn${n === span ? ' is-active' : ''}`}
+              aria-pressed={n === span}
+              onClick={() => onChangeSpan(n)}
+            >
+              {t(`spendingAnalysis.chart.span${n}`)}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="analysis-chart__canvas">
         <Chart type="bar" data={data} options={options} />
       </div>

@@ -4,9 +4,12 @@ This file records version updates for Smart Finance Tracker.
 
 - Added a desktop Spending Analysis page comparing this month with the same days of a usual month, and showing which categories drive the difference
 - Added a line chart of a category's recent months when you open it in Spending Analysis
-- Added large one-off items such as tuition being listed separately in Spending Analysis, with the option to include each one
-- Added trips to Spending Analysis, showing what each trip cost in total and leaving trip spending out of your usual
+- Added a list of this month's large purchases in Spending Analysis, with a threshold amount you can set
+- Added trips to Spending Analysis, showing what each trip cost in total
 - Added a prompt to create a trip when you spend in a foreign currency several days in a row
+- Added choosing which month Spending Analysis starts from, with your usual building up from that month
+- Added a 3-month, 6-month and 1-year switch to the Spending Analysis bar chart
+- Added arrows to step to the previous or next month in Spending Analysis
 - Fixed charts not switching colors right away when you change the theme
 - Fixed Esc also closing the dialog underneath when one dialog is opened on top of another
 - Fixed the pie chart and payment breakdown briefly showing the wrong content when returning to the dashboard from another page

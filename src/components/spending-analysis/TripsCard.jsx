@@ -1,6 +1,7 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import { formatTripRange } from '@/lib/trips';
+import InfoTip from '@/components/spending-analysis/InfoTip';
 
 const TOP_CATEGORIES = 3;
 
@@ -26,10 +27,10 @@ export default function TripsCard({ summaries, suggestions, currentYear, onCreat
   return (
     <section className="analysis-card analysis-trips">
       <div className="analysis-trips__head">
-        <div>
-          <h3 className="analysis-card__title">{t('spendingAnalysis.trips.title')}</h3>
-          <p className="analysis-card__subtitle">{t('spendingAnalysis.trips.subtitle')}</p>
-        </div>
+        <h3 className="analysis-card__title">
+          {t('spendingAnalysis.trips.title')}
+          <InfoTip>{t('spendingAnalysis.trips.subtitle')}</InfoTip>
+        </h3>
         <button type="button" className="analysis-btn" onClick={() => onCreate()}>
           {t('spendingAnalysis.trips.add')}
         </button>

@@ -184,12 +184,25 @@ describe('旅程對消費分析的影響', () => {
     expect(a.categories.map((c) => c.name)).toEqual(['飲食']);
   });
 
-  it('看下個月：平常不含旅程', () => {
-    const withTrip = buildSpendingAnalysis({ ...base, targetYm: '2026-10', todayYmd: '2026-10-27' });
-    const without = buildSpendingAnalysis({ ...base, tripOf: new Map(), targetYm: '2026-10', todayYmd: '2026-10-27' });
-    expect(withTrip.baseline).toBe(10000);
-    // 沒有旅程時：9 月的 1.2 萬飯店被當大額另列，8 千晚餐留在日常 → 平常 (1 萬＋1 萬＋1.8 萬) / 3
-    expect(without.baseline).toBeCloseTo(38000 / 3);
+  it('看下個月：平常照實際花的算，旅程也算在內；有沒有建旅程，平常都一樣', () => {
+    const withTrip = buildSpendingAnalysis({ ...base, targetYm: '2026-10', todayYmd: '2026-10-31' });
+    const without = buildSpendingAnalysis({ ...base, tripOf: new Map(), targetYm: '2026-10', todayYmd: '2026-10-31' });
+    expect(withTrip.baseline).toBeCloseTo(50000 / 3);
+    expect(without.baseline).toBeCloseTo(50000 / 3);
+    // 各分類的平常不含旅程（旅程在分類清單整趟算一列）
+    expect(withTrip.categories.find((c) => c.name === '旅遊')).toBeUndefined();
+  });
+
+  it('結論句判斷「主要是旅程」只看這趟比平常的旅程多花多少', () => {
+    // 9 月的比利時：平常（7、8 月）沒有旅程 → 整趟 2 萬都是多出來的
+    const sep = buildSpendingAnalysis({ ...base, targetYm: '2026-09', todayYmd: '2026-10-27' });
+    expect(sep.tripExtra).toBe(20000);
+    // 10 月再去一趟 2 萬：平常（7–9 月）平均每月旅程 2 萬 / 3，多出來的只有 2 萬 × 2/3
+    const again = [tx('2026-10-05', 20000, { itemName: '東京' })];
+    const t2 = trip({ id: 't2', start: '2026-10-05', end: '2026-10-05' });
+    const all = [...rows, ...again];
+    const oct = buildSpendingAnalysis({ expenses: all, firstYm: '2026-06', tripOf: buildTripIndex([t1, t2], all), targetYm: '2026-10', todayYmd: '2026-10-31' });
+    expect(oct.tripExtra).toBeCloseTo(20000 - 20000 / 3);
   });
 
   it('旅程裡的大筆不會再被抓成大額單筆', () => {
@@ -218,14 +231,12 @@ describe('旅程對消費分析的影響', () => {
     expect(a.projected).toBe(55000);
   });
 
-  it('建了旅程之後，其他筆是不是大額照「沒有這趟旅程」判斷：一筆很大的旅程支出不會讓同月其他大筆躲過', () => {
-    // 9 月日常 3 萬＋1.2 萬筆電＋旅程裡 50 萬的手動加入項目。旅程不算分母：筆電占 4.2 萬的 29%，照規則另列。
-    // （如果旅程算在分母，筆電只占 0.8%，跟其他大筆一起留在日常支出，把之後的「平常」撐高）
+  it('同月有很大的旅程支出，其他大筆照樣標成大額', () => {
     const laptop = tx('2026-09-15', 12000, { category: '購物', itemName: '筆電' });
     const huge = tx('2026-09-25', 500000, { itemName: '旅程裡的大筆' });
     const all = [...daily('2026-07'), ...daily('2026-08'), ...Array.from({ length: 6 }, (_, i) => tx(`2026-09-0${i + 1}`, 5000)), huge, laptop];
     const a = buildSpendingAnalysis({ expenses: all, firstYm: '2026-06', targetYm: '2026-09', todayYmd: '2026-10-27', tripOf: buildTripIndex([t1], all) });
     expect(a.largeItems.map((i) => i.tx.id)).toEqual([laptop.id]);
-    expect(a.months.at(-1)).toMatchObject({ daily: 30000, trip: 500000 });
+    expect(a.months.at(-1)).toMatchObject({ daily: 42000, trip: 500000 });
   });
 });

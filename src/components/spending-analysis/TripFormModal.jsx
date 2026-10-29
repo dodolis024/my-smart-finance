@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Modal from '@/components/common/Modal';
 import { useLanguage } from '@/contexts/LanguageContext';
+import InfoTip from '@/components/spending-analysis/InfoTip';
 
 /**
  * 建立或編輯旅程：名稱＋起訖日期。從系統提示開的會先帶好日期，並提醒可以自己調整。
@@ -46,6 +47,7 @@ export default function TripFormModal({ form, onClose, onSave }) {
         <button type="button" className="category-detail-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
         <h2 id="trip-form-title" className="category-detail-modal__title">
           {t(form.mode === 'edit' ? 'spendingAnalysis.tripForm.editTitle' : 'spendingAnalysis.tripForm.createTitle')}
+          {form.fromSuggestion && <InfoTip>{t('spendingAnalysis.tripForm.suggestedHint')}</InfoTip>}
         </h2>
 
         <label className="analysis-field">
@@ -69,7 +71,6 @@ export default function TripFormModal({ form, onClose, onSave }) {
             <input className="analysis-input" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
           </label>
         </div>
-        {form.fromSuggestion && <p className="analysis-trip-form__note">{t('spendingAnalysis.tripForm.suggestedHint')}</p>}
         {error && <p className="analysis-trip-form__error" role="alert">{error}</p>}
 
         <div className="analysis-trip-form__actions">

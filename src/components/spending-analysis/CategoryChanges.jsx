@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import { EARLY_MONTH_DAYS } from '@/lib/spendingAnalysis';
-import { formatTripRange } from '@/lib/trips';
+import InfoTip from '@/components/spending-analysis/InfoTip';
 
 const COLLAPSED_COUNT = 6;
 const SPARK_W = 72;
@@ -45,21 +45,17 @@ export function ChangePill({ ratio }) {
 }
 
 /**
- * 每個分類：本月金額、跟平常比的變化、近幾個月的小走勢線。這個月的旅程整趟算一列（平常沒有旅程，整趟都是多花的）。
+ * 每個分類：本月金額、跟平常比的變化、近幾個月的小走勢線。旅程不列在這裡（不拆進各分類），看旅程卡片。
  * 排序與結論句同一個標準（多花的金額），預設只顯示前幾名。
  */
-export default function CategoryChanges({ analysis, currentYear, onSelectCategory, onSelectTrip }) {
+export default function CategoryChanges({ analysis, onSelectCategory }) {
   const { t } = useLanguage();
   const { formatTotal } = useDisplayAmount();
   const [expanded, setExpanded] = useState(false);
-  const { categories, targetTrips, months, isCurrent, isEarly, baseline } = analysis;
+  const { categories, months, isCurrent, isEarly, baseline } = analysis;
   // 這個月還沒過完：跟平常同期比，走勢線最後一點用月底預估（虛線）；月初還不比，走勢線只畫到上個月
   const estimating = isCurrent && !isEarly;
-  const all = [
-    ...targetTrips.map((row) => ({ kind: 'trip', key: `trip:${row.trip.id}`, sortBy: row.value, row })),
-    ...categories.map((cat) => ({ kind: 'category', key: cat.name, sortBy: cat.diff ?? cat.current, cat })),
-  ].sort((a, b) => b.sortBy - a.sortBy);
-  const rows = expanded ? all : all.slice(0, COLLAPSED_COUNT);
+  const rows = expanded ? categories : categories.slice(0, COLLAPSED_COUNT);
   const startIndex = months.findIndex((m) => !m.beforeStart);
 
   const subline = (cat) => {
@@ -79,37 +75,19 @@ export default function CategoryChanges({ analysis, currentYear, onSelectCategor
 
   return (
     <section className={`analysis-card analysis-cats${expanded ? ' is-expanded' : ''}`}>
-      <h3 className="analysis-card__title">{t('spendingAnalysis.categories.title')}</h3>
-      <p className="analysis-card__subtitle">
-        {isEarly
-          ? t('spendingAnalysis.categories.subtitleEarly', { day: EARLY_MONTH_DAYS })
-          : t('spendingAnalysis.categories.subtitle')}
-        {targetTrips.length > 0 && t('spendingAnalysis.categories.tripNote')}
-      </p>
-      {all.length === 0 ? (
+      <h3 className="analysis-card__title">
+        {t('spendingAnalysis.categories.title')}
+        <InfoTip>
+          {isEarly
+            ? t('spendingAnalysis.categories.subtitleEarly', { day: EARLY_MONTH_DAYS })
+            : t('spendingAnalysis.categories.subtitle')}
+        </InfoTip>
+      </h3>
+      {categories.length === 0 ? (
         <p className="analysis-empty">{t('spendingAnalysis.categories.empty')}</p>
       ) : (
         <ul className="analysis-cat-list">
-          {rows.map((item) => {
-            if (item.kind === 'trip') {
-              const { trip, value } = item.row;
-              return (
-                <li key={item.key}>
-                  <button type="button" className="analysis-cat" onClick={() => onSelectTrip(trip.id)}>
-                    <span className="analysis-cat__name-wrap">
-                      <span className="analysis-cat__name">✈︎ {trip.name}</span>
-                      <span className="analysis-cat__sub">
-                        {t('spendingAnalysis.categories.tripSub', { range: formatTripRange(trip.start, trip.end, currentYear) })}
-                      </span>
-                    </span>
-                    <span className="analysis-spark" />
-                    <span className="analysis-cat__amount">{formatTotal(value)}</span>
-                    <span className="analysis-pill">{t('spendingAnalysis.categories.tripPill')}</span>
-                  </button>
-                </li>
-              );
-            }
-            const { cat } = item;
+          {rows.map((cat) => {
             const trend = cat.series.slice(Math.max(startIndex, 0), isEarly ? -1 : undefined);
             if (estimating && trend.length) trend[trend.length - 1] = cat.projected;
             return (
@@ -134,11 +112,11 @@ export default function CategoryChanges({ analysis, currentYear, onSelectCategor
           })}
         </ul>
       )}
-      {all.length > COLLAPSED_COUNT && (
+      {categories.length > COLLAPSED_COUNT && (
         <button type="button" className="analysis-link" onClick={() => setExpanded((v) => !v)}>
           {expanded
             ? t('spendingAnalysis.categories.showLess')
-            : t(targetTrips.length ? 'spendingAnalysis.categories.showAllWithTrips' : 'spendingAnalysis.categories.showAll', { count: all.length })}
+            : t('spendingAnalysis.categories.showAll', { count: categories.length })}
         </button>
       )}
     </section>

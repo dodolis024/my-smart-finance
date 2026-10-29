@@ -1,26 +1,30 @@
+import { ZERO_DECIMAL_CURRENCIES } from '@/lib/constants';
+import { convertTx, isRateTableUsable } from '@/lib/displayCurrency';
+
 /**
  * 消費分析頁的計算（純函式，不碰畫面與資料庫）。
  *
  * 核心規則：
- * 1. 大額單筆另列：學費、一次繳兩個月房租這種一次性大筆會把「這個月花多少」扯歪，
- *    自動找出來另外列，不算進結論、長條圖與分類比較；使用者可以逐筆改回「算進去」。
- *    判斷一律用台幣（twdAmount），換顯示幣別不會改變哪幾筆被抓出來。
- * 2. 固定支出（房租、訂閱、保險這種每個月都付一次的）不是一次性大筆：再大也留在日常支出裡。
- * 3. 平常 = 目標月份之前最近 3 個完整月份的日常支出平均；帳本第一個月多半是月中才開始記，
- *    金額偏低，不算；一筆支出都沒有的月份多半是沒記帳，也不算。不滿 3 個月就用現有的月份，一個都沒有就不比較。
- * 4. 這個月還沒過完時，跟「平常同期」比：近 3 個月各自 1 號到今天這一天花了多少的平均，不把已經花的放大成整個月
+ * 1. 每一筆都照實際金額算：大額單筆、旅程都算進「平常」、本月與長條圖，數字就是實際花的錢。
+ * 2. 大額單筆只標示：單筆金額達到使用者設的門檻（預設 NT$10,000）就列出來、在卡片上提一句。
+ *    固定支出（房租、訂閱、保險這種每個月都付一次的）再大也不標；旅程裡的交易歸旅程，也不標。
+ * 3. 平常 = 從分析起點到目標月份前一個月，每個月支出的平均，每過一個月就多算一個月進去。
+ *    起點由使用者設定（月份，從 1 號算起）；沒設定就從帳本第二個月起算：第一個月多半是月中才開始記，金額偏低。
+ *    一筆支出都沒有的月份多半是沒記帳，不算；一個月都沒有就不比較。
+ *    「連續上升」也從起點往回數；長條圖顯示幾個月（一季／半年／一年）只影響畫面，不影響任何數字。
+ * 4. 這個月還沒過完時，跟「平常同期」比：平常那幾個月各自 1 號到今天這一天花了多少的平均，不把已經花的放大成整個月
  *    （一次買一雙鞋的分類照天數放大，會變成「月底前還會再買」）。月底預估 = 已經花的 + 平常在今天之後會花的。
  *    月初前幾天資料太少，不跟平常比。
- * 5. 旅程（見 lib/trips.js）只從「平常」扣掉：正在看的月份照樣算進去，長條圖另畫一段；
- *    旅程裡的交易不會再被抓成大額單筆，其他筆是不是大額也照「沒有這趟旅程」的日常支出判斷，
- *    跟沒有旅行的月份同一把尺。
+ * 5. 旅程（見 lib/trips.js）不拆進各分類，分類清單也不列；長條圖另畫一段斜線，各分類的平常不含旅程。
  */
 
-export const LARGE_ITEM_RULE = { shareOfMonth: 0.25, minTwd: 10000 };
+// 大額單筆門檻的預設值；twd 是存設定當下換成台幣的金額，門檻幣別的匯率讀不到時拿來比
+export const DEFAULT_LARGE_THRESHOLD = { amount: 10000, currency: 'TWD', twd: 10000 };
 // 固定支出：前後 3 個月內至少另有 2 個月「剛好出現一次」而且金額跟這筆差不到 30%
 export const FIXED_ITEM_RULE = { withinMonths: 3, minOtherMonths: 2, amountTolerance: 0.3 };
-export const BASELINE_MONTHS = 3;
-export const CHART_MONTHS = 6;
+// 長條圖可以選的月數（一季／半年／一年），預設半年
+export const CHART_SPANS = [3, 6, 12];
+export const DEFAULT_CHART_SPAN = 6;
 // 這個月過了幾天以上才推估月底、跟平常比（第 7 天起）
 export const EARLY_MONTH_DAYS = 7;
 
@@ -50,9 +54,42 @@ export function daysInMonth(ym) {
   return new Date(y, m, 0).getDate();
 }
 
-/** 目標月份往前推，長條圖要畫的 6 個月（舊 → 新） */
-export function chartMonths(targetYm) {
-  return Array.from({ length: CHART_MONTHS }, (_, i) => addMonths(targetYm, i - CHART_MONTHS + 1));
+/** 目標月份往前推，長條圖要畫的 span 個月（舊 → 新） */
+export function chartMonths(targetYm, span = DEFAULT_CHART_SPAN) {
+  return Array.from({ length: span }, (_, i) => addMonths(targetYm, i - span + 1));
+}
+
+/** from 到 to 的每個月（含頭尾，舊 → 新）；from 比 to 晚就是空的 */
+export function monthsBetween(fromYm, toYm) {
+  const count = monthGap(toYm, fromYm) + 1;
+  return Array.from({ length: Math.max(count, 0) }, (_, i) => addMonths(fromYm, i));
+}
+
+/** 存在設定裡的分析起點：{ month: 'YYYY-MM' }；沒設定（自動）是 null */
+export function normalizeStartYm(value) {
+  const month = value?.month;
+  return typeof month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(month) ? month : null;
+}
+
+/** 存在設定裡的長條圖月數：{ months: 6 }；不是可選的值就用預設 */
+export function normalizeChartSpan(value) {
+  const months = Number(value?.months);
+  return CHART_SPANS.includes(months) ? months : DEFAULT_CHART_SPAN;
+}
+
+/**
+ * 分析從哪個月開始：使用者設的起點，沒設定就是帳本第一個月。起點設得比開始記帳還早，從開始記帳那個月算。
+ * 這個月以前的月份不分析（月份箭頭也停在這裡），長條圖上淡淡顯示。
+ */
+export function analysisStartOf(firstYm, startYm) {
+  if (!firstYm) return null;
+  return startYm && startYm > firstYm ? startYm : firstYm;
+}
+
+/** 「平常」從哪個月開始算：使用者設的起點照算；自動的話跳過帳本第一個月 */
+export function baselineStartOf(firstYm, startYm) {
+  if (!firstYm) return null;
+  return startYm ? analysisStartOf(firstYm, startYm) : addMonths(firstYm, 1);
 }
 
 const twdOf = (tx) => (typeof tx.twdAmount === 'number' ? tx.twdAmount : 0);
@@ -103,51 +140,101 @@ export function detectFixedItems(expenses, rule = FIXED_ITEM_RULE) {
   return ids;
 }
 
-/**
- * 每個月各自找出大額單筆，回傳交易 id 的 Set。
- *
- * 由大到小檢查：單筆同時「≥ 最低金額」且「≥ 當月支出的一定比例」就抓出來，
- * 從當月總額扣掉後再檢查下一筆。逐筆扣掉是必要的：10 月有一筆 46 萬學費時，
- * 7.7 萬的房租只佔 13%，要先拿掉學費，房租才看得出是一次性大筆（佔剩下的 65%）。
- * exemptIds（固定支出）不會被抓，但仍算在當月總額裡，判斷其他筆的占比時照樣當分母。
- * minTotalByMonth：某些月份的分母至少要這麼多（還沒過完的這個月用平常墊底，月初一筆一萬多才不會占九成被抓）。
- */
-export function detectLargeItems(expenses, rule = LARGE_ITEM_RULE, exemptIds = new Set(), minTotalByMonth = {}) {
-  const byMonth = new Map();
-  for (const tx of expenses || []) {
-    const ym = ymOf(tx.date);
-    if (!byMonth.has(ym)) byMonth.set(ym, []);
-    byMonth.get(ym).push(tx);
-  }
+/** 設定裡存的門檻 → { amount, currency, twd }；格式不對就用預設值 */
+export function normalizeLargeThreshold(value) {
+  const amount = Number(value?.amount);
+  const twd = Number(value?.twd);
+  const currency = typeof value?.currency === 'string' ? value.currency.toUpperCase() : '';
+  if (!(amount > 0) || !currency || !(twd > 0)) return DEFAULT_LARGE_THRESHOLD;
+  return { amount, currency, twd };
+}
 
+/** 四捨五入到該幣別畫面上顯示的位數（台幣、日圓到個位，其他到分） */
+export function roundForCurrency(value, currency) {
+  const digits = ZERO_DECIMAL_CURRENCIES.has(String(currency || 'TWD').toUpperCase()) ? 0 : 2;
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+/**
+ * 大額門檻的比法：每一筆換成「門檻的幣別」、四捨五入到畫面上顯示的位數，再跟門檻比。
+ * - 換算跟顯示幣別同一套（lib/displayCurrency.js 的 convertTx）：門檻 £250 時，畫面上顯示 £250.00 的那筆一定會被標，
+ *   不會因為匯率換算多出 £249.997 這種尾數而漏掉；換顯示幣別也不會改變哪幾筆被標。
+ * - 門檻幣別的匯率表讀不到（離線又沒有快取）時，退回用台幣比存設定當下換好的 twd，至少不會整批標錯。
+ * @param {{ amount: number, currency: string, twd: number }} threshold
+ * @param {object|null} table 門檻幣別的匯率表（useRateTables）；台幣門檻不需要
+ * @returns {{ valueOf: (tx: object) => number, min: number }}
+ */
+export function largeMeasure(threshold, table) {
+  const { amount, currency, twd } = threshold;
+  if (currency === 'TWD') return { valueOf: (tx) => roundForCurrency(twdOf(tx), 'TWD'), min: amount };
+  if (isRateTableUsable(table)) {
+    return { valueOf: (tx) => roundForCurrency(convertTx(tx, currency, table).value, currency), min: amount };
+  }
+  return { valueOf: (tx) => roundForCurrency(twdOf(tx), 'TWD'), min: Math.round(twd) };
+}
+
+/** 匯率表裡最新的匯率（1 單位 = 多少台幣）：今日匯率優先，沒有就用歷史最後一筆；都沒有回 null */
+function latestRate(table) {
+  const live = Number(table?.live);
+  if (live > 0) return live;
+  const last = table?.history?.[table.history.length - 1]?.[1];
+  return Number(last) > 0 ? Number(last) : null;
+}
+
+/**
+ * 使用者輸入的門檻 → 要存的設定。輸入的幣別就是畫面正在顯示的幣別；同時用今天的匯率換成台幣存一份備用。
+ * 金額要先檢查 > 0；外幣的匯率讀不到回 null。
+ */
+export function thresholdFromInput(amount, currency, table) {
+  const rounded = roundForCurrency(amount, currency);
+  if (currency === 'TWD') return { amount: rounded, currency, twd: rounded };
+  const rate = latestRate(table);
+  return rate ? { amount: rounded, currency, twd: rounded * rate } : null;
+}
+
+/** 只留兩位有效數字：235.8 → 240、48,316 → 48,000、10,592 → 11,000 */
+export function roundSignificant(value, digits = 2) {
+  return value > 0 ? Number(value.toPrecision(digits)) : value;
+}
+
+/**
+ * 門檻在正在顯示的幣別下怎麼寫。
+ * - 幣別跟門檻一樣：就是當初輸入的金額，approx = false
+ * - 不一樣：用今天的匯率換算、只留兩位有效數字，approx = true（畫面加「約」）。
+ *   只是給人看的參考，判斷哪幾筆是大額一律照門檻本身的幣別（largeMeasure），換顯示幣別不會改變結果。
+ * 門檻幣別的匯率讀不到就用存設定當下的台幣備用值；顯示幣別的匯率讀不到回 null（照門檻本身的幣別寫）。
+ * @returns {{ amount: number, currency: string, approx: boolean } | null}
+ */
+export function thresholdForDisplay(threshold, currency, thresholdTable, displayTable) {
+  if (threshold.currency === currency) return { amount: threshold.amount, currency, approx: false };
+  const thresholdRate = threshold.currency === 'TWD' ? 1 : latestRate(thresholdTable);
+  const twd = thresholdRate ? threshold.amount * thresholdRate : threshold.twd;
+  const displayRate = currency === 'TWD' ? 1 : latestRate(displayTable);
+  if (!displayRate) return null;
+  return { amount: roundSignificant(twd / displayRate), currency, approx: true };
+}
+
+/**
+ * 找出大額單筆，回傳交易 id 的 Set：金額達到門檻就算，跟當月總共花多少無關
+ * （用比例的話，同一筆會隨著月中累積越來越多，一下是大額、一下又不是）。
+ * exemptIds（固定支出）不算。
+ */
+export function detectLargeItems(expenses, measure = largeMeasure(DEFAULT_LARGE_THRESHOLD), exemptIds = new Set()) {
   const ids = new Set();
-  for (const [ym, txs] of byMonth) {
-    const sorted = [...txs].sort((a, b) => twdOf(b) - twdOf(a));
-    // 負數（退款、更正）不扣分母，否則分母變小甚至變負，每筆過門檻的都會被抓
-    let remaining = Math.max(sorted.reduce((sum, tx) => sum + Math.max(twdOf(tx), 0), 0), minTotalByMonth[ym] ?? 0);
-    for (const tx of sorted) {
-      if (exemptIds.has(tx.id)) continue;
-      const amount = twdOf(tx);
-      if (amount < rule.minTwd || amount < remaining * rule.shareOfMonth) break;
-      ids.add(tx.id);
-      remaining -= amount;
-    }
+  for (const tx of expenses || []) {
+    if (!exemptIds.has(tx.id) && measure.valueOf(tx) >= measure.min) ids.add(tx.id);
   }
   return ids;
 }
 
 /**
- * 「平常」用哪幾個月：目標月份之前最近 3 個月，扣掉帳本第一個月（以及更早、還沒開始記帳的月份）。
- * 回傳新 → 舊。
+ * 「平常」用哪幾個月：從平常的起點（baselineStartOf）到目標月份的前一個月。
+ * 回傳新 → 舊；沒有記帳的月份由 buildSpendingAnalysis 再扣掉。
  */
-export function baselineMonths(targetYm, firstYm) {
-  if (!firstYm) return [];
-  const months = [];
-  for (let i = 1; i <= BASELINE_MONTHS; i++) {
-    const ym = addMonths(targetYm, -i);
-    if (ym > firstYm) months.push(ym);
-  }
-  return months;
+export function baselineMonths(targetYm, firstYm, startYm = null) {
+  const from = baselineStartOf(firstYm, startYm);
+  return from ? monthsBetween(from, addMonths(targetYm, -1)).reverse() : [];
 }
 
 /** 數列尾端連續上升了幾個月（最後一個值比前一個大，再往前比，直到不再上升） */
@@ -161,12 +248,14 @@ export function risingStreak(values) {
  * 組出整頁要的數字。
  *
  * @param {object} params
- * @param {object[]} params.expenses     支出交易（駝峰形狀，含 id/date/category/itemName/twdAmount）：圖表 6 個月，
- *                                       最好再多前後 3 個月，固定支出才認得出來；窗口外的只用來辨認固定支出
+ * @param {object[]} params.expenses     支出交易（駝峰形狀，含 id/date/category/itemName/twdAmount）：分析起點到目標月份，
+ *                                       最好再多前後 3 個月，固定支出才認得出來；範圍外的只用來辨認固定支出
  * @param {string}   params.targetYm     正在看的月份 'YYYY-MM'
  * @param {string}   params.todayYmd     今天 'YYYY-MM-DD'（客戶端日期）
  * @param {string|null} params.firstYm   帳本第一筆交易所在月份；沒有任何交易時為 null
- * @param {Set<string>} [params.includedIds] 使用者改回「算進去」的大額單筆
+ * @param {string|null} [params.startYm] 使用者設的分析起點 'YYYY-MM'；null 是自動（帳本第二個月起）
+ * @param {number}   [params.chartSpan]  長條圖畫幾個月（3／6／12）；只影響 months 與各分類的 series
+ * @param {{ valueOf: Function, min: number }} [params.measure] 大額門檻的比法（largeMeasure），預設 NT$10,000
  * @param {(tx: object) => number} [params.toValue] 單筆換算成顯示幣別的金額，預設用台幣
  * @param {string} [params.uncategorizedLabel]
  * @param {Map<string, {id: string, name: string}>} [params.tripOf] 交易 id → 所屬旅程
@@ -176,16 +265,22 @@ export function buildSpendingAnalysis({
   targetYm,
   todayYmd,
   firstYm,
-  includedIds = new Set(),
+  startYm = null,
+  chartSpan = DEFAULT_CHART_SPAN,
+  measure = largeMeasure(DEFAULT_LARGE_THRESHOLD),
   toValue = twdOf,
   uncategorizedLabel = '',
   tripOf = new Map(),
 }) {
-  const months = chartMonths(targetYm);
-  const inWindow = (expenses || []).filter((tx) => months.includes(ymOf(tx.date)));
+  const viewStart = analysisStartOf(firstYm, startYm);
+  const baseFrom = baselineStartOf(firstYm, startYm);
+  // 平常與連續上升要從分析起點一路看到這個月；圖表只畫最後 chartSpan 個月（可能比起點還早，那幾個月淡淡顯示）
+  const chartYms = chartMonths(targetYm, chartSpan);
+  const allYms = monthsBetween(viewStart && viewStart < chartYms[0] ? viewStart : chartYms[0], targetYm);
+  const byMonth = new Map(allYms.map((ym) => [ym, []]));
+  for (const tx of expenses || []) byMonth.get(ymOf(tx.date))?.push(tx);
   const isTrip = (tx) => tripOf.has(tx.id);
-  const notTrip = inWindow.filter((tx) => !isTrip(tx));
-  // 固定支出用全部傳進來的交易判斷：只看圖表 6 個月的話，最早幾個月往前比不到，換個月份看結果就會不同
+  // 固定支出用全部傳進來的交易判斷：只看分析範圍的話，最早幾個月往前比不到，換個月份看結果就會不同
   const fixed = detectFixedItems(expenses);
 
   const todayYm = ymOf(todayYmd);
@@ -200,66 +295,52 @@ export function buildSpendingAnalysis({
 
   const catOf = (tx) => (tx.category && String(tx.category).trim()) || uncategorizedLabel;
   const sumOf = (txs) => txs.reduce((sum, tx) => sum + toValue(tx), 0);
-  const candidates = baselineMonths(targetYm, firstYm);
 
-  // 旅程裡的交易歸旅程，不參加大額判斷（機票不會同時出現在大額清單），也不算在分母：
-  // 放進分母的話，一筆很大的旅程支出會讓同月其他大筆都不到門檻，全部留在日常支出裡
-  // 還沒過完的這個月，大額的分母至少用平常（台幣）。每個月各自判斷，之前月份的結果不受這一步影響，
-  // 所以先照一般規則抓一次、算出平常，再只重抓這個月
-  let detected = detectLargeItems(notTrip, LARGE_ITEM_RULE, fixed);
-  if (isCurrent) {
-    const pastDaily = candidates
-      .map((ym) => notTrip.filter((tx) => ymOf(tx.date) === ym))
-      .filter((txs) => txs.length > 0)
-      .map((txs) => txs.filter((tx) => !detected.has(tx.id) || includedIds.has(tx.id)).reduce((sum, tx) => sum + twdOf(tx), 0));
-    if (pastDaily.length) {
-      const floor = pastDaily.reduce((sum, v) => sum + v, 0) / pastDaily.length;
-      detected = detectLargeItems(notTrip, LARGE_ITEM_RULE, fixed, { [targetYm]: floor });
-    }
-  }
-  const isExcluded = (tx) => detected.has(tx.id) && !includedIds.has(tx.id);
-
-  const monthly = months.map((ym) => {
-    const txs = inWindow.filter((tx) => ymOf(tx.date) === ym);
-    const daily = txs.filter((tx) => !isTrip(tx) && !isExcluded(tx));
-    const large = txs.filter((tx) => !isTrip(tx) && isExcluded(tx));
+  const monthly = allYms.map((ym) => {
+    const txs = byMonth.get(ym);
+    // 日常支出＝旅程以外的每一筆（含大額單筆）；旅程另外一段
+    const daily = txs.filter((tx) => !isTrip(tx));
     const tripTxs = txs.filter(isTrip);
     return {
       ym,
       dailyTxs: daily,
       daily: sumOf(daily),
-      large: sumOf(large),
       tripTxs,
       trip: sumOf(tripTxs),
       hasRecords: txs.length > 0,
-      beforeStart: !firstYm || ym < firstYm,
+      // 分析起點以前（含還沒開始記帳）：不畫長條、不算進平常
+      beforeStart: !viewStart || ym < viewStart,
+      beforeRecords: !firstYm || ym < firstYm,
     };
   });
   const target = monthly[monthly.length - 1];
+  const allOf = (m) => [...m.dailyTxs, ...m.tripTxs];
 
-  const baseRows = monthly.filter((m) => m.hasRecords && candidates.includes(m.ym));
+  const inBaseline = (m) => !!baseFrom && m.ym >= baseFrom && m.ym < targetYm;
+  const baseRows = monthly.filter((m) => m.hasRecords && inBaseline(m));
   const baseYms = baseRows.map((m) => m.ym).reverse();
   const avgOf = (pickTxs) => (baseRows.length
     ? baseRows.reduce((sum, m) => sum + sumOf(pickTxs(m)), 0) / baseRows.length
     : 0);
-  const baseTotal = baseRows.reduce((sum, m) => sum + m.daily, 0);
-  // 平常是 0（那幾個月只有另列的大額單筆）就跟沒有平常一樣，不比較
+  const baseTotal = baseRows.reduce((sum, m) => sum + m.daily + m.trip, 0);
+  // 平常是 0（那幾個月只有退款之類的負數）就跟沒有平常一樣，不比較
   const baseline = baseRows.length && baseTotal > 0 ? baseTotal / baseRows.length : null;
   // 平常同期：拿來比的金額。過去的月份就是整個月的平常
-  const baselineToDate = baseline == null ? null : avgOf((m) => m.dailyTxs.filter(inPeriod));
+  const baselineToDate = baseline == null ? null : avgOf((m) => allOf(m).filter(inPeriod));
 
   // 月底預估 = 已經花的 + 平常在今天之後會花的。不把已經花的照天數放大：買了一雙鞋不代表月底前還會再買。
   // 固定支出這個月已經記了（例如先記好月底的房租），平常剩下日子裡的那一筆就不再算一次
   const seenFixed = new Set(target.dailyTxs.filter((tx) => fixed.has(tx.id)).map(fixedKeyOf));
-  const restOf = (m) => (isCurrent
-    ? m.dailyTxs.filter((tx) => !inPeriod(tx) && !(fixed.has(tx.id) && seenFixed.has(fixedKeyOf(tx))))
+  const restOf = (txs) => (isCurrent
+    ? txs.filter((tx) => !inPeriod(tx) && !(fixed.has(tx.id) && seenFixed.has(fixedKeyOf(tx))))
     : []);
   const toDate = target.daily + target.trip;
-  const projected = toDate + avgOf(restOf);
+  const projected = toDate + avgOf((m) => restOf(allOf(m)));
   // 月初不比：比例留空，畫面改說「第 7 天起開始比」
   const ratio = baselineToDate && !isEarly ? toDate / baselineToDate - 1 : null;
-  // 「連續上升」只看完整的月份：帳本第一個月與沒記帳的月份偏低，從那裡往上算不是真的變多
-  const trendMonth = (m) => m === target || (m.hasRecords && !m.beforeStart && m.ym !== firstYm);
+  // 「連續上升」從這個月往回數到平常的起點，只看完整的月份：自動起點跳過的帳本第一個月與沒記帳的月份偏低，
+  // 從那裡往上算不是真的變多。跟圖表顯示幾個月無關
+  const trendMonth = (m) => m === target || (m.hasRecords && inBaseline(m));
 
   // 分類：本月到目前 vs 該分類的平常同期，依「多花的金額」排序（跟結論句的「主要是哪個分類」同一個標準）。
   // 顯示的金額就是實際花的，點進去看到的明細加起來一樣；走勢線最後一點才用月底預估（虛線）
@@ -267,12 +348,12 @@ export function buildSpendingAnalysis({
   for (const m of [target, ...baseRows]) for (const tx of m.dailyTxs) names.add(catOf(tx));
   const categories = [...names].map((name) => {
     const ofCat = (txs) => txs.filter((tx) => catOf(tx) === name);
-    const series = monthly.map((m) => sumOf(ofCat(m.dailyTxs)));
-    const current = series[series.length - 1];
+    const fullSeries = monthly.map((m) => sumOf(ofCat(m.dailyTxs)));
+    const current = fullSeries[fullSeries.length - 1];
     const usual = baseline == null ? null : avgOf((m) => ofCat(m.dailyTxs));
     const base = baseline == null ? null : avgOf((m) => ofCat(m.dailyTxs).filter(inPeriod));
-    const catProjected = current + avgOf((m) => ofCat(restOf(m)));
-    const trend = [...series.slice(0, -1), catProjected].filter((_, i) => trendMonth(monthly[i]));
+    const catProjected = current + avgOf((m) => ofCat(restOf(m.dailyTxs)));
+    const trend = [...fullSeries.slice(0, -1), catProjected].filter((_, i) => trendMonth(monthly[i]));
     return {
       name,
       current,
@@ -281,14 +362,15 @@ export function buildSpendingAnalysis({
       baseline: base,
       diff: base == null || isEarly ? null : current - base,
       ratio: base && !isEarly ? current / base - 1 : null,
-      series,
+      // 跟 months 對齊的那幾個月（圖表範圍）
+      series: fullSeries.slice(-chartSpan),
       risingMonths: isEarly ? 0 : risingStreak(trend),
       txs: ofCat(target.dailyTxs),
     };
   });
   categories.sort((a, b) => (b.diff ?? b.current) - (a.diff ?? a.current));
 
-  // 這個月的旅程：每趟一列，平常沒有旅程，所以整趟金額就是多花的部分
+  // 這個月的旅程：每趟一筆，卡片附註與結論句用（平常的旅程花費算在整體的平常裡）
   const tripTotals = new Map();
   for (const tx of target.tripTxs) {
     const trip = tripOf.get(tx.id);
@@ -298,27 +380,32 @@ export function buildSpendingAnalysis({
     row.txs.push(tx);
   }
   const targetTrips = [...tripTotals.values()].sort((a, b) => b.value - a.value);
+  // 旅程比平常同期多花多少（平常幾個月也出去玩的話，這趟就不全是多花的）；結論句判斷「主要是旅程」用
+  const tripExtra = target.trip - avgOf((m) => m.tripTxs.filter(inPeriod));
 
-  const largeItems = inWindow
-    .filter((tx) => detected.has(tx.id))
-    // 新 → 舊；同一天的大筆在前
+  // 正在看的這個月的大額單筆：新 → 舊；同一天的大筆在前。旅程裡的交易歸旅程，不標大額（機票不會同時出現在旅程和大額清單）
+  const detected = detectLargeItems(target.dailyTxs, measure, fixed);
+  const largeItems = target.dailyTxs.filter((tx) => detected.has(tx.id))
     .sort((a, b) => (a.date === b.date ? twdOf(b) - twdOf(a) : a.date < b.date ? 1 : -1))
-    .map((tx) => ({ tx, included: includedIds.has(tx.id), value: toValue(tx) }));
+    .map((tx) => ({ tx, value: toValue(tx) }));
 
   return {
     targetYm,
     isCurrent,
     isFuture,
-    // 開始記帳之前的月份：沒有資料，不是「還不能比」
-    isBeforeStart: !!firstYm && targetYm < firstYm,
+    // 分析起點之前的月份：不分析，不是「還不能比」；isBeforeRecords 是連帳都還沒開始記
+    isBeforeStart: !!viewStart && targetYm < viewStart,
+    isBeforeRecords: !!firstYm && targetYm < firstYm,
+    analysisStartYm: viewStart,
     isEarly,
     daysElapsed,
     daysInMonth: dim,
-    months: monthly,
+    months: monthly.slice(-chartSpan),
     toDate,
     projected,
-    targetLarge: target.large,
+    largeTotal: largeItems.reduce((sum, item) => sum + item.value, 0),
     targetTrips,
+    tripExtra,
     baseline,
     baselineToDate,
     baselineMonths: baseYms,

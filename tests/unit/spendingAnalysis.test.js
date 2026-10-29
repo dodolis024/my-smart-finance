@@ -7,8 +7,20 @@ import {
   chartMonths,
   detectLargeItems,
   baselineMonths,
+  monthsBetween,
+  analysisStartOf,
+  baselineStartOf,
+  normalizeStartYm,
+  normalizeChartSpan,
   risingStreak,
   buildSpendingAnalysis,
+  largeMeasure,
+  normalizeLargeThreshold,
+  roundForCurrency,
+  thresholdFromInput,
+  thresholdForDisplay,
+  roundSignificant,
+  DEFAULT_LARGE_THRESHOLD,
   EARLY_MONTH_DAYS,
 } from '@/lib/spendingAnalysis';
 
@@ -32,8 +44,16 @@ describe('月份小工具', () => {
     expect(daysInMonth('2028-02')).toBe(29);
   });
 
-  it('chartMonths 是舊到新的 6 個月', () => {
+  it('chartMonths 預設是舊到新的 6 個月，也可以指定月數', () => {
     expect(chartMonths('2026-02')).toEqual(['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02']);
+    expect(chartMonths('2026-02', 3)).toEqual(['2025-12', '2026-01', '2026-02']);
+    expect(chartMonths('2026-02', 12)).toHaveLength(12);
+  });
+
+  it('monthsBetween 含頭尾、跨年；起點比終點晚就是空的', () => {
+    expect(monthsBetween('2025-11', '2026-02')).toEqual(['2025-11', '2025-12', '2026-01', '2026-02']);
+    expect(monthsBetween('2026-02', '2026-02')).toEqual(['2026-02']);
+    expect(monthsBetween('2026-03', '2026-02')).toEqual([]);
   });
 
   it('risingStreak 只算尾端連續上升', () => {
@@ -44,45 +64,134 @@ describe('月份小工具', () => {
 });
 
 describe('detectLargeItems', () => {
-  it('先拿掉最大筆再檢查下一筆：學費之後，房租也看得出是一次性大筆', () => {
-    const tuition = tx('2026-10-14', 467725, '上學');
-    const rent = tx('2026-10-23', 77511, '生活');
-    const food = Array.from({ length: 20 }, (_, i) => tx(`2026-10-${String(i + 1).padStart(2, '0')}`, 2000));
-    const ids = detectLargeItems([tuition, rent, ...food]);
-    expect(ids).toEqual(new Set([tuition.id, rent.id]));
+  it('預設門檻 NT$10,000：剛好一萬就算，差一塊不算', () => {
+    const exact = tx('2026-10-14', 10000, '購物');
+    const below = tx('2026-10-15', 9999, '購物');
+    expect(detectLargeItems([exact, below])).toEqual(new Set([exact.id]));
   });
 
-  it('單筆占比高但沒達最低金額，不算大額（小月份的一筆咖啡不會被抓）', () => {
-    const coffee = tx('2026-08-02', 150);
-    expect(detectLargeItems([coffee]).size).toBe(0);
+  it('只看金額，跟當月花多少無關：同一筆不會隨著月中累積一下是大額、一下又不是', () => {
+    const phone = tx('2026-10-02', 32900, '購物', 'iPhone');
+    const fewDays = [phone, tx('2026-10-01', 500)];
+    const fullMonth = [phone, ...Array.from({ length: 30 }, (_, i) => tx(`2026-10-${String(i + 1).padStart(2, '0')}`, 5000))];
+    expect(detectLargeItems(fewDays).has(phone.id)).toBe(true);
+    expect(detectLargeItems(fullMonth).has(phone.id)).toBe(true);
   });
 
-  it('金額超過最低門檻但只占當月一小部分，不算大額（9 千的電鍋）', () => {
-    const cooker = tx('2026-09-03', 9049, '生活');
-    const big = tx('2026-09-05', 12000, '生活');
-    const rest = Array.from({ length: 30 }, (_, i) => tx(`2026-09-${String(i + 1).padStart(2, '0')}`, 2000));
-    const ids = detectLargeItems([cooker, big, ...rest]);
-    expect(ids.has(cooker.id)).toBe(false);
-    expect(ids.has(big.id)).toBe(false);
+  it('單筆小額不算（小月份的一筆咖啡不會被抓）；退款的負數也不算', () => {
+    expect(detectLargeItems([tx('2026-08-02', 150), tx('2026-08-08', -25000)]).size).toBe(0);
   });
 
-  it('固定支出不會被抓，但仍算在當月總額裡', () => {
+  it('固定支出不會被抓', () => {
     const rent = tx('2026-10-05', 12000, '居住', '房租');
     const phone = tx('2026-10-18', 32900, '購物', 'iPhone');
-    const rest = Array.from({ length: 20 }, (_, i) => tx(`2026-10-${String(i + 1).padStart(2, '0')}`, 1000));
-    const ids = detectLargeItems([rent, phone, ...rest], undefined, new Set([rent.id]));
-    expect(ids).toEqual(new Set([phone.id]));
-    // 房租是最大筆、被跳過之後，下一筆照樣要檢查（不能直接停）
-    const ids2 = detectLargeItems([tx('2026-11-05', 50000, '居住', '房租'), tx('2026-11-06', 30000, '購物', '筆電')], undefined, new Set());
-    expect(ids2.size).toBe(2);
+    expect(detectLargeItems([rent, phone], undefined, new Set([rent.id]))).toEqual(new Set([phone.id]));
   });
 
-  it('每個月分開判斷', () => {
-    const sep = tx('2026-09-10', 30000);
-    const oct = Array.from({ length: 10 }, (_, i) => tx(`2026-10-${String(i + 1).padStart(2, '0')}`, 20000));
-    // 9 月只有這一筆 → 是大額；10 月十筆一樣大，各占 10% → 都不是
-    const ids = detectLargeItems([sep, ...oct]);
-    expect(ids).toEqual(new Set([sep.id]));
+  it('使用者自己設的門檻', () => {
+    const rows = [tx('2026-10-02', 3000), tx('2026-10-03', 6000)];
+    const measure = largeMeasure({ amount: 5000, currency: 'TWD', twd: 5000 });
+    expect(detectLargeItems(rows, measure)).toEqual(new Set([rows[1].id]));
+  });
+});
+
+describe('大額門檻與匯率', () => {
+  // 英鎊匯率表：1 GBP = 40 TWD（9/1 起）、42 TWD（10/1 起）；今日 41
+  const gbpTable = { history: [['2026-09-01', 40], ['2026-10-01', 42]], live: 41 };
+  const gbpThreshold = { amount: 250, currency: 'GBP', twd: 250 * 41 };
+
+  it('外幣門檻：英鎊記的帳用記帳當下的匯率反推回原幣，畫面上 £250.00 的那筆一定被標', () => {
+    // £250 記帳時匯率 41.37，台幣存成 10342.5；換回英鎊會有浮點尾數，四捨五入到分之後剛好 £250
+    const exact = { ...tx('2026-10-05', 10342.5, '購物'), currency: 'GBP', exchangeRate: 41.37 };
+    const below = { ...tx('2026-10-06', 249.99 * 41.37, '購物'), currency: 'GBP', exchangeRate: 41.37 };
+    const measure = largeMeasure(gbpThreshold, gbpTable);
+    expect(measure.valueOf(exact)).toBe(250);
+    expect(detectLargeItems([exact, below], measure)).toEqual(new Set([exact.id]));
+  });
+
+  it('外幣門檻：台幣記的帳用交易當天的歷史匯率換算，跟顯示幣別換算的結果一樣', () => {
+    const sept = tx('2026-09-15', 10000, '購物'); // 9 月匯率 40 → £250
+    const oct = tx('2026-10-15', 10000, '購物'); // 10 月匯率 42 → £238.10
+    const measure = largeMeasure(gbpThreshold, gbpTable);
+    expect(measure.valueOf(sept)).toBe(250);
+    expect(measure.valueOf(oct)).toBe(238.1);
+    expect(detectLargeItems([sept, oct], measure)).toEqual(new Set([sept.id]));
+  });
+
+  it('門檻幣別的匯率表讀不到：退回用台幣比存設定時換好的金額，不會整批標錯或全部不標', () => {
+    const measure = largeMeasure(gbpThreshold, null);
+    expect(measure.min).toBe(10250);
+    expect(detectLargeItems([tx('2026-10-15', 10250), tx('2026-10-16', 10249)], measure).size).toBe(1);
+  });
+
+  it('台幣門檻：小數四捨五入到個位再比（畫面上顯示 $10,000 的那筆會被標）', () => {
+    const measure = largeMeasure(DEFAULT_LARGE_THRESHOLD);
+    expect(detectLargeItems([tx('2026-10-15', 9999.6)], measure).size).toBe(1);
+    expect(detectLargeItems([tx('2026-10-15', 9999.4)], measure).size).toBe(0);
+  });
+
+  it('換顯示幣別不影響哪幾筆被標：比的是門檻的幣別，不是顯示幣別', () => {
+    const rows = [tx('2026-10-15', 12000), tx('2026-10-16', 8000)];
+    const asTwd = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-10-31', firstYm: '2026-01' });
+    const asGbp = buildSpendingAnalysis({
+      expenses: rows, targetYm: '2026-10', todayYmd: '2026-10-31', firstYm: '2026-01', toValue: (t) => t.twdAmount / 42,
+    });
+    expect(asGbp.largeItems.map((i) => i.tx.id)).toEqual(asTwd.largeItems.map((i) => i.tx.id));
+    // 列出來的金額跟著顯示幣別
+    expect(asGbp.largeItems[0].value).toBeCloseTo(12000 / 42, 6);
+  });
+
+  it('roundForCurrency：台幣、日圓到個位，其他到分', () => {
+    expect(roundForCurrency(9999.6, 'TWD')).toBe(10000);
+    expect(roundForCurrency(1234.5, 'JPY')).toBe(1235);
+    expect(roundForCurrency(249.996, 'GBP')).toBe(250);
+    expect(roundForCurrency(249.994, 'gbp')).toBe(249.99);
+  });
+
+  it('輸入門檻：外幣用今日匯率換一份台幣；沒有今日匯率用歷史最後一筆；都沒有回 null', () => {
+    expect(thresholdFromInput(10000, 'TWD', null)).toEqual({ amount: 10000, currency: 'TWD', twd: 10000 });
+    expect(thresholdFromInput(250.004, 'GBP', gbpTable)).toEqual({ amount: 250, currency: 'GBP', twd: 250 * 41 });
+    expect(thresholdFromInput(250, 'GBP', { history: [['2026-10-01', 42]], live: null })).toEqual({ amount: 250, currency: 'GBP', twd: 250 * 42 });
+    expect(thresholdFromInput(250, 'GBP', null)).toBeNull();
+  });
+
+  it('roundSignificant：只留兩位有效數字', () => {
+    expect(roundSignificant(235.8)).toBe(240);
+    expect(roundSignificant(48316)).toBe(48000);
+    expect(roundSignificant(10592)).toBe(11000);
+    expect(roundSignificant(312.5)).toBe(310);
+    expect(roundSignificant(9.46)).toBe(9.5);
+  });
+
+  it('門檻在其他幣別下：用今天的匯率換算、取兩位有效數字、標成約；同幣別就是原本的金額', () => {
+    // 台幣 10,000 → 英鎊（今日 41）≈ 243.9 → 約 £240
+    expect(thresholdForDisplay(DEFAULT_LARGE_THRESHOLD, 'GBP', null, gbpTable)).toEqual({ amount: 240, currency: 'GBP', approx: true });
+    expect(thresholdForDisplay(DEFAULT_LARGE_THRESHOLD, 'TWD', null, null)).toEqual({ amount: 10000, currency: 'TWD', approx: false });
+    // 英鎊 250：同幣別照原本的金額，不取整數
+    const odd = { amount: 250.5, currency: 'GBP', twd: 250.5 * 41 };
+    expect(thresholdForDisplay(odd, 'GBP', gbpTable, gbpTable)).toEqual({ amount: 250.5, currency: 'GBP', approx: false });
+    // 英鎊 250 → 台幣：用英鎊今天的匯率（41），不是存設定時的備用值 → 10,250 → 約 $10,000
+    const stale = { amount: 250, currency: 'GBP', twd: 250 * 35 };
+    expect(thresholdForDisplay(stale, 'TWD', gbpTable, null)).toEqual({ amount: 10000, currency: 'TWD', approx: true });
+    // 英鎊匯率讀不到：退回備用值 8,750 → 約 $8,800
+    expect(thresholdForDisplay(stale, 'TWD', null, null)).toEqual({ amount: 8800, currency: 'TWD', approx: true });
+    // 顯示幣別的匯率讀不到：回 null（畫面照門檻本身的幣別寫）
+    expect(thresholdForDisplay(DEFAULT_LARGE_THRESHOLD, 'GBP', null, null)).toBeNull();
+  });
+
+  it('換算顯示只是參考：判斷哪幾筆是大額，一律照門檻本身的幣別', () => {
+    // 門檻 NT$10,000；英鎊畫面寫「約 £240」，但 NT$10,100（約 £240.48，以 42 換算）照樣是大額、NT$9,900 照樣不是
+    const near = [tx('2026-10-15', 10100), tx('2026-10-16', 9900)];
+    const a = buildSpendingAnalysis({
+      expenses: near, targetYm: '2026-10', todayYmd: '2026-10-31', firstYm: '2026-01', toValue: (t) => t.twdAmount / 42,
+    });
+    expect(a.largeItems.map((i) => i.tx.id)).toEqual([near[0].id]);
+  });
+
+  it('設定讀回來格式不對就用預設值', () => {
+    expect(normalizeLargeThreshold(null)).toBe(DEFAULT_LARGE_THRESHOLD);
+    expect(normalizeLargeThreshold({ amount: -5, currency: 'TWD', twd: 5 })).toBe(DEFAULT_LARGE_THRESHOLD);
+    expect(normalizeLargeThreshold({ amount: 250, currency: 'gbp', twd: 10250 })).toEqual({ amount: 250, currency: 'GBP', twd: 10250 });
   });
 });
 
@@ -133,15 +242,99 @@ describe('detectFixedItems', () => {
 });
 
 describe('baselineMonths', () => {
-  it('最近 3 個月，扣掉帳本第一個月', () => {
+  it('沒設起點：從帳本第二個月一路累積到上個月', () => {
     expect(baselineMonths('2026-10', '2026-07')).toEqual(['2026-09', '2026-08']);
-    expect(baselineMonths('2026-10', '2026-01')).toEqual(['2026-09', '2026-08', '2026-07']);
+    expect(baselineMonths('2026-10', '2026-01')).toEqual(
+      ['2026-09', '2026-08', '2026-07', '2026-06', '2026-05', '2026-04', '2026-03', '2026-02'],
+    );
+  });
+
+  it('設了起點：從起點那個月算起（含帳本第一個月，使用者自己選的）', () => {
+    expect(baselineMonths('2026-10', '2026-01', '2026-06')).toEqual(['2026-09', '2026-08', '2026-07', '2026-06']);
+    expect(baselineMonths('2026-03', '2026-01', '2026-01')).toEqual(['2026-02', '2026-01']);
+    // 起點比開始記帳還早：從開始記帳那個月算
+    expect(baselineMonths('2026-03', '2026-01', '2025-06')).toEqual(['2026-02', '2026-01']);
   });
 
   it('還沒有完整月份就是空的', () => {
     expect(baselineMonths('2026-10', '2026-10')).toEqual([]);
     expect(baselineMonths('2026-10', '2026-09')).toEqual([]);
     expect(baselineMonths('2026-10', null)).toEqual([]);
+    expect(baselineMonths('2026-10', '2026-01', '2026-10')).toEqual([]);
+  });
+});
+
+describe('分析起點與長條圖月數', () => {
+  it('起點：沒設定就是帳本第一個月；設得比開始記帳早就從開始記帳算', () => {
+    expect(analysisStartOf('2026-01', null)).toBe('2026-01');
+    expect(analysisStartOf('2026-01', '2026-05')).toBe('2026-05');
+    expect(analysisStartOf('2026-01', '2025-05')).toBe('2026-01');
+    expect(analysisStartOf(null, '2026-05')).toBeNull();
+    expect(baselineStartOf('2026-01', null)).toBe('2026-02');
+    expect(baselineStartOf('2026-01', '2026-01')).toBe('2026-01');
+  });
+
+  it('讀設定：格式不對就當成沒設定／預設半年', () => {
+    expect(normalizeStartYm({ month: '2026-03' })).toBe('2026-03');
+    expect(normalizeStartYm({ month: null })).toBeNull();
+    expect(normalizeStartYm({ month: '2026-13' })).toBeNull();
+    expect(normalizeStartYm(undefined)).toBeNull();
+    expect(normalizeChartSpan({ months: 12 })).toBe(12);
+    expect(normalizeChartSpan({ months: 5 })).toBe(6);
+    expect(normalizeChartSpan(null)).toBe(6);
+  });
+
+  // 1–3 月每月 3 萬（搬家前），4 月起每月 1 萬；午餐每月越吃越多
+  function moved() {
+    const rows = [];
+    for (const m of ['01', '02', '03']) rows.push(tx(`2026-${m}-10`, 30000, '居住', '舊家'));
+    for (const m of ['04', '05', '06', '07', '08', '09', '10']) rows.push(tx(`2026-${m}-10`, 10000, '居住', '新家'));
+    ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'].forEach((m, i) => rows.push(tx(`2026-${m}-12`, 1000 + i * 100, '飲食', '午餐')));
+    return rows;
+  }
+  const build = (extra) => buildSpendingAnalysis({
+    expenses: moved(), targetYm: '2026-10', todayYmd: '2026-11-02', firstYm: '2026-01', ...extra,
+  });
+
+  it('平常從起點一路累積：沒設定從 2 月起，設 4 月就不算搬家前', () => {
+    const auto = build();
+    expect(auto.baselineMonths).toHaveLength(8);
+    expect(auto.baselineMonths.at(-1)).toBe('2026-02');
+    const fromApril = build({ startYm: '2026-04' });
+    expect(fromApril.baselineMonths).toEqual(['2026-09', '2026-08', '2026-07', '2026-06', '2026-05', '2026-04']);
+    // 居住 1 萬 × 6 個月；午餐 4–9 月 1,300…1,800 的平均 1,550
+    expect(fromApril.baseline).toBeCloseTo(10000 + 1550, 6);
+  });
+
+  it('起點以前的月份：不算平常，長條圖上標成分析起點之前（不是還沒記帳）', () => {
+    const a = build({ startYm: '2026-07' });
+    expect(a.months.map((m) => [m.ym, m.beforeStart, m.beforeRecords])).toEqual([
+      ['2026-05', true, false], ['2026-06', true, false],
+      ['2026-07', false, false], ['2026-08', false, false], ['2026-09', false, false], ['2026-10', false, false],
+    ]);
+    expect(a.analysisStartYm).toBe('2026-07');
+  });
+
+  it('看起點以前的月份：不分析', () => {
+    const a = build({ startYm: '2026-07', targetYm: '2026-05' });
+    expect(a.isBeforeStart).toBe(true);
+    expect(a.isBeforeRecords).toBe(false);
+    const b = build({ targetYm: '2025-12' });
+    expect(b.isBeforeStart).toBe(true);
+    expect(b.isBeforeRecords).toBe(true);
+  });
+
+  it('長條圖月數只影響圖表：平常、比例、連續上升都一樣', () => {
+    const results = [3, 6, 12].map((chartSpan) => build({ chartSpan }));
+    expect(results.map((a) => a.months.length)).toEqual([3, 6, 12]);
+    const lunch = results.map((a) => a.categories.find((c) => c.name === '飲食'));
+    expect(lunch.map((c) => c.series.length)).toEqual([3, 6, 12]);
+    // 午餐 2 月起每個月都比前一個月多（帳本第一個月 1 月不算）：連續 8 個月上升，選一季也照樣是 8
+    expect(lunch.map((c) => c.risingMonths)).toEqual([8, 8, 8]);
+    expect(new Set(results.map((a) => a.baseline)).size).toBe(1);
+    expect(new Set(results.map((a) => a.ratio)).size).toBe(1);
+    // 一年的圖表比開始記帳還早的那兩個月，標成還沒記帳
+    expect(results[2].months.slice(0, 2).map((m) => m.beforeRecords)).toEqual([true, true]);
   });
 });
 
@@ -157,44 +350,39 @@ describe('buildSpendingAnalysis', () => {
     return { all: [...july, ...aug, ...sep, ...oct], tuition, rent };
   }
 
-  it('大額另列、帳本第一個月不算進平常、月中跟平常同期比', () => {
+  it('大額照算、帳本第一個月不算進平常、月中跟平常同期比', () => {
     const { all, tuition, rent } = realisticLedger();
     const a = buildSpendingAnalysis({ expenses: all, targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2026-07' });
+    const everyday = 21 * 2005.33;
 
     expect(a.isCurrent).toBe(true);
     expect(a.baselineMonths).toEqual(['2026-09', '2026-08']);
     expect(a.baseline).toBeCloseTo((16013 + 9049 + 21 * 3032) / 2, 0);
-    expect(a.toDate).toBeCloseTo(21 * 2005.33, 1);
+    // 學費、房租照樣算進本月
+    expect(a.toDate).toBeCloseTo(everyday + 467725 + 77511, 1);
     // 8、9 月的支出都在 1–27 號：平常同期就是整個月，之後也沒有平常會花的 → 月底預估就是已經花的
     expect(a.baselineToDate).toBeCloseTo(a.baseline, 6);
     expect(a.projected).toBeCloseTo(a.toDate, 6);
     expect(a.ratio).toBeCloseTo(a.toDate / a.baselineToDate - 1, 6);
-    expect(a.targetLarge).toBeCloseTo(467725 + 77511, 0);
-    expect(a.largeItems.map((l) => l.tx.id)).toEqual(expect.arrayContaining([tuition.id, rent.id]));
-    // 長條圖的 10 月不含那兩筆
+    // 只標示：本月的大額單筆列出來、加總給卡片用
+    expect(a.largeItems.map((l) => l.tx.id)).toEqual([rent.id, tuition.id]);
+    expect(a.largeTotal).toBeCloseTo(467725 + 77511, 0);
     expect(a.months.at(-1).daily).toBeCloseTo(a.toDate, 6);
+    expect(a.categories.find((c) => c.name === '上學').current).toBe(467725);
   });
 
-  it('使用者把某筆改回算進去，它就回到日常支出', () => {
-    const { all, rent } = realisticLedger();
-    const a = buildSpendingAnalysis({
-      expenses: all, targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2026-07', includedIds: new Set([rent.id]),
-    });
-    expect(a.toDate).toBeCloseTo(21 * 2005.33 + 77511, 1);
-    expect(a.targetLarge).toBeCloseTo(467725, 0);
-    expect(a.largeItems.find((l) => l.tx.id === rent.id).included).toBe(true);
+  it('大額單筆只列正在看的這個月', () => {
+    const { all } = realisticLedger();
+    const a = buildSpendingAnalysis({ expenses: all, targetYm: '2026-09', todayYmd: '2026-10-27', firstYm: '2026-07' });
+    expect(a.largeItems).toEqual([]);
+    expect(a.largeTotal).toBe(0);
   });
 
-  it('改回算進去的大額單筆照實際金額算，月底預估不放大', () => {
-    const { all, tuition } = realisticLedger();
-    const a = buildSpendingAnalysis({
-      expenses: all, targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2026-07', includedIds: new Set([tuition.id]),
-    });
-    const everyday = 21 * 2005.33;
-    expect(a.toDate).toBeCloseTo(everyday + 467725, 1);
-    expect(a.projected).toBeCloseTo(everyday + 467725, 1);
-    const school = a.categories.find((c) => c.name === '上學');
-    expect(school.projected).toBeCloseTo(467725, 1);
+  it('過去月份的大額單筆算進平常', () => {
+    const { all } = realisticLedger();
+    const a = buildSpendingAnalysis({ expenses: all, targetYm: '2026-11', todayYmd: '2026-11-30', firstYm: '2026-07' });
+    expect(a.baselineMonths).toEqual(['2026-10', '2026-09', '2026-08']);
+    expect(a.baseline).toBeCloseTo((16013 + (9049 + 21 * 3032) + (467725 + 77511 + 21 * 2005.33)) / 3, 0);
   });
 
   it('過去的月份不推估', () => {
@@ -279,21 +467,17 @@ describe('buildSpendingAnalysis', () => {
     expect(a.categories[0].name).toBe('購物');
   });
 
-  it('金額走顯示幣別換算，大額判斷仍看台幣', () => {
+  it('金額走顯示幣別換算，大額判斷看門檻的幣別（預設台幣）', () => {
     const big = tx('2026-10-02', 40000, '上學');
     const small = tx('2026-10-03', 4000, '飲食');
-    const a = buildSpendingAnalysis({
-      expenses: [big, small], targetYm: '2026-09', todayYmd: '2026-10-27', firstYm: '2026-01',
-      toValue: (t) => t.twdAmount / 40,
-    });
-    expect(a.months.at(-1).ym).toBe('2026-09');
     const b = buildSpendingAnalysis({
       expenses: [big, small], targetYm: '2026-10', todayYmd: '2026-10-31', firstYm: '2026-01',
       toValue: (t) => t.twdAmount / 40,
     });
     expect(b.largeItems.map((l) => l.tx.id)).toEqual([big.id]);
-    expect(b.toDate).toBeCloseTo(100, 6);
+    expect(b.toDate).toBeCloseTo(1100, 6);
     expect(b.largeItems[0].value).toBeCloseTo(1000, 6);
+    expect(b.largeTotal).toBeCloseTo(1000, 6);
   });
 
   it('空白分類歸到未分類', () => {
@@ -318,18 +502,18 @@ describe('一般用戶的帳：房租與訂閱是固定支出', () => {
     return rows;
   }
 
-  it('房租不會被當成大額單筆，留在日常支出；手機照樣另列', () => {
+  it('房租超過門檻也不會被標成大額；手機照樣標，金額都算進本月', () => {
     const rows = ledger(27);
     const phone = tx('2026-10-18', 32900, '購物', 'iPhone 17');
     const a = buildSpendingAnalysis({ expenses: [...rows, phone], targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2026-03' });
     expect(a.largeItems.map((l) => l.tx.id)).toEqual([phone.id]);
-    expect(a.toDate).toBe(12000 + 390 + 27 * 700);
+    expect(a.toDate).toBe(12000 + 390 + 27 * 700 + 32900);
   });
 
   it('月底預估 = 已經花的 + 平常 28 號之後的午餐；房租與訂閱已經付了，不會多算', () => {
     const a = buildSpendingAnalysis({ expenses: ledger(27), targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2026-03' });
-    // 7、8 月 28 號之後各 4 天，9 月 3 天
-    expect(a.projected).toBeCloseTo(12000 + 390 + 27 * 700 + (700 * 11) / 3, 6);
+    // 平常是 5–9 月（3、4 月沒記帳不算）：28 號之後 5、7、8 月各 4 天，6、9 月各 3 天
+    expect(a.projected).toBeCloseTo(12000 + 390 + 27 * 700 + (700 * 18) / 5, 6);
     expect(a.ratio).toBeCloseTo(0, 6);
     const subs = a.categories.find((c) => c.name === '訂閱');
     expect(subs.ratio).toBeCloseTo(0, 6);
@@ -337,7 +521,8 @@ describe('一般用戶的帳：房租與訂閱是固定支出', () => {
 
   it('月初房租還沒付：平常 5 號的房租會算進月底預估', () => {
     const a = buildSpendingAnalysis({ expenses: ledger(3), targetYm: '2026-10', todayYmd: '2026-10-03', firstYm: '2026-03' });
-    expect(a.projected).toBeCloseTo(390 + 3 * 700 + 12000 + (700 * 83) / 3, 6);
+    // 5–9 月 4 號之後的午餐：28 + 27 + 28 + 28 + 27 天
+    expect(a.projected).toBeCloseTo(390 + 3 * 700 + 12000 + (700 * 138) / 5, 6);
     const housing = a.categories.find((c) => c.name === '居住');
     expect(housing.current).toBe(0);
     expect(housing.projected).toBe(12000);
@@ -369,16 +554,6 @@ describe('一般用戶的帳：房租與訂閱是固定支出', () => {
 });
 
 describe('審查後修正的邊界情況', () => {
-  it('負數（退款）不會把分母拉低，害一般大筆被抓成大額', () => {
-    // 正數共 7.6 萬：3 萬抓出來後剩 4.6 萬，1 萬只占 22%，不抓。
-    // 如果 -2.5 萬也扣分母，剩下只有 2.1 萬，1 萬占 48% 就會被誤抓
-    const rows = [tx('2026-08-02', 30000), tx('2026-08-03', 10000), tx('2026-08-04', 9000), tx('2026-08-05', 9000),
-      tx('2026-08-06', 9000), tx('2026-08-07', 9000), tx('2026-08-08', -25000)];
-    const ids = detectLargeItems(rows);
-    expect(ids.has(rows[0].id)).toBe(true);
-    expect(ids.has(rows[1].id)).toBe(false);
-  });
-
   it('一筆都沒記的月份不算進平常', () => {
     const rows = [tx('2026-07-10', 9000), tx('2026-08-10', 9000), tx('2026-10-10', 9000)];
     const a = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-11-02', firstYm: '2026-06' });
@@ -393,8 +568,8 @@ describe('審查後修正的邊界情況', () => {
     expect(a.categories[0].risingMonths).toBe(1);
   });
 
-  it('平常是 0（那幾個月只有另列的大額單筆）就不比較', () => {
-    const rows = [tx('2026-09-10', 50000, '學費', '學費'), tx('2026-10-10', 9000)];
+  it('平常是 0（那幾個月加起來只有退款）就不比較', () => {
+    const rows = [tx('2026-09-10', -500, '購物', '退貨'), tx('2026-10-10', 9000)];
     const a = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-11-02', firstYm: '2026-08' });
     expect(a.baseline).toBeNull();
     expect(a.ratio).toBeNull();
@@ -443,14 +618,5 @@ describe('月初第一週不推估、不比較', () => {
     const a = buildSpendingAnalysis({ expenses: usual(), targetYm: '2026-09', todayYmd: '2026-10-02', firstYm: '2026-06' });
     expect(a.isEarly).toBe(false);
     expect(a.ratio).toBe(0);
-  });
-
-  it('這個月判斷大額時，分母至少用平常：月初一筆 1.2 萬不會因為占了到目前的九成就被抓', () => {
-    const big = tx('2026-10-02', 12000, '購物', 'Costco');
-    const rows = [...usual(), tx('2026-10-01', 500), big];
-    const a = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-10-02', firstYm: '2026-06' });
-    expect(a.largeItems.map((i) => i.tx.id)).not.toContain(big.id);
-    // 同一筆放在已經過完、總額只有 1.25 萬的月份就會被抓（不墊底）
-    expect(detectLargeItems([tx('2026-05-01', 500), tx('2026-05-02', 12000)]).size).toBe(1);
   });
 });
