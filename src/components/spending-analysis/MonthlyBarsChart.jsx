@@ -13,20 +13,9 @@ import { useTheme } from '@/hooks/useTheme';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import InfoTip from '@/components/spending-analysis/InfoTip';
 import { CHART_SPANS, monthAxisLabels } from '@/lib/spendingAnalysis';
+import { cssVar, compact } from '@/components/spending-analysis/chartHelpers';
 
 ChartJS.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip);
-
-function cssVar(name, fallback) {
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return value || fallback;
-}
-
-/** 刻度只要看得出量級：1,234 → 1.2k */
-function compact(value) {
-  if (Math.abs(value) < 1000) return String(Math.round(value));
-  const k = value / 1000;
-  return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
-}
 
 /** 旅程那段的斜線填色：淡底＋斜線，不用另一個色相也分得出來 */
 function stripes(background, line) {

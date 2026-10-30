@@ -11,16 +11,20 @@ import {
   normalizeLargeThreshold,
   normalizeStartYm,
   normalizeChartSpan,
+  normalizeExcludedIds,
 } from '@/lib/spendingAnalysis';
 
 // 這一頁的設定都存在 settings 跨裝置同步，不用另開資料表。value 欄不能是空值，所以都包成物件
 export const LARGE_THRESHOLD_KEY = 'spending_analysis_large_threshold';
 export const START_MONTH_KEY = 'spending_analysis_start_month';
 export const CHART_SPAN_KEY = 'spending_analysis_chart_months';
+export const EXCLUDED_KEY = 'spending_analysis_excluded';
 const PREFS = {
   threshold: { key: LARGE_THRESHOLD_KEY, read: normalizeLargeThreshold, write: (v) => v },
   startYm: { key: START_MONTH_KEY, read: normalizeStartYm, write: (v) => ({ month: v }) },
   chartSpan: { key: CHART_SPAN_KEY, read: normalizeChartSpan, write: (v) => ({ months: v }) },
+  // 使用者排除、不算進分析的交易 id
+  excluded: { key: EXCLUDED_KEY, read: normalizeExcludedIds, write: (v) => ({ ids: v }) },
 };
 const readPrefs = (valueOf) => Object.fromEntries(Object.entries(PREFS).map(([name, p]) => [name, p.read(valueOf(p.key))]));
 
@@ -65,7 +69,7 @@ async function fetchExpenses(userId, fromYm, toYm) {
 
 /**
  * 消費分析頁的資料：分析起點到這個月的支出、
- * 帳本第一筆交易的月份，以及這頁的設定（大額門檻、分析起點、長條圖月數）。計算交給 lib/spendingAnalysis.js。
+ * 帳本第一筆交易的月份，以及這頁的設定（大額門檻、分析起點、長條圖月數、排除的交易）。計算交給 lib/spendingAnalysis.js。
  * 支出一次讀整段，換月份不用重讀；起點改早才要讀更早的部分。
  * 抓過的都記在記憶體（resourceCache，登出時清掉）：再回到這頁，先用記著的畫，背景重抓到了再換。
  */
@@ -162,7 +166,7 @@ export function useSpendingAnalysis(userId, year, month) {
     return () => { cancelled = true; };
   }, [userId, storePrefs]);
 
-  /** 改設定（name 是 threshold／startYm／chartSpan）；畫面先變，寫入失敗再退回原本的值 */
+  /** 改設定（name 是 threshold／startYm／chartSpan／excluded）；畫面先變，寫入失敗再退回原本的值 */
   const savePref = useCallback((name, next) => {
     if (!userId || !prefsRef.current) return Promise.resolve();
     const previous = prefsRef.current[name];
@@ -183,6 +187,13 @@ export function useSpendingAnalysis(userId, year, month) {
     return run;
   }, [userId, storePrefs]);
 
+  /** 排除或放回一筆交易；從最新的清單改，連點好幾筆也不會互相蓋掉 */
+  const setExcluded = useCallback((txId, exclude) => {
+    const ids = prefsRef.current?.excluded ?? [];
+    const next = exclude ? [...new Set([...ids, txId])] : ids.filter((id) => id !== txId);
+    return savePref('excluded', next);
+  }, [savePref]);
+
   const current = prefs ?? readPrefs(() => undefined);
   return {
     targetYm,
@@ -191,6 +202,7 @@ export function useSpendingAnalysis(userId, year, month) {
     threshold: current.threshold,
     startYm: current.startYm,
     chartSpan: current.chartSpan,
+    excludedIds: current.excluded,
     // 第一筆交易的月份、設定還沒查回來時也算載入中：避免先用錯的「平常」或預設門檻閃一下。
     // 沒有任何交易就不用讀支出；讀失敗就不算載入中，畫面才會改說載入失敗
     loading: !metaError && (!ready || (!!firstYm && !ledgerReady && !error)),
@@ -198,5 +210,6 @@ export function useSpendingAnalysis(userId, year, month) {
     // 交易筆數超過讀取上限時，資料從哪個月起才完整；沒超過是 null
     coveredFromYm: ledgerReady ? ledger.coveredFromYm : null,
     savePref,
+    setExcluded,
   };
 }

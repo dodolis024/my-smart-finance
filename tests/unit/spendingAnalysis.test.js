@@ -12,6 +12,7 @@ import {
   baselineStartOf,
   normalizeStartYm,
   normalizeChartSpan,
+  normalizeExcludedIds,
   risingStreak,
   buildSpendingAnalysis,
   largeMeasure,
@@ -317,9 +318,9 @@ describe('buildSpendingAnalysis', () => {
     // 學費、房租照樣算進本月
     expect(a.toDate).toBeCloseTo(everyday + 467725 + 77511, 1);
     expect(a.ratio).toBeCloseTo(a.toDate / a.baseline - 1, 6);
-    // 只標示：本月的大額單筆列出來、加總給卡片用
+    // 只標示：本月的大額單筆列出來
     expect(a.largeItems.map((l) => l.tx.id)).toEqual([rent.id, tuition.id]);
-    expect(a.largeTotal).toBeCloseTo(467725 + 77511, 0);
+    expect(a.largeItems.map((l) => l.value)).toEqual([77511, 467725]);
     expect(a.months.at(-1).daily).toBeCloseTo(a.toDate, 6);
     expect(a.categories.find((c) => c.name === '上學').current).toBe(467725);
   });
@@ -328,7 +329,55 @@ describe('buildSpendingAnalysis', () => {
     const { all } = realisticLedger();
     const a = buildSpendingAnalysis({ expenses: all, targetYm: '2026-09', todayYmd: '2026-10-27', firstYm: '2026-07' });
     expect(a.largeItems).toEqual([]);
-    expect(a.largeTotal).toBe(0);
+  });
+
+  it('排除的大額：本月、分類都不算，留在大額清單裡標成排除', () => {
+    const { all, tuition, rent } = realisticLedger();
+    const a = buildSpendingAnalysis({
+      expenses: all, targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2026-07', excludedIds: new Set([tuition.id]),
+    });
+    const everyday = 21 * 2005.33;
+    expect(a.toDate).toBeCloseTo(everyday + 77511, 1);
+    expect(a.months.at(-1).daily).toBeCloseTo(a.toDate, 6);
+    expect(a.months.at(-1).dailyTxs.map((t) => t.id)).not.toContain(tuition.id);
+    expect(a.categories.find((c) => c.name === '上學')).toBeUndefined();
+    expect(a.largeItems.map((l) => [l.tx.id, l.excluded])).toEqual([[rent.id, false], [tuition.id, true]]);
+  });
+
+  it('排除的交易在平常與去年同月都不算', () => {
+    const big = tx('2026-09-10', 50000, '購物');
+    const lastYear = tx('2025-10-05', 30000, '購物');
+    const expenses = [
+      tx('2025-10-01', 1000), lastYear,
+      tx('2026-08-01', 1000), tx('2026-09-01', 1000), big, tx('2026-10-01', 1000),
+    ];
+    const base = { expenses, targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2025-10', startYm: '2025-10', chartSpan: 12 };
+    const before = buildSpendingAnalysis(base);
+    const after = buildSpendingAnalysis({ ...base, excludedIds: new Set([big.id, lastYear.id]) });
+    expect(before.baseline).toBeCloseTo((31000 + 1000 + 51000) / 3, 6);
+    expect(after.baseline).toBeCloseTo((1000 + 1000 + 1000) / 3, 6);
+    expect(after.lastYear.total).toBe(1000);
+    expect(after.months.find((m) => m.ym === '2026-09').daily).toBe(1000);
+    // 別的月份排除的不出現在這個月的大額清單
+    expect(after.largeItems).toEqual([]);
+  });
+
+  it('門檻調高後，排除過的那筆不到門檻了也照樣列著（才放得回來），而且照樣不算', () => {
+    const laptop = tx('2026-10-03', 42900, '購物');
+    const expenses = [tx('2026-09-01', 1000), laptop, tx('2026-10-05', 1000)];
+    const a = buildSpendingAnalysis({
+      expenses, targetYm: '2026-10', todayYmd: '2026-10-27', firstYm: '2026-08', startYm: '2026-09',
+      measure: largeMeasure({ amount: 100000, currency: 'TWD', twd: 100000 }), excludedIds: new Set([laptop.id]),
+    });
+    expect(a.largeItems.map((l) => [l.tx.id, l.excluded])).toEqual([[laptop.id, true]]);
+    expect(a.toDate).toBe(1000);
+  });
+
+  it('讀設定：排除清單格式不對就是空的', () => {
+    expect(normalizeExcludedIds({ ids: ['a', 'b'] })).toEqual(['a', 'b']);
+    expect(normalizeExcludedIds({ ids: ['a', 3, '', null] })).toEqual(['a']);
+    expect(normalizeExcludedIds(null)).toEqual([]);
+    expect(normalizeExcludedIds({ ids: 'a' })).toEqual([]);
   });
 
   it('過去月份的大額單筆算進平常', () => {
@@ -399,7 +448,7 @@ describe('buildSpendingAnalysis', () => {
   });
 
   it('還沒過完也直接跟平常整個月比：不推估、不算同期，金額就是實際花的', () => {
-    // 7–9 月：10 號吃飯 1000、25 號買東西 2000（每次店名不同，不是固定支出）
+    // 7–9 月：10 號吃飯 1000、25 號買東西 2000
     const rows = ['07', '08', '09'].flatMap((m) => [
       tx(`2026-${m}-10`, 1000, '飲食'), tx(`2026-${m}-25`, 2000, '購物', `購物${m}`),
     ]);
@@ -429,7 +478,6 @@ describe('buildSpendingAnalysis', () => {
     expect(b.largeItems.map((l) => l.tx.id)).toEqual([big.id]);
     expect(b.toDate).toBeCloseTo(1100, 6);
     expect(b.largeItems[0].value).toBeCloseTo(1000, 6);
-    expect(b.largeTotal).toBeCloseTo(1000, 6);
   });
 
   it('空白分類歸到未分類', () => {

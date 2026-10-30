@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import Modal from '@/components/common/Modal';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
-import { fetchTripAddCandidates } from '@/hooks/useTransactionSearch';
+import { fetchTripAddCandidates, fetchSplitSyncedCategories } from '@/hooks/useTransactionSearch';
 import { useSettings } from '@/hooks/useSettings';
 import { formatOriginalMoney } from '@/lib/utils';
 import { formatTripRange } from '@/lib/trips';
+import EntryButton from '@/components/spending-analysis/EntryButton';
 
 const SEARCH_LIMIT = 30;
 // App 預設分類裡的「旅遊」（中、英文帳號各自的預設名稱）：使用者有這個分類，加入區就先選它
@@ -29,6 +30,7 @@ const isOut = (entry) => entry.status === 'excluded';
  * 一趟旅程的明細：日期範圍內每一筆可以排除／加回，手動加入的可以移除；排除的接在同一個清單最下面，預設摺起來。
  * 下方搜尋日期範圍外的交易加進來（例如出發前訂的機票）；已經算在別趟旅程的不能加，免得悄悄從那趟被搶走。
  * 搜尋可以先選分類：有「旅遊」分類的使用者一打開就列出出發前的旅遊交易，不用自己想關鍵字。
+ * 分帳群組同步過來的交易分類是群組名稱，另外列在選單最下面的「分帳群組」。
  */
 export default function TripDetailModal({ userId, summary, tripOf, currentYear, onClose, onEntry, onEdit, onDelete }) {
   const { t, lang } = useLanguage();
@@ -39,7 +41,13 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
   const [showExcluded, setShowExcluded] = useState(false);
   const [category, setCategory] = useState('');
   const { expenseCategories, loadSettingsData } = useSettings();
+  // 分帳群組同步過來的交易掛的分類（群組名稱），不在自己的分類清單裡，另外列在選單最下面
+  const [splitCategories, setSplitCategories] = useState([]);
   const searchRequestRef = useRef(0);
+  const dialogRef = useRef(null);
+  const resultsRef = useRef(null);
+  // 按加入時搜尋結果在畫面上的位置；那筆交易出現在上面清單後捲回原位
+  const addAnchorRef = useRef(null);
   const tripId = summary?.trip.id;
   const tripStart = summary?.trip.start;
   const travelCategory = expenseCategories.find((name) => TRAVEL_CATEGORIES.includes(name)) || '';
@@ -47,6 +55,16 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
   useEffect(() => {
     if (tripId) loadSettingsData();
   }, [tripId, loadSettingsData]);
+
+  // 讀不到就只列自己的分類，跟以前一樣，不另外提示
+  useEffect(() => {
+    if (!tripId || !userId) return undefined;
+    let cancelled = false;
+    fetchSplitSyncedCategories(userId).then(({ categories }) => {
+      if (!cancelled) setSplitCategories(categories);
+    });
+    return () => { cancelled = true; };
+  }, [tripId, userId]);
 
   const runSearch = async (nextQuery, nextCategory) => {
     const reqId = ++searchRequestRef.current;
@@ -73,19 +91,40 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
     setQuery('');
     setResults(null);
     setShowExcluded(false);
+    addAnchorRef.current = null;
     setCategory(travelCategory);
     if (tripId && travelCategory) runSearch('', travelCategory);
   }, [tripId, travelCategory]); // eslint-disable-line react-hooks/exhaustive-deps -- runSearch 每次重繪都是新的，只在換旅程時跑
 
+  // 上面多一行會把搜尋結果往下推：跟著捲下去，下一筆就遞補到剛剛按的位置，可以在同一個地方一直加。
+  // 範圍外的交易要重抓才會出現在上面，抓到之前先不動
+  useLayoutEffect(() => {
+    const anchor = addAnchorRef.current;
+    if (!anchor || !summary?.entries.some((e) => e.tx.id === anchor.txId)) return;
+    addAnchorRef.current = null;
+    if (!resultsRef.current || !dialogRef.current) return;
+    dialogRef.current.scrollTop += resultsRef.current.getBoundingClientRect().top - anchor.top;
+  }, [summary]);
+
   if (!summary) return null;
+  const groupCategories = splitCategories
+    .filter((name) => !expenseCategories.includes(name))
+    .sort((a, b) => a.localeCompare(b, lang === 'en' ? 'en' : 'zh-TW'));
   const { trip, entries, total, count } = summary;
   const shown = entries.filter((e) => !isOut(e));
   const excluded = entries.filter(isOut);
   const inTrip = new Set(entries.filter((e) => e.status === 'in' || e.status === 'added').map((e) => e.tx.id));
+  // 加進旅程的從搜尋結果拿掉，移出旅程就自動回來
+  const candidates = Array.isArray(results) ? results.filter((tx) => !inTrip.has(tx.id)) : results;
 
   const handleSearch = (e) => {
     e.preventDefault();
     runSearch(query, category);
+  };
+
+  const handleAdd = (txId) => {
+    addAnchorRef.current = resultsRef.current ? { txId, top: resultsRef.current.getBoundingClientRect().top } : null;
+    onEntry(trip.id, txId, 'add');
   };
 
   const handleCategoryChange = (e) => {
@@ -108,10 +147,11 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
     if (entry.status === 'other') return t('spendingAnalysis.tripDetail.other', { name: entry.otherTrip.name });
     return null;
   };
+  // 日期範圍內的排除後留在「已排除」可以放回；手動加入的拿掉就直接消失
   const action = (entry) => {
-    if (entry.status === 'in') return ['exclude', t('spendingAnalysis.tripDetail.exclude')];
-    if (entry.status === 'excluded') return ['restore', t('spendingAnalysis.tripDetail.restore')];
-    if (entry.status === 'added') return ['remove', t('spendingAnalysis.tripDetail.remove')];
+    if (entry.status === 'in') return 'exclude';
+    if (entry.status === 'excluded') return 'restore';
+    if (entry.status === 'added') return 'remove';
     return null;
   };
 
@@ -131,9 +171,11 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
         <span className="analysis-trip-entry__original">{original(tx)}</span>
         <span className="analysis-trip-entry__amount">{formatTotal(toDisplay(tx).value)}</span>
         {act ? (
-          <button type="button" className="analysis-btn analysis-btn--small" onClick={() => onEntry(trip.id, tx.id, act[0])}>
-            {act[1]}
-          </button>
+          <EntryButton
+            adding={act === 'restore'}
+            label={t(act === 'restore' ? 'spendingAnalysis.tripDetail.addToTrip' : 'spendingAnalysis.tripDetail.removeFromTrip')}
+            onClick={() => onEntry(trip.id, tx.id, act)}
+          />
         ) : <span />}
       </li>
     );
@@ -142,7 +184,7 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
   return (
     <Modal isOpen={!!summary} onClose={onClose} className="category-detail-modal" titleId="trip-detail-title">
       <div className="category-detail-modal__backdrop" onClick={onClose} />
-      <div className="category-detail-modal__dialog scrollbar-on-scroll analysis-trip-detail" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="category-detail-modal__dialog scrollbar-on-scroll analysis-trip-detail" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="category-detail-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
         <div className="analysis-trip-detail__head">
           <h2 id="trip-detail-title" className="category-detail-modal__title">{trip.name}</h2>
@@ -205,6 +247,11 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
           >
             <option value="">{t('spendingAnalysis.tripDetail.allCategories')}</option>
             {expenseCategories.map((name) => <option key={name} value={name}>{name}</option>)}
+            {groupCategories.length > 0 && (
+              <optgroup label={t('spendingAnalysis.tripDetail.splitGroups')}>
+                {groupCategories.map((name) => <option key={name} value={name}>{name}</option>)}
+              </optgroup>
+            )}
           </select>
           <input
             className="analysis-input"
@@ -215,15 +262,15 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
           <button type="submit" className="analysis-btn" disabled={searching}>{t('spendingAnalysis.tripDetail.search')}</button>
         </form>
         {results === 'failed' && <p className="analysis-empty">{t('spendingAnalysis.tripDetail.searchFailed')}</p>}
-        {Array.isArray(results) && (
-          results.length === 0 ? (
+        {Array.isArray(candidates) && (
+          candidates.length === 0 ? (
             <p className="analysis-empty">{t('spendingAnalysis.tripDetail.noResults')}</p>
           ) : (
-            <ul className="analysis-trip-detail__list">
-              {results.map((tx) => {
+            <ul ref={resultsRef} className="analysis-trip-detail__list">
+              {candidates.map((tx) => {
                 // 已經算在別趟旅程的不能加；要改算到這趟，先到那趟排除或移除。旅程名稱可能很長，寫在名稱後面
                 const owner = tripOf?.get(tx.id);
-                const otherTrip = owner && owner.id !== trip.id && !inTrip.has(tx.id) ? owner : null;
+                const otherTrip = owner && owner.id !== trip.id ? owner : null;
                 return (
                   <li key={tx.id} className="analysis-trip-entry">
                     <span className="analysis-trip-entry__date">{tx.date.slice(0, 4) === String(currentYear) ? dateOf(tx) : tx.date.replaceAll('-', '/')}</span>
@@ -234,12 +281,12 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
                     </span>
                     <span className="analysis-trip-entry__original">{original(tx)}</span>
                     <span className="analysis-trip-entry__amount">{formatTotal(toDisplay(tx).value)}</span>
-                    {inTrip.has(tx.id) ? (
-                      <span className="analysis-trip-entry__state">{t('spendingAnalysis.tripDetail.alreadyIn')}</span>
-                    ) : otherTrip ? <span /> : (
-                      <button type="button" className="analysis-btn analysis-btn--small" onClick={() => onEntry(trip.id, tx.id, 'add')}>
-                        {t('spendingAnalysis.tripDetail.add')}
-                      </button>
+                    {otherTrip ? <span /> : (
+                      <EntryButton
+                        adding
+                        label={t('spendingAnalysis.tripDetail.addToTrip')}
+                        onClick={() => handleAdd(tx.id)}
+                      />
                     )}
                   </li>
                 );

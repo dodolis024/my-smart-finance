@@ -15,21 +15,10 @@ import { useTheme } from '@/hooks/useTheme';
 import { useDisplayAmount } from '@/contexts/DisplayAmountContext';
 import { formatOriginalMoney } from '@/lib/utils';
 import { monthAxisLabels } from '@/lib/spendingAnalysis';
+import { cssVar, compact } from '@/components/spending-analysis/chartHelpers';
 import { ChangePill } from '@/components/spending-analysis/CategoryChanges';
 
 ChartJS.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip);
-
-function cssVar(name, fallback) {
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return value || fallback;
-}
-
-/** 刻度只要看得出量級：1,234 → 1.2k */
-function compact(value) {
-  if (Math.abs(value) < 1000) return String(Math.round(value));
-  const k = value / 1000;
-  return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
-}
 
 /** 1、2、5 × 10 的次方裡，不小於 raw 的最小值（刻度間隔用） */
 function niceStep(raw) {

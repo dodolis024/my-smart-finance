@@ -303,12 +303,13 @@
 
 /* 用鍵盤（含 Esc 關彈窗回來）時的焦點框，跟 App 其他按鈕一樣用主題色光暈，不用瀏覽器預設的藍框 */
 .analysis-cat:focus-visible,
-.analysis-trips__row:focus-visible,
+.analysis-trips__tile:focus-visible,
 .analysis-btn:focus-visible,
 .analysis-icon-btn:focus-visible,
 .analysis-segment__btn:focus-visible,
 .analysis-link:focus-visible,
-.analysis-trip-detail__toggle:focus-visible {
+.analysis-trip-detail__toggle:focus-visible,
+.analysis-entry-btn:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
 }
@@ -400,7 +401,7 @@
 
 .analysis-large__row {
   display: grid;
-  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto 1.5rem;
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0;
@@ -428,7 +429,40 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 排除的那筆：留在原位、變淡、金額劃掉，跟旅程明細的「已排除」同一個樣子 */
+.analysis-large__row.is-out {
+  opacity: 0.55;
+}
+
+.analysis-large__row.is-out .analysis-large__amount {
+  text-decoration: line-through;
+}
+
 /* 共用按鈕 */
+
+/* ⊕／⊖（旅程明細、大額消費）：沒有底色與外框，平常灰色，滑過變主題色 */
+.analysis-entry-btn {
+  justify-self: end;
+  display: inline-flex;
+  padding: 0.125rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.analysis-entry-btn svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.analysis-entry-btn:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-tint-hover);
+}
+
 .analysis-btn {
   padding: 0.3rem 0.85rem;
   border: 1px solid var(--color-border);
@@ -464,13 +498,10 @@
   color: var(--color-on-primary);
 }
 
-.analysis-btn--small {
-  padding: 0.15rem 0.6rem;
-}
 
-/* 旅程卡片 */
+/* 旅程：外面不包卡片，標題直接放在頁面底色上，每趟旅程的方塊自己是卡片 */
 .analysis-trips {
-  margin-bottom: var(--space-sm);
+  margin: var(--space-md) 0 var(--space-sm);
 }
 
 .analysis-trips__head {
@@ -496,23 +527,29 @@
   font-size: 0.9375rem;
 }
 
+/* 每趟旅程一個小方塊，一排固定四個、多的換到下一排：五個以上會窄到旅程名稱被截掉。
+   這頁只在有側欄的寬度出現，最窄時每個還有 210px 左右 */
 .analysis-trips__list {
   list-style: none;
-  margin: 0.5rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-sm);
+  margin: 0.75rem 0 0;
   padding: 0;
 }
 
-.analysis-trips__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) auto 1rem;
-  align-items: center;
-  gap: var(--space-sm);
+/* 方塊跟上面的數字卡同一種卡片：白底、圓角、陰影；滑過時往上浮一點，看得出可以點 */
+.analysis-trips__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   width: 100%;
-  padding: 0.75rem 0.5rem;
+  height: 100%;
+  padding: var(--space-md);
   border: none;
-  border-bottom: 1px solid var(--color-border-light);
-  border-radius: 0;
-  background: none;
+  border-radius: 10px;
+  box-shadow: var(--shadow-card);
+  background: var(--color-card);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -520,45 +557,79 @@
   transition: var(--transition);
 }
 
-.analysis-trips__list li:last-child .analysis-trips__row {
-  border-bottom: none;
+.analysis-trips__tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-popover);
 }
 
-.analysis-trips__row:hover {
-  background: var(--color-row-hover);
-}
-
-.analysis-trips__name-wrap {
+.analysis-trips__name-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   min-width: 0;
 }
 
 .analysis-trips__name {
-  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.0625rem;
+  font-weight: 700;
   color: var(--color-text);
 }
 
-.analysis-trips__meta,
-.analysis-trips__cats {
+.analysis-trips__days {
+  flex-shrink: 0;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.analysis-trips__meta {
   font-size: 0.8125rem;
   color: var(--color-text-secondary);
 }
 
-.analysis-trips__cats {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .analysis-trips__total {
-  font-weight: 600;
+  margin-top: 0.75rem;
+  font-size: 1.625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
 
-.analysis-trips__chevron {
-  color: var(--color-text-muted);
+/* 花最多的幾個分類各多少；推到方塊最下面，同一排的分類對齊在同一個高度 */
+.analysis-trips__cats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+.analysis-trips__total + .analysis-trips__meta {
+  margin-bottom: 0.75rem;
+}
+
+.analysis-trips__cat {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.analysis-trips__cat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 旅程表單與明細（外框沿用分類明細的彈窗） */
@@ -751,10 +822,6 @@ select.analysis-input {
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--color-border-light);
   font-size: 0.9375rem;
-}
-
-.analysis-trip-entry > .analysis-btn {
-  justify-self: end;
 }
 
 .analysis-trip-entry.is-out {

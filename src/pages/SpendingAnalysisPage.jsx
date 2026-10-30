@@ -119,9 +119,10 @@ function SpendingAnalysisContent() {
   const yearRange = useTransactionYearRange(user?.id);
   const monthsWithData = useTransactionMonthsInYear(user?.id, pickerYear);
   const {
-    targetYm, expenses, firstYm, threshold, startYm, chartSpan, coveredFromYm,
-    loading: analysisLoading, error: analysisError, savePref,
+    targetYm, expenses, firstYm, threshold, startYm, chartSpan, coveredFromYm, excludedIds,
+    loading: analysisLoading, error: analysisError, savePref, setExcluded,
   } = useSpendingAnalysis(user?.id, period.year, period.month);
+  const excludedSet = useMemo(() => new Set(excludedIds), [excludedIds]);
   // 門檻幣別（比大額用）與顯示幣別（改門檻時換算用）的匯率表；跟顯示幣別共用快取，不會重抓
   const rateTables = useRateTables([threshold.currency, currency]);
   const thresholdTable = rateTables[threshold.currency] ?? null;
@@ -172,7 +173,8 @@ function SpendingAnalysisContent() {
     toValue,
     uncategorizedLabel: t('transaction.uncategorized'),
     tripOf: tripIndex,
-  }), [expenses, targetYm, todayYmd, firstYm, effectiveStartYm, chartSpan, measure, toValue, t, tripIndex]);
+    excludedIds: excludedSet,
+  }), [expenses, targetYm, todayYmd, firstYm, effectiveStartYm, chartSpan, measure, toValue, t, tripIndex, excludedSet]);
 
   const handleSelectMonth = useCallback((m) => {
     setDetail({
@@ -202,6 +204,10 @@ function SpendingAnalysisContent() {
     if (nextThreshold) savePref('threshold', nextThreshold).catch(saveFailed);
     return null;
   }, [currency, displayTable, savePref, saveFailed, t]);
+  // 大額消費的排除／放回：畫面當下重算，存失敗才退回並提示
+  const handleToggleExcluded = useCallback((txId, exclude) => {
+    setExcluded(txId, exclude).catch(saveFailed);
+  }, [setExcluded, saveFailed]);
   // 長條圖月數也一樣：畫面先換，存失敗才退回並提示
   const handleChangeSpan = useCallback((next) => {
     savePref('chartSpan', next).catch(saveFailed);
@@ -241,12 +247,6 @@ function SpendingAnalysisContent() {
   const tripDetail = tripSummaries.find((s) => s.trip.id === tripDetailId) || null;
 
   const a = analysis;
-  const tripTotal = a.targetTrips.reduce((sum, row) => sum + row.value, 0);
-  const tripNote = a.targetTrips.length === 1
-    ? t('spendingAnalysis.kpi.tripNote', { name: a.targetTrips[0].trip.name, amount: formatTotal(tripTotal) })
-    : a.targetTrips.length > 1
-      ? t('spendingAnalysis.kpi.tripsNote', { amount: formatTotal(tripTotal), names: a.targetTrips.map((row) => row.trip.name).join(lang === 'en' ? ', ' : '、') })
-      : null;
   const [, monthNum] = targetYm.split('-').map(Number);
   // 月份箭頭：往前到分析起點、往後到這個月為止（再過去只會顯示「還沒開始」）。
   // 讀資料時照樣能點，連續點會直接跳到最後點的那個月
@@ -257,12 +257,17 @@ function SpendingAnalysisContent() {
     setPeriod({ granularity: 'month', year: y, month: m });
   };
   const showBody = !loading && !error && a.hasAnyData && !a.isFuture && !a.isBeforeStart;
-  // 大額單筆照樣算在金額裡，卡片上只提一句有幾筆
-  const largeNote = a.largeItems.length > 0
-    ? t(a.isCurrent ? 'spendingAnalysis.kpi.largeCount' : 'spendingAnalysis.kpi.largeCountPast', {
+  // 卡片附註只說這個月有幾趟旅程、幾筆大額消費（排除了幾筆另外標），金額在下面的旅程與大額清單看
+  const excludedLarge = a.largeItems.filter((item) => item.excluded).length;
+  const monthItems = [
+    a.targetTrips.length > 0 && t('spendingAnalysis.kpi.tripCount', { count: a.targetTrips.length }),
+    a.largeItems.length > 0 && t('spendingAnalysis.kpi.largeCount', { count: a.largeItems.length })
+      + (excludedLarge > 0 ? t('spendingAnalysis.kpi.largeExcluded', { count: excludedLarge }) : ''),
+  ].filter(Boolean);
+  const monthNote = monthItems.length > 0
+    ? t(a.isCurrent ? 'spendingAnalysis.kpi.monthNote' : 'spendingAnalysis.kpi.monthNotePast', {
       month: monthName,
-      count: a.largeItems.length,
-      amount: formatTotal(a.largeTotal),
+      items: monthItems.join(t('spendingAnalysis.kpi.monthNoteJoin')),
     })
     : null;
   // 平常從哪個月起算（baselineMonths 是新 → 舊）
@@ -346,7 +351,7 @@ function SpendingAnalysisContent() {
               // 不管這個月過完了沒，都直接跟平常整個月比，跟分類清單同一個標記
               pill={a.ratio != null && <ChangePill ratio={a.ratio} />}
               sub={`${monthNum}/1 – ${monthNum}/${a.daysElapsed}`}
-              notes={[tripNote, largeNote]}
+              notes={[monthNote]}
             />
             <KpiCard
               label={t('spendingAnalysis.kpi.baseline')}
@@ -386,7 +391,7 @@ function SpendingAnalysisContent() {
           />
 
           {/* 沒有大額單筆的月份也顯示，看得到門檻是多少 */}
-          <LargeItemsList items={a.largeItems} threshold={threshold} shown={shownThreshold} />
+          <LargeItemsList items={a.largeItems} threshold={threshold} shown={shownThreshold} onToggleExcluded={handleToggleExcluded} />
         </>
       )}
 

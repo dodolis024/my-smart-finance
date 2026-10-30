@@ -120,6 +120,36 @@ export async function fetchTripAddCandidates(userId, { query, category, before, 
   return { rows: (data || []).map(mapSearchRow), error };
 }
 
+// 分帳同步紀錄一次讀這麼多筆（PostgREST 一次預設最多回這麼多）
+const SPLIT_SYNC_PAGE_SIZE = 1000;
+
+/**
+ * 從分帳群組同步到帳本的交易，現在各掛著哪些分類（去掉重複）。
+ * 同步時分類寫的是群組名稱，不在使用者自己的分類清單裡；旅程明細的分類選單靠這個把它們補上。
+ * 看的是交易現在的分類：群組改過名、或使用者在帳本改過分類，選單裡的名字都還搜得到交易。
+ * @param {string} userId
+ * @returns {Promise<{ categories: string[], error: object|null }>}
+ */
+export async function fetchSplitSyncedCategories(userId) {
+  const names = new Set();
+  if (!userId) return { categories: [], error: null };
+  for (let from = 0; ; from += SPLIT_SYNC_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('split_ledger_syncs')
+      .select('id, transaction:transactions(category)')
+      .eq('user_id', userId)
+      .order('id')
+      .range(from, from + SPLIT_SYNC_PAGE_SIZE - 1);
+    if (error) return { categories: [], error };
+    for (const row of data || []) {
+      const name = row.transaction?.category?.trim();
+      if (name) names.add(name);
+    }
+    if (!data || data.length < SPLIT_SYNC_PAGE_SIZE) break;
+  }
+  return { categories: [...names], error: null };
+}
+
 /**
  * 依日期區間（含端點）查詢交易，供「自訂區間匯出 CSV」與主畫面年檢視使用。
  * 日期舊→新排序（匯出的 CSV 順序依賴這個排序，年檢視在呼叫端自行排成新→舊），

@@ -2,6 +2,13 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Added an ⊖ button to exclude a large purchase from Spending Analysis, leaving it out of this month and your usual
+- Improved trips in Spending Analysis to show as cards, four per row, with the number of days, daily average and top three categories
+- Improved adding and removing trip expenses with ⊕/⊖ buttons
+- Improved adding expenses to a trip so the next one moves into place and you can keep adding
+- Improved the note on the first Spending Analysis card to just count trips and large purchases
+- Fixed split groups missing from the trip detail category filter, so expenses synced from split groups couldn't be added
+
 ## [1.34.0] - Oct-30 2026
 - Added a desktop Spending Analysis page comparing this month with your usual month, and showing which categories drive the difference
 - Added a line chart of a category's recent months when you open it in Spending Analysis

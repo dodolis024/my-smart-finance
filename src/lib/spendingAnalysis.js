@@ -8,6 +8,8 @@ import { convertTx, isRateTableUsable } from '@/lib/displayCurrency';
  * 1. 每一筆都照實際金額算：大額單筆、旅程都算進「平常」、本月與長條圖，數字就是實際花的錢。
  * 2. 大額單筆只標示：單筆金額達到使用者設的門檻（預設 NT$10,000）就列出來、在卡片上提一句。
  *    沒有其他例外（房租超過門檻也會列，不想看到就把門檻調高）；旅程裡的交易歸旅程，不標。
+ *    使用者可以把某一筆排除：整頁都當它不存在（本月、平常、長條圖、分類、去年同月），
+ *    只在大額清單裡留著讓人放回來；門檻後來調高、它不到門檻了也照樣列。
  * 3. 平常 = 目標月份前 N 個月（使用者選一季／半年／一年，N = 3／6／12）每個月支出的平均。
  *    卡片、長條圖的虛線、各分類的平常都是這一個數字；長條圖畫的就是這 N 個月加上目標月份。
  *    分析起點是下限：比它早的月份不算、也不畫（月份，從 1 號算起）；沒設定就從帳本第二個月起算：
@@ -71,6 +73,11 @@ export function monthsBetween(fromYm, toYm) {
   return Array.from({ length: Math.max(count, 0) }, (_, i) => addMonths(fromYm, i));
 }
 
+/** 存在設定裡的排除清單：{ ids: [交易 id] }；格式不對就是空的 */
+export function normalizeExcludedIds(value) {
+  return Array.isArray(value?.ids) ? value.ids.filter((id) => typeof id === 'string' && id) : [];
+}
+
 /** 存在設定裡的分析起點：{ month: 'YYYY-MM' }；沒設定（自動）是 null */
 export function normalizeStartYm(value) {
   const month = value?.month;
@@ -85,7 +92,7 @@ export function normalizeChartSpan(value) {
 
 /**
  * 分析從哪個月開始：使用者設的起點，沒設定就是帳本第一個月。起點設得比開始記帳還早，從開始記帳那個月算。
- * 這個月以前的月份不分析（月份箭頭也停在這裡），長條圖上淡淡顯示。
+ * 這個月以前的月份不分析（月份箭頭也停在這裡），長條圖也不畫。
  */
 export function analysisStartOf(firstYm, startYm) {
   if (!firstYm) return null;
@@ -226,6 +233,7 @@ export function risingStreak(values) {
  * @param {(tx: object) => number} [params.toValue] 單筆換算成顯示幣別的金額，預設用台幣
  * @param {string} [params.uncategorizedLabel]
  * @param {Map<string, {id: string, name: string}>} [params.tripOf] 交易 id → 所屬旅程
+ * @param {Set<string>} [params.excludedIds] 使用者排除、不算進分析的交易 id
  */
 export function buildSpendingAnalysis({
   expenses,
@@ -238,6 +246,7 @@ export function buildSpendingAnalysis({
   toValue = twdOf,
   uncategorizedLabel = '',
   tripOf = new Map(),
+  excludedIds = new Set(),
 }) {
   const viewStart = analysisStartOf(firstYm, startYm);
   // 平常的下限（連續上升往回數到這裡）與這次選的月數實際從哪個月算
@@ -246,8 +255,11 @@ export function buildSpendingAnalysis({
   // 連續上升要從分析起點一路看到這個月；平常與圖表只看前 chartSpan 個月
   const windowStart = chartMonths(targetYm, chartSpan)[0];
   const allYms = monthsBetween(viewStart && viewStart < windowStart ? viewStart : windowStart, targetYm);
+  // 排除的交易整頁都不算，只留下正在看的這個月的，給大額清單放回來用
+  const counted = (expenses || []).filter((tx) => !excludedIds.has(tx.id));
+  const excludedHere = (expenses || []).filter((tx) => excludedIds.has(tx.id) && ymOf(tx.date) === targetYm);
   const byMonth = new Map(allYms.map((ym) => [ym, []]));
-  for (const tx of expenses || []) byMonth.get(ymOf(tx.date))?.push(tx);
+  for (const tx of counted) byMonth.get(ymOf(tx.date))?.push(tx);
   const isTrip = (tx) => tripOf.has(tx.id);
 
   const todayYm = ymOf(todayYmd);
@@ -295,7 +307,7 @@ export function buildSpendingAnalysis({
 
   // 去年同月整個月花多少：比平常的下限早、或那個月一筆都沒記，就沒有
   const lastYearYm = addMonths(targetYm, -12);
-  const lastYearTxs = floor && lastYearYm >= floor ? (expenses || []).filter((tx) => ymOf(tx.date) === lastYearYm) : [];
+  const lastYearTxs = floor && lastYearYm >= floor ? counted.filter((tx) => ymOf(tx.date) === lastYearYm) : [];
   const lastYear = lastYearTxs.length ? { ym: lastYearYm, total: sumOf(lastYearTxs) } : null;
 
   // 分類：本月 vs 該分類的平常，依「多花的金額」排序（跟結論句的「主要是哪個分類」同一個標準）。
@@ -322,7 +334,7 @@ export function buildSpendingAnalysis({
   });
   categories.sort((a, b) => (b.diff ?? b.current) - (a.diff ?? a.current));
 
-  // 這個月的旅程：每趟一筆，卡片附註與結論句用（平常的旅程花費算在整體的平常裡）
+  // 這個月的旅程：每趟一筆，卡片附註（幾趟）與結論句用（平常的旅程花費算在整體的平常裡）
   const tripTotals = new Map();
   for (const tx of target.tripTxs) {
     const trip = tripOf.get(tx.id);
@@ -335,11 +347,15 @@ export function buildSpendingAnalysis({
   // 旅程比平常多花多少（平常幾個月也出去玩的話，這趟就不全是多花的）；結論句判斷「主要是旅程」用
   const tripExtra = target.trip - avgOf((m) => m.tripTxs);
 
-  // 正在看的這個月的大額單筆：新 → 舊；同一天的大筆在前。旅程裡的交易歸旅程，不標大額（機票不會同時出現在旅程和大額清單）
+  // 正在看的這個月的大額單筆：新 → 舊；同一天的大筆在前。旅程裡的交易歸旅程，不標大額（機票不會同時出現在旅程和大額清單）。
+  // 排除的那幾筆也列在裡面（excluded），不管現在還到不到門檻，才放得回來
   const detected = detectLargeItems(target.dailyTxs, measure);
-  const largeItems = target.dailyTxs.filter((tx) => detected.has(tx.id))
-    .sort((a, b) => (a.date === b.date ? twdOf(b) - twdOf(a) : a.date < b.date ? 1 : -1))
-    .map((tx) => ({ tx, value: toValue(tx) }));
+  const largeItems = [
+    ...target.dailyTxs.filter((tx) => detected.has(tx.id)).map((tx) => ({ tx, excluded: false })),
+    ...excludedHere.map((tx) => ({ tx, excluded: true })),
+  ]
+    .sort((a, b) => (a.tx.date === b.tx.date ? twdOf(b.tx) - twdOf(a.tx) : a.tx.date < b.tx.date ? 1 : -1))
+    .map((item) => ({ ...item, value: toValue(item.tx) }));
 
   return {
     targetYm,
@@ -354,7 +370,6 @@ export function buildSpendingAnalysis({
     months: chartRows,
     toDate,
     lastYear,
-    largeTotal: largeItems.reduce((sum, item) => sum + item.value, 0),
     targetTrips,
     tripExtra,
     baseline,
