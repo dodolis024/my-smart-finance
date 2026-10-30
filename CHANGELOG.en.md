@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.34.0] - Oct-30 2026
 - Added a desktop Spending Analysis page comparing this month with your usual month, and showing which categories drive the difference
 - Added a line chart of a category's recent months when you open it in Spending Analysis
 - Added a list of this month's large purchases in Spending Analysis, with a threshold amount you can set
