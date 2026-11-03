@@ -893,7 +893,6 @@ const en = {
       addToTrip: 'Add to trip',
       removeFromTrip: 'Remove from trip',
       excluded: 'Excluded',
-      added: 'Added from outside the dates',
       other: 'Counted in "{name}"',
       addTitle: 'Add transactions outside the dates',
       searchPlaceholder: 'Search for flights or hotels booked earlier',

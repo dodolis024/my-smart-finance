@@ -2,8 +2,10 @@
 
 This file records version updates for Smart Finance Tracker.
 
-- Improved spending analysis labels, showing amounts as "Average" while headline sentences keep "usual"
+- Added a category donut at the top of the trip detail, listing each category's amount and share
+- Improved spending analysis labels, showing amounts as "Average" while headline sentences keep "usual", with shorter Chinese descriptions
 - Improved the monthly chart by writing the average on the dashed line and keeping only that month's amounts in tooltips
+- Removed the "Added from outside the dates" label in the trip detail
 
 ## [1.34.1] - Oct-30 2026
 - Added an ⊖ button to exclude a large purchase from Spending Analysis, leaving it out of this month and your usual

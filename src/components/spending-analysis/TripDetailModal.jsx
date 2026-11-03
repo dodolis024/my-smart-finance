@@ -7,6 +7,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { formatOriginalMoney } from '@/lib/utils';
 import { formatTripRange } from '@/lib/trips';
 import EntryButton from '@/components/spending-analysis/EntryButton';
+import TripCategoryDonut from '@/components/spending-analysis/TripCategoryDonut';
 
 const SEARCH_LIMIT = 30;
 // App 預設分類裡的「旅遊」（中、英文帳號各自的預設名稱）：使用者有這個分類，加入區就先選它
@@ -143,7 +144,6 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
 
   const stateLabel = (entry) => {
     if (entry.status === 'excluded') return t('spendingAnalysis.tripDetail.excluded');
-    if (entry.status === 'added') return t('spendingAnalysis.tripDetail.added');
     if (entry.status === 'other') return t('spendingAnalysis.tripDetail.other', { name: entry.otherTrip.name });
     return null;
   };
@@ -214,6 +214,8 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
             {t('spendingAnalysis.trips.meta', { range: formatTripRange(trip.start, trip.end, currentYear), count })}
           </span>
         </div>
+
+        <TripCategoryDonut categories={summary.categories} total={total} />
 
         {entries.length === 0 ? (
           <p className="analysis-empty">{t('spendingAnalysis.tripDetail.empty')}</p>
