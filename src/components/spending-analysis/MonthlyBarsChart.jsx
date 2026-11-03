@@ -37,9 +37,11 @@ function stripes(background, line) {
 }
 
 /**
- * 「平常」的橫向虛線：直接畫在圖上，不當成一組資料。這樣從圖的最左邊畫到最右邊，
- * 切換一季／一年時長度不變、也不跑動畫；畫在長條之後，超過平常的長條不會把線蓋住。
- * 高度與顏色從 options.plugins.usualLine 讀（value 是 null 就不畫）。
+ * 「平均」的橫向虛線：直接畫在圖上，不當成一組資料。這樣從圖的最左邊畫到最右邊，
+ * 切換一季／一年時長度不變、也不跑動畫；畫在長條之後，超過平均的長條不會把線蓋住。
+ * 線的左端上方寫「平均 NT$xx」（左邊是最舊的月份，蓋到也不會擋住正在看的月份）；
+ * 線太靠近頂端放不下時改寫在線的下方。文字描一圈卡片底色，壓在長條上也看得清楚。
+ * 高度、顏色、文字從 options.plugins.usualLine 讀（value 是 null 就不畫）。
  */
 const usualLinePlugin = {
   id: 'usualLine',
@@ -56,6 +58,23 @@ const usualLinePlugin = {
     ctx.moveTo(chartArea.left, y);
     ctx.lineTo(chartArea.right, y);
     ctx.stroke();
+    if (opts.label) {
+      const fontSize = 11;
+      const gap = 4;
+      const above = y - gap - fontSize >= chartArea.top;
+      ctx.setLineDash([]);
+      ctx.font = `600 ${fontSize}px ${getComputedStyle(chart.canvas).fontFamily}`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = above ? 'bottom' : 'top';
+      const x = chartArea.left + 4;
+      const textY = above ? y - gap : y + gap;
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = opts.halo;
+      ctx.strokeText(opts.label, x, textY);
+      ctx.fillStyle = opts.color;
+      ctx.fillText(opts.label, x, textY);
+    }
     ctx.restore();
   },
 };
@@ -65,8 +84,8 @@ const canOpen = (m) => !!m && m.dailyTxs.length > 0;
 
 /**
  * 每個月花多少（大額單筆照樣算在長條裡）：拿來算平常的那幾個月加上正在看的月份。標題旁切換一季／半年／一年，
- * 平常也跟著換成那幾個月的平均。有旅程的月份上面疊一段斜線；這個月還沒過完就畫到目前為止花的；
- * 「平常」畫成一條橫向虛線。點長條會打開那個月的明細。
+ * 平均也跟著換成那幾個月的平均。有旅程的月份上面疊一段斜線；這個月還沒過完就畫到目前為止花的；
+ * 「平均」畫成一條橫向虛線，金額寫在線旁邊。點長條會打開那個月的明細。
  */
 export default function MonthlyBarsChart({ analysis, labelOf, labelOfYm, onSelectMonth, span, onChangeSpan }) {
   const { t } = useLanguage();
@@ -82,6 +101,7 @@ export default function MonthlyBarsChart({ analysis, labelOf, labelOfYm, onSelec
     text: cssVar('--color-text-secondary', '#797169'),
     muted: cssVar('--color-text-muted', '#999999'),
     grid: cssVar('--color-border-light', '#eeeeee'),
+    card: cssVar('--color-card', '#ffffff'),
   }), [theme]); // eslint-disable-line react-hooks/exhaustive-deps -- theme 僅作觸發器，主題切換時需重新讀取 cssVar 顏色
 
   const data = useMemo(() => {
@@ -135,12 +155,15 @@ export default function MonthlyBarsChart({ analysis, labelOf, labelOfYm, onSelec
           // 橫軸只在換年的地方寫年份，提示框一律寫完整的年月
           title: (items) => (items.length ? labelOfYm(months[items[0].dataIndex].ym) : ''),
           label: (ctx) => (ctx.parsed.y == null ? null : ` ${ctx.dataset.label}: ${formatTotal(ctx.parsed.y)}`),
-          // 虛線不是一組資料，平常多少另外接在各段金額後面
-          afterBody: () => (baseline == null ? [] : [` ${t('spendingAnalysis.chart.usual')}: ${formatTotal(baseline)}`]),
-          footer: (items) => (canOpen(months[items[0]?.dataIndex]) ? t('spendingAnalysis.chart.clickHint') : ''),
         },
       },
-      usualLine: { value: baseline, color: colors.text },
+      // 平均多少直接寫在虛線旁邊，提示框裡只放那個月的金額
+      usualLine: {
+        value: baseline,
+        color: colors.text,
+        halo: colors.card,
+        label: baseline == null ? null : `${t('spendingAnalysis.chart.usual')} ${formatTotal(baseline)}`,
+      },
     },
     scales: {
       x: {
@@ -157,7 +180,7 @@ export default function MonthlyBarsChart({ analysis, labelOf, labelOfYm, onSelec
       y: {
         stacked: true,
         beginAtZero: true,
-        // 平常比每根長條都高時，刻度也要容得下那條虛線
+        // 平均比每根長條都高時，刻度也要容得下那條虛線
         suggestedMax: baseline ?? undefined,
         grid: { color: colors.grid },
         border: { display: false },
