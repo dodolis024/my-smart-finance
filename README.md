@@ -2,7 +2,7 @@
 
 A React + Supabase personal finance app for tracking transactions, analysing spending, splitting expenses with friends, and building a daily logging habit. Also comes with a command-line tool so you (or an AI assistant) can log and look up transactions from the terminal.
 
-Current version: **1.34.1** — see [`CHANGELOG.en.md`](CHANGELOG.en.md) / [`CHANGELOG.zh.md`](CHANGELOG.zh.md).
+Current version: **1.34.2** — see [`CHANGELOG.en.md`](CHANGELOG.en.md) / [`CHANGELOG.zh.md`](CHANGELOG.zh.md).
 
 ## Features
 
