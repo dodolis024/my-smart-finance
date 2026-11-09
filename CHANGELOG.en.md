@@ -2,6 +2,8 @@
 
 This file records version updates for Smart Finance Tracker.
 
+- Improved category trends in Spending Analysis to sort by this month's spending, matching the dashboard order
+
 ## [1.34.2] - Nov-03 2026
 - Added a category donut at the top of the trip detail, listing each category's amount and share
 - Improved spending analysis labels, showing amounts as "Average" while headline sentences keep "usual", with shorter Chinese descriptions

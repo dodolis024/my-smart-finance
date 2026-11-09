@@ -310,7 +310,9 @@ export function buildSpendingAnalysis({
   const lastYearTxs = floor && lastYearYm >= floor ? counted.filter((tx) => ymOf(tx.date) === lastYearYm) : [];
   const lastYear = lastYearTxs.length ? { ym: lastYearYm, total: sumOf(lastYearTxs) } : null;
 
-  // 分類：本月 vs 該分類的平常，依「多花的金額」排序（跟結論句的「主要是哪個分類」同一個標準）。
+  // 分類：本月 vs 該分類的平常，依這個月實際花的金額排序（跟首頁的分類同一個順序）。
+  // 不照「多花的金額」排：月初或少花的月份每個分類都是負的，平常花最多的分類反而沉到最底。
+  // 多花少花看各列的百分比；結論句另外挑多花最多的分類。
   // 顯示的金額就是實際花的，點進去看到的明細加起來一樣
   const names = new Set();
   for (const m of [target, ...baseRows]) for (const tx of m.dailyTxs) names.add(catOf(tx));
@@ -332,7 +334,8 @@ export function buildSpendingAnalysis({
       txs: ofCat(target.dailyTxs),
     };
   });
-  categories.sort((a, b) => (b.diff ?? b.current) - (a.diff ?? a.current));
+  // 金額一樣（例如這個月都還沒花）時，平常花比較多的在前
+  categories.sort((a, b) => (b.current - a.current) || ((b.usual ?? 0) - (a.usual ?? 0)));
 
   // 這個月的旅程：每趟一筆，卡片附註（幾趟）與結論句用（平常的旅程花費算在整體的平常裡）
   const tripTotals = new Map();

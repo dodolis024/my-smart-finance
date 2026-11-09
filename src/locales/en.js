@@ -823,7 +823,7 @@ const en = {
     },
     categories: {
       title: 'Categories vs. usual',
-      subtitle: 'This month vs. average, biggest increases first',
+      subtitle: 'This month vs. average, biggest spending first',
       usual: 'Average {amount}',
       rising: 'Up {count} months in a row',
       risingToLast: 'Up {count} months in a row through last month',

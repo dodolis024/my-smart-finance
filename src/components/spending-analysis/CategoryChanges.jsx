@@ -48,7 +48,7 @@ export function ChangePill({ ratio }) {
 
 /**
  * 每個分類：本月金額、跟平常比的變化、近幾個月的小走勢線。旅程不列在這裡（不拆進各分類），看旅程卡片。
- * 排序與結論句同一個標準（多花的金額），預設只顯示前幾名。
+ * 照這個月花的金額排（跟首頁同一個順序），預設只顯示前幾名。
  */
 export default function CategoryChanges({ analysis, onSelectCategory }) {
   const { t } = useLanguage();

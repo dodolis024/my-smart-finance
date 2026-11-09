@@ -423,7 +423,7 @@ describe('buildSpendingAnalysis', () => {
     expect(first.isBeforeStart).toBe(false);
   });
 
-  it('分類依多花的金額排序，並算出連續上升的月數', () => {
+  it('分類依這個月花的金額排序，並算出連續上升的月數', () => {
     const rows = [
       // 飲食：7、8、9 月 1000 → 10 月到 15 號 1500（多 500）
       tx('2026-07-05', 1000, '飲食'), tx('2026-08-05', 1000, '飲食'), tx('2026-09-05', 1000, '飲食'),
@@ -435,12 +435,13 @@ describe('buildSpendingAnalysis', () => {
       tx('2026-08-07', 100, '娛樂'), tx('2026-09-07', 200, '娛樂'), tx('2026-10-07', 400, '娛樂'),
     ];
     const a = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-10-15', firstYm: '2026-06' });
-    expect(a.categories.map((c) => c.name)).toEqual(['飲食', '娛樂', '交通']);
+    // 照金額排：飲食 1500、交通 500、娛樂 400（交通少花 2500 也不會沉到最底）
+    expect(a.categories.map((c) => c.name)).toEqual(['飲食', '交通', '娛樂']);
     const food = a.categories[0];
     expect(food.usual).toBe(1000);
     expect(food.diff).toBe(500);
     // 連續上升只算過完的月份：7 → 8 → 9 月；還沒過完的 10 月不算
-    expect(a.categories[1].risingMonths).toBe(2);
+    expect(a.categories.find((c) => c.name === '娛樂').risingMonths).toBe(2);
     // 看過去的月份（10 月已經過完）就算進去
     const later = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-11-02', firstYm: '2026-06' });
     expect(later.categories.find((c) => c.name === '娛樂').risingMonths).toBe(3);
@@ -565,6 +566,21 @@ describe('月初也照比，不特別處理', () => {
     expect(a.baseline).toBe(50000);
     expect(a.ratio).toBeCloseTo(3000 / 50000 - 1);
     expect(a.categories[0]).toMatchObject({ current: 3000, usual: 50000, diff: -47000 });
+  });
+
+  it('月初每個分類都少花：平常花最多的分類照樣排在前面，還沒花的排後面', () => {
+    // 7–9 月：飲食 12,000、交通 2,500、醫療只有 9 月 4,500；11 月初飲食 5,500、交通 1,300、醫療還沒花
+    const rows = ['07', '08', '09'].flatMap((m) => [tx(`2026-${m}-03`, 12000, '飲食'), tx(`2026-${m}-04`, 2500, '交通')]);
+    rows.push(tx('2026-09-20', 4500, '醫療'), tx('2026-10-02', 5500, '飲食'), tx('2026-10-03', 1300, '交通'));
+    const a = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-10-08', firstYm: '2026-06' });
+    expect(a.categories.map((c) => c.name)).toEqual(['飲食', '交通', '醫療']);
+    expect(a.categories[0].diff).toBe(5500 - 12000);
+  });
+
+  it('金額一樣時，平常花比較多的在前', () => {
+    const rows = [tx('2026-07-03', 900, '娛樂'), tx('2026-08-03', 3000, '醫療'), tx('2026-10-02', 100, '飲食')];
+    const a = buildSpendingAnalysis({ expenses: rows, targetYm: '2026-10', todayYmd: '2026-10-08', firstYm: '2026-06' });
+    expect(a.categories.map((c) => c.name)).toEqual(['飲食', '醫療', '娛樂']);
   });
 
   it('看過去的月份：整個月跟平常一樣就是 0', () => {

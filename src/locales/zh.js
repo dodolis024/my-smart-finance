@@ -828,7 +828,7 @@ const zh = {
     },
     categories: {
       title: '分類趨勢',
-      subtitle: '本月 vs 平均，多花最多的排前面',
+      subtitle: '本月 vs 平均，這個月花最多的排前面',
       usual: '平均 {amount}',
       rising: '連續 {count} 個月上升',
       // 看這個月時，還沒過完的這個月不算進去，寫清楚是數到上個月

@@ -67,7 +67,8 @@ function headlineText(a, monthName, startName, t) {
   const percent = Math.round(Math.abs(a.ratio) * 100);
   if (Math.abs(a.ratio) < SAME_AS_USUAL) return t(`spendingAnalysis.headline.same${tense}`, { month: monthName });
   if (a.ratio > 0) {
-    const top = a.categories.find((c) => c.diff > 0);
+    // 分類清單照金額排，這裡另外挑多花最多的
+    const top = a.categories.filter((c) => c.diff > 0).sort((x, y) => y.diff - x.diff)[0];
     // 旅程平常是 0，整趟都算多花；比最會多花的分類還多，就說主要是這趟旅程
     const trip = a.targetTrips[0];
     const more = t(`spendingAnalysis.headline.more${tense}`, { month: monthName, percent });
