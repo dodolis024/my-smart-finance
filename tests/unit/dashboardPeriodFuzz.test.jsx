@@ -93,12 +93,14 @@ vi.mock('@/lib/supabase', () => {
       from: (table) => {
         const q = { table, filters: {}, limitN: null, wantCount: false, orders: [] };
         const b = {
-          select: (_cols, opts) => { q.wantCount = opts?.count === 'exact'; return b; },
+          select: (cols, opts) => { q.cols = cols; q.wantCount = opts?.count === 'exact'; return b; },
           eq: (col, val) => { q.filters[col] = val; return b; },
           gte: (_c, v) => { q.gte = v; return b; },
           lte: (_c, v) => { q.lte = v; return b; },
           order: (col, opts) => { q.orders.push([col, opts?.ascending]); return b; },
           limit: (n) => { q.limitN = n; return b; },
+          // 區間查詢改成分批讀（.range），一批最多 1000 列
+          range: (from, to) => { q.range = [from, to]; return b; },
           maybeSingle: async () => ({ data: null, error: null }),
           upsert: async () => ({ error: null }),
           insert: async () => ({ error: null }),
@@ -115,12 +117,18 @@ vi.mock('@/lib/supabase', () => {
             const row = asc ? sorted[0] : sorted[sorted.length - 1];
             return { data: row ? [{ date: row.date }] : [], count: 1, error: null };
           }
+          // 月份選單「哪幾個月有資料」的查詢（只選 date）：照實回，不算進區間查詢的紀錄
+          if (q.cols === 'date') {
+            const dates = globalThis.__inRange(q.gte, q.lte).map((r) => ({ date: r.date }));
+            return { data: q.range ? dates.slice(q.range[0], q.range[1] + 1) : dates, error: null };
+          }
           // 區間查詢
-          h.rangeCalls.push({ gte: q.gte, lte: q.lte, limit: q.limitN, count: q.wantCount });
+          h.rangeCalls.push({ gte: q.gte, lte: q.lte, range: q.range, count: q.wantCount });
           if (h.rangeDelay) await wait(h.rangeDelay);
           if (h.rangeError) return { data: null, count: null, error: h.rangeError };
-          const rows = globalThis.__inRange(q.gte, q.lte);
-          return { data: rows, count: rows.length, error: null };
+          const all = globalThis.__inRange(q.gte, q.lte);
+          const rows = q.range ? all.slice(q.range[0], q.range[1] + 1) : all;
+          return { data: rows, count: all.length, error: null };
         };
         return b;
       },
@@ -304,7 +312,8 @@ describe('暴力亂搞：主畫面期間切換', () => {
     // 年模式仍要拿得到支付統計（accounts 來自月 RPC）
     expect($('.payment-stats-list, .payment-stats-empty')).not.toBeNull();
     expect(h.rangeCalls.length, '年模式沒有發出區間查詢').toBeGreaterThan(0);
-    expect(h.rangeCalls[0].limit).toBe(5000);
+    // 分批讀：第一批要前 1000 筆，總數也在這一批問
+    expect(h.rangeCalls[0].range).toEqual([0, 999]);
     expect(h.rangeCalls[0].count).toBe(true);
   });
 

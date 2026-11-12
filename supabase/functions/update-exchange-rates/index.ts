@@ -5,7 +5,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { cronSecretGuard } from '../_shared/cronAuth.ts'
 import { utcDateString } from './rateHistory.ts'
-import { validateRates, MAX_CHANGE_PERCENT, STALE_AFTER_DAYS } from './validate.ts'
+import { validateRates, buildNewRates, MAX_CHANGE_PERCENT, STALE_AFTER_DAYS } from './validate.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -118,19 +118,18 @@ serve(async (req) => {
     // 因為 API 回傳的是 1 TWD = X 外幣，我們需要反轉（1 外幣 = Y TWD）
     // 幣別清單動態決定：以資料庫現有幣別為準，聯集種子清單（首次啟動的後備），
     // 日後於 exchange_rates 新增幣別即自動納入更新，無需改動此函數。
-    const rates = data.conversion_rates
-    const defaultRatesMap = defaultRates as { [key: string]: number }
-    const currencyCodes = Array.from(new Set([
-      ...Object.keys(lastKnownGood),
-      ...Object.keys(defaultRatesMap),
-    ]))
+    // API 沒回的幣別今天不寫（理由見 validate.ts 的 buildNewRates）
+    const { newRates, missing } = buildNewRates({
+      apiRates: data.conversion_rates,
+      lastKnownGood,
+      defaultRates,
+    })
 
-    const newRates: { [key: string]: number } = { TWD: 1.0 }
-    for (const cur of currencyCodes) {
-      if (cur === 'TWD') continue
-      // API 有回 → 反轉；否則退回舊值 / 種子值；都沒有則略過該幣別
-      const v = rates[cur] ? (1 / rates[cur]) : (lastKnownGood[cur] ?? defaultRatesMap[cur])
-      if (v != null) newRates[cur] = v
+    if (missing.length > 0) {
+      console.error(
+        `⚠️ API returned no rate for: ${missing.join(', ')}. ` +
+        'Not written; stored rate and updated_at left untouched.'
+      )
     }
 
     console.log('Fetched new exchange rates:', newRates)
@@ -222,6 +221,7 @@ serve(async (req) => {
         },
         anomalies: anomalies.length > 0 ? anomalies : undefined,
         rejected: rejected.length > 0 ? rejected : undefined,
+        missing: missing.length > 0 ? missing : undefined,
         warning: rejected.length > 0
           ? `Some rates changed more than ${MAX_CHANGE_PERCENT}% and were rejected. ` +
             'They were not written, so their updated_at keeps aging (badge after 3 days, ' +

@@ -128,3 +128,41 @@ export function validateRates({
 
   return { toWrite, rejected, anomalies, decisions }
 }
+
+/**
+ * 把 API 回的匯率（1 TWD = X 外幣）整理成要驗證的新匯率（1 外幣 = Y TWD）。
+ *
+ * API 這次沒回的幣別（供應商下架、欄位是 0 或壞值）：
+ *   - 資料庫已經有值 → 列進 missing，今天完全不寫，updated_at 照實變舊，首頁徽章才會亮。
+ *     以前這裡退回舊值當「新匯率」，新舊相同、變動 0% 被當成正常接受，舊值每天被蓋上今天的
+ *     更新時間——跟「被拒絕仍刷新時間」是同一個洞，幣別永久停在舊值卻沒有任何提示。
+ *   - 資料庫沒有值 → 用種子值起頭（首次啟動的後備），有種子才寫。
+ */
+export function buildNewRates({
+  apiRates,
+  lastKnownGood,
+  defaultRates,
+}: {
+  apiRates: { [currency: string]: number } | null | undefined
+  lastKnownGood: { [currency: string]: number }
+  defaultRates: { [currency: string]: number }
+}): { newRates: { [currency: string]: number }; missing: string[] } {
+  const currencyCodes = Array.from(new Set([
+    ...Object.keys(lastKnownGood),
+    ...Object.keys(defaultRates),
+  ]))
+  const newRates: { [currency: string]: number } = { TWD: 1.0 }
+  const missing: string[] = []
+  for (const cur of currencyCodes) {
+    if (cur === 'TWD') continue
+    const apiRate = Number(apiRates?.[cur])
+    if (apiRate > 0 && Number.isFinite(apiRate)) {
+      newRates[cur] = 1 / apiRate
+    } else if (lastKnownGood[cur] > 0) {
+      missing.push(cur)
+    } else if (defaultRates[cur] > 0) {
+      newRates[cur] = defaultRates[cur]
+    }
+  }
+  return { newRates, missing }
+}

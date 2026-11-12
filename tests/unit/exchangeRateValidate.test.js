@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateRates,
+  buildNewRates,
   isStaleRate,
   MAX_CHANGE_PERCENT,
   STALE_AFTER_DAYS,
@@ -120,5 +121,52 @@ describe('isStaleRate', () => {
     expect(isStaleRate(null, NOW)).toBe(true);
     expect(isStaleRate(undefined, NOW)).toBe(true);
     expect(isStaleRate('not a date', NOW)).toBe(true);
+  });
+});
+
+describe('buildNewRates', () => {
+  const DEFAULTS = { TWD: 1.0, USD: 30.0, JPY: 0.2 };
+
+  it('API 有回 → 反轉成 1 外幣 = 多少台幣', () => {
+    const r = buildNewRates({ apiRates: { USD: 0.03125, JPY: 5 }, lastKnownGood: { USD: 31, JPY: 0.21 }, defaultRates: DEFAULTS });
+    expect(r.newRates).toEqual({ TWD: 1, USD: 32, JPY: 0.2 });
+    expect(r.missing).toEqual([]);
+  });
+
+  it('API 沒回、資料庫有舊值 → 列進 missing，不在新匯率裡', () => {
+    const r = buildNewRates({ apiRates: { USD: 0.03125 }, lastKnownGood: { USD: 31, THB: 0.9 }, defaultRates: DEFAULTS });
+    expect(r.missing).toEqual(['THB']);
+    expect(r.newRates).not.toHaveProperty('THB');
+  });
+
+  it('API 沒回的幣別走完驗證也不會被寫入（updated_at 才會照實變舊）', () => {
+    const lastKnownGood = { TWD: 1, USD: 31, THB: 0.9 };
+    const { newRates } = buildNewRates({ apiRates: { USD: 0.03125 }, lastKnownGood, defaultRates: DEFAULTS });
+    const v = run({ newRates, lastKnownGood, lastUpdatedAt: { TWD: daysAgo(1), USD: daysAgo(1), THB: daysAgo(1) } });
+    expect(v.toWrite).not.toHaveProperty('THB');
+    expect(v.toWrite.USD).toBe(32);
+  });
+
+  it('API 回 0、負數、不是數字 → 一樣當作沒回', () => {
+    const r = buildNewRates({ apiRates: { USD: 0, JPY: -1, THB: 'x' }, lastKnownGood: { USD: 31, JPY: 0.21, THB: 0.9 }, defaultRates: DEFAULTS });
+    expect(r.missing.sort()).toEqual(['JPY', 'THB', 'USD']);
+    expect(r.newRates).toEqual({ TWD: 1 });
+  });
+
+  it('API 沒回、資料庫也沒有 → 用種子值起頭；連種子都沒有就略過', () => {
+    const r = buildNewRates({ apiRates: {}, lastKnownGood: { THB: 0 }, defaultRates: DEFAULTS });
+    expect(r.newRates).toEqual({ TWD: 1, USD: 30, JPY: 0.2 });
+    expect(r.missing).toEqual([]);
+  });
+
+  it('API 整包是空的 → 不當掉，既有幣別全部列進 missing', () => {
+    const r = buildNewRates({ apiRates: undefined, lastKnownGood: { USD: 31 }, defaultRates: {} });
+    expect(r.missing).toEqual(['USD']);
+    expect(r.newRates).toEqual({ TWD: 1 });
+  });
+
+  it('TWD 固定 1，不看 API', () => {
+    const r = buildNewRates({ apiRates: { TWD: 5 }, lastKnownGood: { TWD: 1 }, defaultRates: DEFAULTS });
+    expect(r.newRates.TWD).toBe(1);
   });
 });

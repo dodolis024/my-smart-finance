@@ -154,6 +154,8 @@ export async function fetchSplitSyncedCategories(userId) {
  * 依日期區間（含端點）查詢交易，供「自訂區間匯出 CSV」與主畫面年檢視使用。
  * 日期舊→新排序（匯出的 CSV 順序依賴這個排序，年檢視在呼叫端自行排成新→舊），
  * 與跨月搜尋共用同一份欄位定義（SELECT_COLUMNS）。
+ * 分批讀到完：伺服器單次最多回 RANGE_PAGE_SIZE 列，只發一次查詢的話，超過的部分（最新的交易）
+ * 會被悄悄截掉，匯出的 CSV 少了最近幾個月也不會有任何提示。
  * @param {string} userId
  * @param {string} startDate 'YYYY-MM-DD'
  * @param {string} endDate 'YYYY-MM-DD'
@@ -164,20 +166,49 @@ export async function fetchTransactionsByDateRange(userId, startDate, endDate, {
   if (!userId || !startDate || !endDate) {
     return { rows: [], count: 0, error: null };
   }
-  let queryBuilder = supabase
+  let total = null;
+  const { rows, error } = await fetchAllPages((from, to) => supabase
     .from('transactions')
-    .select(SELECT_COLUMNS, count ? { count: 'exact' } : undefined)
+    // 總數只在第一批問一次
+    .select(SELECT_COLUMNS, count && from === 0 ? { count: 'exact' } : undefined)
     .eq('user_id', userId)
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date', { ascending: true })
-    .order('time', { ascending: true });
-  if (limit != null) {
-    queryBuilder = queryBuilder.limit(limit);
+    .order('time', { ascending: true })
+    .order('id', { ascending: true })
+    .range(from, to)
+    .then((res) => {
+      if (from === 0 && res.count != null) total = res.count;
+      return res;
+    }), limit);
+  if (error) return { rows: [], count: 0, error };
+  const mapped = rows.map(mapSearchRow);
+  return { rows: mapped, count: total ?? mapped.length, error: null };
+}
+
+// 伺服器單次查詢最多回這麼多列（Supabase 預設值；2026-11-12 在正式站實測：要 5000 筆、共 1371 筆，只回 1000 筆）
+export const RANGE_PAGE_SIZE = 1000;
+
+/**
+ * 把一個查詢分批讀到完。fetchPage(from, to) 回傳帶 .range(from, to) 的查詢；
+ * 排序必須唯一（最後補一個 id），否則同一天同一分鐘的交易在兩批之間可能重複或漏掉。
+ * 任一批失敗就整個算失敗：只拿到一部分的資料不能當成全部。
+ * @param {(from: number, to: number) => PromiseLike<{ data: object[]|null, error: object|null }>} fetchPage
+ * @param {number} [limit] 最多讀幾筆；不給就讀到完
+ * @returns {Promise<{ rows: object[], error: object|null }>}
+ */
+export async function fetchAllPages(fetchPage, limit) {
+  const max = limit ?? Infinity;
+  const rows = [];
+  for (let from = 0; from < max; from += RANGE_PAGE_SIZE) {
+    const to = Math.min(from + RANGE_PAGE_SIZE, max) - 1;
+    const { data, error } = await fetchPage(from, to);
+    if (error) return { rows: [], error };
+    rows.push(...(data || []));
+    if (!data || data.length < to - from + 1) break;
   }
-  const { data, count: total, error } = await queryBuilder;
-  const rows = (data || []).map(mapSearchRow);
-  return { rows, count: total ?? rows.length, error };
+  return { rows, error: null };
 }
 
 /**

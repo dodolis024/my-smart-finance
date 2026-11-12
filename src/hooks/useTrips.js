@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getCached, setCached } from '@/lib/resourceCache';
-import { mapSearchRow, RANGE_FETCH_LIMIT, SELECT_COLUMNS } from '@/hooks/useTransactionSearch';
+import { mapSearchRow, fetchAllPages, RANGE_FETCH_LIMIT, SELECT_COLUMNS } from '@/hooks/useTransactionSearch';
 import { normalizeTripsSetting } from '@/lib/trips';
 
 // 旅程與「不是旅程」的提示紀錄；存在 settings 跨裝置同步，不另開資料表
@@ -83,15 +83,18 @@ export function useTrips(userId) {
     const clauses = trips.map((trip) => `and(date.gte.${trip.start},date.lte.${trip.end})`);
     const included = [...new Set(trips.flatMap((trip) => trip.includedIds))];
     if (included.length) clauses.push(`id.in.(${included.join(',')})`);
-    supabase
+    // 分批讀到完：只發一次查詢最多回 1000 列，旅程一多，最新那幾趟的交易會被截掉、算回日常支出
+    const filter = clauses.join(',');
+    fetchAllPages((from, to) => supabase
       .from('transactions')
       .select(SELECT_COLUMNS)
       .eq('user_id', userId)
-      .or(clauses.join(','))
+      .or(filter)
       .order('date', { ascending: true })
       .order('time', { ascending: true })
-      .limit(RANGE_FETCH_LIMIT)
-      .then(({ data, error: queryError }) => {
+      .order('id', { ascending: true })
+      .range(from, to), RANGE_FETCH_LIMIT)
+      .then(({ rows: data, error: queryError }) => {
         if (reqId !== rowsRequestRef.current) return;
         if (!queryError) {
           const next = (data || []).map(mapSearchRow);

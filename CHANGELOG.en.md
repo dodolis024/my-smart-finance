@@ -3,6 +3,9 @@
 This file records version updates for Smart Finance Tracker.
 
 - Improved category trends in Spending Analysis to sort by this month's spending, matching the dashboard order
+- Fixed custom range export and the year view dropping the newest transactions beyond 1,000
+- Fixed newer trips missing transactions when trips cover more than 1,000 in total
+- Fixed the stale rate notice not appearing when the rate source stops returning a currency
 
 ## [1.34.2] - Nov-03 2026
 - Added a category donut at the top of the trip detail, listing each category's amount and share
