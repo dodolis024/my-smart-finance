@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getCached, setCached } from '@/lib/resourceCache';
-import { mapSearchRow, fetchAllPages, RANGE_FETCH_LIMIT, SELECT_COLUMNS } from '@/hooks/useTransactionSearch';
+import { mapSearchRow, fetchAllPages, fetchDeletedTransactionIds, RANGE_FETCH_LIMIT, SELECT_COLUMNS } from '@/hooks/useTransactionSearch';
 import { normalizeTripsSetting } from '@/lib/trips';
 
 // 旅程與「不是旅程」的提示紀錄；存在 settings 跨裝置同步，不另開資料表
@@ -25,6 +25,8 @@ export function useTrips(userId) {
   const [rows, setRows] = useState(() => getCached(ROWS_CACHE_KEY, userId)?.rows ?? []);
   // 已經抓好哪一組範圍的交易；跟目前的 rowsKey 不同就算載入中（含設定剛讀到、還沒開始抓的那一下）
   const [loadedKey, setLoadedKey] = useState(() => getCached(ROWS_CACHE_KEY, userId)?.key ?? null);
+  // 交易有沒有成功抓到過；抓取失敗時用它分辨「第一次就失敗」和「之後重抓失敗」
+  const hasLoadedRef = useRef(loadedKey !== null);
   const [error, setError] = useState(null);
   // 之後重抓失敗（不是第一次載入）：頁面照常顯示舊的交易，另外跳提示
   const [refreshError, setRefreshError] = useState(null);
@@ -32,6 +34,10 @@ export function useTrips(userId) {
   const saveChainRef = useRef(Promise.resolve());
   const pendingSavesRef = useRef(0);
   const rowsRequestRef = useRef(0);
+  // 剛抓回來的那一批交易與當時的旅程，用來找出設定裡已經被刪掉的交易 id
+  const [fetched, setFetched] = useState(null);
+  // 查過確定還在的交易 id，這次打開頁面不用再查
+  const knownIdsRef = useRef(new Set());
 
   const storeSetting = useCallback((next) => {
     settingRef.current = next;
@@ -75,6 +81,7 @@ export function useTrips(userId) {
     const reqId = ++rowsRequestRef.current;
     if (!trips.length) {
       setRows([]);
+      hasLoadedRef.current = true;
       setLoadedKey(rowsKey);
       setCached(ROWS_CACHE_KEY, userId, { key: rowsKey, rows: [] });
       return;
@@ -99,17 +106,16 @@ export function useTrips(userId) {
         if (!queryError) {
           const next = (data || []).map(mapSearchRow);
           setRows(next);
+          hasLoadedRef.current = true;
           setLoadedKey(rowsKey);
           setCached(ROWS_CACHE_KEY, userId, { key: rowsKey, rows: next });
           setError(null);
+          setFetched({ trips, rowIds: new Set(next.map((tx) => tx.id)) });
           return;
         }
         // 第一次就抓不到才算載入失敗；之後重抓失敗先沿用舊的交易，下一次改動會再抓
-        setLoadedKey((key) => {
-          if (key === null) setError(queryError);
-          else setRefreshError(queryError);
-          return key;
-        });
+        if (hasLoadedRef.current) setRefreshError(queryError);
+        else setError(queryError);
       });
   }, [userId, settingLoaded, rowsKey]);
 
@@ -138,6 +144,29 @@ export function useTrips(userId) {
     saveChainRef.current = run.catch(() => {});
     return run;
   }, [userId, fetchSetting, loadSetting, storeSetting]);
+
+  // 交易被刪掉後，旅程裡記著的 id（排除的、手動加入的）沒有用了，卻會一直留在設定裡、
+  // 手動加入的還會串進每次查詢的網址。抓完交易後找出沒抓到的 id，確認真的不存在才從設定拿掉；
+  // 只是不在旅程日期內的（例如改過旅程日期）還存在，留著。
+  useEffect(() => {
+    if (!userId || !fetched) return;
+    const candidates = [...new Set(fetched.trips.flatMap((trip) => [...trip.includedIds, ...trip.excludedIds]))]
+      .filter((id) => !fetched.rowIds.has(id) && !knownIdsRef.current.has(id));
+    if (!candidates.length) return;
+    let cancelled = false;
+    fetchDeletedTransactionIds(userId, candidates).then((deletedIds) => {
+      if (cancelled) return;
+      const deleted = new Set(deletedIds);
+      for (const id of candidates) if (!deleted.has(id)) knownIdsRef.current.add(id);
+      if (!deleted.size) return;
+      const keep = (list) => list.filter((id) => !deleted.has(id));
+      mutate((s) => ({
+        ...s,
+        trips: s.trips.map((trip) => ({ ...trip, includedIds: keep(trip.includedIds), excludedIds: keep(trip.excludedIds) })),
+      })).catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, [userId, fetched, mutate]);
 
   const updateTrip = useCallback((tripId, change) => mutate((s) => ({
     ...s,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { SELECT_COLUMNS, mapSearchRow } from '@/hooks/useTransactionSearch';
+import { SELECT_COLUMNS, mapSearchRow, fetchDeletedTransactionIds } from '@/hooks/useTransactionSearch';
 import { getCached, setCached } from '@/lib/resourceCache';
 import { getTodayYmd } from '@/lib/utils';
 import {
@@ -93,6 +93,10 @@ export function useSpendingAnalysis(userId, year, month) {
   const [metaError, setMetaError] = useState(null);
   const requestIdRef = useRef(0);
   const refreshedRef = useRef(false);
+  // 設定這次打開頁面已經從雲端讀回來（不是記憶體裡記著的舊值）
+  const [prefsFresh, setPrefsFresh] = useState(false);
+  // 查過確定還在的交易 id，這次打開頁面不用再查
+  const knownIdsRef = useRef(new Set());
 
   const ready = firstYm !== undefined && prefs !== undefined;
   const viewStart = ready ? analysisStartOf(firstYm, prefs.startYm) : null;
@@ -162,6 +166,7 @@ export function useSpendingAnalysis(userId, year, month) {
         const loaded = readPrefs((key) => stored.get(key));
         for (const name of changedRef.current) loaded[name] = prefsRef.current[name];
         storePrefs(loaded);
+        setPrefsFresh(true);
       });
     return () => { cancelled = true; };
   }, [userId, storePrefs]);
@@ -193,6 +198,27 @@ export function useSpendingAnalysis(userId, year, month) {
     const next = exclude ? [...new Set([...ids, txId])] : ids.filter((id) => id !== txId);
     return savePref('excluded', next);
   }, [savePref]);
+
+  // 交易被刪掉後，排除清單裡的 id 沒有用了，卻會一直留在設定裡。
+  // 清單裡不在已讀支出內的 id，確認真的不存在才拿掉（比分析起點早的、改成收入的都還存在，留著）
+  const excludedList = prefs?.excluded;
+  const loadedExpenses = ledgerReady ? ledger.expenses : null;
+  useEffect(() => {
+    if (!userId || !prefsFresh || !loadedExpenses || !excludedList?.length) return;
+    const loadedIds = new Set(loadedExpenses.map((tx) => tx.id));
+    const candidates = excludedList.filter((id) => !loadedIds.has(id) && !knownIdsRef.current.has(id));
+    if (!candidates.length) return;
+    let cancelled = false;
+    fetchDeletedTransactionIds(userId, candidates).then((deletedIds) => {
+      if (cancelled) return;
+      const deleted = new Set(deletedIds);
+      for (const id of candidates) if (!deleted.has(id)) knownIdsRef.current.add(id);
+      if (!deleted.size) return;
+      // 從最新的清單改，查詢期間使用者剛排除的不會被蓋掉
+      savePref('excluded', (prefsRef.current?.excluded ?? []).filter((id) => !deleted.has(id))).catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, [userId, prefsFresh, loadedExpenses, excludedList, savePref]);
 
   const current = prefs ?? readPrefs(() => undefined);
   return {

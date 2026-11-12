@@ -304,3 +304,28 @@ export function useTransactionSearch(userId, query) {
 
   return { results, totalCount, summary, summaryRows: allMatches, searching, searchError, refresh };
 }
+
+const ID_LOOKUP_CHUNK = 100;
+
+/**
+ * 這些交易 id 裡，哪些已經不存在（交易被刪掉了）。
+ * 給「把交易 id 存在設定裡」的功能清掉沒用的 id；查詢失敗就當作都還在，寧可不清。
+ * @param {string} userId
+ * @param {string[]} ids
+ * @returns {Promise<string[]>}
+ */
+export async function fetchDeletedTransactionIds(userId, ids) {
+  const wanted = [...new Set(ids || [])];
+  if (!userId || !wanted.length) return [];
+  const found = new Set();
+  for (let i = 0; i < wanted.length; i += ID_LOOKUP_CHUNK) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .in('id', wanted.slice(i, i + ID_LOOKUP_CHUNK));
+    if (error) return [];
+    for (const row of data || []) found.add(row.id);
+  }
+  return wanted.filter((id) => !found.has(id));
+}
