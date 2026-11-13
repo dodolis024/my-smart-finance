@@ -182,10 +182,9 @@ export default function TripDetailModal({ userId, summary, tripOf, currentYear, 
   };
 
   return (
-    <Modal isOpen={!!summary} onClose={onClose} className="category-detail-modal" titleId="trip-detail-title">
+    <Modal isOpen={!!summary} onClose={onClose} className="category-detail-modal" titleId="trip-detail-title" closeLabel={t('common.close')}>
       <div className="category-detail-modal__backdrop" onClick={onClose} />
-      <div ref={dialogRef} className="category-detail-modal__dialog scrollbar-on-scroll analysis-trip-detail" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="category-detail-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
+      <div ref={dialogRef} className="category-detail-modal__dialog scrollbar-on-scroll analysis-trip-detail" data-modal-card onClick={(e) => e.stopPropagation()}>
         <div className="analysis-trip-detail__head">
           <h2 id="trip-detail-title" className="category-detail-modal__title">{trip.name}</h2>
           <button

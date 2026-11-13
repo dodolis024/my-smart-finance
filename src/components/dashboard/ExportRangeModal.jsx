@@ -31,10 +31,9 @@ export default function ExportRangeModal({ isOpen, onClose, initialYear, initial
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="split-modal" titleId="export-range-title">
+    <Modal isOpen={isOpen} onClose={onClose} className="split-modal" titleId="export-range-title" closeLabel={t('common.close')}>
       <div className="reminder-modal__backdrop" onClick={onClose} />
-      <div className="split-modal__dialog" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="reminder-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
+      <div className="split-modal__dialog" data-modal-card onClick={(e) => e.stopPropagation()}>
         <h2 id="export-range-title" className="split-modal__title">{t('dashboard.exportRangeTitle')}</h2>
 
         <div className="split-modal__field">

@@ -72,10 +72,9 @@ export default function ManageMembersModal({ isOpen, onClose, members, currentUs
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="manage-members-title">
+    <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="manage-members-title" closeLabel={t('common.close')}>
       <div className="reminder-modal__backdrop" onClick={handleClose} />
-      <div className="split-modal__dialog" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-        <button type="button" className="reminder-modal__close" aria-label={t('common.close')} onClick={handleClose}>×</button>
+      <div className="split-modal__dialog" data-modal-card onClick={e => e.stopPropagation()}>
         <h2 id="manage-members-title" className="split-modal__title">{t('split.manageMembers')}</h2>
 
         {/* Current members */}

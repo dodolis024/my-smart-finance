@@ -206,10 +206,9 @@ export default function CategoryTrendModal({ category, analysis, labelOf, labelO
   };
 
   return (
-    <Modal isOpen={!!category} onClose={onClose} className="category-detail-modal" titleId="category-trend-title">
+    <Modal isOpen={!!category} onClose={onClose} className="category-detail-modal" titleId="category-trend-title" closeLabel={t('common.close')}>
       <div className="category-detail-modal__backdrop" onClick={onClose} />
-      <div className="category-detail-modal__dialog scrollbar-on-scroll analysis-cat-trend" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="category-detail-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
+      <div className="category-detail-modal__dialog scrollbar-on-scroll analysis-cat-trend" data-modal-card onClick={(e) => e.stopPropagation()}>
         <h2 id="category-trend-title" className="category-detail-modal__title">{category.name}</h2>
 
         <div className="analysis-cat-trend__summary">

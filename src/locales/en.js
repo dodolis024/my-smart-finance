@@ -286,7 +286,6 @@ const en = {
 
   settings: {
     title: 'Settings',
-    close: 'Close',
     settingsCategories: 'Settings categories',
 
     language: {
@@ -738,7 +737,6 @@ const en = {
       shareRemaining: 'Allocated {amount} / {total} (remaining {diff})',
       addFailed: 'Failed to add, please try again',
       updateFailed: 'Failed to update, please try again',
-      close: 'Close',
     },
 
     joinPage: {
@@ -766,7 +764,6 @@ const en = {
   changelog: {
     title: 'Change Log',
     loading: 'Loading...',
-    close: 'Close',
   },
 
   spendingAnalysis: {

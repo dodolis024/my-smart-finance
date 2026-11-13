@@ -289,7 +289,6 @@ const zh = {
 
   settings: {
     title: '設定',
-    close: '關閉',
     settingsCategories: '設定分類',
 
     language: {
@@ -741,7 +740,6 @@ const zh = {
       shareRemaining: '已分配 {amount} / {total}（剩餘 {diff}）',
       addFailed: '新增失敗，請稍後再試',
       updateFailed: '更新失敗，請稍後再試',
-      close: '關閉',
     },
 
     joinPage: {
@@ -769,7 +767,6 @@ const zh = {
   changelog: {
     title: '更新紀錄',
     loading: '載入中...',
-    close: '關閉',
   },
 
   spendingAnalysis: {

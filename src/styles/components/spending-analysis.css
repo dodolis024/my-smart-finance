@@ -752,13 +752,12 @@ select.analysis-input {
   text-align: right;
 }
 
-/* 標題列：名稱＋編輯、刪除 icon；右邊留給關閉鈕 */
+/* 標題列：名稱＋編輯、刪除 icon */
 .analysis-trip-detail__head {
   display: flex;
   align-items: center;
   gap: 0.25rem;
   margin-bottom: 0.75rem;
-  padding-right: 3rem;
 }
 
 .analysis-trip-detail__head .category-detail-modal__title {

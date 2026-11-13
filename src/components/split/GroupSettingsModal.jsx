@@ -49,10 +49,9 @@ export default function GroupSettingsModal({ isOpen, onClose, onSave, group, cur
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="group-settings-title">
+    <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="group-settings-title" closeLabel={t('common.close')}>
       <div className="reminder-modal__backdrop" onClick={handleClose} />
-      <div className="split-modal__dialog" onClick={e => e.stopPropagation()}>
-        <button type="button" className="reminder-modal__close" aria-label={t('common.close')} onClick={handleClose}>×</button>
+      <div className="split-modal__dialog" data-modal-card onClick={e => e.stopPropagation()}>
         <h2 id="group-settings-title" className="split-modal__title">{t('split.groupSettings')}</h2>
 
         <div className="split-modal__field">

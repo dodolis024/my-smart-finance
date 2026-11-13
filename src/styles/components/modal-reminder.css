@@ -28,29 +28,6 @@
   border: 1px solid var(--color-border-subtle);
   overflow-y: auto;
 }
-.reminder-modal__close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border);
-  background: var(--color-card);
-  color: var(--color-text);
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: var(--transition);
-  z-index: 1;
-}
-.reminder-modal__close:hover {
-  background: var(--color-row-hover);
-}
-.reminder-modal__close:focus {
-  outline: none;
-  box-shadow: var(--shadow-focus);
-}
 .reminder-modal__title {
   margin: 0 0 1rem 0;
   font-size: 1.5rem;

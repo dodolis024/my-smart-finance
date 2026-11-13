@@ -17,16 +17,10 @@ export default function SplitShareDetailModal({ isOpen, onClose, items = [], gro
   useScrollbarOnScroll(bodyRef, isOpen);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="transaction-detail-modal" titleId="splitShareDetailTitle">
-      <div className="transaction-detail-content">
+    <Modal isOpen={isOpen} onClose={onClose} className="transaction-detail-modal" titleId="splitShareDetailTitle" closeLabel={t('common.close')}>
+      <div className="transaction-detail-content" data-modal-card>
         <div className="transaction-detail-header">
           <h2 id="splitShareDetailTitle" className="transaction-detail-title">{t('split.shareDetailTitle')}</h2>
-          <button type="button" className="transaction-detail-close" aria-label={t('common.close')} onClick={onClose}>
-            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
         </div>
 
         <div ref={bodyRef} className="transaction-detail-body scrollbar-on-scroll">

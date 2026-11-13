@@ -41,10 +41,9 @@ export default function TripFormModal({ form, onClose, onSave }) {
   };
 
   return (
-    <Modal isOpen={!!form} onClose={onClose} className="category-detail-modal" titleId="trip-form-title">
+    <Modal isOpen={!!form} onClose={onClose} className="category-detail-modal" titleId="trip-form-title" closeLabel={t('common.close')}>
       <div className="category-detail-modal__backdrop" onClick={onClose} />
-      <form className="category-detail-modal__dialog analysis-trip-form" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-        <button type="button" className="category-detail-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
+      <form className="category-detail-modal__dialog analysis-trip-form" data-modal-card onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2 id="trip-form-title" className="category-detail-modal__title">
           {t(form.mode === 'edit' ? 'spendingAnalysis.tripForm.editTitle' : 'spendingAnalysis.tripForm.createTitle')}
           {form.fromSuggestion && <InfoTip>{t('spendingAnalysis.tripForm.suggestedHint')}</InfoTip>}

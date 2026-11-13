@@ -115,10 +115,9 @@ export default function AccountBalanceModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="account-balance-modal" titleId="account-balance-modal-title">
+    <Modal isOpen={isOpen} onClose={onClose} className="account-balance-modal" titleId="account-balance-modal-title" closeLabel={t('common.close')}>
       <div className="account-balance-modal__backdrop" onClick={onClose} />
-      <div ref={dialogRef} className="account-balance-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="account-balance-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
+      <div ref={dialogRef} className="account-balance-modal__dialog scrollbar-on-scroll" data-modal-card onClick={(e) => e.stopPropagation()}>
         <h2 id="account-balance-modal-title" className="account-balance-modal__title">{accountName}</h2>
         {isViewingOtherMonth && (
           <p className="account-balance-modal__live-hint">

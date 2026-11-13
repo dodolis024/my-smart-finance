@@ -19,6 +19,7 @@
 @import url('./components/settings-account.css');
 @import url('./components/table.css');
 @import url('./components/modal.css');
+@import url('./components/modal-close.css');
 @import url('./components/modal-usm.css');
 @import url('./components/modal-reminder.css');
 @import url('./components/modal-push.css');

@@ -86,10 +86,9 @@ export default function AnalysisSettings({ startYm, firstYm, currentYm, labelOfY
       >
         <SettingsIcon />
       </button>
-      <Modal isOpen={open} onClose={close} className="category-detail-modal" titleId="analysis-settings-title">
+      <Modal isOpen={open} onClose={close} className="category-detail-modal" titleId="analysis-settings-title" closeLabel={t('common.close')}>
         <div className="category-detail-modal__backdrop" onClick={close} />
-        <form className="category-detail-modal__dialog analysis-trip-form" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-          <button type="button" className="category-detail-modal__close" aria-label={t('common.close')} onClick={close}>×</button>
+        <form className="category-detail-modal__dialog analysis-trip-form" data-modal-card onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
           <h2 id="analysis-settings-title" className="category-detail-modal__title">{t('spendingAnalysis.settings.title')}</h2>
 
           <label className="analysis-field">

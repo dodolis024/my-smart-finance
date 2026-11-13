@@ -231,11 +231,10 @@ export default function UnifiedSettingsModal({ isOpen, onClose }) {
   }, [activeTab]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="usm" titleId="usm-title">
+    <Modal isOpen={isOpen} onClose={onClose} className="usm" titleId="usm-title" closeLabel={t('common.close')}>
       <div className="usm__backdrop" onClick={onClose} />
-      <div ref={dialogRef} className="usm__dialog" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="usm__dialog" data-modal-card onClick={(e) => e.stopPropagation()}>
         <h2 id="usm-title" className="sr-only">{t('settings.title')}</h2>
-        <button type="button" className="usm__close" aria-label={t('settings.close')} onClick={onClose}>×</button>
 
         {/* Body */}
         <div className="usm__body">

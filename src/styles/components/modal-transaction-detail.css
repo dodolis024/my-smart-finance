@@ -64,27 +64,8 @@
   margin: 0;
 }
 
-.transaction-detail-close {
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  border-radius: 4px;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.transaction-detail-close:hover {
-  background: var(--color-row-hover);
-  color: var(--color-text);
-}
 
-.transaction-detail-close:active {
-  transform: scale(0.95);
-}
 
 .transaction-detail-body {
   padding: 1.5rem;
@@ -141,11 +122,6 @@
   display: flex;
   align-items: center;
   gap: 0.125rem;
-}
-
-/* 與關閉鈕拉開距離，避免誤觸刪除 */
-.transaction-detail-header-actions .transaction-detail-close {
-  margin-left: 0.5rem;
 }
 
 /* 金額後的淺色補充（匯率、含手續費）：整段一起換行，不在括號中間斷開 */

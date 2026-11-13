@@ -377,16 +377,15 @@ export default function AddExpenseModal({ isOpen, onClose, onAdd, onUpdate, edit
 
   return (
     <>
-    <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="add-expense-title">
+    <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="add-expense-title" closeLabel={t('common.close')}>
       <div className="reminder-modal__backdrop" onClick={handleClose} />
-      <div ref={dialogRef} className="split-modal__dialog" onClick={e => {
+      <div ref={dialogRef} className="split-modal__dialog" data-modal-card onClick={e => {
           e.stopPropagation();
           // 點擊 dialog 內非計算機輸入區域時，關閉鍵盤
           if (activeField != null && !e.target.closest('.is-calc')) {
             setActiveField(null);
           }
         }}>
-        <button type="button" className="reminder-modal__close" aria-label={t('split.addExpenseModal.close')} onClick={handleClose}>×</button>
         <h2 id="add-expense-title" className="split-modal__title">{isEditing ? t('split.addExpenseModal.editTitle') : t('split.addExpenseModal.addTitle')}</h2>
 
         <div className="split-modal__field">

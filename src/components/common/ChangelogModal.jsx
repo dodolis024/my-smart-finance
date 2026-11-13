@@ -19,12 +19,11 @@ export default function ChangelogModal({ isOpen, onClose }) {
   }, [isOpen, lang]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="changelog-modal" titleId="changelog-modal-title">
+    <Modal isOpen={isOpen} onClose={onClose} className="changelog-modal" titleId="changelog-modal-title" closeLabel={t('common.close')}>
       <div className="changelog-modal__backdrop" onClick={onClose} />
-      <div className="changelog-modal__dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="changelog-modal__dialog" data-modal-card onClick={(e) => e.stopPropagation()}>
         <div className="changelog-modal__header">
           <h2 id="changelog-modal-title" className="changelog-modal__title">{t('changelog.title')}</h2>
-          <button type="button" className="changelog-modal__close" aria-label={t('changelog.close')} onClick={onClose}>×</button>
         </div>
         <div ref={contentRef} className="changelog-modal__body scrollbar-on-scroll">
           <div className="changelog-content">

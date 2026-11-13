@@ -25,10 +25,9 @@ export default function CategoryDetailModal({ isOpen, onClose, category, onEdit,
   const shareText = share % 1 === 0 ? String(Math.round(share)) : share.toFixed(1);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="category-detail-modal" titleId="category-detail-modal-title">
+    <Modal isOpen={isOpen} onClose={onClose} className="category-detail-modal" titleId="category-detail-modal-title" closeLabel={t('common.close')}>
       <div className="category-detail-modal__backdrop" onClick={onClose} />
-      <div ref={dialogRef} className="category-detail-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="category-detail-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
+      <div ref={dialogRef} className="category-detail-modal__dialog scrollbar-on-scroll" data-modal-card onClick={(e) => e.stopPropagation()}>
         <h2 id="category-detail-modal-title" className="category-detail-modal__title">{category.label}</h2>
 
         <div className="category-detail-modal__summary">

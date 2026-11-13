@@ -66,10 +66,9 @@ export default function CreditCardModal({
   const accountName = account.name || account.accountName || t('creditCard.defaultName');
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="credit-card-modal" titleId="credit-card-modal-title">
+    <Modal isOpen={isOpen} onClose={onClose} className="credit-card-modal" titleId="credit-card-modal-title" closeLabel={t('common.close')}>
       <div className="credit-card-modal__backdrop" onClick={onClose} />
-      <div ref={dialogRef} className="credit-card-modal__dialog scrollbar-on-scroll" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="credit-card-modal__close" aria-label={t('common.close')} onClick={onClose}>×</button>
+      <div ref={dialogRef} className="credit-card-modal__dialog scrollbar-on-scroll" data-modal-card onClick={(e) => e.stopPropagation()}>
         <h2 id="credit-card-modal-title" className="credit-card-modal__title">{accountName}</h2>
         {isViewingOtherMonth && (
           <p className="credit-card-modal__live-hint">

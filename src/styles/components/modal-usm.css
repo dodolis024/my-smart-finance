@@ -30,29 +30,6 @@
   overflow: hidden;
 }
 
-/* Close button */
-.usm__close {
-  position: absolute;
-  top: 0.6rem;
-  right: 0.6rem;
-  z-index: 1;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-card);
-  color: var(--color-text);
-  font-size: 1.3rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.usm__close:hover { background: var(--color-row-hover); }
-.usm__close:focus { outline: none; box-shadow: var(--shadow-focus); }
-
 /* Body: sidebar + content */
 .usm__body {
   display: flex;

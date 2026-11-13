@@ -49,10 +49,9 @@ export default function CreateGroupModal({ isOpen, onClose, onCreate, currencies
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="create-group-title">
+    <Modal isOpen={isOpen} onClose={handleClose} className="split-modal" titleId="create-group-title" closeLabel={t('common.close')}>
       <div className="reminder-modal__backdrop" onClick={handleClose} />
-      <div className="split-modal__dialog" onClick={e => e.stopPropagation()}>
-        <button type="button" className="reminder-modal__close" aria-label={t('common.close')} onClick={handleClose}>×</button>
+      <div className="split-modal__dialog" data-modal-card onClick={e => e.stopPropagation()}>
         <h2 id="create-group-title" className="split-modal__title">{t('split.createGroupTitle')}</h2>
 
         <div className="split-modal__field">

@@ -1,0 +1,53 @@
+/* ============================================
+   彈窗關閉鈕：卡片外右上角的白色線條 ×
+   位置由 Modal.jsx 依卡片位置算（右側放不下就改放卡片上方）
+   ============================================ */
+
+.modal-close {
+  position: fixed;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-card);
+  filter: drop-shadow(0 1px 2px var(--color-backdrop));
+  cursor: pointer;
+  /* 定位好之前先藏著，免得在左上角閃一下 */
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.2s ease;
+}
+
+.modal-close.is-placed {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .modal-close:hover {
+    background: var(--color-backdrop-light);
+  }
+}
+
+/* 觸控裝置：看起來一樣大，手指可以點的範圍放大到 44px */
+@media (pointer: coarse) {
+  .modal-close {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* 改放卡片上方時，卡片往下讓出 × 的位置 */
+.modal-overlay.has-close-above {
+  --modal-close-room: 48px;
+  padding-top: var(--modal-close-room);
+  box-sizing: border-box;
+}
+
+.modal-overlay.has-close-above > [data-modal-card] {
+  max-height: calc(100dvh - 8dvh - var(--modal-close-room));
+}
