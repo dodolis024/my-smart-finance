@@ -4,6 +4,7 @@ This file records version updates for Smart Finance Tracker.
 
 - Improved category trends in Spending Analysis to sort by this month's spending, matching the dashboard order
 - Improved the close button on every pop-up, now a white line × outside the card's top-right corner
+- Improved spacing in every pop-up, now consistent across all of them
 - Improved settings section titles with a highlighter-style background
 - Improved the payment method add button, now a + beside the section title
 - Fixed custom range export and the year view dropping the newest transactions beyond 1,000

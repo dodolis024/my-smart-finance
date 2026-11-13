@@ -227,8 +227,20 @@
     margin: auto;
   }
 
-  .category-detail-modal__dialog {
-    padding: 1.5rem 1rem;
+  /* 彈窗留白統一：手機外框上下 20px、左右 16px（電腦版是四邊 24px） */
+  .category-detail-modal__dialog,
+  .credit-card-modal__dialog,
+  .account-balance-modal__dialog,
+  .split-modal__dialog {
+    padding: 1.25rem 1rem;
+  }
+
+  .changelog-modal__header {
+    padding: 1.25rem 1rem 1rem;
+  }
+
+  .changelog-modal__body {
+    padding: 0 1rem 1.25rem;
   }
 
   .category-detail-row {
@@ -532,13 +544,13 @@
   .reaction-modal__dialog {
     width: calc(100% - 1.5rem);
     margin: 5vh auto 0;
-    padding: 1rem;
+    padding: 1.25rem 1rem;
     border-radius: 12px;
   }
 
   .reaction-modal__title {
     font-size: 1.25rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
   }
 
   .streak-calendar {
@@ -629,7 +641,7 @@
   }
 
   .transaction-detail-header {
-    padding: 0.875rem 1rem;
+    padding: 1.25rem 1rem;
   }
 
   .transaction-detail-title {
@@ -637,7 +649,7 @@
   }
 
   .transaction-detail-body {
-    padding: 0.75rem 1rem 1rem;
+    padding: 1rem 1rem 1.25rem;
   }
 
   .transaction-detail-item {
@@ -775,17 +787,9 @@
     right: 0.3rem;
   }
 
-  /* Transaction detail modal — extra small */
-  .transaction-detail-header {
-    padding: 0.75rem 0.875rem;
-  }
-
+  /* Transaction detail modal — extra small（留白沿用 600px 以下的統一值） */
   .transaction-detail-title {
     font-size: 1rem;
-  }
-
-  .transaction-detail-body {
-    padding: 0.625rem 0.875rem 0.875rem;
   }
 
   .transaction-detail-item {

@@ -21,7 +21,7 @@
   width: min(820px, calc(100% - 2rem));
   max-height: calc(100dvh - 8dvh);
   margin: 4dvh auto;
-  padding: 2rem;
+  padding: 1.5rem;
   background: var(--color-card);
   border-radius: 16px;
   box-shadow: var(--shadow-modal-sm);
@@ -29,7 +29,7 @@
   overflow-y: auto;
 }
 .category-detail-modal__title {
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 1rem 0;
   font-size: 1.5rem;
   color: var(--color-text);
 }
