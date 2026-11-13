@@ -181,7 +181,7 @@ function AccountsPanel({ isOpen, confirm, toast }) {
   return (
     <div className="usm-panel">
       {loadError && <div className="auth-error" style={{ marginBottom: '1rem' }} role="alert">{loadError}</div>}
-      <section className="settings-manage__section">
+      <section className="settings-manage__section settings-manage__section--accounts">
         <h3 className="settings-manage__section-title">{t('settings.account.sectionTitle')}</h3>
         {loading ? <p className="settings-manage__loading">{t('common.loadingDots')}</p> : (
           <AccountManager

@@ -15,31 +15,63 @@
   gap: 1rem;
 }
 
-/* 外層都是 gap: 1rem 的 flex 直欄，負 margin 把「標題線 → 下方內容」收成 14px */
+/* 區塊標題：字的下半段襯一層主題淡色，像螢光筆劃過（不再整條底線）
+   只包住字本身的寬度（inline-block + 靠左），外層 flex 直欄的 gap: 1rem 決定到下方內容的距離 */
 .settings-manage__section-title {
-  margin: 0 0 -0.125rem 0;
+  align-self: flex-start;
+  display: inline-block;
+  margin: 0;
+  padding: 0 0.125rem;
   font-size: 1.125rem;
   color: var(--color-text);
   font-weight: 600;
-  border-bottom: 2px solid var(--color-primary);
-  padding-bottom: 0.5rem;
+  background: linear-gradient(transparent 62%, var(--color-primary-tint) 62%);
 }
 
 [data-theme="dawn"] .settings-manage__section-title {
-  border-bottom: none;
-  position: relative;
+  background: linear-gradient(transparent 62%, rgba(247, 202, 201, 0.6) 62%, rgba(146, 168, 209, 0.45) 100%);
 }
 
-[data-theme="dawn"] .settings-manage__section-title::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #f7cac9, #92a8d1);
-  border-radius: 1px;
-}
+/* 備選樣式（2026-11-13 跟螢光筆一起比過，沒選但留著，想換時替換上面兩段即可）
+
+   C 短色條：字左下方一段 28×3px 主題色短線
+   .settings-manage__section-title {
+     position: relative;
+     margin: 0 0 -0.125rem 0;   ← 把「短線 → 下方內容」收成 14px
+     font-size: 1.125rem;
+     color: var(--color-text);
+     font-weight: 600;
+     padding-bottom: 0.625rem;
+   }
+   .settings-manage__section-title::after {
+     content: '';
+     position: absolute;
+     bottom: 0;
+     left: 0;
+     width: 28px;
+     height: 3px;
+     background: var(--color-primary);
+     border-radius: 2px;
+   }
+   [data-theme="dawn"] .settings-manage__section-title::after {
+     background: linear-gradient(90deg, #f7cac9, #92a8d1);
+   }
+
+   D 左側色條：字的左邊一條 3px 主題色直線（缺點：標題字會比下方內容往右縮約 13px）
+   .settings-manage__section-title {
+     margin: 0;
+     font-size: 1.125rem;
+     color: var(--color-text);
+     font-weight: 600;
+     line-height: 1.25;
+     border-left: 3px solid var(--color-primary);
+     padding-left: 0.625rem;
+   }
+   [data-theme="dawn"] .settings-manage__section-title {
+     border-left: 3px solid transparent;
+     border-image: linear-gradient(180deg, #f7cac9, #92a8d1) 1;
+   }
+*/
 
 .settings-manage__loading {
   margin: 0;

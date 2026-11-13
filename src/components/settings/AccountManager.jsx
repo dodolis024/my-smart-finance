@@ -229,9 +229,19 @@ export default function AccountManager({ accounts, onSave, onDelete, onSetActive
 
   return (
     <div className="account-manager">
-      <div className="accounts-header">
-        <button type="button" className="btn-add-account" onClick={handleAdd} disabled={loading}>{t('settings.account.addBtn')}</button>
-      </div>
+      {/* 擺在區塊標題列的右邊（定位見 settings-account.css），不另佔一行 */}
+      <button
+        type="button"
+        className="btn-add-account"
+        onClick={handleAdd}
+        disabled={loading}
+        aria-label={t('settings.account.addTitle')}
+        title={t('settings.account.addTitle')}
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+      </button>
       {accounts.length === 0 ? (
         <p className="account-manager__empty">{t('settings.account.noAccounts')}</p>
       ) : (
