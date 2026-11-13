@@ -2,6 +2,7 @@
 
 This file records version updates for Smart Finance Tracker.
 
+## [1.34.3] - Nov-13 2026
 - Improved category trends in Spending Analysis to sort by this month's spending, matching the dashboard order
 - Improved the close button on every pop-up, now a white line × outside the card's top-right corner
 - Improved spacing in every pop-up, now consistent across all of them
